@@ -1,0 +1,1 @@
+ffmpeg -i "C:\Users\miche\programming\lec-extraction-prog\bin\Debug\net10.0\runtimes\win\lib\net7.0\monday-part-2.mp4" -vf "setpts=0.66*PTS,scale=1280:720,fps=1" -r 1 -c:v libx264 -b:v 150k -maxrate 150k -bufsize 300k -c:a aac -b:a 96k -ac 1 -af "atempo=1.5" "C:\Users\miche\programming\lec-extraction-prog\bin\Debug\net10.0\runtimes\win\lib\net7.0\monday-part-2-compressed.mp4"
