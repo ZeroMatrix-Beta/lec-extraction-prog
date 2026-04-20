@@ -5,20 +5,17 @@ using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
 using System.Text.Json;
+using System.Linq;
+using System.Net.Http;
+
 
 class Program
 {
     static async Task Main(string[] args)
     {
         // 1. API Key sicher aus den Umgebungsvariablen laden
-        string? apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-        
-        // Fallback für Windows: Prüfen, ob die Variable auf Benutzerebene existiert 
-        // (hilft, wenn das Terminal/die IDE nach dem Setzen der Variable noch nicht neu gestartet wurde)
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", System.EnvironmentVariableTarget.User);
-        }
+        string? apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
+                      ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.User);
 
         if (string.IsNullOrEmpty(apiKey))
         {
@@ -29,14 +26,38 @@ class Program
         // 2. Den Client erstellen
         var client = new Client(apiKey: apiKey);
 
-        // 3. Liste für die Chat-Historie erstellen
+        // 3. Modellauswahl beim Start
+        Console.WriteLine("=== Gemini Chat-Konfiguration ===");
+        Console.WriteLine("Wähle ein Modell:");
+        Console.WriteLine("1) gemini-2.5-pro       (Standard, sehr mächtig)");
+        Console.WriteLine("2) gemini-2.5-flash     (Schnell, sehr effizient)");
+        Console.WriteLine("3) gemini-2.5-flash-lite (Leichtgewicht)");
+        Console.WriteLine("4) gemma-3-27b-it       (Open Model, 27B Parameter)");
+        Console.WriteLine("5) gemini-1.5-pro       (Verlässliches Fallback für Video/Audio)");
+        Console.WriteLine("6) gemini-1.5-flash     (Schnelles Fallback für Video/Audio)");
+        Console.Write("Auswahl (1-6) [Standard: 1]: ");
+        
+        string? choice = Console.ReadLine();
+        string selectedModel = choice switch
+        {
+            "2" => "gemini-2.5-flash",
+            "3" => "gemini-2.5-flash-lite",
+            "4" => "gemma-3-27b-it",
+            "5" => "gemini-1.5-pro",
+            "6" => "gemini-1.5-flash",
+            _ => "gemini-2.5-pro"
+        };
+
+        // 4. Liste für die Chat-Historie erstellen
         var history = new List<Content>();
 
-        Console.WriteLine("\n--- Chat gestartet (gemini-2.5-pro) ---");
-        Console.WriteLine("Tipp: Schreibe 'exit', um den Chat zu beenden.");
-        Console.WriteLine("Tipp: Schreibe 'SENDE <Dateipfad>', um Dateien anzuhängen (mehrere trennen mit ';' oder ',').");
-        Console.WriteLine("Tipp: Schreibe 'modelle', um zu prüfen, welche Modelle Audio unterstützen.");
-        Console.WriteLine("Tipp: Schreibe 'clear', um das Gedächtnis (den Kontext) der KI zu löschen.");
+        Console.WriteLine($"\n--- Chat gestartet ({selectedModel}) ---");
+        Console.WriteLine("Befehle:");
+        Console.WriteLine("  exit / quit               -> Beendet den Chat");
+        Console.WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+        Console.WriteLine("  /attach datei1, datei2 | Frage -> Hängt Dateien an und stellt eine Frage dazu.");
+        Console.WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
+        Console.WriteLine("  /modelle                  -> Zeigt alle Modelle mit Audio-Support an");
 
         while (true)
         {
@@ -56,8 +77,8 @@ class Program
             var parts = new List<Part>();
             string promptText = input;
 
-            // 4a. Sonderbefehl: Modelle checken
-            if (input.ToLower() == "modelle")
+            // 5a. Sonderbefehl: Modelle checken
+            if (input.ToLower() == "/modelle" || input.ToLower() == "modelle")
             {
                 Console.WriteLine("\n[API] Analysiere alle Modelle auf der Suche nach Audio-Support...");
                 try
@@ -80,7 +101,6 @@ class Program
                             }
                         }
                     }
-                    Console.WriteLine("\n(Tipp: Um Audio zu senden, musst du 'gemini-2.5-pro' unten im Code durch eines dieser Modelle ersetzen!)\n");
                 }
                 catch (Exception ex)
                 {
@@ -89,22 +109,29 @@ class Program
                 continue;
             }
 
-            // 4. Prüfen, ob eine Datei gesendet werden soll (Escape-Befehl)
-            if (input.StartsWith("SENDE ", StringComparison.OrdinalIgnoreCase))
+            // 5b. Datei-Anhang mit kombiniertem Prompt (Z.B.: /attach file1.txt, file2.jpg | Erkläre das Bild)
+            if (input.StartsWith("/attach ", StringComparison.OrdinalIgnoreCase))
             {
-                string[] filePaths = input.Substring(6).Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                string payload = input.Substring(8).Trim();
+                string[] payloadParts = payload.Split('|', 2);
+                string filesPart = payloadParts[0];
+                promptText = payloadParts.Length > 1 ? payloadParts[1].Trim() : "";
+
+                string[] filePaths = filesPart.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
                 bool filesLoaded = false;
                 var loadedNames = new List<string>();
 
                 foreach (var path in filePaths)
                 {
-                    string filePath = path.Trim();
+                    // Anführungszeichen entfernen, falls die Dateien per Drag & Drop eingefügt wurden
+                    string filePath = path.Trim().Trim('"', '\''); 
+                    
                     if (System.IO.File.Exists(filePath))
                     {
                         string ext = Path.GetExtension(filePath).ToLower();
                         
                         // Text-Dateien sauber als Text-Part einlesen
-                        if (ext == ".md" || ext == ".txt" || ext == ".cs" || ext == ".json" || ext == ".xml")
+                        if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext))
                         {
                             string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
                             parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(filePath)}) ---\n{fileContent}\n--- DOKUMENT ENDE ---" });
@@ -142,18 +169,23 @@ class Program
                     }
                 }
 
-                if (filesLoaded)
+                // Wenn Dateien geladen wurden, aber keine Frage per '|' definiert wurde
+                if (filesLoaded && string.IsNullOrWhiteSpace(promptText))
                 {
-                    Console.Write($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}] Was ist deine Frage dazu? ");
+                    Console.Write($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]\nWas ist deine Frage dazu? ");
                     promptText = Console.ReadLine() ?? "";
                 }
-                else
+                else if (!filesLoaded)
                 {
                     continue; // Keine Datei war erfolgreich, starte Schleife neu
                 }
+                else 
+                {
+                    Console.WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
+                }
             }
 
-            // 5. Text-Prompt anhängen und an die Historie übergeben
+            // 6. Text-Prompt anhängen und an die Historie übergeben
             if (!string.IsNullOrWhiteSpace(promptText)) parts.Add(new Part { Text = promptText });
             else if (parts.Count == 0) continue;
 
@@ -161,16 +193,18 @@ class Program
 
             try
             {
-                var response = await client.Models.GenerateContentAsync(model: "gemini-2.5-pro", contents: history);
+                // Die dynamische Modellauswahl nutzen!
+                var response = await client.Models.GenerateContentAsync(model: selectedModel, contents: history);
                 string responseText = response.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "(Keine Antwort)";
                 
                 Console.WriteLine($"\nGemini: {responseText}");
                 
-                // 6. KI-Antwort in die Historie aufnehmen
+                // 7. KI-Antwort in die Historie aufnehmen
                 history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = responseText } } });
                 
                 // Optional: Verlauf in einer Log-Datei mitprotokollieren
-                await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {(input.StartsWith("SENDE") ? $"[Datei: {input.Substring(6).Trim()}] {promptText}" : input)}\n\n**Gemini:** {responseText}\n---\n");
+                string logInput = input.StartsWith("/attach") ? $"[Dateien] {promptText}" : input;
+                await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**Gemini:** {responseText}\n---\n");
             }
             catch (Exception ex)
             {

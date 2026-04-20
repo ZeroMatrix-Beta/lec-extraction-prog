@@ -11,8 +11,7 @@
 *.mp4
 *.jpg
 
-git config --global user.name "ZeroMatrix-Beta"
-git config --global user.email "michelwerder@gmail.com"
+
 
 # Build results
 [Dd]ebug/
