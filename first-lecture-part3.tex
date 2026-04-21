@@ -1,0 +1,204 @@
+\setcounter{section}{4} % Continuing from Volume of the 3D Unit Ball
+
+% ==========================================
+% SECTION 5 (Cont.): FINISHING THE 3D BALL
+% ==========================================
+\section{Completing the 3D Unit Ball Setup}
+
+\begin{spoken_clean}[00:32:53 - 00:36:10]
+Now that we have the correct spherical coordinates defined, we need the Jacobian determinant. I am not going to spend seven minutes on the board computing this $3 \times 3$ matrix, but I highly encourage you to do it at home. Because of the trigonometric identity $\sin^2(\theta) + \cos^2(\theta) = 1$, many terms simplify beautifully.
+
+In the end, the determinant of the Jacobian evaluates to $y_1^2 \cos(y_3)$. Notice that because our elevation angle $y_3$ goes strictly from $-\pi/2$ to $\pi/2$, the cosine function is always positive. Therefore, the absolute value of the determinant is simply $y_1^2 \cos(y_3)$ itself.
+
+Using our Change of Variables formula, the volume of the unit ball in $\mathbb{R}^3$ is equal to the integral over our rectangular parameter domain $D$.
+\end{spoken_clean}
+
+\begin{nice-box}[Finalizing the 3D Integral]
+The professor writes the final Jacobian determinant and constructs the triple integral on the board.
+\end{nice-box}
+
+\begin{math_stroke}[Computing the 3D Volume Integral]
+The Jacobian determinant simplifies to:
+\[
+\det J\Psi = y_1^2 \cos(y_3)
+\]
+Because $y_3 \in (-\pi/2, \pi/2)$, $\cos(y_3) > 0$. Applying the substitution rule:
+\begin{equation} \label{eq:ball_3d_integral}
+\mu_3(B_1) = \int_{D} \underbrace{y_1^2 \cos(y_3)}_{\text{Distortion Factor}} \, dy = \int_0^1 \int_0^{2\pi} \int_{-\pi/2}^{\pi/2} y_1^2 \cos(y_3) \, dy_3 \, dy_2 \, dy_1
+\end{equation}
+\end{math_stroke}
+
+\begin{spoken_clean}[00:36:10 - 00:40:07]
+Now, you might ask me: "How do we do a geometric trick to compute this, like we did with the 2D wedge?" The answer is, we don't. I know of no simple geometric trick to evaluate this 4-dimensional hyper-volume. 
+
+While we could try to invent more sophisticated coordinate changes, we will instead approach this integral systematically. To compute integrals of this type effortlessly, we must introduce the slicing idea. We will establish Cavalieri's Principle, which leads directly to Fubini's Theorem.
+\end{spoken_clean}
+
+% ==========================================
+% SECTION 6: CAVALIERI'S PRINCIPLE
+% ==========================================
+\section{The Slicing Idea: Cavalieri's Principle}
+
+\begin{spoken_clean}[00:40:07 - 00:42:00]
+Let me motivate the slicing idea informally. The Cavalieri Principle states that if you have a 3D body—which for us will be a Jordan measurable set—you can compute its total volume by slicing it. 
+
+Imagine a potato. If you take a potato and cut a very thin vertical slice, that slice is almost perfectly uniform from its front face to its back face. You can approximate the volume of that single slice by multiplying its cross-sectional area by its tiny thickness. If you sum the volumes of all these slices, the total volume of the potato is perfectly preserved.
+\end{spoken_clean}
+
+\begin{nice-box}[The Potato Analogy]
+The professor draws a 3D blob (a potato) and highlights a single, thin vertical slice to illustrate the concept of $V \approx \sum A(x) \Delta x$.
+\end{nice-box}
+
+\begin{math_stroke}[Geometric Visualization: Slicing a Volume]
+\begin{center}
+\begin{tikzpicture}[scale=1.2]
+    % Axes
+    \draw[->, thick] (0,0) -- (6,0) node[right] {Base Axis $x$};
+    \draw[->, thick] (0,0) -- (0,4) node[above] {Cross-Sectional Area $y$};
+    
+    % Potato body
+    \draw[thick, fill=brown!40] (1,1) to[out=20,in=180] (3,3) to[out=0,in=90] (5,1.5) to[out=-90,in=0] (3,0.5) to[out=180,in=-160] (1,1);
+    \node at (2.2, 2.5) {\textbf{Body $A$ (Potato)}};
+    
+    % Thin Slice
+    \draw[dashed, thick, profred] (3.5, 0.6) -- (3.5, 2.6);
+    \draw[dashed, thick, profred] (3.7, 0.7) -- (3.7, 2.4);
+    \fill[profred, opacity=0.4] (3.5, 0.6) to[out=90,in=-90] (3.5,2.6) -- (3.7, 2.4) to[out=-90,in=90] (3.7, 0.7) -- cycle;
+    
+    % Annotations
+    \node[profred, above] at (3.6, 2.8) {Area $\approx A_x$};
+    \draw[->, profred] (3.6, -0.2) -- (3.6, 0.5);
+    \node[profred, below] at (3.6, -0.2) {Position $x$};
+    \draw[<->, profred] (3.5, 0.3) -- (3.7, 0.3) node[midway, below] {$dx$};
+\end{tikzpicture}
+\end{center}
+\end{math_stroke}
+
+\begin{spoken_clean}[00:42:00 - 00:46:30]
+How do we do this systematically? We state it in terms of Jordan measures. We split our $n$-dimensional space, $\mathbb{R}^n$, into a product space: $\mathbb{R}^k \times \mathbb{R}^{n-k}$. Let the base coordinates be $x$ and the vertical coordinates be $y$. 
+
+Let $A \subset \mathbb{R}^n$ be a Jordan measurable set. For a specific base point $x$, we define the slice $A_x$ as the set of all vertical points $y$ that lie inside $A$. 
+
+Here is the technical hurdle: Just because $A$ is Jordan measurable in $\mathbb{R}^n$ does not guarantee that the slice $A_x$ is Jordan measurable in the lower-dimensional space $\mathbb{R}^{n-k}$. But we don't care! The outer measure and inner measure are *always* well-defined for any bounded set. So, we define the upper marginal density $\overline{\Phi}(x)$ using the outer measure, and the lower marginal density $\underline{\Phi}(x)$ using the inner measure.
+\end{spoken_clean}
+
+\begin{nice-box}[Formalizing the Slices]
+The professor writes down the formal set notation for slices and explicitly addresses the "non-measurable slice" edge case using inner/outer measures.
+\end{nice-box}
+
+\begin{math_stroke}[Formal Notation of Slices]
+Split the space: $\mathbb{R}^n = \mathbb{R}^k \times \mathbb{R}^{n-k}$. A point is $(x,y)$.
+Let $A \subset \mathbb{R}^n$ be Jordan measurable.
+\end{math_stroke}
+
+\begin{orangeformula}
+\begin{definition}[Slices]
+For a fixed base coordinate $x \in \mathbb{R}^k$, the slice $A_x$ is defined as:
+\[
+A_x = \{ y \in \mathbb{R}^{n-k} \mid (x,y) \in A \}
+\]
+\end{definition}
+\end{orangeformula}
+
+\begin{math_stroke}[Marginal Densities]
+To bypass slices that are not Jordan measurable, we define the \textbf{marginal densities}:
+\begin{align*}
+\overline{\varphi}(x) &= \mu_{n-k}^{\text{out}}(A_x) \quad (\text{Upper Marginal}) \\
+\underline{\varphi}(x) &= \mu_{n-k}^{\text{in}}(A_x) \quad (\text{Lower Marginal})
+\end{align*}
+\end{math_stroke}
+
+\begin{orangeformula}
+\begin{theorem}[Cavalieri's Principle]
+For a Jordan measurable set $A \subset \mathbb{R}^n \equiv \mathbb{R}^k \times \mathbb{R}^{n-k}$, both marginal functions are Riemann integrable over the base space $\mathbb{R}^k$. Their integrals perfectly yield the total $n$-dimensional volume of $A$:
+\[
+\int_{\mathbb{R}^k} \overline{\varphi}(x) \, dx = \int_{\mathbb{R}^k} \underline{\varphi}(x) \, dx = \mu_n(A)
+\]
+\end{theorem}
+\end{orangeformula}
+
+\begin{didactic_insight}[The "I Don't Care" Philosophy]
+The colloquial "I don't care" regarding slices that are not Jordan measurable imparts profound mathematical wisdom. In integration, sets of measure zero or pathological boundary anomalies disappear when summed over. The upper and lower integrals act as a squeeze theorem—even if individual slices are "fuzzy," integrating over the entire domain squeezes that fuzziness down to zero.
+\end{didactic_insight}
+
+% ==========================================
+% SECTION 7: PROVING CAVALIERI (PIXEL COUNTING)
+% ==========================================
+\section{Proof by Counting Pixels}
+
+\begin{spoken_clean}[00:46:30 - 00:52:00]
+How do we prove this? Because $A$ is Jordan measurable, we can approximate it using a very small grid of dyadic cubes—like pixels on a screen. 
+
+For any $\epsilon > 0$, we can find an inner approximation $F$ (made entirely of yellow pixels inside $A$) and an outer approximation $G$ (made of red pixels covering $A$), such that the volume difference between $G$ and $F$ is less than $\epsilon$.
+
+Because these sets are built from perfect cubes aligned to a grid, what happens when we slice them? As long as our base point $x$ stays within the same column of the grid, the slice of $F$ or $G$ cannot change! Therefore, the measures of these slices, $\mu(F_x)$ and $\mu(G_x)$, are just dyadic step functions. 
+\end{spoken_clean}
+
+\begin{nice-box}[The Dyadic Pixel Proof]
+The professor illustrates the inner ($F$) and outer ($G$) approximations. He notes that integrating a dyadic step function is just combinatorics—counting the total number of pixels.
+\end{nice-box}
+
+\begin{math_stroke}[Dyadic Pixel Approximation]
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+    % Grid
+    \draw[step=1, gray!30, thin] (0,0) grid (8,6);
+    
+    % Smooth Set A
+    \draw[thick, profblue, fill=profblue!10, opacity=0.5] (2,2) to[out=90,in=180] (4,5) to[out=0,in=90] (6,3) to[out=-90,in=0] (5,1) to[out=180,in=-90] (2,2);
+    \node[profblue] at (4,3) {\Large $A$};
+    
+    % Inner Approximation F (Yellow Pixels)
+    \fill[profyellow, opacity=0.6] (3,2) rectangle (5,3);
+    \fill[profyellow, opacity=0.6] (3,3) rectangle (5,4);
+    \draw[proforange, thick] (3,2) rectangle (5,4);
+    \node[proforange] at (4, 2.5) {$F$};
+
+    % Outer Approximation G (Red Pixels)
+    \draw[profred, very thick] (1,1) -- (6,1) -- (6,4) -- (7,4) -- (7,6) -- (3,6) -- (3,5) -- (2,5) -- (2,3) -- (1,3) -- cycle;
+    \node[profred] at (6.5, 4.5) {$G$};
+    
+    % Highlight a single column (Slice)
+    \fill[profgreen!20, opacity=0.5] (4, 0) rectangle (5, 6);
+    \draw[dashed, profgreen!60!black, thick] (4, 0) -- (4, 6);
+    \draw[dashed, profgreen!60!black, thick] (5, 0) -- (5, 6);
+    \node[profgreen!50!black] at (4.5, -0.5) {Slice Column $x$};
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}
+1. $A$ is sandwiched: $F \subset A \subset G$.
+2. This forces the slices to be sandwiched: $F_x \subset A_x \subset G_x$.
+3. Taking the measure of the slices: 
+   \[ \mu(F_x) \le \underline{\varphi}(x) \le \overline{\varphi}(x) \le \mu(G_x) \]
+4. Integrating the step functions $\mu(F_x)$ and $\mu(G_x)$ over the base $dx$ simply counts the total number of pixels in $F$ and $G$. Thus:
+   \[ \Vol(F) \le \int \underline{\varphi}(x) dx \le \int \overline{\varphi}(x) dx \le \Vol(G) \]
+5. Since we chose our grid such that $\Vol(G) - \Vol(F) < \epsilon$, as $\epsilon \to 0$, the outer and inner pixel volumes squeeze the marginal integrals perfectly to $\Vol(A)$.
+\end{explanation-of-steps}
+\end{math_stroke}
+
+% ==========================================
+% SECTION 8: FUBINI'S THEOREM
+% ==========================================
+\section{Fubini's Theorem: Cavalieri for Functions}
+
+\begin{spoken_clean}[End of Lecture Segment]
+Fubini's theorem is the immediate consequence of Cavalieri's Principle applied to functions instead of just shapes. 
+
+If you have a function $f(x,y)$ that is Riemann integrable over $A$, you can compute the total multi-dimensional integral by integrating over the slices first. You integrate over $y$ for a fixed $x$, and then you sum those results over all $x$. 
+
+The proof is identical. In fact, remember that the integral of a function is just the volume of its hypograph! Fubini's Theorem is quite literally just Cavalieri's Principle applied to the $n+1$ dimensional hypograph wedge of the function.
+\end{spoken_clean}
+
+\begin{orangeformula}
+\begin{theorem}[Fubini's Theorem (Informal)]
+Let $A \subset \mathbb{R}^k \times \mathbb{R}^{n-k}$ be a Jordan measurable set, and let $f(x,y)$ be Riemann integrable over $A$. The multiple integral can be evaluated by integrating over the vertical slices $A_x$ first, and then over the base coordinates $x$:
+\[
+\int_A f(x,y) \, d(x,y) = \int_{\mathbb{R}^k} \left( \int_{A_x} f(x,y) \, dy \right) dx
+\]
+\end{theorem}
+\end{orangeformula}
+
+\begin{didactic_insight}[The Grand Finale]
+The entire lecture culminates here. The 2D disk trick (where the function $x_3 = y_1$ created a wedge) was a manual, geometric application of Fubini's theorem! Using a visual trick to solve the integral before proving the theorem that justifies it beautifully completes the pedagogical loop.
+\end{didactic_insight}

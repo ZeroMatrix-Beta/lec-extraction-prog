@@ -13,13 +13,32 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        // 1. API Key sicher aus den Umgebungsvariablen laden
-        string? apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
-                      ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.User);
+        // 1. API Keys sicher aus den Umgebungsvariablen laden
+        string? apiKey1 = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
+                       ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.User);
+        string? apiKey2 = System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY") 
+                       ?? System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY", EnvironmentVariableTarget.User);
+
+        // Ändere diese Variable auf 1 oder 2, um das Projekt/Konto im Code zu wechseln
+        int activeKeyProfile = 2; 
+        string apiKey = "";
+
+        switch (activeKeyProfile)
+        {
+            case 2:
+                apiKey = apiKey2 ?? "";
+                Console.WriteLine("  [INFO] Verwende LECTURE_TRANSCRIPTION_API_KEY (Projekt 2)");
+                break;
+            case 1:
+            default:
+                apiKey = apiKey1 ?? "";
+                Console.WriteLine("  [INFO] Verwende GEMINI_API_KEY (Projekt 1)");
+                break;
+        }
 
         if (string.IsNullOrEmpty(apiKey))
         {
-            Console.WriteLine("Fehler: Die Umgebungsvariable GEMINI_API_KEY wurde nicht gefunden.");
+            Console.WriteLine("Fehler: Weder GEMINI_API_KEY noch LECTURE_TRANSCRIPTION_API_KEY wurden in den Umgebungsvariablen gefunden.");
             return;
         }
 
@@ -53,12 +72,29 @@ class Program
         // Den Startzustand (inkl. Beispiele) merken, um ihn bei 'clear' wiederherzustellen
         var initialHistory = new List<Content>(history);
 
+        Console.Write("\n[Setup] Möchtest du das Video 'monday-part-2-compressed.mp4' direkt anhängen und starten? (j/n): ");
+        bool autoStartVideo = Console.ReadLine()?.Trim().ToLower() == "j";
+        
+        string? initialInput = autoStartVideo 
+            ? "/attach monday-part-2-compressed.mp4 | WICHTIG: Das angehängte Video läuft in doppelter Geschwindigkeit (2x). Das heißt, du musst alle zeitlichen Constraints, die in gemini.md beschrieben sind, entsprechend anpassen: Bilde die logischen Blöcke alle 30 Sekunden statt jede Minute. Der externe Stopp ('Segment complete') muss nach exakt 5 bis 5.5 Minuten des komprimierten Videos erfolgen. Wenn das gesamte Video zu Ende ist, fordere KEIN 'Continue' mehr an. Bitte starte jetzt mit der Transkription!"
+            : null;
+
         // Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle,
         // sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
         while (true)
         {
-            Console.Write("\nDu: ");
-            string? input = Console.ReadLine();
+            string? input;
+            if (initialInput != null)
+            {
+                input = initialInput;
+                Console.WriteLine($"\nDu: {input}");
+                initialInput = null; // Nur beim allerersten Durchlauf verwenden
+            }
+            else
+            {
+                Console.Write("\nDu: ");
+                input = Console.ReadLine();
+            }
 
             if (string.IsNullOrWhiteSpace(input)) continue;
             if (input.ToLower() == "exit" || input.ToLower() == "quit") break;
@@ -239,7 +275,7 @@ class Program
     }
 
     /// <summary>
-    /// Parst den /attach-Befehl, lädt lokale Textdateien in den Speicher und 
+    /// Parst den \attach-Befehl, lädt lokale Textdateien in den Speicher und 
     /// streamt Medien-Dateien (Bilder, Videos, Audio) asynchron an die Google API.
     /// Wartet bei großen Medien-Dateien automatisch auf die serverseitige Verarbeitung.
     /// </summary>
