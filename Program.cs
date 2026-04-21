@@ -13,34 +13,32 @@ class Program
 {
     static async Task Main(string[] args)
     {
+        var chatSession = new ChatSession();
+        await chatSession.StartAsync();
+    }
+}
+
+class ChatSession
+{
+    // [AI Context] Global state for file resolution. 
+    // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
+    // Konfigurierbarer Basis-Pfad für deine Uploads. 
+    // Z.B.: @"C:\Users\miche\programming\lec-extraction-prog\uploads"
+    private string UploadFolderPath = @"";
+
+    // Absoluter Pfad zum Ordner für die automatisch zu ladende History.
+    // Z.B.: @"C:\Users\miche\programming\lec-extraction-prog\history"
+    private string HistoryFolderPath = @"";
+
+    // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
+    private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig und warte dann auf meine nächsten Anweisungen.";
+
+    public async Task StartAsync()
+    {
+        // [AI Context] Setup phase: Load API keys, configure client (custom timeout for large media), and initialize history.
         // 1. API Keys sicher aus den Umgebungsvariablen laden
-        string? apiKey1 = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
-                       ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.User);
-        string? apiKey2 = System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY") 
-                       ?? System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY", EnvironmentVariableTarget.User);
-
-        // Ändere diese Variable auf 1 oder 2, um das Projekt/Konto im Code zu wechseln
-        int activeKeyProfile = 2; 
-        string apiKey = "";
-
-        switch (activeKeyProfile)
-        {
-            case 2:
-                apiKey = apiKey2 ?? "";
-                Console.WriteLine("  [INFO] Verwende LECTURE_TRANSCRIPTION_API_KEY (Projekt 2)");
-                break;
-            case 1:
-            default:
-                apiKey = apiKey1 ?? "";
-                Console.WriteLine("  [INFO] Verwende GEMINI_API_KEY (Projekt 1)");
-                break;
-        }
-
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            Console.WriteLine("Fehler: Weder GEMINI_API_KEY noch LECTURE_TRANSCRIPTION_API_KEY wurden in den Umgebungsvariablen gefunden.");
-            return;
-        }
+        string? apiKey = ResolveApiKey();
+        if (string.IsNullOrEmpty(apiKey)) return;
 
         // 2. Den Client mit einem benutzerdefinierten Timeout erstellen
         // Der Standard-Timeout (100s) ist für große Datei-Uploads/Verarbeitung zu kurz.
@@ -54,8 +52,25 @@ class Program
         // 3. Zeigt das interaktive Menü zur Modellauswahl an und gibt die API-ID des gewählten Modells zurück.
         string selectedModel = SelectModel();
 
-        // 4. Liste für die Chat-Historie erstellen
+        string? initialInput = GetInitialHistoryCommand();
+
+        // 4. Starte die Haupt-Chat-Schleife
+        await RunChatSessionAsync(client, selectedModel, apiKey, initialInput);
+    }
+
+    // --- Ausgelagerte Methoden ---
+
+    /// <summary>
+    /// [AI Context] Main REPL loop. 
+    /// Mutates the 'history' list to maintain conversation state. Catches errors to prevent chat state corruption.
+    /// Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle,
+    /// sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
+    /// </summary>
+    private async Task RunChatSessionAsync(Client client, string selectedModel, string apiKey, string? initialInput)
+    {
         var history = new List<Content>();
+
+        var initialHistory = new List<Content>(history); // Den Startzustand merken
 
         Console.WriteLine($"\n--- Chat gestartet ({selectedModel}) ---");
         Console.WriteLine("Befehle:");
@@ -65,22 +80,6 @@ class Program
         Console.WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
         Console.WriteLine("  /modelle                  -> Zeigt alle Modelle mit Audio-Support an");
 
-        // 4. Lädt die System-Regeln (Config) und die LaTeX-Beispiele (History) asynchron vor
-        GenerateContentConfig? config = await LoadSystemConfigAsync();
-        await PreloadHistoryAsync(history);
-
-        // Den Startzustand (inkl. Beispiele) merken, um ihn bei 'clear' wiederherzustellen
-        var initialHistory = new List<Content>(history);
-
-        Console.Write("\n[Setup] Möchtest du das Video 'monday-part-2-compressed.mp4' direkt anhängen und starten? (j/n): ");
-        bool autoStartVideo = Console.ReadLine()?.Trim().ToLower() == "j";
-        
-        string? initialInput = autoStartVideo 
-            ? "/attach monday-part-2-compressed.mp4 | WICHTIG: Das angehängte Video läuft in doppelter Geschwindigkeit (2x). Das heißt, du musst alle zeitlichen Constraints, die in gemini.md beschrieben sind, entsprechend anpassen: Bilde die logischen Blöcke alle 30 Sekunden statt jede Minute. Der externe Stopp ('Segment complete') muss nach exakt 5 bis 5.5 Minuten des komprimierten Videos erfolgen. Wenn das gesamte Video zu Ende ist, fordere KEIN 'Continue' mehr an. Bitte starte jetzt mit der Transkription!"
-            : null;
-
-        // Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle,
-        // sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
         while (true)
         {
             string? input;
@@ -103,7 +102,7 @@ class Program
             {
                 history.Clear();
                 history.AddRange(initialHistory); // Startzustand wiederherstellen
-                Console.WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet frisch, behält aber deine LaTeX-Beispiele im Kopf.");
+                Console.WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
                 continue;
             }
 
@@ -133,25 +132,7 @@ class Program
 
             try
             {
-                Console.Write($"\nGemini: ");
-                string fullResponse = "";
-
-                // Streaming aktivieren und config mit System-Prompt übergeben
-                var responseStream = client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config);
-                await foreach (var chunk in responseStream)
-                {
-                    string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    Console.Write(chunkText);
-                    fullResponse += chunkText;
-                }
-                Console.WriteLine();
-                
-                // 7. KI-Antwort in die Historie aufnehmen
-                history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-                
-                // Optional: Verlauf in einer Log-Datei mitprotokollieren
-                string logInput = input.StartsWith("/attach") ? $"[Dateien] {promptText}" : input;
-                await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**Gemini:** {fullResponse}\n---\n");
+                await StreamGeminiResponseAsync(client, selectedModel, history, input, promptText);
             }
             catch (Exception ex)
             {
@@ -162,13 +143,105 @@ class Program
         }
     }
 
-    // --- Ausgelagerte Methoden ---
+    /// <summary>
+    /// [AI Context] Response streaming & state update.
+    /// Side-effects: Mutates 'history' list by appending the assistant's full response. Appends raw text to 'chat_log.md'.
+    /// Streamt die Antwort von Gemini asynchron in die Konsole und speichert das Ergebnis in der Historie und einem Logfile.
+    /// </summary>
+    private async Task StreamGeminiResponseAsync(Client client, string selectedModel, List<Content> history, string input, string promptText)
+    {
+        Console.Write($"\n{selectedModel}: ");
+        string fullResponse = "";
+
+        // Streaming aktivieren
+        var responseStream = client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history);
+        await foreach (var chunk in responseStream)
+        {
+            string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+            Console.Write(chunkText);
+            fullResponse += chunkText;
+        }
+        Console.WriteLine();
+        
+        // 7. KI-Antwort in die Historie aufnehmen
+        history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+        
+        // Optional: Verlauf in einer Log-Datei mitprotokollieren
+        string logInput = input.StartsWith("/attach") ? $"[Dateien] {promptText}" : input;
+        await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
+    }
+
+    /// <summary>
+    /// Lädt und wählt den konfigurierten API-Key aus den Umgebungsvariablen aus.
+    /// </summary>
+    private string? ResolveApiKey()
+    {
+        string? apiKey1 = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") 
+                       ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.User);
+        string? apiKey2 = System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY") 
+                       ?? System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY", EnvironmentVariableTarget.User);
+
+        // Ändere diese Variable auf 1 oder 2, um das Projekt/Konto im Code zu wechseln
+        int activeKeyProfile = 2; 
+        string apiKey = "";
+
+        switch (activeKeyProfile)
+        {
+            case 2:
+                apiKey = apiKey2 ?? "";
+                Console.WriteLine("  [INFO] Verwende LECTURE_TRANSCRIPTION_API_KEY (Projekt 2)");
+                break;
+            case 1:
+            default:
+                apiKey = apiKey1 ?? "";
+                Console.WriteLine("  [INFO] Verwende GEMINI_API_KEY (Projekt 1)");
+                break;
+        }
+
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            Console.WriteLine("Fehler: Weder GEMINI_API_KEY noch LECTURE_TRANSCRIPTION_API_KEY wurden in den Umgebungsvariablen gefunden.");
+            return null;
+        }
+
+        return apiKey;
+    }
+
+    /// <summary>
+    /// Fragt den Nutzer, ob eine bestehende History geladen werden soll, 
+    /// und baut den entsprechenden /attach Befehl zusammen.
+    /// </summary>
+    private string? GetInitialHistoryCommand()
+    {
+        Console.Write("\n[Setup] Möchtest du mit einer frischen History starten? (j/n, bei 'n' wird der 'history'-Ordner geladen): ");
+        bool loadHistory = Console.ReadLine()?.Trim().ToLower() == "n";
+
+        if (!loadHistory) return null;
+
+        if (string.IsNullOrWhiteSpace(HistoryFolderPath) || !Directory.Exists(HistoryFolderPath))
+        {
+            Console.WriteLine($"  [WARNUNG] Der History-Ordner '{HistoryFolderPath}' wurde nicht gefunden oder ist nicht konfiguriert.");
+            return null;
+        }
+
+        string[] historyFiles = Directory.GetFiles(HistoryFolderPath);
+        if (historyFiles.Length == 0)
+        {
+            Console.WriteLine($"  [INFO] Der History-Ordner '{HistoryFolderPath}' ist leer. Nichts zu laden.");
+            return null;
+        }
+
+        // Die `historyFiles` enthalten bereits die vollen, absoluten Pfade.
+        // Wir können sie direkt verwenden und für den Befehl in Anführungszeichen setzen.
+        string fileList = string.Join(", ", historyFiles.Select(p => $"\"{p}\""));
+        return $"/attach {fileList} | {InitialHistoryPrompt}";
+    }
 
     /// <summary>
     /// Präsentiert dem Nutzer ein aufgeräumtes Konsolen-Menü zur Auswahl des gewünschten Gemini-Modells.
     /// Fallback ist standardmäßig das schnelle und effiziente 'gemini-2.5-flash'.
     /// </summary>
-    static string SelectModel()
+    private string SelectModel()
     {
         Console.WriteLine("=== Gemini Chat-Konfiguration ===");
         Console.WriteLine("Wähle ein Modell:");
@@ -180,7 +253,7 @@ class Program
         Console.WriteLine("6) gemini-robotics-er-1.6-preview (Neues Robotics Modell)");
         Console.Write("Auswahl (1-6) [Standard: 1]: ");
         
-        string? choice = Console.ReadLine();
+        string? choice = Console.ReadLine()?.Trim();
         return choice switch
         {
             "2" => "gemini-2.5-flash-lite",
@@ -193,11 +266,13 @@ class Program
     }
 
     /// <summary>
+    /// [AI Context] Diagnostic tool. Uses raw HttpClient to fetch model details from REST API, 
+    /// bypassing the GenAI SDK to access raw JSON properties like 'inputTokenLimit'.
     /// Verbindet sich direkt mit der Google REST-API, um dynamisch eine Liste aller unterstützten Modelle 
     /// abzurufen und formatiert in der Konsole darzustellen (inklusive Token-Limits).
     /// </summary>
     /// <param name="apiKey">Der API-Schlüssel für die Authentifizierung.</param>
-    static async Task ShowAvailableModelsAsync(string apiKey)
+    private async Task ShowAvailableModelsAsync(string apiKey)
     {
         Console.WriteLine("\n[API] Rufe alle aktuell verfügbaren Modelle von Google ab...");
         try
@@ -234,47 +309,10 @@ class Program
     }
 
     /// <summary>
-    /// Lädt die System-Anweisungen (z.B. gemini.md) asynchron von der Festplatte,
-    /// um die grundlegenden Regeln und das Verhalten (Persona) der KI zu definieren.
-    /// </summary>
-    /// <returns>Die Konfiguration mit dem System-Prompt oder null, falls die Datei nicht existiert.</returns>
-    static async Task<GenerateContentConfig?> LoadSystemConfigAsync()
-    {
-        if (System.IO.File.Exists("gemini.md"))
-        {
-            string sysPrompt = await System.IO.File.ReadAllTextAsync("gemini.md");
-            Console.WriteLine("  [INFO] System-Prompt 'gemini.md' erfolgreich geladen! (LaTeX-Modus aktiv)");
-            return new GenerateContentConfig
-            {
-                SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = sysPrompt } } }
-            };
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Lädt vordefinierte Beispiel-Dateien (example1.tex, example2.tex) asynchron in den 
-    /// Chat-Verlauf und simuliert eine Bestätigung der KI, um Token und API-Requests zu sparen.
-    /// </summary>
-    /// <param name="history">Die Liste mit dem aktuellen Chat-Verlauf, die befüllt wird.</param>
-    static async Task PreloadHistoryAsync(List<Content> history)
-    {
-        if (System.IO.File.Exists("example1.tex") && System.IO.File.Exists("example2.tex"))
-        {
-            string ex1 = await System.IO.File.ReadAllTextAsync("example1.tex");
-            string ex2 = await System.IO.File.ReadAllTextAsync("example2.tex");
-            var exampleParts = new List<Part> {
-                new Part { Text = $"Hier sind zwei Beispiele für das gewünschte LaTeX-Format:\n\n--- DOKUMENT START (example1.tex) ---\n{ex1}\n--- DOKUMENT ENDE ---" },
-                new Part { Text = $"--- DOKUMENT START (example2.tex) ---\n{ex2}\n--- DOKUMENT ENDE ---" },
-                new Part { Text = "Bitte lies diese sorgfältig, bevor ich dir weitere Anweisungen gebe." }
-            };
-            history.Add(new Content { Role = "user", Parts = exampleParts });
-            history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "Ich habe die Protocol-Beispiele verstanden und werde mich bei der Transkription strikt an diese Vorlagen und semantischen Umgebungen halten." } } });
-            Console.WriteLine("  [INFO] Referenzdateien 'example1.tex' und 'example2.tex' automatisch in das Gedächtnis geladen!");
-        }
-    }
-
-    /// <summary>
+    /// [AI Context] Media & Document handler.
+    /// Side-effects: Mutates 'parts' list by appending local file contents or API FileData URIs. 
+    /// Handles file path resolution and long-polling for Gemini file processing state.
+    /// 
     /// Parst den \attach-Befehl, lädt lokale Textdateien in den Speicher und 
     /// streamt Medien-Dateien (Bilder, Videos, Audio) asynchron an die Google API.
     /// Wartet bei großen Medien-Dateien automatisch auf die serverseitige Verarbeitung.
@@ -283,7 +321,7 @@ class Program
     /// <param name="client">Der verbundene Gemini API-Client.</param>
     /// <param name="parts">Die Liste der Nachrichten-Teile, an die die Dateien angehängt werden.</param>
     /// <returns>Ein Tupel mit Erfolg-Status und dem extrahierten Text-Prompt.</returns>
-    static async Task<(bool success, string promptText)> HandleAttachmentsAsync(string input, Client client, List<Part> parts)
+    private async Task<(bool success, string promptText)> HandleAttachmentsAsync(string input, Client client, List<Part> parts)
     {
         string payload = input.Substring(8).Trim();
         string[] payloadParts = payload.Split('|', 2);
@@ -296,8 +334,19 @@ class Program
 
         foreach (var path in filePaths)
         {
-            string filePath = path.Trim().Trim('"', '\''); 
+            string originalPath = path.Trim().Trim('"', '\''); 
+            string filePath = originalPath;
             
+            // Falls ein Upload-Ordner gesetzt ist und der Pfad nicht absolut ist, kombiniere sie
+            if (!string.IsNullOrWhiteSpace(UploadFolderPath) && !Path.IsPathRooted(filePath))
+            {
+                string combinedPath = Path.Combine(UploadFolderPath, filePath);
+                if (System.IO.File.Exists(combinedPath))
+                {
+                    filePath = combinedPath;
+                }
+            }
+
             if (System.IO.File.Exists(filePath))
             {
                 string ext = Path.GetExtension(filePath).ToLower();
