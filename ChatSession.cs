@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 
@@ -23,6 +24,10 @@ public class ChatSession
   // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
   private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig und warte dann auf meine nächsten Anweisungen.";
 
+  // [GCS] Der Name deines Google Cloud Storage Buckets
+  // Z.B.: "en-linalg-biran-gemini-videos"
+  private readonly string GcsBucketName = "DEIN_BUCKET_NAME_HIER_EINTRAGEN";
+
   public ChatSession(string uploadFolder, string historyFolder)
   {
     UploadFolderPath = uploadFolder;
@@ -32,9 +37,8 @@ public class ChatSession
   public async Task StartAsync(string selectedModel)
   {
     // [AI Context] Setup phase: Load API keys, configure client (custom timeout for large media), and initialize history.
-    // 1. API Keys sicher aus den Umgebungsvariablen laden
-    string? apiKey = ResolveApiKey();
-    if (string.IsNullOrEmpty(apiKey)) return;
+    // 1. API Key laden (wird nur noch als Fallback für den /modelle Befehl genutzt)
+    string apiKey = ResolveApiKey() ?? "no-key";
 
     // 2. Den Client mit einem benutzerdefinierten Timeout erstellen
     // Der Standard-Timeout (100s) ist für große Datei-Uploads/Verarbeitung zu kurz.
@@ -43,7 +47,15 @@ public class ChatSession
       // Timeout auf 20 Minuten erhöhen, um die Verarbeitung großer Dateien zu ermöglichen
       Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
     };
-    var client = new Client(apiKey: apiKey, httpOptions: options);
+
+    // 3. Vertex AI Modus: Nutzt Google Cloud (Guthaben) statt AI Studio API Keys
+    Console.WriteLine("  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: en-linalg-biran-gemini)...");
+    var client = new Client(
+        vertexAI: true,
+        project: "en-linalg-biran-gemini",
+        location: "us-central1",
+        httpOptions: options
+    );
 
     string? initialInput = GetInitialHistoryCommand();
 
@@ -180,7 +192,7 @@ public class ChatSession
                    ?? System.Environment.GetEnvironmentVariable("ULTIMATE_API_KEY", EnvironmentVariableTarget.Machine);
 
     // Ändere diese Variable auf 1, 2 oder 3, um das Projekt/Konto im Code zu wechseln
-    int activeKeyProfile = 3;
+    int activeKeyProfile = 1; // Zurück auf den ersten Key (z.B. Free Tier) wechseln
     string apiKey = "";
 
     switch (activeKeyProfile)
@@ -350,28 +362,25 @@ public class ChatSession
             continue;
           }
 
-          Console.WriteLine($"  [API] Lade '{Path.GetFileName(filePath)}' hoch (dies kann je nach Dateigröße einen Moment dauern)...");
-          var uploadedFile = await client.Files.UploadAsync(filePath);
-
-          if (uploadedFile.State?.ToString().Equals("Processing", StringComparison.OrdinalIgnoreCase) == true)
+          Console.WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
+          try
           {
-            Console.Write("  [API] Warte auf Verarbeitung durch Google");
-            while (uploadedFile.State?.ToString().Equals("Processing", StringComparison.OrdinalIgnoreCase) == true)
-            {
-              Console.Write(".");
-              await Task.Delay(3000);
-              uploadedFile = await client.Files.GetAsync(uploadedFile.Name!);
-            }
-            Console.WriteLine();
+            var storageClient = await StorageClient.CreateAsync();
+            string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}"; // Verhindert Überschreiben
+
+            using var fileStream = System.IO.File.OpenRead(filePath);
+            await storageClient.UploadObjectAsync(GcsBucketName, objectName, mimeType, fileStream);
+
+            string gcsUri = $"gs://{GcsBucketName}/{objectName}";
+            Console.WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
+
+            parts.Add(new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } });
           }
-
-          if (uploadedFile.State?.ToString().Equals("Failed", StringComparison.OrdinalIgnoreCase) == true)
+          catch (Exception ex)
           {
-            Console.WriteLine($"  [Fehler] Die Datei '{Path.GetFileName(filePath)}' konnte von Google nicht verarbeitet werden.");
+            Console.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten: {ex.Message}");
             continue;
           }
-
-          parts.Add(new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } });
         }
 
         loadedNames.Add(Path.GetFileName(filePath));

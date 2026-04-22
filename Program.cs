@@ -39,7 +39,7 @@ class Program
     Console.WriteLine("4) gemini-1.5-flash     (Schnelles Fallback für Video/Audio, 1M+ Tokens)");
     Console.WriteLine("5) gemini-robotics-er-1.5-preview (Free Tier, Multimodal)");
     Console.WriteLine("6) gemini-robotics-er-1.6-preview (Neues Robotics Modell)");
-    Console.WriteLine("7) gemini-3.1-pro       (Neuestes Pro Modell)");
+    Console.WriteLine("7) gemini-2.5-pro       (Neuestes Pro Modell)");
     Console.WriteLine("8) --- FFmpeg Manager (Lokale Video/Audio-Verarbeitung) ---");
     Console.Write("Auswahl (1-8) [Standard: 1]: ");
 
@@ -51,7 +51,7 @@ class Program
       "4" => "gemini-1.5-flash",
       "5" => "gemini-robotics-er-1.5-preview",
       "6" => "gemini-robotics-er-1.6-preview",
-      "7" => "gemini-3.1-pro",
+      "7" => "gemini-2.5-pro",
       "8" => "ffmpeg",
       _ => "gemini-2.5-flash"
     };
