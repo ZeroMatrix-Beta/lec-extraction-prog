@@ -4,10 +4,21 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 
+/// <summary>
+/// [AI Context] Manages FFmpeg preprocessing tasks for video/audio files before feeding them to the AI.
+/// Handles time-stretching (atempo), downscaling (1 fps), and overlapping splits to optimize AI token usage.
+/// </summary>
 public class AIStudioFfmpegManager
 {
-  private string DefaultSourceFolder = @"C:\VideoConverter\Input";
-  private string DefaultDestinationFolder = @"C:\VideoConverter\Output";
+  // [AI Context] Configurable default fallback paths.
+  private string DefaultSourceFolder;
+  private string DefaultDestinationFolder;
+
+  public AIStudioFfmpegManager(string sourceFolder, string destinationFolder)
+  {
+    DefaultSourceFolder = sourceFolder;
+    DefaultDestinationFolder = destinationFolder;
+  }
 
   public Task StartAsync()
   {
@@ -33,10 +44,11 @@ public class AIStudioFfmpegManager
 
     // ====================================================================
     // Human: Behold! The tiny, clean main processing loop!
+    // It dynamically routes to either the split processor or the standard one.
     // ====================================================================
     foreach (string inputFile in filesToProcess)
     {
-      if (mode == "3" || mode == "4")
+      if (mode == "9" || mode == "10")
       {
         ProcessSplitVideo(inputFile, destFolder);
       }
@@ -67,12 +79,13 @@ public class AIStudioFfmpegManager
   {
     Console.WriteLine("\n======================================");
     Console.WriteLine("All files processed successfully.");
-    Console.WriteLine("Press any key to exit...");
-    Console.ReadKey();
+    Console.WriteLine("Press Enter to exit...");
+    Console.ReadLine();
   }
 
   private bool SetupDirectories(out string sourceFolder, out string destFolder)
   {
+    // [Human] Interactive prompt to easily override the default hardcoded paths on the fly.
     sourceFolder = DefaultSourceFolder;
     destFolder = DefaultDestinationFolder;
 
@@ -108,35 +121,61 @@ public class AIStudioFfmpegManager
   private string ShowMenuAndGetMode()
   {
     Console.WriteLine("\nConversion Options:");
-    Console.WriteLine("1. Single File: Fixed 720p, 1.5x Speed, 1 FPS (Hardcoded Bitrates)");
-    Console.WriteLine("2. Single File: Universal AI Format (Visually Lossless/Orig Res, 1.5x Speed, 1 FPS, 256k Mono)");
-    Console.WriteLine("3. Single File: Universal AI Format + Split into 3 parts (3-minute overlap)");
-    Console.WriteLine("4. Batch Folder: Universal AI Format + Split into 3 parts (ALL FILES IN SOURCE)");
-    Console.WriteLine("5. Custom: Provide your own specific FFmpeg parameters (Single File)");
-    Console.Write("\nChoose an option (1, 2, 3, 4, or 5)?: ");
+    Console.WriteLine("1.  Single File: Fixed 720p, 1.5x Speed, 1 FPS (Hardcoded Bitrates)");
+    Console.WriteLine("2.  Batch Folder: Fixed 720p, 1.5x Speed, 1 FPS (Hardcoded Bitrates)");
+    Console.WriteLine("3.  Single File: Universal AI Format (1.5x Speed, 1 FPS, 256k Mono) [Okay Quality]");
+    Console.WriteLine("4.  Batch Folder: Universal AI Format (1.5x Speed, 1 FPS, 256k Mono) [Okay Quality]");
+    Console.WriteLine("5.  Single File: High-Fidelity AI Format (1.2x Speed, 1 FPS, 256k Mono) [Good Quality]");
+    Console.WriteLine("6.  Batch Folder: High-Fidelity AI Format (1.2x Speed, 1 FPS, 256k Mono) [Good Quality]");
+    Console.WriteLine("7.  Single File: Gold Standard AI Format (1.0x Speed, 1 FPS, Original Audio) [Best Quality]");
+    Console.WriteLine("8.  Batch Folder: Gold Standard AI Format (1.0x Speed, 1 FPS, Original Audio) [Best Quality]");
+    Console.WriteLine("9.  Single File: Split into 3 parts (1 FPS, Original Audio, 3-min overlap)");
+    Console.WriteLine("10. Batch Folder: Split into 3 parts (1 FPS, Original Audio, 3-min overlap)");
+    Console.WriteLine("11. Custom: Provide your own specific FFmpeg parameters (Single File)");
+    Console.WriteLine("12. Custom: Provide your own specific FFmpeg parameters (Batch Folder)");
+    Console.Write("\nChoose an option (1-12)?: ");
 
     return Console.ReadLine()?.Trim() ?? "";
   }
 
   private bool IsValidMode(string mode)
   {
-    return mode == "1" || mode == "2" || mode == "3" || mode == "4" || mode == "5";
+    if (int.TryParse(mode, out int m))
+    {
+      return m >= 1 && m <= 12;
+    }
+    return false;
   }
 
   private string GetCommandTemplate(string mode, out string outputExtension)
   {
+    // [AI Context] Maps user selection to specific FFmpeg filtergraphs.
+    // - setpts: Adjusts video framerate/speed to maintain sync.
+    // - atempo: Changes audio speed WITHOUT changing pitch (vital for AI transcription).
+    // - aformat=channel_layouts=mono: Mixes stereo to mono BEFORE atempo to prevent phase artifacts.
     outputExtension = ".mp4";
     string template = "";
 
     switch (mode)
     {
       case "1":
+      case "2":
         template = "-i \"{0}\" -vf \"setpts=0.666667*PTS,scale=1280:720,fps=1\" -c:v libx264 -b:v 150k -maxrate 150k -bufsize 300k -c:a aac -b:a 192k -ac 1 -af \"atempo=1.5\" -r 1 \"{1}\"";
         break;
-      case "2":
+      case "3":
+      case "4":
         template = "-i \"{0}\" -vf \"setpts=0.666667*PTS,fps=1\" -c:v libx264 -crf 18 -c:a aac -b:a 256k -ac 1 -af \"atempo=1.5\" -r 1 \"{1}\"";
         break;
       case "5":
+      case "6":
+        template = "-i \"{0}\" -vf \"setpts=0.833333*PTS,fps=1\" -c:v libx264 -crf 18 -c:a aac -b:a 256k -ar 48000 -af \"aformat=channel_layouts=mono,atempo=1.2\" -r 1 \"{1}\"";
+        break;
+      case "7":
+      case "8":
+        template = "-i \"{0}\" -vf \"fps=1\" -c:v libx264 -crf 18 -c:a copy -r 1 \"{1}\"";
+        break;
+      case "11":
+      case "12":
         Console.WriteLine("\nEnter custom parameters.");
         Console.WriteLine("Tip: Use {0} as the placeholder for the input file path, and {1} for the output file path.");
         Console.WriteLine("Example: -i \"{0}\" -vcodec libx264 \"{1}\"");
@@ -147,7 +186,7 @@ public class AIStudioFfmpegManager
         outputExtension = Console.ReadLine() ?? ".mp4";
         if (!outputExtension.StartsWith(".")) outputExtension = "." + outputExtension;
         break;
-        // Modes 3 & 4 handle their templates actively during execution, so we skip standard template binding here
+        // Modes 9 & 10 handle their templates actively during execution, so we skip standard template binding here
     }
 
     return template;
@@ -164,7 +203,7 @@ public class AIStudioFfmpegManager
     }
 
     // Interactive single-file selection
-    if (mode == "1" || mode == "2" || mode == "3" || mode == "5")
+    if (mode == "1" || mode == "3" || mode == "5" || mode == "7" || mode == "9" || mode == "11")
     {
       Console.WriteLine("\nAvailable files in Source folder:");
       for (int i = 0; i < inputFiles.Length; i++)
@@ -186,7 +225,7 @@ public class AIStudioFfmpegManager
     }
 
     // Batch mode
-    if (mode == "4")
+    if (mode == "2" || mode == "4" || mode == "6" || mode == "8" || mode == "10" || mode == "12")
     {
       Console.WriteLine($"\nFound {inputFiles.Length} file(s) to process in batch mode.");
       return inputFiles;
@@ -197,6 +236,8 @@ public class AIStudioFfmpegManager
 
   private void ProcessSplitVideo(string inputFile, string destFolder)
   {
+    // [AI Context] Intelligent splitting logic for long lectures.
+    // Adds a 3-minute overlap (180s) between segments so the AI never loses a sentence at the cut.
     string fileName = Path.GetFileNameWithoutExtension(inputFile);
     double duration = GetVideoDuration(inputFile);
 
@@ -211,10 +252,19 @@ public class AIStudioFfmpegManager
 
     if (duration <= overlap * 2)
     {
-      Console.WriteLine("  Warning: Video is too short to meaningfully split into 3 parts with a 3-minute overlap. Processing as a single file.");
-      string outputFile = Path.Combine(destFolder, $"{fileName}-compressed.mp4");
-      string ffmpegArgs = $"-i \"{inputFile}\" -vf \"setpts=0.666667*PTS,fps=1\" -c:v libx264 -crf 18 -c:a aac -b:a 256k -ac 1 -af \"atempo=1.5\" -r 1 \"{outputFile}\"";
-      RunFFmpeg(ffmpegArgs);
+      Console.WriteLine("  Warning: Video is too short to meaningfully split. Processing as a single file.");
+      Console.WriteLine("  Action: Extracting video at 1 FPS and copying original audio (No overlap)...");
+      string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
+      string ffmpegArgs = $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -crf 18 -c:a copy -r 1 \"{outputFile}\"";
+
+      if (RunFFmpeg(ffmpegArgs))
+      {
+        Console.WriteLine($"  [SUCCESS] Single-file processing complete!");
+      }
+      else
+      {
+        Console.WriteLine($"  [FAILED] Error processing file.");
+      }
     }
     else
     {
@@ -226,12 +276,21 @@ public class AIStudioFfmpegManager
         double end = start + segmentLength;
         if (end > duration) end = duration;
 
-        string outputFile = Path.Combine(destFolder, $"{fileName}_part{i + 1}-compressed.mp4");
-        string ffmpegArgs = $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"setpts=0.666667*PTS,fps=1\" -c:v libx264 -crf 18 -c:a aac -b:a 256k -ac 1 -af \"atempo=1.5\" -r 1 \"{outputFile}\"";
+        string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_part{i + 1}-compressed", ".mp4");
+        string ffmpegArgs = $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -crf 18 -c:a copy -r 1 \"{outputFile}\"";
 
         Console.WriteLine($"\n  Part {i + 1}/3: Start={start:F2}s, End={end:F2}s");
+        Console.WriteLine($"  Action: Extracting at 1 FPS and copying original audio...");
         Console.WriteLine($"  Running FFmpeg...");
-        RunFFmpeg(ffmpegArgs);
+
+        if (RunFFmpeg(ffmpegArgs))
+        {
+          Console.WriteLine($"  [SUCCESS] Part {i + 1} completed!");
+        }
+        else
+        {
+          Console.WriteLine($"  [FAILED] Error processing Part {i + 1}.");
+        }
       }
     }
   }
@@ -239,17 +298,41 @@ public class AIStudioFfmpegManager
   private void ProcessStandardVideo(string inputFile, string destFolder, string commandTemplate, string outputExtension)
   {
     string fileName = Path.GetFileNameWithoutExtension(inputFile);
-    string outputFile = Path.Combine(destFolder, $"{fileName}-compressed{outputExtension}");
+    string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-compressed", outputExtension);
     string ffmpegArgs = string.Format(commandTemplate, inputFile, outputFile);
 
     Console.WriteLine($"\nProcessing: {Path.GetFileName(inputFile)}...");
     Console.WriteLine($"Running FFmpeg with arguments: {ffmpegArgs}");
 
-    RunFFmpeg(ffmpegArgs);
+    if (RunFFmpeg(ffmpegArgs))
+    {
+      Console.WriteLine($"\n  [SUCCESS] Extraction and compression complete!");
+      Console.WriteLine($"  => FROM: {inputFile}");
+      Console.WriteLine($"  => TO:   {outputFile}");
+    }
+    else
+    {
+      Console.WriteLine($"\n  [FAILED] An error occurred while processing {Path.GetFileName(inputFile)}.");
+    }
+  }
+
+  private string GetUniqueFilePath(string destFolder, string baseName, string extension)
+  {
+    string fullPath = Path.Combine(destFolder, $"{baseName}{extension}");
+    int copyIndex = 1;
+
+    while (File.Exists(fullPath))
+    {
+      fullPath = Path.Combine(destFolder, $"{baseName}-copy-{copyIndex}{extension}");
+      copyIndex++;
+    }
+
+    return fullPath;
   }
 
   private double GetVideoDuration(string filePath)
   {
+    // [AI Context] Uses ffprobe to securely extract the precise duration of the media file in seconds.
     ProcessStartInfo startInfo = new ProcessStartInfo
     {
       FileName = "ffprobe",
@@ -261,7 +344,7 @@ public class AIStudioFfmpegManager
 
     try
     {
-      using (Process process = Process.Start(startInfo))
+      using (Process? process = Process.Start(startInfo))
       {
         if (process == null) return -1;
 
@@ -281,26 +364,45 @@ public class AIStudioFfmpegManager
     return -1;
   }
 
-  private void RunFFmpeg(string arguments)
+  private bool RunFFmpeg(string arguments)
   {
+    // [AI Context] Executes FFmpeg silently in the background.
+    // Redirects StandardError to capture actual crashes without spamming the console with standard progress buffers.
     ProcessStartInfo startInfo = new ProcessStartInfo
     {
       FileName = "ffmpeg",
-      Arguments = arguments,
+      Arguments = arguments + " -v error", // -v error suppresses all progress output spam
       UseShellExecute = false,
-      CreateNoWindow = false // Set true to hide the ffmpeg console window
+      CreateNoWindow = true,
+      RedirectStandardError = true,
+      RedirectStandardOutput = true
     };
 
     try
     {
-      using (Process process = Process.Start(startInfo))
+      using (Process? process = Process.Start(startInfo))
       {
-        process?.WaitForExit();
+        if (process == null) return false;
+
+        string errorOutput = "";
+        process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorOutput += e.Data + "\n"; };
+        process.BeginErrorReadLine();
+        process.StandardOutput.ReadToEnd();
+
+        process.WaitForExit();
+
+        if (process.ExitCode != 0)
+        {
+          Console.WriteLine($"  [FFmpeg Error] {errorOutput.Trim()}");
+          return false;
+        }
+        return true;
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Error running FFmpeg. Make sure it is installed and added to PATH.\nDetails: {ex.Message}");
+      Console.WriteLine($"  [Error] Failed to start FFmpeg: {ex.Message}");
+      return false;
     }
   }
 }

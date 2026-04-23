@@ -12,10 +12,14 @@ class Program
   // Konfigurationsobjekt für die Chat-Session
   public static readonly ChatConfig SessionConfig = new ChatConfig
   {
+    UseVertexAI = false, // Setze auf 'true' für Google Cloud Vertex AI, 'false' für Google AI Studio (Free-Tier API Keys)
     UploadFolder = @"D:\gemin-upload-folder",
     HistoryFolder = @"D:\gemini-chat-history",
     LogFolder = @"D:\gemini-logs",
     GcsBucketName = "biran-linalg-source-material",
+    IncludePaths = new[] {
+      @"c:\Users\miche\programming\lec-extraction-prog\gemini.md"
+    },
     AI = new AIConfig
     {
       // Temperature steuert die Zufälligkeit bzw. Kreativität der Antworten (Range: 0.0 - 2.0 für Gemini).
@@ -39,10 +43,10 @@ class Program
       TopK = 10,              // Geändert auf 10: Der perfekte Sweetspot für strikten LaTeX-Code und natürlichen Text.
 
       // MaxOutputTokens setzt eine harte Obergrenze für die Länge der generierten Antwort.
-      // - 65536 (~64k): Das Maximum für neuere Modelle wie Gemini 2.5 (Pro/Flash). Erlaubt das Generieren gigantischer LaTeX-Skripte am Stück!
-      // - 8192: Das alte Maximum (z.B. für Gemini 1.5 Modelle).
-      //   WICHTIG: Das Input-Limit (Kontextfenster) liegt bei den Modellen noch viel höher (1 bis 2 Millionen Tokens).
-      // - Niedrigere Werte (z.B. 1000 - 2000): Nützlich, wenn man die KI zu kurzen, prägnanten Antworten zwingen möchte.
+      // WICHTIG: Dieser Wert ändert NICHT das Verhalten oder die Ausführlichkeit der KI. 
+      // Wenn das Limit erreicht wird, bricht die Antwort einfach mitten im Satz ab (Truncation).
+      // Um kurze Antworten zu erzwingen, nutze stattdessen Prompts (z.B. "Antworte in einem Satz").
+      // - 65536 (~64k): Das Maximum für neuere Modelle (Gemini 2.5). Erlaubt gigantische LaTeX-Skripte am Stück!
       MaxOutputTokens = 65536
     }
   };
@@ -51,14 +55,9 @@ class Program
   {
     string selectedOption = SelectModel();
 
-    if (selectedOption == "ffmpeg")
+    if (selectedOption == "aistudio_ffmpeg")
     {
-      var ffmpegProcessor = new FfmpegProcessor(FfmpegSourceFolder, FfmpegTargetFolder);
-      await ffmpegProcessor.StartInteractiveAsync();
-    }
-    else if (selectedOption == "aistudio_ffmpeg")
-    {
-      var aiStudioFfmpegManager = new AIStudioFfmpegManager();
+      var aiStudioFfmpegManager = new AIStudioFfmpegManager(FfmpegSourceFolder, FfmpegTargetFolder);
       await aiStudioFfmpegManager.StartAsync();
     }
     else
@@ -79,9 +78,8 @@ class Program
     Console.WriteLine("5) gemini-robotics-er-1.5-preview (Free Tier, Multimodal)");
     Console.WriteLine("6) gemini-robotics-er-1.6-preview (Neues Robotics Modell)");
     Console.WriteLine("7) gemini-2.5-pro       (Neuestes Pro Modell)");
-    Console.WriteLine("8) --- FFmpeg Manager (Lokale Video/Audio-Verarbeitung) ---");
-    Console.WriteLine("9) --- Try AI sduio FFMPEG Manager ---");
-    Console.Write("Auswahl (1-9) [Standard: 1]: ");
+    Console.WriteLine("8) --- AI Studio FFmpeg Manager (Lokale Video/Audio-Verarbeitung) ---");
+    Console.Write("Auswahl (1-8) [Standard: 1]: ");
 
     string? choice = Console.ReadLine()?.Trim();
     return choice switch
@@ -92,8 +90,7 @@ class Program
       "5" => "gemini-robotics-er-1.5-preview",
       "6" => "gemini-robotics-er-1.6-preview",
       "7" => "gemini-2.5-pro",
-      "8" => "ffmpeg",
-      "9" => "aistudio_ffmpeg",
+      "8" => "aistudio_ffmpeg",
       _ => "gemini-2.5-flash"
     };
   }
@@ -101,10 +98,12 @@ class Program
 
 public class ChatConfig
 {
+  public bool UseVertexAI { get; set; } = false;
   public string UploadFolder { get; set; } = "";
   public string HistoryFolder { get; set; } = "";
   public string LogFolder { get; set; } = "";
   public string GcsBucketName { get; set; } = "";
+  public string[] IncludePaths { get; set; } = Array.Empty<string>();
   public AIConfig AI { get; set; } = new AIConfig();
 }
 

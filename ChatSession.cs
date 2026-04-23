@@ -31,8 +31,12 @@ public class ChatSession
   // [Log-Ordner] Status für den aktuellen Programmablauf
   private readonly string LogFolderPath;
   private string CurrentSessionLogPath = "";
+  private string CurrentSessionDateSuffix = "";
   private int ResponseCount = 1;
   private AIConfig AIParams;
+  private readonly string[] IncludePaths;
+  private readonly bool UseVertexAI;
+  private bool IsAiStudio;
 
   public ChatSession(ChatConfig config)
   {
@@ -40,9 +44,12 @@ public class ChatSession
     HistoryFolderPath = config.HistoryFolder;
     LogFolderPath = config.LogFolder;
     GcsBucketName = config.GcsBucketName;
-    
+    IncludePaths = config.IncludePaths ?? Array.Empty<string>();
+    UseVertexAI = config.UseVertexAI;
+
     // Wir legen eine lokale Kopie an, damit /set Befehle nur diese Sitzung modifizieren
-    AIParams = new AIConfig {
+    AIParams = new AIConfig
+    {
       Temperature = config.AI.Temperature,
       TopP = config.AI.TopP,
       TopK = config.AI.TopK,
@@ -64,41 +71,54 @@ public class ChatSession
       Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
     };
 
-    // 3. Vertex AI Modus: Nutzt Google Cloud (Guthaben) statt AI Studio API Keys
-    Console.WriteLine("  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: en-linalg-biran-gemini)...");
-    var client = new Client(
-        vertexAI: true,
-        project: "en-linalg-biran-gemini",
-        location: "us-central1", // Geändert, da neueste Modelle oft nicht sofort in europe-west6 verfügbar sind
-        httpOptions: options
-    );
+    // 3. Client initialisieren: Prüfen ob Free-Tier (AI Studio) oder Vertex AI genutzt werden soll
+    Client client;
+    IsAiStudio = !UseVertexAI || selectedModel.Contains("gemma", StringComparison.OrdinalIgnoreCase);
+    if (IsAiStudio)
+    {
+      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API (Free-Tier API-Keys aktiv)...");
+      client = new Client(apiKey: apiKey, httpOptions: options);
+    }
+    else
+    {
+      Console.WriteLine("  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: en-linalg-biran-gemini)...");
+      client = new Client(
+          vertexAI: true,
+          project: "en-linalg-biran-gemini",
+          location: "us-central1", // Geändert, da neueste Modelle oft nicht sofort in europe-west6 verfügbar sind
+          httpOptions: options
+      );
+    }
 
     // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
     await CleanupGcsBucketAsync();
 
     // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
+    CurrentSessionDateSuffix = GetFormattedDateString(DateTime.Now);
+
     if (!string.IsNullOrWhiteSpace(LogFolderPath))
     {
       if (!Directory.Exists(LogFolderPath))
       {
         Directory.CreateDirectory(LogFolderPath);
       }
-      
+
       int maxIndex = 0;
       foreach (var dir in Directory.GetDirectories(LogFolderPath))
       {
         string dirName = Path.GetFileName(dir);
         if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase))
         {
-          if (int.TryParse(dirName.Substring(7), out int parsedIndex))
+          string[] dirParts = dirName.Split('-');
+          if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int parsedIndex))
           {
             if (parsedIndex > maxIndex) maxIndex = parsedIndex;
           }
         }
       }
-      
+
       int folderIndex = maxIndex + 1;
-      CurrentSessionLogPath = Path.Combine(LogFolderPath, $"folder-{folderIndex}");
+      CurrentSessionLogPath = Path.Combine(LogFolderPath, $"folder-{folderIndex}-{CurrentSessionDateSuffix}");
       Directory.CreateDirectory(CurrentSessionLogPath);
     }
 
@@ -126,11 +146,11 @@ public class ChatSession
     Console.WriteLine("Befehle:");
     Console.WriteLine("  exit / quit               -> Beendet den Chat");
     Console.WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-    Console.WriteLine("  /attach datei1, datei2 | Frage -> Hängt Dateien an und stellt eine Frage dazu.");
+    Console.WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
     Console.WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
-    Console.WriteLine("  /modelle                  -> Zeigt alle Modelle mit Audio-Support an");
-    Console.WriteLine("  /set temp [wert]          -> Ändert die Temperatur für die nächste Antwort (z.B. /set temp 0.5)");
-    Console.WriteLine("  /set tokens [wert]        -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. /set tokens 8192)");
+    Console.WriteLine("  modelle                   -> Zeigt alle Modelle mit Audio-Support an");
+    Console.WriteLine("  set temp [wert]           -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
+    Console.WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
 
     while (true)
     {
@@ -162,45 +182,47 @@ public class ChatSession
       string promptText = input;
 
       // 5a. Sonderbefehl: Ruft die Google API ab, um alle aktuell verfügbaren Modelle aufzulisten.
-      if (input.ToLower() == "/modelle" || input.ToLower() == "modelle")
+      if (input.ToLower() == "modelle")
       {
         await ShowAvailableModelsAsync(apiKey);
         continue;
       }
 
       // 5c. Temperatur dynamisch anpassen
-      if (input.StartsWith("/set temp ", StringComparison.OrdinalIgnoreCase))
+      if (input.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
       {
-        string tempValueStr = input.Substring(10).Trim();
+        string tempValueStr = input.Substring(9).Trim();
         // Use InvariantCulture to ensure '.' is used as the decimal separator
         if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
         {
-          this.AIParams.Temperature = newTemp;
-          Console.WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {this.AIParams.Temperature:F1} gesetzt.");
+          AIParams.Temperature = newTemp;
+          Console.WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
         }
-        else {
+        else
+        {
           Console.WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
         }
         continue;
       }
 
       // 5d. MaxOutputTokens dynamisch anpassen
-      if (input.StartsWith("/set tokens ", StringComparison.OrdinalIgnoreCase))
+      if (input.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
       {
-        string tokenValueStr = input.Substring(12).Trim();
+        string tokenValueStr = input.Substring(11).Trim();
         if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
         {
-          this.AIParams.MaxOutputTokens = newTokens;
-          Console.WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {this.AIParams.MaxOutputTokens} gesetzt.");
+          AIParams.MaxOutputTokens = newTokens;
+          Console.WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
         }
-        else {
+        else
+        {
           Console.WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
         }
         continue;
       }
 
-      // 5b. Datei-Anhang mit kombiniertem Prompt (Z.B.: /attach file1.txt, file2.jpg | Erkläre das Bild)
-      if (input.StartsWith("/attach ", StringComparison.OrdinalIgnoreCase))
+      // 5b. Datei-Anhang mit kombiniertem Prompt (Z.B.: attach file1.txt, file2.jpg | Erkläre das Bild)
+      if (input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
       {
         var (success, parsedPrompt) = await HandleAttachmentsAsync(input, client, parts);
         if (!success) continue;
@@ -242,10 +264,10 @@ public class ChatSession
     // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
     var config = new GenerateContentConfig
     {
-      Temperature = this.AIParams.Temperature,
-      TopP = this.AIParams.TopP,
-      TopK = this.AIParams.TopK,
-      MaxOutputTokens = this.AIParams.MaxOutputTokens
+      Temperature = AIParams.Temperature,
+      TopP = AIParams.TopP,
+      TopK = AIParams.TopK,
+      MaxOutputTokens = AIParams.MaxOutputTokens
     };
 
     // Streaming aktivieren
@@ -262,13 +284,13 @@ public class ChatSession
     history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
 
     // Optional: Verlauf in einer Log-Datei mitprotokollieren
-    string logInput = input.StartsWith("/attach") ? $"[Dateien] {promptText}" : input;
+    string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
     await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
 
     // Antwort zusätzlich als saubere .tex-Datei im aktuellen Session-Ordner speichern
     if (!string.IsNullOrWhiteSpace(CurrentSessionLogPath))
     {
-      string texFilePath = Path.Combine(CurrentSessionLogPath, $"response-{ResponseCount}.tex");
+      string texFilePath = Path.Combine(CurrentSessionLogPath, $"response-{ResponseCount}-{CurrentSessionDateSuffix}.tex");
       await System.IO.File.WriteAllTextAsync(texFilePath, fullResponse);
       ResponseCount++;
     }
@@ -346,7 +368,7 @@ public class ChatSession
     // Die `historyFiles` enthalten bereits die vollen, absoluten Pfade.
     // Wir können sie direkt verwenden und für den Befehl in Anführungszeichen setzen.
     string fileList = string.Join(", ", historyFiles.Select(p => $"\"{p}\""));
-    return $"/attach {fileList} | {InitialHistoryPrompt}";
+    return $"attach {fileList} | {InitialHistoryPrompt}";
   }
 
   /// <summary>
@@ -397,17 +419,17 @@ public class ChatSession
   /// Side-effects: Mutates 'parts' list by appending local file contents or API FileData URIs. 
   /// Handles file path resolution and long-polling for Gemini file processing state.
   /// 
-  /// Parst den \attach-Befehl, lädt lokale Textdateien in den Speicher und 
+  /// Parst den attach-Befehl, lädt lokale Textdateien in den Speicher und 
   /// streamt Medien-Dateien (Bilder, Videos, Audio) asynchron an die Google API.
   /// Wartet bei großen Medien-Dateien automatisch auf die serverseitige Verarbeitung.
   /// </summary>
-  /// <param name="input">Die komplette Benutzereingabe inklusive /attach.</param>
+  /// <param name="input">Die komplette Benutzereingabe inklusive attach.</param>
   /// <param name="client">Der verbundene Gemini API-Client.</param>
   /// <param name="parts">Die Liste der Nachrichten-Teile, an die die Dateien angehängt werden.</param>
   /// <returns>Ein Tupel mit Erfolg-Status und dem extrahierten Text-Prompt.</returns>
   private async Task<(bool success, string promptText)> HandleAttachmentsAsync(string input, Client client, List<Part> parts)
   {
-    string payload = input.Substring(8).Trim();
+    string payload = input.Substring(7).Trim();
     string[] payloadParts = payload.Split('|', 2);
     string filesPart = payloadParts[0];
     string promptText = payloadParts.Length > 1 ? payloadParts[1].Trim() : "";
@@ -421,13 +443,38 @@ public class ChatSession
       string originalPath = path.Trim().Trim('"', '\'');
       string filePath = originalPath;
 
-      // Falls ein Upload-Ordner gesetzt ist und der Pfad nicht absolut ist, kombiniere sie
-      if (!string.IsNullOrWhiteSpace(UploadFolderPath) && !Path.IsPathRooted(filePath))
+      // 1. Zuerst prüfen, ob der Pfad direkt oder relativ zum UploadFolder gefunden wird
+      if (!System.IO.File.Exists(filePath) && !Path.IsPathRooted(originalPath))
       {
-        string combinedPath = Path.Combine(UploadFolderPath, filePath);
-        if (System.IO.File.Exists(combinedPath))
+        if (!string.IsNullOrWhiteSpace(UploadFolderPath))
         {
-          filePath = combinedPath;
+          string combinedPath = Path.Combine(UploadFolderPath, originalPath);
+          if (System.IO.File.Exists(combinedPath))
+          {
+            filePath = combinedPath;
+          }
+        }
+
+        // 2. Falls immer noch nicht gefunden, in den konfigurierten IncludePaths suchen
+        if (!System.IO.File.Exists(filePath) && IncludePaths != null)
+        {
+          foreach (var includePath in IncludePaths)
+          {
+            if (System.IO.File.Exists(includePath) && Path.GetFileName(includePath).Equals(originalPath, StringComparison.OrdinalIgnoreCase))
+            {
+              filePath = includePath; // Exakte Datei in den IncludePaths gefunden
+              break;
+            }
+            else if (System.IO.Directory.Exists(includePath))
+            {
+              string combinedPath = Path.Combine(includePath, originalPath);
+              if (System.IO.File.Exists(combinedPath))
+              {
+                filePath = combinedPath; // Ordner in den IncludePaths gefunden, Datei darin gefunden
+                break;
+              }
+            }
+          }
         }
       }
 
@@ -461,24 +508,45 @@ public class ChatSession
             continue;
           }
 
-          Console.WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
-          try
+          if (IsAiStudio)
           {
-            var storageClient = await StorageClient.CreateAsync();
-            string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}"; // Verhindert Überschreiben
+            Console.WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
+            try
+            {
+              // AI Studio unterstützt keine gs:// Links. Wir nutzen die native File API.
+              var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
+              var uploadedFile = await client.Files.UploadAsync(filePath, config: uploadConfig);
 
-            using var fileStream = System.IO.File.OpenRead(filePath);
-            await storageClient.UploadObjectAsync(GcsBucketName, objectName, mimeType, fileStream);
-
-            string gcsUri = $"gs://{GcsBucketName}/{objectName}";
-            Console.WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
-
-            parts.Add(new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } });
+              Console.WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
+              parts.Add(new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } });
+            }
+            catch (Exception ex)
+            {
+              Console.WriteLine($"  [Fehler] Beim Upload über File API ist ein Fehler aufgetreten: {ex.Message}");
+              continue;
+            }
           }
-          catch (Exception ex)
+          else
           {
-            Console.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten: {ex.Message}");
-            continue;
+            Console.WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
+            try
+            {
+              var storageClient = await StorageClient.CreateAsync();
+              string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}"; // Verhindert Überschreiben
+
+              using var fileStream = System.IO.File.OpenRead(filePath);
+              await storageClient.UploadObjectAsync(GcsBucketName, objectName, mimeType, fileStream);
+
+              string gcsUri = $"gs://{GcsBucketName}/{objectName}";
+              Console.WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
+
+              parts.Add(new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } });
+            }
+            catch (Exception ex)
+            {
+              Console.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten: {ex.Message}");
+              continue;
+            }
           }
         }
 
@@ -529,5 +597,20 @@ public class ChatSession
     {
       Console.WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
     }
+  }
+
+  /// <summary>
+  /// Generates a formatted date string like "april-23rd-26".
+  /// </summary>
+  private string GetFormattedDateString(DateTime date)
+  {
+    string month = date.ToString("MMMM", System.Globalization.CultureInfo.InvariantCulture).ToLower();
+    int day = date.Day;
+    string suffix = (day % 10 == 1 && day != 11) ? "st"
+                  : (day % 10 == 2 && day != 12) ? "nd"
+                  : (day % 10 == 3 && day != 13) ? "rd"
+                  : "th";
+    string year = date.ToString("yyyy");
+    return $"{month}-{day}{suffix}-{year}";
   }
 }
