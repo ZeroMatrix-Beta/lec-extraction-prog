@@ -26,18 +26,28 @@ public class ChatSession
 
   // [GCS] Der Name deines Google Cloud Storage Buckets
   // Z.B.: "en-linalg-biran-gemini-videos"
-  private readonly string GcsBucketName = "source-material ";
+  private readonly string GcsBucketName;
 
   // [Log-Ordner] Status für den aktuellen Programmablauf
   private readonly string LogFolderPath;
   private string CurrentSessionLogPath = "";
   private int ResponseCount = 1;
+  private AIConfig AIParams;
 
-  public ChatSession(string uploadFolder, string historyFolder, string logFolder)
+  public ChatSession(ChatConfig config)
   {
-    UploadFolderPath = uploadFolder;
-    HistoryFolderPath = historyFolder;
-    LogFolderPath = logFolder;
+    UploadFolderPath = config.UploadFolder;
+    HistoryFolderPath = config.HistoryFolder;
+    LogFolderPath = config.LogFolder;
+    GcsBucketName = config.GcsBucketName;
+    
+    // Wir legen eine lokale Kopie an, damit /set Befehle nur diese Sitzung modifizieren
+    AIParams = new AIConfig {
+      Temperature = config.AI.Temperature,
+      TopP = config.AI.TopP,
+      TopK = config.AI.TopK,
+      MaxOutputTokens = config.AI.MaxOutputTokens
+    };
   }
 
   public async Task StartAsync(string selectedModel)
@@ -59,7 +69,7 @@ public class ChatSession
     var client = new Client(
         vertexAI: true,
         project: "en-linalg-biran-gemini",
-        location: "us-central1",
+        location: "us-central1", // Geändert, da neueste Modelle oft nicht sofort in europe-west6 verfügbar sind
         httpOptions: options
     );
 
@@ -73,11 +83,21 @@ public class ChatSession
       {
         Directory.CreateDirectory(LogFolderPath);
       }
-      int folderIndex = 1;
-      while (Directory.Exists(Path.Combine(LogFolderPath, $"folder-{folderIndex}")))
+      
+      int maxIndex = 0;
+      foreach (var dir in Directory.GetDirectories(LogFolderPath))
       {
-        folderIndex++;
+        string dirName = Path.GetFileName(dir);
+        if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase))
+        {
+          if (int.TryParse(dirName.Substring(7), out int parsedIndex))
+          {
+            if (parsedIndex > maxIndex) maxIndex = parsedIndex;
+          }
+        }
       }
+      
+      int folderIndex = maxIndex + 1;
       CurrentSessionLogPath = Path.Combine(LogFolderPath, $"folder-{folderIndex}");
       Directory.CreateDirectory(CurrentSessionLogPath);
     }
@@ -109,6 +129,8 @@ public class ChatSession
     Console.WriteLine("  /attach datei1, datei2 | Frage -> Hängt Dateien an und stellt eine Frage dazu.");
     Console.WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
     Console.WriteLine("  /modelle                  -> Zeigt alle Modelle mit Audio-Support an");
+    Console.WriteLine("  /set temp [wert]          -> Ändert die Temperatur für die nächste Antwort (z.B. /set temp 0.5)");
+    Console.WriteLine("  /set tokens [wert]        -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. /set tokens 8192)");
 
     while (true)
     {
@@ -143,6 +165,37 @@ public class ChatSession
       if (input.ToLower() == "/modelle" || input.ToLower() == "modelle")
       {
         await ShowAvailableModelsAsync(apiKey);
+        continue;
+      }
+
+      // 5c. Temperatur dynamisch anpassen
+      if (input.StartsWith("/set temp ", StringComparison.OrdinalIgnoreCase))
+      {
+        string tempValueStr = input.Substring(10).Trim();
+        // Use InvariantCulture to ensure '.' is used as the decimal separator
+        if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
+        {
+          this.AIParams.Temperature = newTemp;
+          Console.WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {this.AIParams.Temperature:F1} gesetzt.");
+        }
+        else {
+          Console.WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
+        }
+        continue;
+      }
+
+      // 5d. MaxOutputTokens dynamisch anpassen
+      if (input.StartsWith("/set tokens ", StringComparison.OrdinalIgnoreCase))
+      {
+        string tokenValueStr = input.Substring(12).Trim();
+        if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
+        {
+          this.AIParams.MaxOutputTokens = newTokens;
+          Console.WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {this.AIParams.MaxOutputTokens} gesetzt.");
+        }
+        else {
+          Console.WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
+        }
         continue;
       }
 
@@ -186,8 +239,17 @@ public class ChatSession
     Console.Write($"\n{selectedModel}: ");
     string fullResponse = "";
 
+    // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
+    var config = new GenerateContentConfig
+    {
+      Temperature = this.AIParams.Temperature,
+      TopP = this.AIParams.TopP,
+      TopK = this.AIParams.TopK,
+      MaxOutputTokens = this.AIParams.MaxOutputTokens
+    };
+
     // Streaming aktivieren
-    var responseStream = client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history);
+    var responseStream = client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config);
     await foreach (var chunk in responseStream)
     {
       string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
@@ -208,7 +270,6 @@ public class ChatSession
     {
       string texFilePath = Path.Combine(CurrentSessionLogPath, $"response-{ResponseCount}.tex");
       await System.IO.File.WriteAllTextAsync(texFilePath, fullResponse);
-      Console.WriteLine($"[INFO] LaTeX-Antwort gespeichert in: {texFilePath}");
       ResponseCount++;
     }
   }
@@ -376,6 +437,7 @@ public class ChatSession
 
         if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext))
         {
+          Console.WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
           string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
           parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(filePath)}) ---\n{fileContent}\n--- DOKUMENT ENDE ---" });
         }
@@ -429,20 +491,12 @@ public class ChatSession
       }
     }
 
-    if (filesLoaded && string.IsNullOrWhiteSpace(promptText))
-    {
-      Console.WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
-      Console.WriteLine("  [INFO] Kein Prompt angegeben. Sende automatischen Start-Befehl an Gemini...");
-      promptText = "Hier ist das Material. Bitte starte mit der Transkription exakt nach den Regeln des System-Protocols.";
-    }
-    else if (!filesLoaded)
+    if (!filesLoaded)
     {
       return (false, promptText);
     }
-    else
-    {
-      Console.WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
-    }
+
+    Console.WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
 
     return (true, promptText);
   }
