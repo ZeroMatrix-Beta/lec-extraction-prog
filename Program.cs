@@ -1,10 +1,10 @@
-﻿﻿﻿using System;
+﻿﻿using System;
 using System.Threading.Tasks;
 
 class Program
 {
   // === Zentrale Pfad-Konfiguration ===
-  
+
   // Ordner für den FFmpeg-Prozessor (Videodateien -> MP3)
   public static string FfmpegSourceFolder = @"D:\ffmpeg-tool\source";
   public static string FfmpegTargetFolder = @"D:\ffmpeg-tool\target";
@@ -23,7 +23,7 @@ class Program
       // - 0.7 bis 1.0: Ausgewogen. Standard-Wert für natürliche Chats, Zusammenfassungen und normale Textgenerierung.
       // - 1.5 bis 2.0: Sehr kreativ bis chaotisch. Erlaubt unerwartete Wortkombinationen, erhöht aber das Risiko von Halluzinationen.
       Temperature = 0.1f,
-      
+
       // TopP (Nucleus Sampling) steuert die Auswahl dynamisch basierend auf der kumulativen Wahrscheinlichkeit (Range: 0.0 - 1.0).
       // Die KI wählt die kleinste Menge an Wörtern aus, deren summierte Wahrscheinlichkeit P erreicht.
       // - TopP = 0.95 bis 1.0: Standardwert. Erlaubt eine große Vielfalt und Kreativität (gut für Chats).
@@ -31,13 +31,13 @@ class Program
       // - TopP = 0.1 bis 0.7: Sehr restriktiv. Zwingt die KI, fast ausschließlich die absolut wahrscheinlichsten Standard-Wörter zu nutzen.
       // - TopP = 0.0: Theoretisches Minimum. Maximal deterministisch (quasi identisch mit TopK = 1). Erlaubt keinerlei Abweichungen.
       TopP = 0.9f,
-      
+
       // TopK steuert das Vokabular der KI. Bei jedem Schritt werden nur die K wahrscheinlichsten nächsten Wörter in Betracht gezogen.
       // - TopK = 40: Standardwert für normale Chats und kreatives Schreiben.
       // - TopK = 10 bis 20: Guter Mittelweg für strukturierte, faktenbasierte Texte.
       // - TopK = 1 (Greedy Decoding): Wählt immer exakt das 1 wahrscheinlichste Wort. Maximal deterministisch und perfekt, um Halluzinationen in LaTeX zu verhindern.
       TopK = 10,              // Geändert auf 10: Der perfekte Sweetspot für strikten LaTeX-Code und natürlichen Text.
-      
+
       // MaxOutputTokens setzt eine harte Obergrenze für die Länge der generierten Antwort.
       // - 65536 (~64k): Das Maximum für neuere Modelle wie Gemini 2.5 (Pro/Flash). Erlaubt das Generieren gigantischer LaTeX-Skripte am Stück!
       // - 8192: Das alte Maximum (z.B. für Gemini 1.5 Modelle).
@@ -55,6 +55,11 @@ class Program
     {
       var ffmpegProcessor = new FfmpegProcessor(FfmpegSourceFolder, FfmpegTargetFolder);
       await ffmpegProcessor.StartInteractiveAsync();
+    }
+    else if (selectedOption == "aistudio_ffmpeg")
+    {
+      var aiStudioFfmpegManager = new AIStudioFfmpegManager();
+      await aiStudioFfmpegManager.StartAsync();
     }
     else
     {
@@ -75,7 +80,8 @@ class Program
     Console.WriteLine("6) gemini-robotics-er-1.6-preview (Neues Robotics Modell)");
     Console.WriteLine("7) gemini-2.5-pro       (Neuestes Pro Modell)");
     Console.WriteLine("8) --- FFmpeg Manager (Lokale Video/Audio-Verarbeitung) ---");
-    Console.Write("Auswahl (1-8) [Standard: 1]: ");
+    Console.WriteLine("9) --- Try AI sduio FFMPEG Manager ---");
+    Console.Write("Auswahl (1-9) [Standard: 1]: ");
 
     string? choice = Console.ReadLine()?.Trim();
     return choice switch
@@ -87,6 +93,7 @@ class Program
       "6" => "gemini-robotics-er-1.6-preview",
       "7" => "gemini-2.5-pro",
       "8" => "ffmpeg",
+      "9" => "aistudio_ffmpeg",
       _ => "gemini-2.5-flash"
     };
   }
