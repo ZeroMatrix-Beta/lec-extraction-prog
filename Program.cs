@@ -1,13 +1,16 @@
 ﻿﻿using System;
 using System.Threading.Tasks;
+using FfmpegUtilities;
 
 class Program
 {
   // === Zentrale Pfad-Konfiguration ===
 
   // Ordner für den FFmpeg-Prozessor (Videodateien -> MP3)
-  public static string FfmpegSourceFolder = @"D:\ffmpeg-tool\source";
-  public static string FfmpegTargetFolder = @"D:\ffmpeg-tool\target";
+  public static string FfmpegSourceFolder = @"D:\lecture-videos\d-und-a/";
+  //public static string FfmpegSourceFolder = @"D:\ffmpeg-tool\source";
+  public static string FfmpegTargetFolder = @"D:\lecture-videos\d-und-a/new";
+  //public static string FfmpegTargetFolder = @"D:\ffmpeg-tool\target";
 
   // Konfigurationsobjekt für die Chat-Session
   public static readonly ChatConfig SessionConfig = new ChatConfig
@@ -57,8 +60,8 @@ class Program
 
     if (selectedOption == "aistudio_ffmpeg")
     {
-      var aiStudioFfmpegManager = new AIStudioFfmpegManager(FfmpegSourceFolder, FfmpegTargetFolder);
-      await aiStudioFfmpegManager.StartAsync();
+      var ffmpegMenu = new FfmpegInteractiveMenu(FfmpegSourceFolder, FfmpegTargetFolder);
+      await ffmpegMenu.StartAsync();
     }
     else
     {
