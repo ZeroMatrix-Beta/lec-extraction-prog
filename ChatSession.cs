@@ -26,12 +26,18 @@ public class ChatSession
 
   // [GCS] Der Name deines Google Cloud Storage Buckets
   // Z.B.: "en-linalg-biran-gemini-videos"
-  private readonly string GcsBucketName = "DEIN_BUCKET_NAME_HIER_EINTRAGEN";
+  private readonly string GcsBucketName = "source-material ";
 
-  public ChatSession(string uploadFolder, string historyFolder)
+  // [Log-Ordner] Status für den aktuellen Programmablauf
+  private readonly string LogFolderPath;
+  private string CurrentSessionLogPath = "";
+  private int ResponseCount = 1;
+
+  public ChatSession(string uploadFolder, string historyFolder, string logFolder)
   {
     UploadFolderPath = uploadFolder;
     HistoryFolderPath = historyFolder;
+    LogFolderPath = logFolder;
   }
 
   public async Task StartAsync(string selectedModel)
@@ -56,6 +62,25 @@ public class ChatSession
         location: "us-central1",
         httpOptions: options
     );
+
+    // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
+    await CleanupGcsBucketAsync();
+
+    // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
+    if (!string.IsNullOrWhiteSpace(LogFolderPath))
+    {
+      if (!Directory.Exists(LogFolderPath))
+      {
+        Directory.CreateDirectory(LogFolderPath);
+      }
+      int folderIndex = 1;
+      while (Directory.Exists(Path.Combine(LogFolderPath, $"folder-{folderIndex}")))
+      {
+        folderIndex++;
+      }
+      CurrentSessionLogPath = Path.Combine(LogFolderPath, $"folder-{folderIndex}");
+      Directory.CreateDirectory(CurrentSessionLogPath);
+    }
 
     string? initialInput = GetInitialHistoryCommand();
 
@@ -146,6 +171,9 @@ public class ChatSession
         history.RemoveAt(history.Count - 1);
       }
     }
+
+    Console.WriteLine("\n[INFO] Chat beendet. Räume temporäre Dateien im Cloud Storage auf...");
+    await CleanupGcsBucketAsync();
   }
 
   /// <summary>
@@ -174,6 +202,15 @@ public class ChatSession
     // Optional: Verlauf in einer Log-Datei mitprotokollieren
     string logInput = input.StartsWith("/attach") ? $"[Dateien] {promptText}" : input;
     await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
+
+    // Antwort zusätzlich als saubere .tex-Datei im aktuellen Session-Ordner speichern
+    if (!string.IsNullOrWhiteSpace(CurrentSessionLogPath))
+    {
+      string texFilePath = Path.Combine(CurrentSessionLogPath, $"response-{ResponseCount}.tex");
+      await System.IO.File.WriteAllTextAsync(texFilePath, fullResponse);
+      Console.WriteLine($"[INFO] LaTeX-Antwort gespeichert in: {texFilePath}");
+      ResponseCount++;
+    }
   }
 
   /// <summary>
@@ -408,5 +445,35 @@ public class ChatSession
     }
 
     return (true, promptText);
+  }
+
+  /// <summary>
+  /// [GCS] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket.
+  /// Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
+  /// </summary>
+  private async Task CleanupGcsBucketAsync()
+  {
+    if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;
+
+    try
+    {
+      var storageClient = await StorageClient.CreateAsync();
+      Console.WriteLine($"  [GCS] Prüfe Bucket '{GcsBucketName}' auf alte/temporäre Dateien...");
+      var objects = storageClient.ListObjectsAsync(GcsBucketName);
+      int count = 0;
+      await foreach (var obj in objects)
+      {
+        await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
+        count++;
+      }
+      if (count > 0)
+      {
+        Console.WriteLine($"  [GCS] {count} Datei(en) erfolgreich gelöscht.");
+      }
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
+    }
   }
 }

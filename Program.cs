@@ -10,8 +10,10 @@ class Program
   public static string FfmpegTargetFolder = @"";
 
   // Ordner für die Gemini-ChatSession (Uploads und History)
-  public static string ChatUploadFolder = @"";
+  public static string ChatUploadFolder = @"D:\lecture videos";
   public static string ChatHistoryFolder = @"";
+  // Absoluter Pfad für den designierten Log-Ordner, in dem die folder-x Ordner erstellt werden
+  public static string ChatLogFolder = @"D:\gemini-logs";
 
   static async Task Main(string[] args)
   {
@@ -24,7 +26,7 @@ class Program
     }
     else
     {
-      var chatSession = new ChatSession(ChatUploadFolder, ChatHistoryFolder);
+      var chatSession = new ChatSession(ChatUploadFolder, ChatHistoryFolder, ChatLogFolder);
       await chatSession.StartAsync(selectedOption);
     }
   }
