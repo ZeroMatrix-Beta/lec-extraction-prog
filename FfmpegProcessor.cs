@@ -3,6 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
+/// <summary>
+/// [AI Context] LEGACY CLASS. This class represents the older iteration of the FFmpeg implementation.
+/// It has been mostly superseded by the FfmpegInteractiveMenu and FfmpegToolkit classes but remains for backward compatibility.
+/// [Human] ACHTUNG: Alter Code! Für neue FFmpeg Features solltest du stattdessen die Datei 'FfmpegToolkit.cs' verwenden.
+/// </summary>
 public class FfmpegProcessor
 {
   // [AI Context] Konfigurierbare Pfade für die FFmpeg-Verarbeitung.
@@ -26,6 +31,8 @@ public class FfmpegProcessor
 
   /// <summary>
   /// Startet eine interaktive Konsole zur Steuerung der FFmpeg-Aufgaben.
+  /// [AI Context] Loops indefinitely until explicit 'exit' command.
+  /// [Human] Das alte Text-Menü.
   /// </summary>
   public async Task StartInteractiveAsync()
   {

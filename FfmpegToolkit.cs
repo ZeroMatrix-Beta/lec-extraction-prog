@@ -9,12 +9,14 @@ namespace FfmpegUtilities
   /// <summary>
   /// Core FFmpeg toolset. Independent of any console/interactive logic.
   /// Can be safely called from background tasks, ChatSession, or APIs.
+  /// [Human] Hier passiert die wahre Magie! Diese Klasse baut die exakten FFmpeg-Befehle zusammen und führt sie aus.
   /// </summary>
   public class FfmpegToolkit
   {
     /// <summary>
     /// [AI Context] Splits long lecture videos into smaller segments with overlapping audio/video.
     /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
+    /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
     /// </summary>
     public async Task<bool> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false)
     {
@@ -31,6 +33,7 @@ namespace FfmpegUtilities
 
       // [AI Context] Mono audio effectively halves the bandwidth and token size for speech-to-text models
       // without losing any transcription accuracy. The 'aformat' filter enforces correct metadata.
+      // [Human] KI-Spracherkennung braucht kein Stereo. Mono spart uns gigantische Mengen an Tokens, Geld und Upload-Zeit.
       string audioArgs = downmixToMono ? "-c:a aac -b:a 256k -ac 1 -ar 48000 -af \"aformat=channel_layouts=mono\"" : "-c:a copy";
 
       if (duration <= overlapSeconds * 2 || parts <= 1)
@@ -72,6 +75,7 @@ namespace FfmpegUtilities
     /// [AI Context] A highly flexible generic method to prepare videos for AI analysis.
     /// Adjusts speed (atempo), drops framerate (fps=1), and downmixes audio to mono to minimize token usage
     /// while preserving perfectly understandable speech and legible board states.
+    /// [Human] Der Standard-Prozess: Macht das Video schneller, reduziert es auf 1 Bild pro Sekunde (reicht für Tafeln!) und macht Audio zu Mono.
     /// </summary>
     public async Task<bool> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000)
     {
@@ -130,6 +134,7 @@ namespace FfmpegUtilities
 
     /// <summary>
     /// Legacy/Hardcoded fast 720p profile for standard batch processing with strict bitrates.
+    /// [Human] Alter, fester Code von früher. Eher für den menschlichen Gebrauch als für die KI gedacht.
     /// </summary>
     public async Task<bool> LegacyCodeProcessFast720pVideoAsync(string inputFile, string destFolder)
     {
@@ -151,6 +156,7 @@ namespace FfmpegUtilities
 
     /// <summary>
     /// Executes custom, raw FFmpeg commands supplied directly by the user.
+    /// [Human] Führt komplett frei von dir eingetippte FFmpeg-Parameter aus.
     /// </summary>
     public async Task<bool> ProcessCustomVideoAsync(string inputFile, string destFolder, string commandTemplate, string outputExtension)
     {

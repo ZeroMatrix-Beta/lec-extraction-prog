@@ -9,6 +9,11 @@ using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 
+/// <summary>
+/// [AI Context] Core REPL (Read-Eval-Print Loop) manager for the conversational AI interface.
+/// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
+/// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
+/// </summary>
 public class ChatSession
 {
   // [AI Context] Global state for file resolution. 
@@ -37,7 +42,9 @@ public class ChatSession
   private readonly string[] IncludePaths;
   private readonly bool UseVertexAI;
   private bool IsAiStudio;
+  private AttachmentHandler _attachmentHandler;
 
+  // [AI Context] Constructor injects config dependencies to isolate state.
   public ChatSession(ChatConfig config)
   {
     UploadFolderPath = config.UploadFolder;
@@ -47,6 +54,8 @@ public class ChatSession
     IncludePaths = config.IncludePaths ?? Array.Empty<string>();
     UseVertexAI = config.UseVertexAI;
 
+    // [AI Context] Creates a localized deep copy of AI parameters.
+    // [Human] Kopiert die Standard-Werte, damit wir sie später mit "/set temp" im Chat verändern können, ohne das Original zu überschreiben.
     // Wir legen eine lokale Kopie an, damit /set Befehle nur diese Sitzung modifizieren
     AIParams = new AIConfig
     {
@@ -57,6 +66,10 @@ public class ChatSession
     };
   }
 
+  /// <summary>
+  /// [AI Context] Asynchronous entry point for the session. Initializes API clients and directory structures.
+  /// [Human] Startet die Session, verbindet sich mit Google und erstellt die Log-Ordner für diesen Chat-Verlauf.
+  /// </summary>
   public async Task StartAsync(string selectedModel)
   {
     // [AI Context] Setup phase: Load API keys, configure client (custom timeout for large media), and initialize history.
@@ -64,6 +77,9 @@ public class ChatSession
     string apiKey = ResolveApiKey() ?? "no-key";
 
     // 2. Den Client mit einem benutzerdefinierten Timeout erstellen
+    // [Human] TIPP: Falls es genau HIER einen Kompilier-Fehler gibt ("HttpOptions nicht gefunden"), 
+    // liegt das an einem Update des Google.GenAI SDKs. In ganz neuen Versionen ist der Timeout oft direkt im Konstruktor von 'Client'.
+    // [AI Context] Increases HttpClient timeout to 20 minutes to prevent socket closures during large video file polling.
     // Der Standard-Timeout (100s) ist für große Datei-Uploads/Verarbeitung zu kurz.
     var options = new HttpOptions
     {
@@ -76,7 +92,7 @@ public class ChatSession
     IsAiStudio = !UseVertexAI || selectedModel.Contains("gemma", StringComparison.OrdinalIgnoreCase);
     if (IsAiStudio)
     {
-      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API (Free-Tier API-Keys aktiv)...");
+      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio (Developer API-Key aktiv)...");
       client = new Client(apiKey: apiKey, httpOptions: options);
     }
     else
@@ -90,9 +106,13 @@ public class ChatSession
       );
     }
 
+    _attachmentHandler = new AttachmentHandler(client, UploadFolderPath, IncludePaths, IsAiStudio, GcsBucketName);
+
     // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
     await CleanupGcsBucketAsync();
 
+    // [AI Context] Implements session persistence by isolating text/LaTeX outputs in discrete timestamped directories.
+    // [Human] Erstellt für jede neue Chat-Sitzung einen eigenen Ordner, damit nichts aus Versehen überschrieben wird.
     // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
     CurrentSessionDateSuffix = GetFormattedDateString(DateTime.Now);
 
@@ -140,6 +160,8 @@ public class ChatSession
   {
     var history = new List<Content>();
 
+    // [AI Context] Cache initial state to allow memory resets without restarting the runtime.
+    // [Human] Speichert den Zustand nach dem ersten Laden ab. So funktioniert der "clear" Befehl!
     var initialHistory = new List<Content>(history); // Den Startzustand merken
 
     Console.WriteLine($"\n--- Chat gestartet ({selectedModel}) ---");
@@ -170,6 +192,8 @@ public class ChatSession
       if (string.IsNullOrWhiteSpace(input)) continue;
       if (input.ToLower() == "exit" || input.ToLower() == "quit") break;
 
+      // [AI Context] Purges active conversation state.
+      // [Human] Setzt den Chatbot zurück, falls er "verwirrt" ist oder du das Thema komplett wechseln möchtest.
       if (input.ToLower() == "clear" || input.ToLower() == "reset")
       {
         history.Clear();
@@ -224,9 +248,10 @@ public class ChatSession
       // 5b. Datei-Anhang mit kombiniertem Prompt (Z.B.: attach file1.txt, file2.jpg | Erkläre das Bild)
       if (input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
       {
-        var (success, parsedPrompt) = await HandleAttachmentsAsync(input, client, parts);
+        var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(input);
         if (!success) continue;
         promptText = parsedPrompt;
+        parts.AddRange(attachmentParts);
       }
 
       // 6. Text-Prompt anhängen und an die Historie übergeben
@@ -237,6 +262,7 @@ public class ChatSession
 
       try
       {
+        // [AI Context] Hands off to streaming handler. Mutates 'history' internally.
         await StreamGeminiResponseAsync(client, selectedModel, history, input, promptText);
       }
       catch (Exception ex)
@@ -261,6 +287,7 @@ public class ChatSession
     Console.Write($"\n{selectedModel}: ");
     string fullResponse = "";
 
+    // [AI Context] Maps current dynamic AI params to the Request payload.
     // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
     var config = new GenerateContentConfig
     {
@@ -287,6 +314,8 @@ public class ChatSession
     string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
     await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
 
+    // [AI Context] File I/O: Dumps raw stream into a .tex file. Assumes model follows LaTeX protocol formatting.
+    // [Human] Speichert JEDE Antwort zusätzlich als saubere LaTeX Datei im Ordner!
     // Antwort zusätzlich als saubere .tex-Datei im aktuellen Session-Ordner speichern
     if (!string.IsNullOrWhiteSpace(CurrentSessionLogPath))
     {
@@ -297,6 +326,8 @@ public class ChatSession
   }
 
   /// <summary>
+  /// [AI Context] Environment variable parser for robust credential loading across OS environments.
+  /// [Human] Sucht deinen API Key in den Windows Umgebungsvariablen. So musst du ihn nicht unsicher in den Code schreiben.
   /// Lädt und wählt den konfigurierten API-Key aus den Umgebungsvariablen aus.
   /// </summary>
   private string? ResolveApiKey()
@@ -328,7 +359,7 @@ public class ChatSession
       case 1:
       default:
         apiKey = apiKey1 ?? "";
-        Console.WriteLine("  [INFO] Verwende GEMINI_API_KEY (Projekt 1)");
+        Console.WriteLine("  [INFO] Verwende GEMINI_API_KEY (Projekt 1 - Pay-as-you-go/AI Studio)");
         break;
     }
 
@@ -415,180 +446,15 @@ public class ChatSession
   }
 
   /// <summary>
-  /// [AI Context] Media & Document handler.
-  /// Side-effects: Mutates 'parts' list by appending local file contents or API FileData URIs. 
-  /// Handles file path resolution and long-polling for Gemini file processing state.
-  /// 
-  /// Parst den attach-Befehl, lädt lokale Textdateien in den Speicher und 
-  /// streamt Medien-Dateien (Bilder, Videos, Audio) asynchron an die Google API.
-  /// Wartet bei großen Medien-Dateien automatisch auf die serverseitige Verarbeitung.
-  /// </summary>
-  /// <param name="input">Die komplette Benutzereingabe inklusive attach.</param>
-  /// <param name="client">Der verbundene Gemini API-Client.</param>
-  /// <param name="parts">Die Liste der Nachrichten-Teile, an die die Dateien angehängt werden.</param>
-  /// <returns>Ein Tupel mit Erfolg-Status und dem extrahierten Text-Prompt.</returns>
-  private async Task<(bool success, string promptText)> HandleAttachmentsAsync(string input, Client client, List<Part> parts)
-  {
-    string payload = input.Substring(7).Trim();
-    string[] payloadParts = payload.Split('|', 2);
-    string filesPart = payloadParts[0];
-    string promptText = payloadParts.Length > 1 ? payloadParts[1].Trim() : "";
-
-    string[] filePaths = filesPart.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
-    bool filesLoaded = false;
-    var loadedNames = new List<string>();
-    var searchedPaths = new List<string>();
-
-    foreach (var path in filePaths)
-    {
-      string originalPath = path.Trim().Trim('"', '\'');
-      string filePath = originalPath;
-      searchedPaths.Add(Path.GetFullPath(originalPath));
-
-      // 1. Zuerst prüfen, ob der Pfad direkt oder relativ zum UploadFolder gefunden wird
-      if (!System.IO.File.Exists(filePath) && !Path.IsPathRooted(originalPath))
-      {
-        if (!string.IsNullOrWhiteSpace(UploadFolderPath))
-        {
-          string combinedPath = Path.Combine(UploadFolderPath, originalPath);
-          searchedPaths.Add(combinedPath);
-          if (System.IO.File.Exists(combinedPath))
-          {
-            filePath = combinedPath;
-          }
-        }
-
-        // 2. Falls immer noch nicht gefunden, in den konfigurierten IncludePaths suchen
-        if (!System.IO.File.Exists(filePath) && IncludePaths != null)
-        {
-          foreach (var includePath in IncludePaths)
-          {
-            if (System.IO.File.Exists(includePath) && Path.GetFileName(includePath).Equals(originalPath, StringComparison.OrdinalIgnoreCase))
-            {
-              filePath = includePath; // Exakte Datei in den IncludePaths gefunden
-              break;
-            }
-            else if (System.IO.Directory.Exists(includePath))
-            {
-              string combinedPath = Path.Combine(includePath, originalPath);
-              searchedPaths.Add(combinedPath);
-              if (System.IO.File.Exists(combinedPath))
-              {
-                filePath = combinedPath; // Ordner in den IncludePaths gefunden, Datei darin gefunden
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (System.IO.File.Exists(filePath))
-      {
-        string ext = Path.GetExtension(filePath).ToLower();
-
-        if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext))
-        {
-          Console.WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
-          string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
-          parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(filePath)}) ---\n{fileContent}\n--- DOKUMENT ENDE ---" });
-        }
-        else
-        {
-          string? mimeType = ext switch
-          {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".webp" => "image/webp",
-            ".pdf" => "application/pdf",
-            ".mp3" => "audio/mpeg",
-            ".wav" => "audio/wav",
-            ".mp4" => "video/mp4",
-            _ => null
-          };
-
-          if (mimeType == null)
-          {
-            Console.WriteLine($"[Fehler] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
-            continue;
-          }
-
-          if (IsAiStudio)
-          {
-            Console.WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
-            try
-            {
-              // AI Studio unterstützt keine gs:// Links. Wir nutzen die native File API.
-              var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
-              var uploadedFile = await client.Files.UploadAsync(filePath, config: uploadConfig);
-
-              Console.WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
-              parts.Add(new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } });
-            }
-            catch (Exception ex)
-            {
-              Console.WriteLine($"  [Fehler] Beim Upload über File API ist ein Fehler aufgetreten: {ex.Message}");
-              continue;
-            }
-          }
-          else
-          {
-            Console.WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
-            try
-            {
-              var storageClient = await StorageClient.CreateAsync();
-              string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}"; // Verhindert Überschreiben
-
-              using var fileStream = System.IO.File.OpenRead(filePath);
-              await storageClient.UploadObjectAsync(GcsBucketName, objectName, mimeType, fileStream);
-
-              string gcsUri = $"gs://{GcsBucketName}/{objectName}";
-              Console.WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
-
-              parts.Add(new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } });
-            }
-            catch (Exception ex)
-            {
-              Console.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten: {ex.Message}");
-              continue;
-            }
-          }
-        }
-
-        loadedNames.Add(Path.GetFileName(filePath));
-        filesLoaded = true;
-      }
-      else
-      {
-        Console.WriteLine($"[Fehler] Die Datei '{filePath}' wurde nicht gefunden und übersprungen.");
-        Console.WriteLine($"[Fehler] Die Datei '{originalPath}' wurde nicht gefunden und übersprungen.");
-        Console.WriteLine("  Ich habe in folgenden Pfaden gesucht:");
-        foreach (var searched in searchedPaths.Distinct())
-        {
-          Console.WriteLine($"   - {searched}");
-        }
-        Console.WriteLine($"  Tipp: Gib den absoluten Pfad an oder lege die Datei in '{UploadFolderPath}'.");
-      }
-      searchedPaths.Clear();
-    }
-
-    if (!filesLoaded)
-    {
-      return (false, promptText);
-    }
-
-    Console.WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
-
-    return (true, promptText);
-  }
-
-  /// <summary>
   /// [GCS] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket.
   /// Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
   /// </summary>
   private async Task CleanupGcsBucketAsync()
   {
     if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;
-    1
+
+    if (IsAiStudio) return; // Verhindert, dass AI Studio versehentlich GCS-Ressourcen anpingt
+
     try
     {
       var storageClient = await StorageClient.CreateAsync();

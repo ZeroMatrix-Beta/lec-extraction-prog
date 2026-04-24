@@ -9,6 +9,7 @@ namespace FfmpegUtilities
   /// <summary>
   /// [AI Context] Manages FFmpeg preprocessing tasks for video/audio files before feeding them to the AI.
   /// Interactive console menu that acts as a frontend for the FfmpegToolkit.
+  /// [Human] Dies ist die Menü-Oberfläche, wenn du im Hauptmenü "13" drückst. Sie regelt nur die Benutzerinteraktion.
   /// </summary>
   public class FfmpegInteractiveMenu
   {
@@ -50,6 +51,7 @@ namespace FfmpegUtilities
       }
 
       // Phase 4: Target Selection
+      // [AI Context] Validates IO state before execution to prevent partial failure.
       string[] filesToProcess = SelectFilesToProcess(sourceFolder, mode);
       if (filesToProcess == null || filesToProcess.Length == 0) return;
 
@@ -76,6 +78,7 @@ namespace FfmpegUtilities
     private bool SetupDirectories(out string sourceFolder, out string destFolder)
     {
       // [Human] Interactive prompt to easily override the default hardcoded paths on the fly.
+      // [AI Context] Enables runtime overriding of configured static defaults without recompilation.
       sourceFolder = DefaultSourceFolder;
       destFolder = DefaultDestinationFolder;
 
