@@ -74,26 +74,45 @@ class Program
   {
     Console.WriteLine("=== Start-Konfiguration ===");
     Console.WriteLine("Wähle ein Modell:");
-    Console.WriteLine("1) gemini-2.5-flash     (Schnell, sehr effizient, 1M+ Tokens)");
-    Console.WriteLine("2) gemini-2.5-flash-lite (Leichtgewicht)");
-    Console.WriteLine("3) gemma-3-27b-it       (Open Model, 27B Parameter)");
-    Console.WriteLine("4) gemini-1.5-flash     (Schnelles Fallback für Video/Audio, 1M+ Tokens)");
-    Console.WriteLine("5) gemini-robotics-er-1.5-preview (Free Tier, Multimodal)");
-    Console.WriteLine("6) gemini-robotics-er-1.6-preview (Neues Robotics Modell)");
-    Console.WriteLine("7) gemini-2.5-pro       (Neuestes Pro Modell)");
-    Console.WriteLine("8) --- AI Studio FFmpeg Manager (Lokale Video/Audio-Verarbeitung) ---");
-    Console.Write("Auswahl (1-8) [Standard: 1]: ");
+    Console.WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
+    Console.WriteLine("                                  || Output: $1.50 (<== Claimed to be the most cost-efficient, optimized)");
+    Console.WriteLine(" 2) gemini-3-flash-preview        || Input:  $0.50 (text / image / video), $1.00 (audio)");
+    Console.WriteLine("                                  || Output: $3.0");
+    Console.WriteLine(" 3) gemini-3.1-pro-preview        || Input:  $2.00, prompts <= 200k tokens, $4.00, prompts > 200k tokens");
+    Console.WriteLine("                                  || Output: $12.00, prompts <= 200k tokens, $18.00, prompts > 200k");
+    Console.WriteLine(" 4) gemini-2.5-flash              || Input:  $0.30  (text / image / video) $1.00 (audio). ");
+    Console.WriteLine("                                  || Output: $2.50");
+    Console.WriteLine(" 5) gemini-2.5-flash-lite         || Input:  $0.10  (text / image / video). ");
+    Console.WriteLine("                                  || Output: $0.40");
+    Console.WriteLine(" 6) gemini-2.5-pro                || Input:  $1.25, prompts <= 200k tokens, $2.50, prompts > 200k tokens.");
+    Console.WriteLine("                                  || Output: $10.00, prompts <= 200k tokens $15.00, prompts > 200k");
+    Console.WriteLine(" 7) gemini-2.0-flash              || Input:  $0.10  (text / image / video). $0.70 (audio) (shut down June 1, 2026)");
+    Console.WriteLine("                                  || Output: $0.40");
+    Console.WriteLine(" 8) gemini-2.0-flash-lite         || Input:  $0.075 (shut down June 1, 2026)");
+    Console.WriteLine("                                  || Output: $0.30");
+    Console.WriteLine(" 9) gemma-3-27b-it                || (Open Model, 27B Parameter)");
+    Console.WriteLine("10) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
+    Console.WriteLine("11) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
+    Console.WriteLine("12) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
+    Console.WriteLine("13) --- AI Studio FFmpeg Manager (Lokale Video/Audio-Verarbeitung) ---");
+    Console.Write("Auswahl (1-13) [Standard: 4]: ");
 
     string? choice = Console.ReadLine()?.Trim();
     return choice switch
     {
-      "2" => "gemini-2.5-flash-lite",
-      "3" => "gemma-3-27b-it",
-      "4" => "gemini-1.5-flash",
-      "5" => "gemini-robotics-er-1.5-preview",
-      "6" => "gemini-robotics-er-1.6-preview",
-      "7" => "gemini-2.5-pro",
-      "8" => "aistudio_ffmpeg",
+      "1" => "gemini-3.1-flash-lite-preview",
+      "2" => "gemini-3-flash-preview",
+      "3" => "gemini-3.1-pro-preview",
+      "4" => "gemini-2.5-flash",
+      "5" => "gemini-2.5-flash-lite",
+      "6" => "gemini-2.5-pro",
+      "7" => "gemini-2.0-flash",
+      "8" => "gemini-2.0-flash-lite",
+      "9" => "gemma-3-27b-it",
+      "10" => "gemini-1.5-flash",
+      "11" => "gemini-robotics-er-1.5-preview",
+      "12" => "gemini-robotics-er-1.6-preview",
+      "13" => "aistudio_ffmpeg",
       _ => "gemini-2.5-flash"
     };
   }

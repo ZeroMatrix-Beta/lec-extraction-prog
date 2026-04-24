@@ -437,11 +437,13 @@ public class ChatSession
     string[] filePaths = filesPart.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
     bool filesLoaded = false;
     var loadedNames = new List<string>();
+    var searchedPaths = new List<string>();
 
     foreach (var path in filePaths)
     {
       string originalPath = path.Trim().Trim('"', '\'');
       string filePath = originalPath;
+      searchedPaths.Add(Path.GetFullPath(originalPath));
 
       // 1. Zuerst prüfen, ob der Pfad direkt oder relativ zum UploadFolder gefunden wird
       if (!System.IO.File.Exists(filePath) && !Path.IsPathRooted(originalPath))
@@ -449,6 +451,7 @@ public class ChatSession
         if (!string.IsNullOrWhiteSpace(UploadFolderPath))
         {
           string combinedPath = Path.Combine(UploadFolderPath, originalPath);
+          searchedPaths.Add(combinedPath);
           if (System.IO.File.Exists(combinedPath))
           {
             filePath = combinedPath;
@@ -468,6 +471,7 @@ public class ChatSession
             else if (System.IO.Directory.Exists(includePath))
             {
               string combinedPath = Path.Combine(includePath, originalPath);
+              searchedPaths.Add(combinedPath);
               if (System.IO.File.Exists(combinedPath))
               {
                 filePath = combinedPath; // Ordner in den IncludePaths gefunden, Datei darin gefunden
@@ -556,7 +560,15 @@ public class ChatSession
       else
       {
         Console.WriteLine($"[Fehler] Die Datei '{filePath}' wurde nicht gefunden und übersprungen.");
+        Console.WriteLine($"[Fehler] Die Datei '{originalPath}' wurde nicht gefunden und übersprungen.");
+        Console.WriteLine("  Ich habe in folgenden Pfaden gesucht:");
+        foreach (var searched in searchedPaths.Distinct())
+        {
+          Console.WriteLine($"   - {searched}");
+        }
+        Console.WriteLine($"  Tipp: Gib den absoluten Pfad an oder lege die Datei in '{UploadFolderPath}'.");
       }
+      searchedPaths.Clear();
     }
 
     if (!filesLoaded)
@@ -576,7 +588,7 @@ public class ChatSession
   private async Task CleanupGcsBucketAsync()
   {
     if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;
-
+    1
     try
     {
       var storageClient = await StorageClient.CreateAsync();

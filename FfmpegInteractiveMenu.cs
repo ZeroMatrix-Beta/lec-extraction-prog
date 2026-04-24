@@ -26,7 +26,9 @@ namespace FfmpegUtilities
 
     public async Task StartAsync()
     {
-      PrintHeader();
+      Console.WriteLine("======================================");
+      Console.WriteLine("   FFmpeg Console Video Converter");
+      Console.WriteLine("======================================");
 
       // Phase 1: Setup and Validation
       if (!SetupDirectories(out string sourceFolder, out string destFolder)) return;
@@ -57,51 +59,19 @@ namespace FfmpegUtilities
       // ====================================================================
       foreach (string inputFile in filesToProcess)
       {
-        switch (mode)
-        {
-          case "1":
-          case "7":
-            await _toolkit.ProcessFast720pVideoAsync(inputFile, destFolder); break;
-          case "2":
-          case "8":
-            await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.5, fps: 1, downmixToMono: true); break;
-          case "3":
-          case "9":
-            await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.2, fps: 1, downmixToMono: true, audioSampleRate: 48000); break;
-          case "4":
-          case "10":
-            await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.0, fps: 1, downmixToMono: true); break;
-          case "5":
-          case "11":
-            await _toolkit.ProcessSplitVideoAsync(inputFile, destFolder, downmixToMono: true); break;
-          case "6":
-          case "12":
-            await _toolkit.ProcessCustomVideoAsync(inputFile, destFolder, customCommandTemplate, customOutputExtension); break;
-        }
+        await ExecuteToolkitActionAsync(mode, inputFile, destFolder, customCommandTemplate, customOutputExtension);
       }
       // ====================================================================
 
-      PrintFooter();
-    }
-
-    // ========================================================================
-    // Sub-Methods (Refactored Logic)
-    // ========================================================================
-
-    private void PrintHeader()
-    {
-      Console.WriteLine("======================================");
-      Console.WriteLine("   FFmpeg Console Video Converter");
-      Console.WriteLine("======================================");
-    }
-
-    private void PrintFooter()
-    {
       Console.WriteLine("\n======================================");
       Console.WriteLine("All files processed successfully.");
       Console.WriteLine("Press Enter to exit...");
       Console.ReadLine();
     }
+
+    // ========================================================================
+    // Sub-Methods (Refactored Logic)
+    // ========================================================================
 
     private bool SetupDirectories(out string sourceFolder, out string destFolder)
     {
@@ -142,16 +112,16 @@ namespace FfmpegUtilities
     {
       Console.WriteLine("\nConversion Options:");
       Console.WriteLine("\n--- Single File Options ---");
-      Console.WriteLine("1. Fixed 720p, 1.5x Speed, 1 FPS (Hardcoded Bitrates)");
-      Console.WriteLine("2. Universal AI Format (1.5x Speed, 1 FPS, 256k Mono) [Okay Quality]");
+      Console.WriteLine("1. Fixed 720p, 1.5x Speed, 1 FPS (Legacy Code Hardcoded Bitrates)");
+      Console.WriteLine("2. Universal AI Format (1.3x Speed, 1 FPS, 256k Mono) [Okay Quality]");
       Console.WriteLine("3. High-Fidelity AI Format (1.2x Speed, 1 FPS, 256k Mono) [Good Quality]");
       Console.WriteLine("4. Gold Standard AI Format (1.0x Speed, 1 FPS, 256k Mono) [Best Quality]");
       Console.WriteLine("5. Split into 3 parts (1 FPS, 256k Mono, 3-min overlap)");
       Console.WriteLine("6. Custom: Provide your own specific FFmpeg parameters");
 
       Console.WriteLine("\n--- Batch Folder Options ---");
-      Console.WriteLine("7.  Fixed 720p, 1.5x Speed, 1 FPS (Hardcoded Bitrates)");
-      Console.WriteLine("8.  Universal AI Format (1.5x Speed, 1 FPS, 256k Mono) [Okay Quality]");
+      Console.WriteLine("7.  Fixed 720p, 1.5x Speed, 1 FPS (Legacy Code Hardcoded Bitrates)");
+      Console.WriteLine("8.  Universal AI Format (1.3x Speed, 1 FPS, 256k Mono) [Okay Quality]");
       Console.WriteLine("9.  High-Fidelity AI Format (1.2x Speed, 1 FPS, 256k Mono) [Good Quality]");
       Console.WriteLine("10. Gold Standard AI Format (1.0x Speed, 1 FPS, 256k Mono) [Best Quality]");
       Console.WriteLine("11. Split into 3 parts (1 FPS, 256k Mono, 3-min overlap)");
@@ -161,14 +131,7 @@ namespace FfmpegUtilities
       return Console.ReadLine()?.Trim() ?? "";
     }
 
-    private bool IsValidMode(string mode)
-    {
-      if (int.TryParse(mode, out int m))
-      {
-        return m >= 1 && m <= 12;
-      }
-      return false;
-    }
+    private bool IsValidMode(string mode) => int.TryParse(mode, out int m) && m >= 1 && m <= 12;
 
     private string GetCustomCommandTemplate(out string outputExtension)
     {
@@ -187,47 +150,42 @@ namespace FfmpegUtilities
 
     private string[] SelectFilesToProcess(string sourceFolder, string mode)
     {
-      string[] inputFiles = Directory.GetFiles(sourceFolder);
-
-      if (inputFiles.Length == 0)
-      {
-        Console.WriteLine("No files found in the source folder.");
-        return Array.Empty<string>();
-      }
-
       // We safely parse since IsValidMode already verified it's an integer between 1-12.
       int modeNum = int.Parse(mode);
 
       // Interactive single-file selection (Options 1-6)
       if (modeNum >= 1 && modeNum <= 6)
       {
-        Console.WriteLine("\nAvailable files in Source folder:");
-        for (int i = 0; i < inputFiles.Length; i++)
-        {
-          Console.WriteLine($"{i + 1}. {Path.GetFileName(inputFiles[i])}");
-        }
-
-        Console.Write("\nSelect a file to process (enter the number): ");
-        if (int.TryParse(Console.ReadLine(), out int fileIndex) && fileIndex > 0 && fileIndex <= inputFiles.Length)
-        {
-          Console.WriteLine($"\nSelected Target: {Path.GetFileName(inputFiles[fileIndex - 1])}");
-          return new string[] { inputFiles[fileIndex - 1] };
-        }
-        else
-        {
-          Console.WriteLine("Invalid selection.");
-          return Array.Empty<string>();
-        }
+        return ConsoleUiHelper.SelectSingleFile(sourceFolder);
       }
 
       // Batch mode (Options 7-12)
-      if (modeNum >= 7 && modeNum <= 12)
-      {
-        Console.WriteLine($"\nFound {inputFiles.Length} file(s) to process in batch mode.");
-        return inputFiles;
-      }
+      return ConsoleUiHelper.SelectBatchFiles(sourceFolder);
+    }
 
-      return Array.Empty<string>();
+    private async Task ExecuteToolkitActionAsync(string mode, string inputFile, string destFolder, string customTemplate, string customExt)
+    {
+      switch (mode)
+      {
+        case "1":
+        case "7":
+          await _toolkit.LegacyCodeProcessFast720pVideoAsync(inputFile, destFolder); break;
+        case "2":
+        case "8":
+          await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.3, fps: 1, downmixToMono: true); break;
+        case "3":
+        case "9":
+          await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.2, fps: 1, downmixToMono: true); break;
+        case "4":
+        case "10":
+          await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.0, fps: 1, downmixToMono: true); break;
+        case "5":
+        case "11":
+          await _toolkit.ProcessSplitVideoAsync(inputFile, destFolder, downmixToMono: true); break;
+        case "6":
+        case "12":
+          await _toolkit.ProcessCustomVideoAsync(inputFile, destFolder, customTemplate, customExt); break;
+      }
     }
   }
 }
