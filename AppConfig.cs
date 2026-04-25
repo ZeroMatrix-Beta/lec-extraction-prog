@@ -69,7 +69,15 @@ public static class AppConfig
       // WICHTIG: Dieser Wert ändert NICHT das Verhalten oder die Ausführlichkeit der KI. 
       // Wenn das Limit erreicht wird, bricht die Antwort einfach mitten im Satz ab (Truncation).
       // - 65536 (~64k): Das Maximum für neuere Modelle (Gemini 2.5). Erlaubt gigantische LaTeX-Skripte am Stück!
-      MaxOutputTokens = 65536
+      MaxOutputTokens = 65536,
+
+      // [AI Context] "Thinking" params introduced for the latest Gemini 2.5 and 3.x models.
+      // - ThinkingBudget: Integer (z.B. 1024, 4096) - Wird strikt nur von der Gemini 2.5 Serie verlangt.
+      ThinkingBudget = 1024,
+
+      // - ThinkingLevel: String (MINIMAL, LOW, MEDIUM, HIGH) - Wird strikt nur von der Gemini 3.x Serie verlangt.
+      // [Human] Kontrolliert, wie lange das 3.1 Modell intern "nachdenkt", bevor es antwortet.
+      ThinkingLevel = "LOW"
     }
   };
 }
@@ -101,4 +109,6 @@ public class AIConfig
   public float TopP { get; set; } = 0.95f;
   public int TopK { get; set; } = 40;
   public int MaxOutputTokens { get; set; } = 65536;
+  public int? ThinkingBudget { get; set; } = null;
+  public string? ThinkingLevel { get; set; } = null;
 }

@@ -92,7 +92,7 @@ public class ChatSession
     IsAiStudio = !UseVertexAI || selectedModel.Contains("gemma", StringComparison.OrdinalIgnoreCase);
     if (IsAiStudio)
     {
-      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio (Developer API-Key aktiv)...");
+      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API (Free-Tier API-Keys aktiv)...");
       client = new Client(apiKey: apiKey, httpOptions: options);
     }
     else
@@ -343,7 +343,7 @@ public class ChatSession
                    ?? System.Environment.GetEnvironmentVariable("ULTIMATE_API_KEY", EnvironmentVariableTarget.Machine);
 
     // Ändere diese Variable auf 1, 2 oder 3, um das Projekt/Konto im Code zu wechseln
-    int activeKeyProfile = 1; // Zurück auf den ersten Key (z.B. Free Tier) wechseln
+    int activeKeyProfile = 3; // Nutze den ULTIMATE_API_KEY (Projekt 3)
     string apiKey = "";
 
     switch (activeKeyProfile)
@@ -453,7 +453,7 @@ public class ChatSession
   {
     if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;
 
-    if (IsAiStudio) return; // Verhindert, dass AI Studio versehentlich GCS-Ressourcen anpingt
+    if (IsAiStudio) return; // Prevent free-tier from pinging GCS
 
     try
     {
