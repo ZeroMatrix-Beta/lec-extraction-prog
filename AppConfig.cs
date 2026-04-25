@@ -1,5 +1,7 @@
 using System;
 
+namespace Config;
+
 /// <summary>
 /// [AI Context] Centralized configuration dependency. Injected into sessions to ensure predictability and avoid hardcoded magic strings.
 /// [Human] Zentrale Anlaufstelle für alle Pfade und Einstellungen. Wenn du Ordner auf deiner Festplatte verschiebst, musst du das nur HIER ändern!
@@ -28,6 +30,8 @@ public static class AppConfig
     // [Human] Wenn auf 'true' gesetzt, nutzt das Programm Google Cloud IAM (Vertex AI). 'false' nutzt den normalen Google AI Studio API-Key (Pay-as-you-go oder Free).
     // [AI Context] Toggles connection mode: true = Vertex AI (Enterprise endpoints), false = Google AI Studio (Developer API).
     UseVertexAI = false, // Setze auf 'true' für Google Cloud Vertex AI, 'false' für Google AI Studio
+
+    ActiveApiProfile = 1, // Wählt den API-Key: 1 = Projekt 1, 2 = Projekt 2, 3 = Projekt 3
     UploadFolder = @"D:\gemin-upload-folder",
     HistoryFolder = @"D:\gemini-chat-history",
     LogFolder = @"D:\gemini-logs",
@@ -92,6 +96,7 @@ public static class AppConfig
 public class ChatConfig
 {
   public bool UseVertexAI { get; set; } = false;
+  public int ActiveApiProfile { get; set; } = 1;
   public string UploadFolder { get; set; } = "";
   public string HistoryFolder { get; set; } = "";
   public string LogFolder { get; set; } = "";

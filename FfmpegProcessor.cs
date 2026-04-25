@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
+namespace FfmpegUtilities;
+
 /// <summary>
 /// [AI Context] LEGACY CLASS. This class represents the older iteration of the FFmpeg implementation.
 /// It has been mostly superseded by the FfmpegInteractiveMenu and FfmpegToolkit classes but remains for backward compatibility.

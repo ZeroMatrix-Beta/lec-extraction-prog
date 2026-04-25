@@ -2,19 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
+using Config;
+using GoogleGenAi;
+
+namespace AiInteraction;
 
 /// <summary>
 /// [AI Context] Core REPL (Read-Eval-Print Loop) manager for the conversational AI interface.
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary>
-public class DirectAIInteraction
+public class AiChatSession
 {
   // [AI Context] Global state for file resolution. 
   // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
@@ -35,23 +37,23 @@ public class DirectAIInteraction
 
   // [Log-Ordner] Status für den aktuellen Programmablauf
   private readonly string LogFolderPath;
-  private string CurrentSessionLogPath = "";
-  private string CurrentSessionDateSuffix = "";
-  private int ResponseCount = 1;
   private AIConfig AIParams;
   private readonly string[] IncludePaths;
+  private readonly int ActiveApiProfile;
   private readonly bool UseVertexAI;
   private bool IsAiStudio;
-  private AttachmentHandler _attachmentHandler;
+  private AttachmentHandler _attachmentHandler = null!;
+  private readonly SessionLogger _sessionLogger;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
-  public DirectAIInteraction(ChatConfig config)
+  public AiChatSession(ChatConfig config)
   {
     UploadFolderPath = config.UploadFolder;
     HistoryFolderPath = config.HistoryFolder;
     LogFolderPath = config.LogFolder;
     GcsBucketName = config.GcsBucketName;
     IncludePaths = config.IncludePaths ?? Array.Empty<string>();
+    ActiveApiProfile = config.ActiveApiProfile;
     UseVertexAI = config.UseVertexAI;
 
     // [AI Context] Creates a localized deep copy of AI parameters.
@@ -64,6 +66,8 @@ public class DirectAIInteraction
       TopK = config.AI.TopK,
       MaxOutputTokens = config.AI.MaxOutputTokens
     };
+
+    _sessionLogger = new SessionLogger(LogFolderPath);
   }
 
   /// <summary>
@@ -74,37 +78,10 @@ public class DirectAIInteraction
   {
     // [AI Context] Setup phase: Load API keys, configure client (custom timeout for large media), and initialize history.
     // 1. API Key laden (wird nur noch als Fallback für den /modelle Befehl genutzt)
-    string apiKey = ResolveApiKey() ?? "no-key";
+    string apiKey = GoogleAiClientBuilder.ResolveApiKey(ActiveApiProfile) ?? "no-key";
 
-    // 2. Den Client mit einem benutzerdefinierten Timeout erstellen
-    // [Human] TIPP: Falls es genau HIER einen Kompilier-Fehler gibt ("HttpOptions nicht gefunden"), 
-    // liegt das an einem Update des Google.GenAI SDKs. In ganz neuen Versionen ist der Timeout oft direkt im Konstruktor von 'Client'.
-    // [AI Context] Increases HttpClient timeout to 20 minutes to prevent socket closures during large video file polling.
-    // Der Standard-Timeout (100s) ist für große Datei-Uploads/Verarbeitung zu kurz.
-    var options = new HttpOptions
-    {
-      // Timeout auf 20 Minuten erhöhen, um die Verarbeitung großer Dateien zu ermöglichen
-      Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
-    };
-
-    // 3. Client initialisieren: Prüfen ob Free-Tier (AI Studio) oder Vertex AI genutzt werden soll
-    Client client;
-    IsAiStudio = !UseVertexAI || selectedModel.Contains("gemma", StringComparison.OrdinalIgnoreCase);
-    if (IsAiStudio)
-    {
-      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API (Free-Tier API-Keys aktiv)...");
-      client = new Client(apiKey: apiKey, httpOptions: options);
-    }
-    else
-    {
-      Console.WriteLine("  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: en-linalg-biran-gemini)...");
-      client = new Client(
-          vertexAI: true,
-          project: "en-linalg-biran-gemini",
-          location: "us-central1", // Geändert, da neueste Modelle oft nicht sofort in europe-west6 verfügbar sind
-          httpOptions: options
-      );
-    }
+    // 2. & 3. Client über den neuen Builder initialisieren (prüft automatisch auf AI Studio vs Vertex AI)
+    Client client = GoogleAiClientBuilder.BuildClient(UseVertexAI, selectedModel, apiKey, out IsAiStudio);
 
     _attachmentHandler = new AttachmentHandler(client, UploadFolderPath, IncludePaths, IsAiStudio, GcsBucketName);
 
@@ -114,38 +91,12 @@ public class DirectAIInteraction
     // [AI Context] Implements session persistence by isolating text/LaTeX outputs in discrete timestamped directories.
     // [Human] Erstellt für jede neue Chat-Sitzung einen eigenen Ordner, damit nichts aus Versehen überschrieben wird.
     // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
-    CurrentSessionDateSuffix = GetFormattedDateString(DateTime.Now);
-
-    if (!string.IsNullOrWhiteSpace(LogFolderPath))
-    {
-      if (!Directory.Exists(LogFolderPath))
-      {
-        Directory.CreateDirectory(LogFolderPath);
-      }
-
-      int maxIndex = 0;
-      foreach (var dir in Directory.GetDirectories(LogFolderPath))
-      {
-        string dirName = Path.GetFileName(dir);
-        if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase))
-        {
-          string[] dirParts = dirName.Split('-');
-          if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int parsedIndex))
-          {
-            if (parsedIndex > maxIndex) maxIndex = parsedIndex;
-          }
-        }
-      }
-
-      int folderIndex = maxIndex + 1;
-      CurrentSessionLogPath = Path.Combine(LogFolderPath, $"folder-{folderIndex}-{CurrentSessionDateSuffix}");
-      Directory.CreateDirectory(CurrentSessionLogPath);
-    }
+    _sessionLogger.InitializeSession();
 
     string? initialInput = GetInitialHistoryCommand();
 
     // 4. Starte die Haupt-Chat-Schleife
-    await RunChatSessionAsync(client, selectedModel, apiKey, initialInput);
+    await RunChatSessionAsync(client, selectedModel, initialInput);
   }
 
   // --- Ausgelagerte Methoden ---
@@ -156,7 +107,7 @@ public class DirectAIInteraction
   /// Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle,
   /// sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
   /// </summary>
-  private async Task RunChatSessionAsync(Client client, string selectedModel, string apiKey, string? initialInput)
+  private async Task RunChatSessionAsync(Client client, string selectedModel, string? initialInput)
   {
     var history = new List<Content>();
 
@@ -170,7 +121,6 @@ public class DirectAIInteraction
     Console.WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
     Console.WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
     Console.WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
-    Console.WriteLine("  modelle                   -> Zeigt alle Modelle mit Audio-Support an");
     Console.WriteLine("  set temp [wert]           -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
     Console.WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
 
@@ -204,13 +154,6 @@ public class DirectAIInteraction
 
       var parts = new List<Part>();
       string promptText = input;
-
-      // 5a. Sonderbefehl: Ruft die Google API ab, um alle aktuell verfügbaren Modelle aufzulisten.
-      if (input.ToLower() == "modelle")
-      {
-        await ShowAvailableModelsAsync(apiKey);
-        continue;
-      }
 
       // 5c. Temperatur dynamisch anpassen
       if (input.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
@@ -311,65 +254,8 @@ public class DirectAIInteraction
     history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
 
     // Optional: Verlauf in einer Log-Datei mitprotokollieren
-    string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
-    await System.IO.File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
-
-    // [AI Context] File I/O: Dumps raw stream into a .tex file. Assumes model follows LaTeX protocol formatting.
-    // [Human] Speichert JEDE Antwort zusätzlich als saubere LaTeX Datei im Ordner!
-    // Antwort zusätzlich als saubere .tex-Datei im aktuellen Session-Ordner speichern
-    if (!string.IsNullOrWhiteSpace(CurrentSessionLogPath))
-    {
-      string texFilePath = Path.Combine(CurrentSessionLogPath, $"response-{ResponseCount}-{CurrentSessionDateSuffix}.tex");
-      await System.IO.File.WriteAllTextAsync(texFilePath, fullResponse);
-      ResponseCount++;
-    }
-  }
-
-  /// <summary>
-  /// [AI Context] Environment variable parser for robust credential loading across OS environments.
-  /// [Human] Sucht deinen API Key in den Windows Umgebungsvariablen. So musst du ihn nicht unsicher in den Code schreiben.
-  /// Lädt und wählt den konfigurierten API-Key aus den Umgebungsvariablen aus.
-  /// </summary>
-  private string? ResolveApiKey()
-  {
-    string? apiKey1 = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-                   ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.User)
-                   ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY", EnvironmentVariableTarget.Machine);
-    string? apiKey2 = System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY")
-                   ?? System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY", EnvironmentVariableTarget.User)
-                   ?? System.Environment.GetEnvironmentVariable("LECTURE_TRANSCRIPTION_API_KEY", EnvironmentVariableTarget.Machine);
-    string? apiKey3 = System.Environment.GetEnvironmentVariable("ULTIMATE_API_KEY")
-                   ?? System.Environment.GetEnvironmentVariable("ULTIMATE_API_KEY", EnvironmentVariableTarget.User)
-                   ?? System.Environment.GetEnvironmentVariable("ULTIMATE_API_KEY", EnvironmentVariableTarget.Machine);
-
-    // Ändere diese Variable auf 1, 2 oder 3, um das Projekt/Konto im Code zu wechseln
-    int activeKeyProfile = 3; // Nutze den ULTIMATE_API_KEY (Projekt 3)
-    string apiKey = "";
-
-    switch (activeKeyProfile)
-    {
-      case 3:
-        apiKey = apiKey3 ?? "";
-        Console.WriteLine("  [INFO] Verwende ULTIMATE_API_KEY (Projekt 3)");
-        break;
-      case 2:
-        apiKey = apiKey2 ?? "";
-        Console.WriteLine("  [INFO] Verwende LECTURE_TRANSCRIPTION_API_KEY (Projekt 2)");
-        break;
-      case 1:
-      default:
-        apiKey = apiKey1 ?? "";
-        Console.WriteLine("  [INFO] Verwende GEMINI_API_KEY (Projekt 1 - Pay-as-you-go/AI Studio)");
-        break;
-    }
-
-    if (string.IsNullOrEmpty(apiKey))
-    {
-      Console.WriteLine("Fehler: Weder GEMINI_API_KEY, LECTURE_TRANSCRIPTION_API_KEY noch ULTIMATE_API_KEY wurden in den Umgebungsvariablen gefunden.");
-      return null;
-    }
-
-    return apiKey;
+    // Und: Antwort zusätzlich als saubere .tex-Datei im aktuellen Session-Ordner speichern
+    await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse);
   }
 
   /// <summary>
@@ -403,49 +289,6 @@ public class DirectAIInteraction
   }
 
   /// <summary>
-  /// [AI Context] Diagnostic tool. Uses raw HttpClient to fetch model details from REST API, 
-  /// bypassing the GenAI SDK to access raw JSON properties like 'inputTokenLimit'.
-  /// Verbindet sich direkt mit der Google REST-API, um dynamisch eine Liste aller unterstützten Modelle 
-  /// abzurufen und formatiert in der Konsole darzustellen (inklusive Token-Limits).
-  /// </summary>
-  /// <param name="apiKey">Der API-Schlüssel für die Authentifizierung.</param>
-  private async Task ShowAvailableModelsAsync(string apiKey)
-  {
-    Console.WriteLine("\n[API] Rufe alle aktuell verfügbaren Modelle von Google ab...");
-    try
-    {
-      using var httpClient = new HttpClient();
-      string json = await httpClient.GetStringAsync($"https://generativelanguage.googleapis.com/v1beta/models?key={apiKey}");
-      using var doc = JsonDocument.Parse(json);
-
-      Console.WriteLine("\nVerfügbare Gemini-Modelle und ihre unterstützten Eingabe-Formate:");
-      foreach (var element in doc.RootElement.GetProperty("models").EnumerateArray())
-      {
-        string name = element.GetProperty("name").GetString()?.Replace("models/", "") ?? "";
-
-        // Nur relevante Modelle anzeigen, um die Liste übersichtlich zu halten
-        if (!name.Contains("gemini") && !name.Contains("gemma")) continue;
-
-        if (element.TryGetProperty("supportedGenerationMethods", out var methods))
-        {
-          var methodList = methods.EnumerateArray().Select(m => m.GetString()).ToList();
-          if (methodList.Contains("generateContent"))
-          {
-            string displayName = element.TryGetProperty("displayName", out var dn) ? dn.GetString() ?? "" : "";
-            int inputTokens = element.TryGetProperty("inputTokenLimit", out var limit) ? limit.GetInt32() : 0;
-            string tokenStr = inputTokens > 0 ? $"[{inputTokens:N0} Tokens]" : "";
-            Console.WriteLine($"🔹 {name,-30} {tokenStr,-16} -> {displayName}");
-          }
-        }
-      }
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"[Fehler] Konnte Modelle nicht abrufen: {ex.Message}");
-    }
-  }
-
-  /// <summary>
   /// [GCS] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket.
   /// Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
   /// </summary>
@@ -475,20 +318,5 @@ public class DirectAIInteraction
     {
       Console.WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
     }
-  }
-
-  /// <summary>
-  /// Generates a formatted date string like "april-23rd-26".
-  /// </summary>
-  private string GetFormattedDateString(DateTime date)
-  {
-    string month = date.ToString("MMMM", System.Globalization.CultureInfo.InvariantCulture).ToLower();
-    int day = date.Day;
-    string suffix = (day % 10 == 1 && day != 11) ? "st"
-                  : (day % 10 == 2 && day != 12) ? "nd"
-                  : (day % 10 == 3 && day != 13) ? "rd"
-                  : "th";
-    string year = date.ToString("yyyy");
-    return $"{month}-{day}{suffix}-{year}";
   }
 }

@@ -7,6 +7,8 @@ using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 
+namespace AiInteraction;
+
 /// <summary>
 /// [AI Context] Specialized handler for parsing commands, discovering local files, and securely uploading them to Google APIs.
 /// Abstracted from DirectAIInteraction to comply with Single Responsibility Principle.

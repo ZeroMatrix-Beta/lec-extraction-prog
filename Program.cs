@@ -1,5 +1,7 @@
 ﻿﻿using System;
 using System.Threading.Tasks;
+using AiInteraction;
+using Config;
 using FfmpegUtilities;
 
 /// <summary>
@@ -22,7 +24,7 @@ class Program
     }
     else
     {
-      var chatSession = new DirectAIInteraction(AppConfig.Session);
+      var chatSession = new AiChatSession(AppConfig.Session);
       await chatSession.StartAsync(selectedOption);
     }
   }
