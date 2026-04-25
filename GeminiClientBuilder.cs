@@ -57,37 +57,33 @@ public static class GoogleAiClientBuilder
   }
 
   /// <summary>
-  /// [AI Context] Initializes the GenAI Client with appropriate endpoints based on user configuration.
-  /// Includes custom timeout extensions for large file uploads.
-  /// [Human] Baut den eigentlichen "Client", also die Verbindungsschnittstelle zu Google, auf.
+  /// [AI Context] Initializes the GenAI Client for Google AI Studio (Developer API).
   /// </summary>
-  public static Client BuildClient(bool useVertexAi, string selectedModel, string apiKey, out bool isAiStudio)
+  public static Client BuildAiStudioClient(string apiKey)
   {
-    // [AI Context] Increases HttpClient timeout to 20 minutes to prevent socket closures during large video file polling.
-    // Der Standard-Timeout (100s) ist für große Datei-Uploads/Verarbeitung zu kurz.
     var options = new HttpOptions
     {
       Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
     };
+    Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API...");
+    return new Client(apiKey: apiKey, httpOptions: options);
+  }
 
-    // [AI Context] Gemma models are primarily served via AI Studio developer endpoints.
-    // [Human] Open-Source Modelle wie 'gemma' zwingen wir ins kostenlose AI Studio, da sie auf Vertex AI oft anders heißen oder fehlen.
-    isAiStudio = !useVertexAi || selectedModel.Contains("gemma", StringComparison.OrdinalIgnoreCase);
-
-    if (isAiStudio)
+  /// <summary>
+  /// [AI Context] Initializes the GenAI Client for Google Cloud Vertex AI (Enterprise API).
+  /// </summary>
+  public static Client BuildVertexClient(string projectId, string location)
+  {
+    var options = new HttpOptions
     {
-      Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API (Free-Tier API-Keys aktiv)...");
-      return new Client(apiKey: apiKey, httpOptions: options);
-    }
-    else
-    {
-      Console.WriteLine("  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: en-linalg-biran-gemini)...");
-      return new Client(
-          vertexAI: true,
-          project: "en-linalg-biran-gemini",
-          location: "us-central1", // Geändert, da neueste Modelle oft nicht sofort in europe-west6 verfügbar sind
-          httpOptions: options
-      );
-    }
+      Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
+    };
+    Console.WriteLine($"  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: {projectId})...");
+    return new Client(
+        vertexAI: true,
+        project: projectId,
+        location: location,
+        httpOptions: options
+    );
   }
 }

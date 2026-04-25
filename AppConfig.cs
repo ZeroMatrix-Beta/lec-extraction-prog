@@ -36,10 +36,10 @@ public static class AppConfig
     HistoryFolder = @"D:\gemini-chat-history",
     LogFolder = @"D:\gemini-logs",
     GcsBucketName = "biran-linalg-source-material",
+    SystemInstructionPath = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md",
 
     // Ordner und Dateien, die der Chat-Bot zusätzlich zum UploadFolder und Arbeitsverzeichnis durchsuchen soll.
     IncludePaths = new[] {
-      @"c:\Users\miche\programming\lec-extraction-prog\gemini.md",
       FfmpegSourceFolder,
       FfmpegTargetFolder
     },
@@ -84,6 +84,30 @@ public static class AppConfig
       ThinkingLevel = "LOW"
     }
   };
+
+  // ====================================================================
+  // 3. Vertex AI (Enterprise) Konfiguration
+  // ====================================================================
+  public static readonly VertexAiConfig VertexSession = new VertexAiConfig
+  {
+    ProjectId = "vertex-ai-experiments-494320", // The Vertex AI Project ID
+    Location = "global",
+    GcsBucketName = "vertex-ai-experiments-upload-bucket",
+    UploadFolder = Session.UploadFolder,
+    HistoryFolder = Session.HistoryFolder,
+    LogFolder = Session.LogFolder,
+    IncludePaths = Session.IncludePaths,
+    SystemInstructionPath = Session.SystemInstructionPath,
+    AI = new AIConfig
+    {
+      Temperature = 0.1f,
+      TopP = 0.9f,
+      TopK = 10,
+      MaxOutputTokens = 65536,
+      ThinkingBudget = 1024,
+      ThinkingLevel = "LOW"
+    }
+  };
 }
 
 // ====================================================================
@@ -101,6 +125,23 @@ public class ChatConfig
   public string HistoryFolder { get; set; } = "";
   public string LogFolder { get; set; } = "";
   public string GcsBucketName { get; set; } = "";
+  public string SystemInstructionPath { get; set; } = "";
+  public string[] IncludePaths { get; set; } = Array.Empty<string>();
+  public AIConfig AI { get; set; } = new AIConfig();
+}
+
+/// <summary>
+/// [AI Context] DTO for Vertex AI specific configurations.
+/// </summary>
+public class VertexAiConfig
+{
+  public string ProjectId { get; set; } = "";
+  public string Location { get; set; } = "global";
+  public string UploadFolder { get; set; } = "";
+  public string HistoryFolder { get; set; } = "";
+  public string LogFolder { get; set; } = "";
+  public string GcsBucketName { get; set; } = "";
+  public string SystemInstructionPath { get; set; } = "";
   public string[] IncludePaths { get; set; } = Array.Empty<string>();
   public AIConfig AI { get; set; } = new AIConfig();
 }
