@@ -22,7 +22,7 @@ public static class AppConfig
   // 2. Chat Session & API Konfiguration
   // ====================================================================
 
-  // [AI Context] Holds the global state definition for ChatSession instantiation.
+  // [AI Context] Holds the global state definition for DirectAIInteraction instantiation.
   public static readonly ChatConfig Session = new ChatConfig
   {
     // [Human] Wenn auf 'true' gesetzt, nutzt das Programm Google Cloud IAM (Vertex AI). 'false' nutzt den normalen Google AI Studio API-Key (Pay-as-you-go oder Free).

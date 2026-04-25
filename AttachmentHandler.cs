@@ -9,7 +9,7 @@ using Google.GenAI.Types;
 
 /// <summary>
 /// [AI Context] Specialized handler for parsing commands, discovering local files, and securely uploading them to Google APIs.
-/// Abstracted from ChatSession to comply with Single Responsibility Principle.
+/// Abstracted from DirectAIInteraction to comply with Single Responsibility Principle.
 /// [Human] Diese Klasse kümmert sich NUR um Dateien. Sie sucht sie auf deiner Festplatte und lädt sie für die KI hoch.
 /// </summary>
 public class AttachmentHandler

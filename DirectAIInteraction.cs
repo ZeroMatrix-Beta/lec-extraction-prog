@@ -14,7 +14,7 @@ using Google.GenAI.Types;
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary>
-public class ChatSession
+public class DirectAIInteraction
 {
   // [AI Context] Global state for file resolution. 
   // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
@@ -45,7 +45,7 @@ public class ChatSession
   private AttachmentHandler _attachmentHandler;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
-  public ChatSession(ChatConfig config)
+  public DirectAIInteraction(ChatConfig config)
   {
     UploadFolderPath = config.UploadFolder;
     HistoryFolderPath = config.HistoryFolder;

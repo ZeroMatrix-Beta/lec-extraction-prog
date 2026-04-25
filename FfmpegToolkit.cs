@@ -8,7 +8,7 @@ namespace FfmpegUtilities
 {
   /// <summary>
   /// Core FFmpeg toolset. Independent of any console/interactive logic.
-  /// Can be safely called from background tasks, ChatSession, or APIs.
+  /// Can be safely called from background tasks, DirectAIInteraction, or APIs.
   /// [Human] Hier passiert die wahre Magie! Diese Klasse baut die exakten FFmpeg-Befehle zusammen und führt sie aus.
   /// </summary>
   public class FfmpegToolkit

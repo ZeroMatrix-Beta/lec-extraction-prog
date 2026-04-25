@@ -22,7 +22,7 @@ class Program
     }
     else
     {
-      var chatSession = new ChatSession(AppConfig.Session);
+      var chatSession = new DirectAIInteraction(AppConfig.Session);
       await chatSession.StartAsync(selectedOption);
     }
   }
