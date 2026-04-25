@@ -247,7 +247,7 @@ public class AttachmentHandler
       }
       catch (Exception ex)
       {
-        _ui.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten: {ex.Message}");
+        _ui.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten:\n{ex}");
         return false;
       }
     }

@@ -304,23 +304,35 @@ public class AiChatSession
   /// </summary>
   private string? GetInitialHistoryCommand()
   {
-    _ui.Write($"\n[Setup] History laden? Ordner: '{HistoryFolderPath}' (j/n): ");
-    bool loadHistory = _ui.ReadLine()?.Trim().ToLower() == "j";
-
-    if (!loadHistory) return null;
-
     if (string.IsNullOrWhiteSpace(HistoryFolderPath) || !Directory.Exists(HistoryFolderPath))
     {
-      _ui.WriteLine($"  [WARNUNG] Der History-Ordner '{HistoryFolderPath}' wurde nicht gefunden oder ist nicht konfiguriert.");
       return null;
     }
 
     string[] historyFiles = Directory.GetFiles(HistoryFolderPath);
+
+    // Verhindert, dass die System Instruction versehentlich als History geladen wird, 
+    // falls der Nutzer sie physisch im History-Ordner abgelegt hat.
+    if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
+    {
+      historyFiles = historyFiles.Where(f => !string.Equals(Path.GetFullPath(f), Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
+
     if (historyFiles.Length == 0)
     {
-      _ui.WriteLine($"  [INFO] Der History-Ordner '{HistoryFolderPath}' ist leer. Nichts zu laden.");
       return null;
     }
+
+    _ui.WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryFolderPath}' gefunden:");
+    foreach (var file in historyFiles)
+    {
+      _ui.WriteLine($"  - {Path.GetFileName(file)}");
+    }
+
+    _ui.Write("Sollen diese Dateien als History geladen werden? (j/n): ");
+    bool loadHistory = _ui.ReadLine()?.Trim().ToLower() == "j";
+
+    if (!loadHistory) return null;
 
     // Die `historyFiles` enthalten bereits die vollen, absoluten Pfade.
     // Wir können sie direkt verwenden und für den Befehl in Anführungszeichen setzen.

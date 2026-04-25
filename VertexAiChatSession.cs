@@ -225,14 +225,30 @@ public class VertexAiChatSession
 
   private string? GetInitialHistoryCommand()
   {
-    _ui.Write($"\n[Setup] History laden? Ordner: '{HistoryFolderPath}' (j/n): ");
-    bool loadHistory = _ui.ReadLine()?.Trim().ToLower() == "j";
-
-    if (!loadHistory) return null;
     if (string.IsNullOrWhiteSpace(HistoryFolderPath) || !Directory.Exists(HistoryFolderPath)) return null;
 
     string[] historyFiles = Directory.GetFiles(HistoryFolderPath);
-    if (historyFiles.Length == 0) return null;
+
+    if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
+    {
+      historyFiles = historyFiles.Where(f => !string.Equals(Path.GetFullPath(f), Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
+
+    if (historyFiles.Length == 0)
+    {
+      return null;
+    }
+
+    _ui.WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryFolderPath}' gefunden:");
+    foreach (var file in historyFiles)
+    {
+      _ui.WriteLine($"  - {Path.GetFileName(file)}");
+    }
+
+    _ui.Write("Sollen diese Dateien als History geladen werden? (j/n): ");
+    bool loadHistory = _ui.ReadLine()?.Trim().ToLower() == "j";
+
+    if (!loadHistory) return null;
 
     string fileList = string.Join(", ", historyFiles.Select(p => $"\"{p}\""));
     return $"attach {fileList} | {InitialHistoryPrompt}";
@@ -271,7 +287,15 @@ public class VertexAiChatSession
     }
     catch (Exception ex)
     {
-      _ui.WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
+      _ui.WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}':\n{ex}");
+      if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase))
+      {
+        _ui.WriteLine($"  [GCS ERROR] Zugriff auf Bucket '{GcsBucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)!");
+      }
+      else
+      {
+        _ui.WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
+      }
     }
   }
 }
