@@ -240,6 +240,7 @@ namespace FfmpegUtilities
       }
       catch (Exception ex)
       {
+        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
         Console.WriteLine($"  [ffprobe error: {ex.Message}]");
       }
       return -1;
@@ -281,6 +282,7 @@ namespace FfmpegUtilities
       }
       catch (Exception ex)
       {
+        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
         Console.WriteLine($"  [Error] Failed to start FFmpeg: {ex.Message}");
         return false;
       }

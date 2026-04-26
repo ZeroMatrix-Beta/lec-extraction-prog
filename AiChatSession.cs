@@ -3,20 +3,73 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
-using Config;
 using GoogleGenAi;
+using AiInteraction;
+using static System.Console;
 
-namespace AiInteraction;
+namespace AiInteraction.GoogleAIStudio;
+
+/// <summary>
+/// [AI Context] Localized generation parameters for the Google AI Studio session.
+/// Dictates the deterministic vs. creative output distribution of the LLM.
+/// </summary>
+public class GoogleAIStudioAIConfig
+{
+  // [AI Context] Temperature (0.0 - 2.0). 0.0 = purely deterministic (best for strict code/math/transcripts). 1.0+ = highly creative (risk of hallucinations).
+  public float Temperature { get; set; } = 0.1f;
+
+  // [AI Context] TopP (Nucleus Sampling). 0.0 - 1.0. Lower values restrict vocabulary to the most probable tokens, cutting off the "long tail" of creative/random words.
+  public float TopP { get; set; } = 0.9f;
+
+  // [AI Context] TopK. Limits the vocabulary to the top K most likely next tokens. TopK=1 is greedy decoding (perfect for LaTeX generation).
+  public int TopK { get; set; } = 10;
+
+  // [AI Context] Hard cutoff limit for output generation. Does NOT affect verbosity, only truncates if exceeded. Set to maximum (65535) for large LaTeX scripts.
+  public int MaxOutputTokens { get; set; } = 65535;
+
+  // [AI Context] "Thinking" params introduced for the latest Gemini 2.5 and 3.x models. Strictly required for the 2.5 series.
+  public int? ThinkingBudget { get; set; } = 4096;
+
+  // [AI Context] Controls the internal reasoning time for the Gemini 3.x series (e.g., MINIMAL, LOW, MEDIUM, HIGH).
+  public string? ThinkingLevel { get; set; } = "HIGH";
+}
+
+/// <summary>
+/// [AI Context] DTO for Google AI Studio specific session configurations.
+/// Separated from VertexAI to prevent accidental contamination of free-tier and enterprise logic.
+/// </summary>
+public class GoogleAIStudioConfig
+{
+  // [AI Context] Selects the environment variable API key profile to use (1-3).
+  public int ActiveApiProfile { get; set; } = 1;
+  public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
+  public string HistoryFolder { get; set; } = @"D:\gemini-chat-history";
+  public string LogFolder { get; set; } = @"D:\gemini-logs";
+
+  // [AI Context] Unused in AI Studio free tier, but retained for interface compatibility with the AttachmentHandler if needed.
+  public string GcsBucketName { get; set; } = "biran-linalg-source-material";
+  public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+
+  // [AI Context] Defines fallback directories for the AttachmentHandler's ResolveFilePath method.
+  public string[] IncludePaths { get; set; } = new[] {
+    @"D:\lecture-videos\d-und-a/",
+    @"D:\lecture-videos\d-und-a/new"
+  };
+
+  // [AI Context] Nested generation config explicitly for AI Studio models.
+  public GoogleAIStudioAIConfig AI { get; set; } = new GoogleAIStudioAIConfig();
+}
 
 /// <summary>
 /// [AI Context] Core REPL (Read-Eval-Print Loop) manager for the conversational AI interface.
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary>
-public class AiChatSession
+public class GoogleAIStudioChatSession
 {
   // [AI Context] Global state for file resolution. 
   // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
@@ -39,18 +92,16 @@ public class AiChatSession
   private readonly string LogFolderPath;
   private readonly string SystemInstructionPath;
   private string? _systemInstructionText;
-  private AIConfig AIParams;
+  private GoogleAIStudioAIConfig AIParams;
   private readonly bool IsAiStudio;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
-  private readonly IUserInterface _ui;
   private readonly Client _client;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
-  public AiChatSession(Client client, ChatConfig config, IUserInterface ui, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio)
+  public GoogleAIStudioChatSession(Client client, GoogleAIStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio)
   {
     _client = client;
-    _ui = ui;
     _sessionLogger = logger;
     _attachmentHandler = attachmentHandler;
     IsAiStudio = isAiStudio;
@@ -63,7 +114,7 @@ public class AiChatSession
     // [AI Context] Creates a localized deep copy of AI parameters.
     // [Human] Kopiert die Standard-Werte, damit wir sie später mit "/set temp" im Chat verändern können, ohne das Original zu überschreiben.
     // Wir legen eine lokale Kopie an, damit /set Befehle nur diese Sitzung modifizieren
-    AIParams = new AIConfig
+    AIParams = new GoogleAIStudioAIConfig
     {
       Temperature = config.AI.Temperature,
       TopP = config.AI.TopP,
@@ -76,8 +127,10 @@ public class AiChatSession
   /// [AI Context] Asynchronous entry point for the session. Initializes API clients and directory structures.
   /// [Human] Startet die Session, verbindet sich mit Google und erstellt die Log-Ordner für diesen Chat-Verlauf.
   /// </summary>
-  public async Task StartAsync(string selectedModel)
+  public async Task StartAsync()
   {
+    string selectedModel = SelectModel();
+
     // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
     await CleanupGcsBucketAsync();
 
@@ -87,28 +140,75 @@ public class AiChatSession
     _sessionLogger.InitializeSession();
 
     // [AI Context] Load System Instructions (Persona & Rules) into memory.
-    _ui.Write($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
-    if (_ui.ReadLine()?.Trim().ToLower() == "j")
+    Write($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+    if (ReadLine()?.Trim().ToLower() == "j")
     {
       if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
       {
         _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-        _ui.WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+        WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
       }
       else
       {
-        _ui.WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+        WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
       }
     }
     else
     {
-      _ui.WriteLine("  [INFO] System Instruction wird ignoriert.");
+      WriteLine("  [INFO] System Instruction wird ignoriert.");
     }
 
     string? initialInput = GetInitialHistoryCommand();
 
     // 4. Starte die Haupt-Chat-Schleife
     await RunChatSessionAsync(selectedModel, initialInput);
+  }
+
+  /// <summary>
+  /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
+  /// RULE: If you add, modify, or remove a model in the switch expression below, you MUST synchronously update the WriteLine menu text here!
+  /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
+  /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
+  /// </summary>
+  private string SelectModel()
+  {
+    WriteLine($"\n=== Model Selection (AI Studio) ===");
+    WriteLine("Wähle ein Modell:");
+    WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
+    WriteLine("                                  || Output: $1.50 (<== Claimed to be the most cost-efficient, optimized)");
+    WriteLine(" 2) gemini-3-flash-preview        || Input:  $0.50 (text / image / video), $1.00 (audio)");
+    WriteLine("                                  || Output: $3.0");
+    WriteLine(" 3) gemini-3.1-pro-preview        || Input:  $2.00, prompts <= 200k tokens, $4.00, prompts > 200k tokens");
+    WriteLine("                                  || Output: $12.00, prompts <= 200k tokens, $18.00, prompts > 200k");
+    WriteLine(" 4) gemini-2.5-flash              || Input:  $0.30  (text / image / video) $1.00 (audio). ");
+    WriteLine("                                  || Output: $2.50");
+    WriteLine(" 5) gemini-2.5-flash-lite         || Input:  $0.10  (text / image / video). ");
+    WriteLine("                                  || Output: $0.40");
+    WriteLine(" 6) gemini-2.5-pro                || Input:  $1.25, prompts <= 200k tokens, $2.50, prompts > 200k tokens.");
+    WriteLine("                                  || Output: $10.00, prompts <= 200k tokens $15.00, prompts > 200k");
+    WriteLine(" 7) gemma-3-27b-it                || (Open Model, 27B Parameter)");
+    WriteLine(" 8) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
+    WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
+    WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
+    WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
+    Write("Auswahl (1-11) [Standard: 4]: ");
+
+    string? choice = ReadLine()?.Trim();
+    return choice switch
+    {
+      "1" => "gemini-3.1-flash-lite-preview",
+      "2" => "gemini-3-flash-preview",
+      "3" => "gemini-3.1-pro-preview",
+      "4" => "gemini-2.5-flash",
+      "5" => "gemini-2.5-flash-lite",
+      "6" => "gemini-2.5-pro",
+      "7" => "gemma-3-27b-it",
+      "8" => "gemini-1.5-flash",
+      "9" => "gemini-1.5-pro",
+      "10" => "gemini-robotics-er-1.5-preview",
+      "11" => "gemini-robotics-er-1.6-preview",
+      _ => "gemini-2.5-flash"
+    };
   }
 
   // --- Ausgelagerte Methoden ---
@@ -127,28 +227,29 @@ public class AiChatSession
     // [Human] Speichert den Zustand nach dem ersten Laden ab. So funktioniert der "clear" Befehl!
     var initialHistory = new List<Content>(history); // Den Startzustand merken
 
-    _ui.WriteLine($"\n--- Chat gestartet ({selectedModel}) ---");
-    _ui.WriteLine("Befehle:");
-    _ui.WriteLine("  exit / quit               -> Beendet den Chat");
-    _ui.WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-    _ui.WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
-    _ui.WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
-    _ui.WriteLine("  set temp [wert]           -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
-    _ui.WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
+    WriteLine($"\n--- Chat gestartet ({selectedModel}) ---");
+    WriteLine("Befehle:");
+    WriteLine("  exit / quit               -> Beendet den Chat");
+    WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+    WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
+    WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
+    WriteLine("  set temp [wert]           -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
+    WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
 
     while (true)
     {
       string? input;
       if (initialInput != null)
       {
+        // [AI Context] Automatically executes the history attachment command on the first loop iteration without requiring user interaction.
         input = initialInput;
-        _ui.WriteLine($"\nDu: {input}");
+        WriteLine($"\nDu: {input}");
         initialInput = null; // Nur beim allerersten Durchlauf verwenden
       }
       else
       {
-        _ui.Write("\nDu: ");
-        input = _ui.ReadLine();
+        Write("\nDu: ");
+        input = ReadLine();
       }
 
       if (string.IsNullOrWhiteSpace(input)) continue;
@@ -158,6 +259,7 @@ public class AiChatSession
       string promptText = input;
 
       // Extract command handling to keep the main loop focused purely on the chat flow
+      // [AI Context] Uses a Command/Interceptor pattern. If TryHandleBuiltInCommandsAsync returns true, the input was a local REPL command, avoiding an API call.
       bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt);
 
       // If the command handler took care of everything (or failed gracefully), we skip the API call for this turn.
@@ -186,13 +288,14 @@ public class AiChatSession
       }
       catch (Exception ex)
       {
-        _ui.WriteLine($"\nHoppla, da gab es einen Fehler: {ex.Message}");
+        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+        WriteLine($"\nHoppla, da gab es einen Fehler: {ex.Message}");
         // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
         history.RemoveAt(history.Count - 1);
       }
     }
 
-    _ui.WriteLine("\n[INFO] Chat beendet. Räume temporäre Dateien im Cloud Storage auf...");
+    WriteLine("\n[INFO] Chat beendet. Räume temporäre Dateien im Cloud Storage auf...");
     await CleanupGcsBucketAsync();
   }
 
@@ -206,7 +309,7 @@ public class AiChatSession
     {
       history.Clear();
       history.AddRange(initialHistory);
-      _ui.WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
+      WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
       return true;
     }
 
@@ -216,11 +319,11 @@ public class AiChatSession
       if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
       {
         AIParams.Temperature = newTemp;
-        _ui.WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
+        WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
       }
       else
       {
-        _ui.WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
+        WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
       }
       return true;
     }
@@ -231,11 +334,11 @@ public class AiChatSession
       if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
       {
         AIParams.MaxOutputTokens = newTokens;
-        _ui.WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
+        WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
       }
       else
       {
-        _ui.WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
+        WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
       }
       return true;
     }
@@ -261,7 +364,7 @@ public class AiChatSession
   /// </summary>
   private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText)
   {
-    _ui.Write($"\n{selectedModel}: ");
+    Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
 
     // [AI Context] Maps current dynamic AI params to the Request payload.
@@ -280,22 +383,59 @@ public class AiChatSession
       config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
 
-    // Streaming aktivieren
-    var responseStream = _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config);
-    await foreach (var chunk in responseStream)
+    bool exceptionCaught = false;
+    using var cts = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
     {
-      string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-      _ui.Write(chunkText);
-      fullResponse += chunkText;
+      e.Cancel = true; // Verhindert das Beenden des Programms
+      try { cts.Cancel(); } catch { }
+    };
+    Console.CancelKeyPress += cancelHandler;
+
+    try
+    {
+      // Streaming aktivieren
+      var responseStream = _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config);
+      await foreach (var chunk in responseStream.WithCancellation(cts.Token))
+      {
+        // Fallback-Break: Falls das CancellationToken vom Google SDK ignoriert wird, 
+        // brechen wir die Schleife manuell beim nächsten empfangenen Wort ab.
+        if (cts.IsCancellationRequested) break;
+
+        string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+        Write(chunkText);
+        fullResponse += chunkText;
+      }
     }
-    _ui.WriteLine();
+    catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+    {
+      exceptionCaught = true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
+      if (exceptionCaught || cts.IsCancellationRequested)
+      {
+        WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
+      }
+      else
+      {
+        WriteLine();
+      }
+    }
 
     // 7. KI-Antwort in die Historie aufnehmen
-    history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-
-    // Optional: Verlauf in einer Log-Datei mitprotokollieren
-    // Und: Antwort zusätzlich als saubere .tex-Datei im aktuellen Session-Ordner speichern
-    await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse);
+    if (!string.IsNullOrWhiteSpace(fullResponse))
+    {
+      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse);
+    }
+    else
+    {
+      // [AI Context] Falls abgebrochen wurde, bevor die KI etwas gesagt hat, 
+      // müssen wir die User-Nachricht entfernen, um "Consecutive User Message"-Errors zu vermeiden.
+      history.RemoveAt(history.Count - 1);
+    }
   }
 
   /// <summary>
@@ -309,7 +449,7 @@ public class AiChatSession
       return null;
     }
 
-    string[] historyFiles = Directory.GetFiles(HistoryFolderPath);
+    string[] historyFiles = Directory.GetFiles(HistoryFolderPath, "*.*", SearchOption.AllDirectories);
 
     // Verhindert, dass die System Instruction versehentlich als History geladen wird, 
     // falls der Nutzer sie physisch im History-Ordner abgelegt hat.
@@ -323,14 +463,15 @@ public class AiChatSession
       return null;
     }
 
-    _ui.WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryFolderPath}' gefunden:");
+    WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryFolderPath}' gefunden:");
     foreach (var file in historyFiles)
     {
-      _ui.WriteLine($"  - {Path.GetFileName(file)}");
+      string relativePath = Path.GetRelativePath(HistoryFolderPath, file);
+      WriteLine($"  - {relativePath}");
     }
 
-    _ui.Write("Sollen diese Dateien als History geladen werden? (j/n): ");
-    bool loadHistory = _ui.ReadLine()?.Trim().ToLower() == "j";
+    Write("Sollen diese Dateien als History geladen werden? (j/n): ");
+    bool loadHistory = ReadLine()?.Trim().ToLower() == "j";
 
     if (!loadHistory) return null;
 
@@ -353,7 +494,7 @@ public class AiChatSession
     try
     {
       var storageClient = await StorageClient.CreateAsync();
-      _ui.WriteLine($"  [GCS] Prüfe Bucket '{GcsBucketName}' auf alte/temporäre Dateien...");
+      WriteLine($"  [GCS] Prüfe Bucket '{GcsBucketName}' auf alte/temporäre Dateien...");
       var objects = storageClient.ListObjectsAsync(GcsBucketName);
       int count = 0;
       await foreach (var obj in objects)
@@ -363,12 +504,22 @@ public class AiChatSession
       }
       if (count > 0)
       {
-        _ui.WriteLine($"  [GCS] {count} Datei(en) erfolgreich gelöscht.");
+        WriteLine($"  [GCS] {count} Datei(en) erfolgreich gelöscht.");
       }
     }
     catch (Exception ex)
     {
-      _ui.WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
+      // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+      if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
+          ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
+          ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase))
+      {
+        WriteLine($"  [GCS Warnung] Netzwerkfehler beim Bereinigen des Buckets '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
+      }
+      else
+      {
+        WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
+      }
     }
   }
 }

@@ -6,19 +6,25 @@ using System.Threading.Tasks;
 
 namespace FfmpegUtilities
 {
+  public class FfmpegSessionConfig
+  {
+    public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a/";
+    public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a/new";
+  }
+
   /// <summary>
   /// [AI Context] Manages FFmpeg preprocessing tasks for video/audio files before feeding them to the AI.
   /// Interactive console menu that acts as a frontend for the FfmpegToolkit.
   /// [Human] Dies ist die Menü-Oberfläche, wenn du im Hauptmenü "13" drückst. Sie regelt nur die Benutzerinteraktion.
   /// </summary>
-  public class FfmpegInteractiveMenu
+  public class FfmpegInteractiveSession
   {
     // [AI Context] Configurable default fallback paths.
     private string DefaultSourceFolder;
     private string DefaultDestinationFolder;
     private readonly FfmpegToolkit _toolkit;
 
-    public FfmpegInteractiveMenu(string sourceFolder, string destinationFolder)
+    public FfmpegInteractiveSession(string sourceFolder, string destinationFolder)
     {
       DefaultSourceFolder = sourceFolder;
       DefaultDestinationFolder = destinationFolder;
@@ -111,6 +117,11 @@ namespace FfmpegUtilities
       return true;
     }
 
+    /// <summary>
+    /// [AI Context] UI Menu rendering for FFmpeg presets.
+    /// RULE: If a new preset is added (e.g., option 13), you MUST update four synchronized locations: 
+    /// ShowMenuAndGetMode() (UI Text), IsValidMode() (Validation), SelectFilesToProcess() (Routing logic), and ExecuteToolkitActionAsync() (Execution mapping).
+    /// </summary>
     private string ShowMenuAndGetMode()
     {
       Console.WriteLine("\nConversion Options:");

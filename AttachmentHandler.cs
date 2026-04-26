@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
+using static System.Console;
 
 namespace AiInteraction;
 
@@ -21,17 +22,15 @@ public class AttachmentHandler
   private readonly bool _isAiStudio;
   private readonly string _gcsBucketName;
   private readonly Client _client;
-  private readonly IUserInterface _ui;
 
   // [AI Context] Injects required runtime dependencies.
-  public AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, IUserInterface ui)
+  public AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName)
   {
     _client = client;
     _uploadFolder = uploadFolder;
     _includePaths = includePaths ?? Array.Empty<string>();
     _isAiStudio = isAiStudio;
     _gcsBucketName = gcsBucketName;
-    _ui = ui;
   }
 
   /// <summary>
@@ -43,6 +42,7 @@ public class AttachmentHandler
   {
     var parts = new List<Part>();
 
+    // [AI Context] Implements a custom syntax parser: "attach [file1, file2] | [prompt]"
     string payload = input.Substring(7).Trim(); // Entfernt das "attach " am Anfang
     string[] payloadParts = payload.Split('|', 2);
     string filesPart = payloadParts[0];
@@ -71,34 +71,18 @@ public class AttachmentHandler
       }
       else
       {
-        _ui.WriteLine($"\n[Fehler] Die Datei '{rawName}' wurde absolut nirgends gefunden.");
-        _ui.WriteLine("  Ich habe exakt hier gesucht:");
+        WriteLine($"\n[Fehler] Die Datei '{rawName}' wurde absolut nirgends gefunden.");
+        WriteLine("  Ich habe exakt hier gesucht:");
         foreach (var loc in searchedLocations)
         {
-          _ui.WriteLine($"   - {loc}");
+          WriteLine($"   - {loc}");
         }
-
-        // Magic Debugging Trick: Zeige, was WIRKLICH im aktuellen Arbeitsverzeichnis liegt!
-        _ui.WriteLine($"\n  -> [DEBUG] Dateien im aktuellen Arbeitsverzeichnis ({System.Environment.CurrentDirectory}):");
-        try
-        {
-          var currentFiles = Directory.GetFiles(System.Environment.CurrentDirectory).Select(Path.GetFileName).ToArray();
-          if (currentFiles.Length > 0)
-          {
-            _ui.WriteLine($"     {string.Join(", ", currentFiles)}");
-          }
-          else
-          {
-            _ui.WriteLine("     (Ordner ist leer!)");
-          }
-        }
-        catch { }
       }
     }
 
     if (loadedNames.Count > 0)
     {
-      _ui.WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
+      WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
     }
 
     return (anyFileLoaded, promptText, parts);
@@ -135,6 +119,7 @@ public class AttachmentHandler
     }
 
     // 4. IncludePaths
+    // [AI Context] Evaluates configured arrays of static fallback directories (e.g., where FFmpeg typically drops processed videos).
     foreach (var inc in _includePaths)
     {
       if (System.IO.File.Exists(inc))
@@ -164,7 +149,7 @@ public class AttachmentHandler
 
     if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext))
     {
-      _ui.WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
+      WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
       string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
       parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(filePath)}) ---\n{fileContent}\n--- DOKUMENT ENDE ---" });
       return true;
@@ -184,7 +169,7 @@ public class AttachmentHandler
 
     if (mimeType == null)
     {
-      _ui.WriteLine($"[Fehler] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
+      WriteLine($"[Fehler] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
       return false;
     }
 
@@ -192,37 +177,46 @@ public class AttachmentHandler
     {
       // [AI Context] Integrates with Google's newer File API specifically designed for AI Studio.
       // [Human] Das ist der direkte Datei-Upload über die Google AI Studio API (ohne GCS Buckets).
-      _ui.WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
+      WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
       try
       {
         var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
         var uploadedFile = await _client.Files.UploadAsync(filePath, config: uploadConfig);
 
-        _ui.WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
-        _ui.Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
-
-        var fileInfo = await _client.Files.GetAsync(uploadedFile.Name);
-        while (fileInfo.State != null && fileInfo.State.ToString().Equals("PROCESSING", StringComparison.OrdinalIgnoreCase))
+        if (uploadedFile.Name == null)
         {
-          _ui.Write(".");
-          await Task.Delay(5000); // 5 Sekunden warten und erneut abfragen
-          fileInfo = await _client.Files.GetAsync(uploadedFile.Name);
-        }
-        _ui.WriteLine();
-
-        if (fileInfo.State != null && fileInfo.State.ToString().Equals("FAILED", StringComparison.OrdinalIgnoreCase))
-        {
-          _ui.WriteLine($"  [Fehler] Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
+          WriteLine($"  [Fehler] Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null.");
           return false;
         }
 
-        _ui.WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
+        string remoteFileName = uploadedFile.Name;
+
+        WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
+        Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
+
+        var fileInfo = await _client.Files.GetAsync(remoteFileName);
+        while (string.Equals(fileInfo?.State?.ToString(), "PROCESSING", StringComparison.OrdinalIgnoreCase))
+        {
+          Write(".");
+          await Task.Delay(5000); // 5 Sekunden warten und erneut abfragen
+          fileInfo = await _client.Files.GetAsync(remoteFileName);
+        }
+        WriteLine();
+
+        if (string.Equals(fileInfo?.State?.ToString(), "FAILED", StringComparison.OrdinalIgnoreCase))
+        {
+          WriteLine($"  [Fehler] Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
+          return false;
+        }
+
+        WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
         parts.Add(new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } });
         return true;
       }
       catch (Exception ex)
       {
-        _ui.WriteLine($"  [Fehler] Beim Upload über File API ist ein Fehler aufgetreten: {ex.Message}");
+        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+        WriteLine($"  [Fehler] Beim Upload über File API ist ein Fehler aufgetreten: {ex.Message}");
         return false;
       }
     }
@@ -230,7 +224,7 @@ public class AttachmentHandler
     {
       // [AI Context] Integrates with Google Cloud Storage for Enterprise Vertex AI workloads.
       // [Human] Das ist der Upload in deinen (ggf. kostenpflichtigen) Google Cloud Storage Bucket.
-      _ui.WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
+      WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
       try
       {
         var storageClient = await StorageClient.CreateAsync();
@@ -240,14 +234,15 @@ public class AttachmentHandler
         await storageClient.UploadObjectAsync(_gcsBucketName, objectName, mimeType, fileStream);
 
         string gcsUri = $"gs://{_gcsBucketName}/{objectName}";
-        _ui.WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
+        WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
 
         parts.Add(new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } });
         return true;
       }
       catch (Exception ex)
       {
-        _ui.WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten:\n{ex}");
+        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+        WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten:\n{ex}");
         return false;
       }
     }

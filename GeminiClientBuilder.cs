@@ -18,38 +18,20 @@ public static class GoogleAiClientBuilder
   /// </summary>
   public static string? ResolveApiKey(int activeKeyProfile = 1)
   {
-    string? apiKey1 = System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-1")
-                   ?? System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-1", EnvironmentVariableTarget.User)
-                   ?? System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-1", EnvironmentVariableTarget.Machine);
-    string? apiKey2 = System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-2")
-                   ?? System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-2", EnvironmentVariableTarget.User)
-                   ?? System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-2", EnvironmentVariableTarget.Machine);
-    string? apiKey3 = System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-3")
-                   ?? System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-3", EnvironmentVariableTarget.User)
-                   ?? System.Environment.GetEnvironmentVariable("API_KEY-ai-studio-test-project-3", EnvironmentVariableTarget.Machine);
+    // [AI Context] Checks Process, User, and Machine environment variables to handle Windows permission contexts gracefully.
+    // Required because User/Machine level environment variables are not always automatically inherited by the running Process unless explicitly reloaded or restarted.
+    // [AI Context] Dynamically resolves the environment variable name based on the requested profile index. No hardcoded switch needed.
+    string envVarName = $"API_KEY-ai-studio-test-project-{activeKeyProfile}";
 
-    string apiKey = "";
+    string? apiKey = System.Environment.GetEnvironmentVariable(envVarName)
+                  ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
+                  ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
 
-    switch (activeKeyProfile)
-    {
-      case 3:
-        apiKey = apiKey3 ?? "";
-        Console.WriteLine("  [INFO] Verwende API_KEY-ai-studio-test-project-3 (Projekt 3)");
-        break;
-      case 2:
-        apiKey = apiKey2 ?? "";
-        Console.WriteLine("  [INFO] Verwende API_KEY-ai-studio-test-project-2 (Projekt 2)");
-        break;
-      case 1:
-      default:
-        apiKey = apiKey1 ?? "";
-        Console.WriteLine("  [INFO] Verwende API_KEY-ai-studio-test-project-1 (Projekt 1)");
-        break;
-    }
+    Console.WriteLine($"  [INFO] Verwende {envVarName} (Projekt {activeKeyProfile})");
 
     if (string.IsNullOrEmpty(apiKey))
     {
-      Console.WriteLine("Fehler: Keiner der API-Keys (Projekt 1, 2 oder 3) wurde in den Umgebungsvariablen gefunden.");
+      Console.WriteLine($"Fehler: Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
       return null;
     }
 

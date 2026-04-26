@@ -26,6 +26,8 @@ public class SessionLogger
 
     if (!string.IsNullOrWhiteSpace(_logFolderPath))
     {
+      // [AI Context] Scans the designated log directory for existing "folder-X-" prefixes.
+      // Dynamically extracts the numeric index (X) to generate a monotonically increasing session ID, ensuring no logs are overwritten.
       if (!Directory.Exists(_logFolderPath))
       {
         Directory.CreateDirectory(_logFolderPath);
@@ -58,6 +60,8 @@ public class SessionLogger
     await File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
 
     // LaTeX Response speichern
+    // [AI Context] Isolates the raw model output into dedicated .tex files.
+    // This is a core feature for academic workflows, allowing immediate compilation of the AI's response without copy-pasting from a Markdown log.
     if (!string.IsNullOrWhiteSpace(_currentSessionLogPath))
     {
       string texFilePath = Path.Combine(_currentSessionLogPath, $"response-{_responseCount}-{_currentSessionDateSuffix}.tex");
