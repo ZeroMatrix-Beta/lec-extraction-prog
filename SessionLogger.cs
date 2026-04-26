@@ -14,6 +14,8 @@ public class SessionLogger
   private string _currentSessionLogPath = "";
   private string _currentSessionDateSuffix = "";
   private int _responseCount = 1;
+  private bool _loadedSystemInstruction;
+  private bool _loadedHistory;
 
   public SessionLogger(string logFolderPath)
   {
@@ -53,11 +55,23 @@ public class SessionLogger
     }
   }
 
-  public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse)
+  public void SetSessionMetadata(bool loadedSystemInstruction, bool loadedHistory)
+  {
+    _loadedSystemInstruction = loadedSystemInstruction;
+    _loadedHistory = loadedHistory;
+  }
+
+  public async Task LogSessionSetupAsync()
+  {
+    string setupLog = $"\n=== Neue Chat-Sitzung ({DateTime.Now}) ===\n- System Prompt geladen: {_loadedSystemInstruction}\n- History geladen: {_loadedHistory}\n---\n";
+    await File.AppendAllTextAsync("chat_log.md", setupLog);
+  }
+
+  public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName)
   {
     // Markdown Verlauf mitprotokollieren
     string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
-    await File.AppendAllTextAsync("chat_log.md", $"\n**Du:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
+    await File.AppendAllTextAsync("chat_log.md", $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
 
     // LaTeX Response speichern
     // [AI Context] Isolates the raw model output into dedicated .tex files.
@@ -65,7 +79,18 @@ public class SessionLogger
     if (!string.IsNullOrWhiteSpace(_currentSessionLogPath))
     {
       string texFilePath = Path.Combine(_currentSessionLogPath, $"response-{_responseCount}-{_currentSessionDateSuffix}.tex");
-      await File.WriteAllTextAsync(texFilePath, fullResponse);
+
+      string formattedPrompt = logInput.Replace("\r\n", "\n").Replace("\n", "\n% ");
+      string texHeader = $"% ==========================================\n" +
+                         $"% Session Info:\n" +
+                         $"% System Prompt loaded: {_loadedSystemInstruction}\n" +
+                         $"% History loaded: {_loadedHistory}\n" +
+                         $"% \n" +
+                         $"% {userName} Prompt:\n" +
+                         $"% {formattedPrompt}\n" +
+                         $"% ==========================================\n\n";
+
+      await File.WriteAllTextAsync(texFilePath, texHeader + fullResponse);
       _responseCount++;
     }
   }

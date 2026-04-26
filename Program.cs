@@ -28,7 +28,8 @@ class Program
     Console.WriteLine(" 3) FFmpeg Interactive Manager (Local Audio/Video Processing)");
     Console.WriteLine("--------------------------------------------------");
     Console.WriteLine(" 4) Automated Content Retrieval & Processing (Future Enhancement)");
-    Console.Write("\nChoice (1-4): ");
+    Console.WriteLine(" 5) LaTeX Refinement & Post-Processing (Dedicated API Key)");
+    Console.Write("\nChoice (1-5): ");
 
     string? mainChoice = Console.ReadLine()?.Trim();
 
@@ -44,7 +45,8 @@ class Program
       {
         var config = new VertexAutoExtractionConfig();
         Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-        var session = new VertexAutoExtractionSession(client, config);
+        var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, isAiStudio: false, config.GcsBucketName);
+        var session = new VertexAutoExtractionSession(client, config, attachmentHandler);
         await session.StartAsync();
       }
       else
@@ -52,9 +54,20 @@ class Program
         var config = new AiStudioAutoExtractionConfig();
         string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-        var session = new AiStudioAutoExtractionSession(client, config);
+        var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, isAiStudio: true, "");
+        var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler);
         await session.StartAsync();
       }
+      return;
+    }
+
+    if (mainChoice == "5")
+    {
+      // Lade den exklusiven Key für das Refinement
+      string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+      Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
+      var session = new LatexRefinementSession(client);
+      await session.StartAsync();
       return;
     }
 

@@ -105,6 +105,7 @@ public class VertexAiChatSession
 
     _sessionLogger.InitializeSession();
 
+    bool loadedSysPrompt = false;
     Write($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
     if (ReadLine()?.Trim().ToLower() == "j")
     {
@@ -112,6 +113,7 @@ public class VertexAiChatSession
       {
         _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
         WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+        loadedSysPrompt = true;
       }
       else
       {
@@ -124,6 +126,10 @@ public class VertexAiChatSession
     }
 
     string? initialInput = GetInitialHistoryCommand();
+    bool loadedHistory = initialInput != null;
+
+    _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
+    await _sessionLogger.LogSessionSetupAsync();
 
     await RunChatSessionAsync(selectedModel, initialInput);
   }
@@ -179,14 +185,10 @@ public class VertexAiChatSession
   {
     var history = new List<Content>();
     var initialHistory = new List<Content>(history);
+    string userName = "Vertex AI User";
 
     WriteLine($"\n--- Vertex Chat gestartet ({selectedModel}) ---");
-    WriteLine("Befehle:");
-    WriteLine("  exit / quit               -> Beendet den Chat");
-    WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-    WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
-    WriteLine("  set temp [wert]           -> Ändert die Temperatur dynamisch");
-    WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch");
+    ShowCommands();
 
     while (true)
     {
@@ -194,12 +196,12 @@ public class VertexAiChatSession
       if (initialInput != null)
       {
         input = initialInput;
-        WriteLine($"\nDu: {input}");
+        WriteLine($"\n{userName}: {input}");
         initialInput = null;
       }
       else
       {
-        Write("\nDu: ");
+        Write($"\n{userName}: ");
         input = ReadLine();
       }
 
@@ -224,7 +226,7 @@ public class VertexAiChatSession
 
       try
       {
-        await StreamGeminiResponseAsync(selectedModel, history, input, promptText);
+        await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
       }
       catch (Exception ex)
       {
@@ -247,8 +249,25 @@ public class VertexAiChatSession
     await ForcePurgeGcsBucketAsync();
   }
 
+  private void ShowCommands()
+  {
+    WriteLine("\nBefehle:");
+    WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
+    WriteLine("  exit / quit               -> Beendet den Chat");
+    WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+    WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
+    WriteLine("  set temp [wert]           -> Ändert die Temperatur dynamisch");
+    WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch");
+  }
+
   private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText)
   {
+    if (input.Equals("help", StringComparison.OrdinalIgnoreCase) || input.Equals("commands", StringComparison.OrdinalIgnoreCase) || input.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+    {
+      ShowCommands();
+      return true;
+    }
+
     if (input.Equals("clear", StringComparison.OrdinalIgnoreCase) || input.Equals("reset", StringComparison.OrdinalIgnoreCase))
     {
       history.Clear();
@@ -293,7 +312,7 @@ public class VertexAiChatSession
     return false;
   }
 
-  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText)
+  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName)
   {
     Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
@@ -305,6 +324,22 @@ public class VertexAiChatSession
       TopK = AIParams.TopK,
       MaxOutputTokens = AIParams.MaxOutputTokens
     };
+
+    // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models
+    if (selectedModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase))
+    {
+      if (!string.IsNullOrWhiteSpace(AIParams.ThinkingLevel))
+      {
+        config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
+      }
+    }
+    else if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    {
+      if (AIParams.ThinkingBudget.HasValue)
+      {
+        config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = AIParams.ThinkingBudget };
+      }
+    }
 
     if (!string.IsNullOrWhiteSpace(_systemInstructionText))
     {
@@ -354,7 +389,7 @@ public class VertexAiChatSession
     if (!string.IsNullOrWhiteSpace(fullResponse))
     {
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse);
+      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName);
     }
     else
     {
