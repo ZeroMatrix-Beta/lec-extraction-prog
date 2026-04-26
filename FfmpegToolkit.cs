@@ -22,6 +22,13 @@ namespace FfmpegUtilities
     public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false)
     {
       var generatedFiles = new List<string>();
+
+      if (!File.Exists(inputFile))
+      {
+        Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
+        return generatedFiles;
+      }
+
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       double duration = await GetVideoDurationAsync(inputFile);
 
@@ -81,6 +88,12 @@ namespace FfmpegUtilities
     /// </summary>
     public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000)
     {
+      if (!File.Exists(inputFile))
+      {
+        Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
+        return null;
+      }
+
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       string speedStr = speedMultiplier.ToString(CultureInfo.InvariantCulture);
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-speed-{speedStr}-compressed", ".mp4");
@@ -126,6 +139,9 @@ namespace FfmpegUtilities
 
       Console.WriteLine($"\n  [FFmpegToolkit] Processing AI Video ({speedMultiplier}x Speed, {fps} FPS): {Path.GetFileName(inputFile)}...");
 
+      // [DEBUG] Ausgabe des exakten Befehls, falls FFmpeg manuell getestet werden muss
+      Console.WriteLine($"  [DEBUG CMD] ffmpeg -y -nostdin {ffmpegArgs}");
+
       if (await RunFfmpegAsync(ffmpegArgs))
       {
         Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
@@ -140,6 +156,12 @@ namespace FfmpegUtilities
     /// </summary>
     public async Task<bool> LegacyCodeProcessFast720pVideoAsync(string inputFile, string destFolder)
     {
+      if (!File.Exists(inputFile))
+      {
+        Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
+        return false;
+      }
+
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-speed-1.5-720p-compressed", ".mp4");
 
@@ -162,6 +184,12 @@ namespace FfmpegUtilities
     /// </summary>
     public async Task<bool> ProcessCustomVideoAsync(string inputFile, string destFolder, string commandTemplate, string outputExtension)
     {
+      if (!File.Exists(inputFile))
+      {
+        Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
+        return false;
+      }
+
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-custom", outputExtension);
       string ffmpegArgs = string.Format(commandTemplate, inputFile, outputFile);
@@ -181,6 +209,12 @@ namespace FfmpegUtilities
     /// </summary>
     public async Task<bool> ExtractAudioAsMp3Async(string inputFile, string destFolder)
     {
+      if (!File.Exists(inputFile))
+      {
+        Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
+        return false;
+      }
+
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_audio", ".mp3");
       string arguments = $"-y -i \"{inputFile}\" -vn -acodec libmp3lame -q:a 2 -ar 48000 \"{outputFile}\"";
@@ -218,6 +252,12 @@ namespace FfmpegUtilities
     /// </summary>
     private async Task<double> GetVideoDurationAsync(string filePath)
     {
+      if (!File.Exists(filePath))
+      {
+        Console.WriteLine($"\n  [ffprobe error] File not found: '{filePath}'");
+        return -1;
+      }
+
       var startInfo = new ProcessStartInfo
       {
         FileName = "ffprobe",
@@ -257,9 +297,9 @@ namespace FfmpegUtilities
       var processInfo = new ProcessStartInfo
       {
         FileName = "ffmpeg",
-        Arguments = arguments + " -v error",
+        Arguments = $"-y -nostdin {arguments} -hide_banner -stats",
         RedirectStandardOutput = true,
-        RedirectStandardError = true,
+        RedirectStandardError = true, // Wir leiten um und leeren den Puffer aktiv
         UseShellExecute = false,
         CreateNoWindow = true
       };
@@ -269,15 +309,34 @@ namespace FfmpegUtilities
         using var process = Process.Start(processInfo);
         if (process == null) return false;
 
-        var readErrorTask = process.StandardError.ReadToEndAsync();
-        var readOutputTask = process.StandardOutput.ReadToEndAsync(); // Good practice to prevent deadlocks
+        // Aktives, paralleles Auslesen der Ausgabeströme. 
+        // Verhindert das Einfrieren von FFmpeg durch volle I/O-Puffer des Betriebssystems.
+        var readErrorTask = Task.Run(async () =>
+        {
+          var buffer = new char[256];
+          int bytesRead;
+          while ((bytesRead = await process.StandardError.ReadAsync(buffer, 0, buffer.Length)) > 0)
+          {
+            Console.Write(new string(buffer, 0, bytesRead));
+          }
+        });
 
-        await process.WaitForExitAsync();
-        string errorOutput = await readErrorTask;
+        var readOutputTask = Task.Run(async () =>
+        {
+          var buffer = new char[256];
+          int bytesRead;
+          while ((bytesRead = await process.StandardOutput.ReadAsync(buffer, 0, buffer.Length)) > 0)
+          {
+            Console.Write(new string(buffer, 0, bytesRead));
+          }
+        });
+
+        // Wir warten, bis der Prozess beendet ist UND unsere Reader-Schleifen alles ausgelesen haben.
+        await Task.WhenAll(process.WaitForExitAsync(), readErrorTask, readOutputTask);
 
         if (process.ExitCode != 0)
         {
-          Console.WriteLine($"  [FFmpeg Error] {errorOutput.Trim()}");
+          Console.WriteLine($"\n  [FFmpeg Error] FFmpeg wurde mit Fehlercode {process.ExitCode} beendet.");
           return false;
         }
         return true;

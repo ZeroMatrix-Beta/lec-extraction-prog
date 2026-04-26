@@ -170,7 +170,8 @@ public class AiStudioAutoExtractionSession
       Console.WriteLine($"\n=== Starte Konvertierung für {Path.GetFileName(file)} ===");
 
       // 1. Mono & Speed
-      Console.WriteLine("Schritt 1: Beschleunige Video und konvertiere nach Mono...");
+      Console.WriteLine("Schritt 1: Konvertiere nach Mono und beschleunige Video...");
+      Console.WriteLine("  -> Dieser Vorgang ist rechenintensiv und kann bei langen Videos einige Minuten dauern. Bitte haben Sie Geduld...");
       string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _speed, fps: 1, downmixToMono: true);
       if (speedVideo == null)
       {
