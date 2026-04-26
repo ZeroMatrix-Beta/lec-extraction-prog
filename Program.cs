@@ -6,6 +6,7 @@ using AiInteraction.Vertex;
 using FfmpegUtilities;
 using GoogleGenAi;
 using Google.GenAI;
+using AiInteraction.AutoExtraction;
 
 /// <summary>
 /// [AI Context] Main application entry point. Orchestrates the execution flow by delegating
@@ -25,9 +26,37 @@ class Program
     Console.WriteLine(" 1) Google AI Studio (API Key / Developer endpoints)");
     Console.WriteLine(" 2) Google Cloud Vertex AI (Enterprise / 'vertex-ai-experiments')");
     Console.WriteLine(" 3) FFmpeg Interactive Manager (Local Audio/Video Processing)");
-    Console.Write("\nChoice (1-3): ");
+    Console.WriteLine("--------------------------------------------------");
+    Console.WriteLine(" 4) Automated Content Retrieval & Processing (Future Enhancement)");
+    Console.Write("\nChoice (1-4): ");
 
     string? mainChoice = Console.ReadLine()?.Trim();
+
+    if (mainChoice == "4")
+    {
+      Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
+      Console.WriteLine(" 1) Google AI Studio");
+      Console.WriteLine(" 2) Google Cloud Vertex AI");
+      Console.Write("Wahl (1-2): ");
+      string? extChoice = Console.ReadLine()?.Trim();
+
+      if (extChoice == "2")
+      {
+        var config = new VertexAutoExtractionConfig();
+        Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
+        var session = new VertexAutoExtractionSession(client, config);
+        await session.StartAsync();
+      }
+      else
+      {
+        var config = new AiStudioAutoExtractionConfig();
+        string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
+        Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
+        var session = new AiStudioAutoExtractionSession(client, config);
+        await session.StartAsync();
+      }
+      return;
+    }
 
     if (mainChoice == "3")
     {

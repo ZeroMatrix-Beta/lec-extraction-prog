@@ -45,7 +45,7 @@ public class GoogleAIStudioAIConfig
 public class GoogleAIStudioConfig
 {
   // [AI Context] Selects the environment variable API key profile to use (1-3).
-  public int ActiveApiProfile { get; set; } = 1;
+  public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
   public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
   public string HistoryFolder { get; set; } = @"D:\gemini-chat-history";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
@@ -96,7 +96,7 @@ public class GoogleAIStudioChatSession
   private readonly bool IsAiStudio;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
-  private readonly Client _client;
+  private Client _client;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
   public GoogleAIStudioChatSession(Client client, GoogleAIStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio)
@@ -174,18 +174,12 @@ public class GoogleAIStudioChatSession
   {
     WriteLine($"\n=== Model Selection (AI Studio) ===");
     WriteLine("Wähle ein Modell:");
-    WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
-    WriteLine("                                  || Output: $1.50 (<== Claimed to be the most cost-efficient, optimized)");
-    WriteLine(" 2) gemini-3-flash-preview        || Input:  $0.50 (text / image / video), $1.00 (audio)");
-    WriteLine("                                  || Output: $3.0");
-    WriteLine(" 3) gemini-3.1-pro-preview        || Input:  $2.00, prompts <= 200k tokens, $4.00, prompts > 200k tokens");
-    WriteLine("                                  || Output: $12.00, prompts <= 200k tokens, $18.00, prompts > 200k");
-    WriteLine(" 4) gemini-2.5-flash              || Input:  $0.30  (text / image / video) $1.00 (audio). ");
-    WriteLine("                                  || Output: $2.50");
-    WriteLine(" 5) gemini-2.5-flash-lite         || Input:  $0.10  (text / image / video). ");
-    WriteLine("                                  || Output: $0.40");
-    WriteLine(" 6) gemini-2.5-pro                || Input:  $1.25, prompts <= 200k tokens, $2.50, prompts > 200k tokens.");
-    WriteLine("                                  || Output: $10.00, prompts <= 200k tokens $15.00, prompts > 200k");
+    WriteLine(" 1) gemini-3.1-flash-lite-preview");
+    WriteLine(" 2) gemini-3-flash-preview");
+    WriteLine(" 3) gemini-3.1-pro-preview");
+    WriteLine(" 4) gemini-2.5-flash");
+    WriteLine(" 5) gemini-2.5-flash-lite");
+    WriteLine(" 6) gemini-2.5-pro");
     WriteLine(" 7) gemma-3-27b-it                || (Open Model, 27B Parameter)");
     WriteLine(" 8) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
     WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
@@ -235,6 +229,7 @@ public class GoogleAIStudioChatSession
     WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
     WriteLine("  set temp [wert]           -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
     WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
+    WriteLine("  change-key [1-3]          -> Wechselt das API-Key Profil dynamisch und speichert die Wahl (z.B. change-key 2)");
 
     while (true)
     {
@@ -339,6 +334,32 @@ public class GoogleAIStudioChatSession
       else
       {
         WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
+      }
+      return true;
+    }
+
+    if (input.StartsWith("change-key ", StringComparison.OrdinalIgnoreCase))
+    {
+      string keyStr = input.Substring(11).Trim();
+      if (int.TryParse(keyStr, out int newProfile) && newProfile >= 1 && newProfile <= 3)
+      {
+        System.Environment.SetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", newProfile.ToString(), EnvironmentVariableTarget.User);
+
+        string? newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
+        if (!string.IsNullOrEmpty(newApiKey))
+        {
+          _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
+          _attachmentHandler.UpdateClient(_client);
+          WriteLine($"[INFO] API-Key Profil erfolgreich auf {newProfile} gewechselt und dauerhaft in den Windows-Umgebungsvariablen gespeichert!");
+        }
+        else
+        {
+          WriteLine($"[Fehler] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
+        }
+      }
+      else
+      {
+        WriteLine("[Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
       }
       return true;
     }

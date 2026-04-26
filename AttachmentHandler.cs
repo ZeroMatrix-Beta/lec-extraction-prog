@@ -21,7 +21,7 @@ public class AttachmentHandler
   private readonly string[] _includePaths;
   private readonly bool _isAiStudio;
   private readonly string _gcsBucketName;
-  private readonly Client _client;
+  private Client _client;
 
   // [AI Context] Injects required runtime dependencies.
   public AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName)
@@ -31,6 +31,11 @@ public class AttachmentHandler
     _includePaths = includePaths ?? Array.Empty<string>();
     _isAiStudio = isAiStudio;
     _gcsBucketName = gcsBucketName;
+  }
+
+  public void UpdateClient(Client newClient)
+  {
+    _client = newClient;
   }
 
   /// <summary>
