@@ -70,25 +70,29 @@ public class AiStudioAutoExtractionSession
       }
     }
 
-    Console.Write("\nSystem Instruction laden? (j/n): ");
+    Console.Write($"\nSystem Instruction aus '{_config.SystemInstructionPath}' laden? (j/n): ");
     if (Console.ReadLine()?.Trim().ToLower() == "j" && System.IO.File.Exists(_config.SystemInstructionPath))
     {
       _systemInstructionText = await System.IO.File.ReadAllTextAsync(_config.SystemInstructionPath);
-      Console.WriteLine($"[INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
+      Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
     }
 
-    Console.Write("History (alte Chat-Verläufe) mitschicken? (j/n): ");
+    Console.Write($"\nHistory (alte Chat-Verläufe) aus '{_config.HistoryPreloadFolder}' mitschicken? (j/n): ");
     if (Console.ReadLine()?.Trim().ToLower() == "j" && Directory.Exists(_config.HistoryPreloadFolder))
     {
       var histFiles = Directory.GetFiles(_config.HistoryPreloadFolder, "*.*", SearchOption.AllDirectories);
+      bool anyLoaded = false;
+      Console.WriteLine("  [INFO] Lade History-Dateien:");
       foreach (var hf in histFiles)
       {
         if (!string.Equals(Path.GetFullPath(hf), Path.GetFullPath(_config.SystemInstructionPath), StringComparison.OrdinalIgnoreCase))
         {
           _historyText += $"\n--- HISTORY DATEI: {Path.GetFileName(hf)} ---\n" + await System.IO.File.ReadAllTextAsync(hf) + "\n";
+          Console.WriteLine($"    - {Path.GetFileName(hf)}");
+          anyLoaded = true;
         }
       }
-      Console.WriteLine($"[INFO] History geladen.");
+      if (!anyLoaded) Console.WriteLine("    (Keine passenden Dateien gefunden)");
     }
 
     _sessionLogger.InitializeSession();
@@ -271,12 +275,14 @@ public class AiStudioAutoExtractionSession
 
     string fullResponse = "";
     int backoff = 15;
+    int currentRequest = 1;
+    int maxRequests = 5;
 
     while (true)
     {
       try
       {
-        Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model}...");
+        Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequests})...");
 
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
         string chunkResp = "";
@@ -292,10 +298,16 @@ public class AiStudioAutoExtractionSession
 
         if (chunkResp.Contains("[SYSTEM] Segment complete", StringComparison.OrdinalIgnoreCase))
         {
+          if (currentRequest >= maxRequests)
+          {
+            Console.WriteLine("\n\n[WARNUNG] Maximale Anzahl an Requests (5) erreicht. Breche Generierung für diesen Teil ab.");
+            break;
+          }
           Console.WriteLine("\n\n[AutoExtraction] Sende 'Continue'...");
           history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
           history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Continue" } } });
           backoff = 15; // reset backoff on success
+          currentRequest++;
           continue;
         }
 
