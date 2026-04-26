@@ -20,7 +20,7 @@ public class AiStudioAutoExtractionConfig
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
   public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
-  public string Model { get; set; } = "gemini-2.5-pro";
+  public string Model { get; set; } = "gemini-3-flash-preview";
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 }
 
@@ -181,7 +181,7 @@ public class AiStudioAutoExtractionSession
 
       // 2. Split
       Console.WriteLine("Schritt 2: Schneide Video in Teile mit Overlap...");
-      var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false);
+      var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
       if (parts.Count == 0)
       {
         Console.WriteLine("Fehler beim Splitten");
@@ -338,6 +338,8 @@ public class AiStudioAutoExtractionSession
 // 2. Google Cloud Vertex AI (Enterprise Tier)
 // ==========================================
 
+// [AI Context] Configuration for the enterprise Vertex AI tier.
+// Binds to a specific GCP Project and Region, requiring an active billing account and a dedicated GCS bucket for multimodal payloads.
 public class VertexAutoExtractionConfig
 {
   public string ProjectId { get; set; } = "vertex-ai-experiments-494320";
@@ -346,8 +348,9 @@ public class VertexAutoExtractionConfig
   public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a\new";
   public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
-  public string Model { get; set; } = "gemini-2.5-pro";
+  public string Model { get; set; } = "gemini-3-flash-preview";
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
+  public double SpeedMultiplier { get; set; } = 1.2;
 }
 
 public class VertexAutoExtractionSession
@@ -398,10 +401,10 @@ public class VertexAutoExtractionSession
 
     Console.WriteLine($"[AutoExtraction] {filesToProcess.Length} Datei(en) gefunden. Starte Verarbeitung...");
 
-    // [AI Context] TODO: Future Architecture Note
-    // This section will become significantly more complex. We need to integrate the FfmpegToolkit here
-    // to automatically cut/split long lecture videos into 10-12 minute chunks before uploading them.
-    // The current loop is a simplified placeholder that assumes the files are already prepared.
+    var toolkit = new FfmpegUtilities.FfmpegToolkit();
+    string tmpFolder = Path.Combine(_config.TargetFolder, "tmp");
+    if (!Directory.Exists(tmpFolder)) Directory.CreateDirectory(tmpFolder);
+
     foreach (var file in filesToProcess)
     {
       string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
@@ -415,34 +418,84 @@ public class VertexAutoExtractionSession
       {
         Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
 
-        var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{file}\" | {_config.Prompt}");
-        if (!uploadSuccess || attachmentParts.Count == 0)
+        Console.WriteLine($"Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
+        string? processedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _config.SpeedMultiplier, fps: 1, downmixToMono: true, scaleTo720p: true);
+
+        if (processedVideo == null)
         {
-          Console.WriteLine($"\n  [Fehler] Upload fehlgeschlagen. Überspringe.");
+          Console.WriteLine($"  [Fehler] Konvertierung fehlgeschlagen. Überspringe.");
           continue;
         }
 
-        var parts = new List<Part>(attachmentParts);
-        parts.Add(new Part { Text = parsedPrompt });
-        var contents = new List<Content> { new Content { Role = "user", Parts = parts } };
+        Console.WriteLine("Schritt 2: Schneide Video in Teile mit Overlap...");
+        var videoParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
 
-        var requestConfig = new GenerateContentConfig
+        if (videoParts.Count == 0)
         {
-          Temperature = 0.0f,
-          MaxOutputTokens = 65535
-        };
+          Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
+          continue;
+        }
 
-        if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
-        if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+        List<string> generatedTexFiles = new List<string>();
+        string fullOutputText = "";
 
-        Console.WriteLine($"  [API] Sende Anfrage an {_config.Model}...");
-        var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
+        for (int i = 0; i < videoParts.Count; i++)
+        {
+          string partFile = videoParts[i];
+          Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
 
-        string outputText = response.Text ?? "";
+          string prompt = _config.Prompt;
+          if (i > 0)
+          {
+            prompt += $"\n\nDieses Video ist Teil {i + 1} einer Vorlesung. Im Kontext sind die bereits generierten LaTeX Dokumente der vorherigen Teile. Bitte nutze diese für den Kontext.";
+          }
+
+          var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
+          if (!uploadSuccess || attachmentParts.Count == 0)
+          {
+            Console.WriteLine($"\n  [Fehler] Upload fehlgeschlagen für Teil {i + 1}. Überspringe.");
+            continue;
+          }
+
+          var parts = new List<Part>(attachmentParts);
+
+          // [AI Context] Context stitching for the Enterprise model. Maintains rigid notation consistency across segment boundaries.
+          foreach (var texFile in generatedTexFiles)
+          {
+            string content = await System.IO.File.ReadAllTextAsync(texFile);
+            parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+          }
+
+          parts.Add(new Part { Text = parsedPrompt });
+          var contents = new List<Content> { new Content { Role = "user", Parts = parts } };
+
+          var requestConfig = new GenerateContentConfig
+          {
+            Temperature = 0.0f,
+            MaxOutputTokens = 65535
+          };
+
+          if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
+          if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+
+          Console.WriteLine($"  [API] Sende Anfrage an {_config.Model}...");
+          var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
+
+          string outputText = response.Text ?? "";
+          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + outputText;
+
+          string partTexFile = Path.ChangeExtension(partFile, ".tex");
+          await System.IO.File.WriteAllTextAsync(partTexFile, outputText);
+          generatedTexFiles.Add(partTexFile);
+
+          // [AI Context] Cost Mitigation Strategy:
+          // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.
+          await CleanupBucketAsync();
+        }
+
         string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% ==========================================\n\n";
-
-        await System.IO.File.WriteAllTextAsync(targetFilePath, header + outputText);
-        Console.WriteLine($"  [Erfolg] Gespeichert unter: {targetFilePath}");
+        await System.IO.File.WriteAllTextAsync(targetFilePath, header + fullOutputText);
+        Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {targetFilePath}");
       }
       catch (Exception ex)
       {
@@ -460,6 +513,8 @@ public class VertexAutoExtractionSession
   private async Task CleanupBucketAsync()
   {
     if (string.IsNullOrWhiteSpace(_config.GcsBucketName)) return;
+    // [AI Context] Financial Guardrail:
+    // Ensures the cloud storage bucket is purged immediately after processing to prevent accumulating storage costs for massive temporary video files.
     try
     {
       var storageClient = await StorageClient.CreateAsync();

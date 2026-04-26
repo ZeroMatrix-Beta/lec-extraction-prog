@@ -19,7 +19,7 @@ namespace FfmpegUtilities
     /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
     /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
     /// </summary>
-    public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false)
+    public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false)
     {
       var generatedFiles = new List<string>();
 
@@ -49,7 +49,7 @@ namespace FfmpegUtilities
       {
         Console.WriteLine("  Warning: Video is too short to meaningfully split (or parts=1). Processing as a single file.");
         string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
-        string ffmpegArgs = $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -crf 18 {audioArgs} -r 1 \"{outputFile}\"";
+        string ffmpegArgs = streamCopy ? $"-i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset fast -crf 18 -g 1 {audioArgs} -r 1 \"{outputFile}\"";
 
         if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add(outputFile);
         return generatedFiles;
@@ -64,7 +64,7 @@ namespace FfmpegUtilities
         if (end > duration) end = duration;
 
         string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_part{i + 1}-compressed", ".mp4");
-        string ffmpegArgs = $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -crf 18 {audioArgs} -r 1 \"{outputFile}\"";
+        string ffmpegArgs = streamCopy ? $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset fast -crf 18 -g 1 {audioArgs} -r 1 \"{outputFile}\"";
 
         Console.WriteLine($"\n  [FFmpegToolkit] Part {i + 1}/{parts}: Start={start:F2}s, End={end:F2}s");
         if (!await RunFfmpegAsync(ffmpegArgs))
@@ -86,7 +86,7 @@ namespace FfmpegUtilities
     /// while preserving perfectly understandable speech and legible board states.
     /// [Human] Der Standard-Prozess: Macht das Video schneller, reduziert es auf 1 Bild pro Sekunde (reicht für Tafeln!) und macht Audio zu Mono.
     /// </summary>
-    public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000)
+    public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000, bool scaleTo720p = false)
     {
       if (!File.Exists(inputFile))
       {
@@ -106,6 +106,10 @@ namespace FfmpegUtilities
       {
         double ptsMultiplier = 1.0 / speedMultiplier;
         videoFilter = $"setpts={ptsMultiplier.ToString(CultureInfo.InvariantCulture)}*PTS,{videoFilter}";
+      }
+      if (scaleTo720p)
+      {
+        videoFilter += ",scale=-2:720";
       }
 
       // 2. Audio Parameter zusammenbauen
@@ -135,7 +139,10 @@ namespace FfmpegUtilities
         if (!string.IsNullOrEmpty(audioFilter)) audioArgs += $" -af \"{audioFilter}\"";
       }
 
-      string ffmpegArgs = $"-i \"{inputFile}\" -vf \"{videoFilter}\" -c:v libx264 -crf 18 {audioArgs} -r {fps} \"{outputFile}\"";
+      // [AI Context] -g {fps} sets the Group of Pictures (GOP) size to exactly 1 second.
+      // This forces a keyframe every second, which is absolutely critical to make `streamCopy: true` 
+      // perfectly frame-accurate during the splitting phase.
+      string ffmpegArgs = $"-i \"{inputFile}\" -vf \"{videoFilter}\" -c:v libx264 -preset fast -crf 18 -g {fps} {audioArgs} -r {fps} \"{outputFile}\"";
 
       Console.WriteLine($"\n  [FFmpegToolkit] Processing AI Video ({speedMultiplier}x Speed, {fps} FPS): {Path.GetFileName(inputFile)}...");
 
@@ -166,7 +173,7 @@ namespace FfmpegUtilities
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-speed-1.5-720p-compressed", ".mp4");
 
       // Hardcodierte Parameter für 720p, 1.5x Speed und 1 FPS
-      string ffmpegArgs = $"-i \"{inputFile}\" -vf \"setpts=0.666667*PTS,scale=1280:720,fps=1\" -c:v libx264 -b:v 150k -maxrate 150k -bufsize 300k -c:a aac -b:a 192k -ac 1 -ar 48000 -af \"aformat=channel_layouts=mono,atempo=1.5\" -r 1 \"{outputFile}\"";
+      string ffmpegArgs = $"-i \"{inputFile}\" -vf \"setpts=0.666667*PTS,scale=1280:720,fps=1\" -c:v libx264 -b:v 150k -maxrate 150k -bufsize 300k -g 1 -c:a aac -b:a 192k -ac 1 -ar 48000 -af \"aformat=channel_layouts=mono,atempo=1.5\" -r 1 \"{outputFile}\"";
 
       Console.WriteLine($"\n  [FFmpegToolkit] Processing (Fast 720p): {Path.GetFileName(inputFile)}...");
 
