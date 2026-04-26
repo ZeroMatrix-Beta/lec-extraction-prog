@@ -11,6 +11,8 @@ public class LatexRefinementConfig
 {
   public string GeminiMdPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
   public string Model { get; set; } = "gemini-2.5-pro";
+  public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination\tex-refinement\refined";
+  public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2\destination\tex-refinement";
 }
 
 /// <summary>
@@ -34,12 +36,12 @@ public class LatexRefinementSession
     Console.WriteLine("   Starte LaTeX Refinement & Post-Processing");
     Console.WriteLine("==================================================");
 
-    Console.Write("\nBitte gib den Pfad zum Ordner mit den 3 generierten .tex Teilen ein: ");
-    string sourceFolder = Console.ReadLine()?.Trim() ?? "";
+    string sourceFolder = _config.SourceFolder;
+    Console.WriteLine($"\nSuche nach .tex Dateien in: {sourceFolder}");
 
     if (!Directory.Exists(sourceFolder))
     {
-      Console.WriteLine("Ordner nicht gefunden.");
+      Console.WriteLine("Ordner nicht gefunden. Bitte prüfe den SourceFolder in der Konfiguration.");
       return;
     }
 
@@ -47,6 +49,20 @@ public class LatexRefinementSession
     if (files.Length == 0)
     {
       Console.WriteLine("Keine .tex Dateien im Ordner gefunden.");
+      return;
+    }
+
+    Console.WriteLine("\nFolgende Dateien wurden gefunden:");
+    foreach (var file in files)
+    {
+      Console.WriteLine($"  - {Path.GetFileName(file)}");
+    }
+
+    Console.Write("\nMöchtest du diese Dateien an Gemini schicken und zusammenfügen lassen? (j/n): ");
+    string? confirm = Console.ReadLine()?.Trim().ToLower();
+    if (confirm != "j" && confirm != "y")
+    {
+      Console.WriteLine("Vorgang abgebrochen.");
       return;
     }
 
@@ -89,7 +105,13 @@ public class LatexRefinementSession
         fullText += text;
       }
 
-      string outPath = Path.Combine(sourceFolder, "refined_output.tex");
+      string targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;
+      if (!Directory.Exists(targetFolder))
+      {
+        Directory.CreateDirectory(targetFolder);
+      }
+
+      string outPath = Path.Combine(targetFolder, "refined_output.tex");
       await System.IO.File.WriteAllTextAsync(outPath, fullText);
       Console.WriteLine($"\n\n[Erfolg] Refined LaTeX erfolgreich gespeichert unter: {outPath}");
     }
