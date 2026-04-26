@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace FfmpegUtilities
@@ -18,15 +19,16 @@ namespace FfmpegUtilities
     /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
     /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
     /// </summary>
-    public async Task<bool> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false)
+    public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false)
     {
+      var generatedFiles = new List<string>();
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       double duration = await GetVideoDurationAsync(inputFile);
 
       if (duration <= 0)
       {
         Console.WriteLine($"\n  [FFmpegToolkit] Error: Could not determine video duration for '{fileName}'.");
-        return false;
+        return generatedFiles;
       }
 
       Console.WriteLine($"\n  [FFmpegToolkit] Splitting into {parts} parts: {Path.GetFileName(inputFile)} (Total Duration: {duration:F2}s)");
@@ -42,10 +44,10 @@ namespace FfmpegUtilities
         string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
         string ffmpegArgs = $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -crf 18 {audioArgs} -r 1 \"{outputFile}\"";
 
-        return await RunFfmpegAsync(ffmpegArgs);
+        if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add(outputFile);
+        return generatedFiles;
       }
 
-      bool allSuccess = true;
       double segmentLength = (duration + (parts - 1) * overlapSeconds) / parts;
 
       for (int i = 0; i < parts; i++)
@@ -61,14 +63,14 @@ namespace FfmpegUtilities
         if (!await RunFfmpegAsync(ffmpegArgs))
         {
           Console.WriteLine($"  [FAILED] Error processing Part {i + 1}.");
-          allSuccess = false;
         }
         else
         {
           Console.WriteLine($"  [SUCCESS] Part {i + 1} completed => {outputFile}");
+          generatedFiles.Add(outputFile);
         }
       }
-      return allSuccess;
+      return generatedFiles;
     }
 
     /// <summary>
@@ -77,7 +79,7 @@ namespace FfmpegUtilities
     /// while preserving perfectly understandable speech and legible board states.
     /// [Human] Der Standard-Prozess: Macht das Video schneller, reduziert es auf 1 Bild pro Sekunde (reicht für Tafeln!) und macht Audio zu Mono.
     /// </summary>
-    public async Task<bool> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000)
+    public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000)
     {
       string fileName = Path.GetFileNameWithoutExtension(inputFile);
       string speedStr = speedMultiplier.ToString(CultureInfo.InvariantCulture);
@@ -127,9 +129,9 @@ namespace FfmpegUtilities
       if (await RunFfmpegAsync(ffmpegArgs))
       {
         Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
-        return true;
+        return outputFile;
       }
-      return false;
+      return null;
     }
 
     /// <summary>

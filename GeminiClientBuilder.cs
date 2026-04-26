@@ -40,6 +40,7 @@ public static class GoogleAiClientBuilder
 
   /// <summary>
   /// [AI Context] Initializes the GenAI Client for Google AI Studio (Developer API).
+  /// [Human] Erstellt den Client für die Google AI Studio API mit dem übergebenen API-Key. Setzt ein Timeout von 20 Minuten für lange Anfragen.
   /// </summary>
   public static Client BuildAiStudioClient(string apiKey)
   {
@@ -52,7 +53,29 @@ public static class GoogleAiClientBuilder
   }
 
   /// <summary>
+  /// [AI Context] Environment variable parser for a specific, named credential profile.
+  /// [Human] Sucht gezielt nach einem API-Key anhand seines exakten Namens in den Umgebungsvariablen (z.B. exklusiv für das LaTeX-Refinement).
+  /// </summary>
+  public static string? ResolveApiKeyByName(string envVarName)
+  {
+    string? apiKey = System.Environment.GetEnvironmentVariable(envVarName)
+                  ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
+                  ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
+
+    Console.WriteLine($"  [INFO] Verwende {envVarName}");
+
+    if (string.IsNullOrEmpty(apiKey))
+    {
+      Console.WriteLine($"Fehler: Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
+      return null;
+    }
+
+    return apiKey;
+  }
+
+  /// <summary>
   /// [AI Context] Initializes the GenAI Client for Google Cloud Vertex AI (Enterprise API).
+  /// [Human] Baut die Verbindung zur professionellen Google Cloud Vertex AI auf, authentifiziert automatisch über dein Cloud-Projekt (IAM).
   /// </summary>
   public static Client BuildVertexClient(string projectId, string location)
   {

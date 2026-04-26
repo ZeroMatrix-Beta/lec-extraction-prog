@@ -45,17 +45,21 @@ class Program
       {
         var config = new VertexAutoExtractionConfig();
         Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-        var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, isAiStudio: false, config.GcsBucketName);
+        var attConfig = new AttachmentHandlerConfig { UploadFolder = config.SourceFolder, IncludePaths = new[] { config.SourceFolder }, IsAiStudio = false, GcsBucketName = config.GcsBucketName };
+        var attachmentHandler = new AttachmentHandler(client, attConfig);
         var session = new VertexAutoExtractionSession(client, config, attachmentHandler);
         await session.StartAsync();
       }
       else
       {
         var config = new AiStudioAutoExtractionConfig();
-        string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
+        string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-        var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, isAiStudio: true, "");
-        var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler);
+        var attConfig = new AttachmentHandlerConfig { UploadFolder = config.SourceFolder, IncludePaths = new[] { config.SourceFolder }, IsAiStudio = true, GcsBucketName = "" };
+        var attachmentHandler = new AttachmentHandler(client, attConfig);
+        var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
+        var sessionLogger = new SessionLogger(loggerConfig);
+        var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
         await session.StartAsync();
       }
       return;
@@ -66,7 +70,8 @@ class Program
       // Lade den exklusiven Key für das Refinement
       string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
       Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-      var session = new LatexRefinementSession(client);
+      var config = new LatexRefinementConfig();
+      var session = new LatexRefinementSession(client, config);
       await session.StartAsync();
       return;
     }
@@ -74,7 +79,7 @@ class Program
     if (mainChoice == "3")
     {
       var ffmpegConfig = new FfmpegSessionConfig();
-      var ffmpegMenu = new FfmpegInteractiveSession(ffmpegConfig.SourceFolder, ffmpegConfig.TargetFolder);
+      var ffmpegMenu = new FfmpegInteractiveSession(ffmpegConfig);
       await ffmpegMenu.StartAsync();
       return;
     }
@@ -86,8 +91,10 @@ class Program
       // Wire up dependencies for Vertex AI
       var config = new VertexAiConfig();
       Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-      var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, isAiStudio: false, config.GcsBucketName);
-      var sessionLogger = new SessionLogger(config.LogFolder);
+      var attConfig = new AttachmentHandlerConfig { UploadFolder = config.UploadFolder, IncludePaths = config.IncludePaths, IsAiStudio = false, GcsBucketName = config.GcsBucketName };
+      var attachmentHandler = new AttachmentHandler(client, attConfig);
+      var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
+      var sessionLogger = new SessionLogger(loggerConfig);
 
       var chatSession = new VertexAiChatSession(client, config, sessionLogger, attachmentHandler);
       await chatSession.StartAsync();
@@ -98,8 +105,10 @@ class Program
       var config = new GoogleAIStudioConfig();
       string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
       Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-      var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, isAiStudio: true, config.GcsBucketName);
-      var sessionLogger = new SessionLogger(config.LogFolder);
+      var attConfig = new AttachmentHandlerConfig { UploadFolder = config.UploadFolder, IncludePaths = config.IncludePaths, IsAiStudio = true, GcsBucketName = config.GcsBucketName };
+      var attachmentHandler = new AttachmentHandler(client, attConfig);
+      var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
+      var sessionLogger = new SessionLogger(loggerConfig);
 
       var chatSession = new GoogleAIStudioChatSession(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
       await chatSession.StartAsync();

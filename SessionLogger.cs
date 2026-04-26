@@ -4,6 +4,11 @@ using System.Threading.Tasks;
 
 namespace AiInteraction;
 
+public class SessionLoggerConfig
+{
+  public string LogFolderPath { get; set; } = @"D:\gemini-logs";
+}
+
 /// <summary>
 /// [AI Context] Handles file I/O operations for a chat session.
 /// Responsible for creating timestamped session folders and saving Markdown/LaTeX logs.
@@ -17,9 +22,9 @@ public class SessionLogger
   private bool _loadedSystemInstruction;
   private bool _loadedHistory;
 
-  public SessionLogger(string logFolderPath)
+  public SessionLogger(SessionLoggerConfig config)
   {
-    _logFolderPath = logFolderPath;
+    _logFolderPath = config.LogFolderPath;
   }
 
   public void InitializeSession()

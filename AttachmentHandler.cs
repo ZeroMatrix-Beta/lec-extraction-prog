@@ -10,6 +10,14 @@ using static System.Console;
 
 namespace AiInteraction;
 
+public class AttachmentHandlerConfig
+{
+  public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
+  public string[] IncludePaths { get; set; } = Array.Empty<string>();
+  public bool IsAiStudio { get; set; } = true;
+  public string GcsBucketName { get; set; } = "";
+}
+
 /// <summary>
 /// [AI Context] Specialized handler for parsing commands, discovering local files, and securely uploading them to Google APIs.
 /// Abstracted from DirectAIInteraction to comply with Single Responsibility Principle.
@@ -24,13 +32,13 @@ public class AttachmentHandler
   private Client _client;
 
   // [AI Context] Injects required runtime dependencies.
-  public AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName)
+  public AttachmentHandler(Client client, AttachmentHandlerConfig config)
   {
     _client = client;
-    _uploadFolder = uploadFolder;
-    _includePaths = includePaths ?? Array.Empty<string>();
-    _isAiStudio = isAiStudio;
-    _gcsBucketName = gcsBucketName;
+    _uploadFolder = config.UploadFolder;
+    _includePaths = config.IncludePaths ?? Array.Empty<string>();
+    _isAiStudio = config.IsAiStudio;
+    _gcsBucketName = config.GcsBucketName;
   }
 
   public void UpdateClient(Client newClient)

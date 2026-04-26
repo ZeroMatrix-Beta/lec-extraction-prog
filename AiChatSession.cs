@@ -47,7 +47,7 @@ public class GoogleAIStudioConfig
   // [AI Context] Selects the environment variable API key profile to use (1-3).
   public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
   public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
-  public string HistoryFolder { get; set; } = @"D:\gemini-chat-history";
+  public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
 
   // [AI Context] Unused in AI Studio free tier, but retained for interface compatibility with the AttachmentHandler if needed.
@@ -79,7 +79,7 @@ public class GoogleAIStudioChatSession
 
   // Absoluter Pfad zum Ordner für die automatisch zu ladende History.
   // Z.B.: @"C:\Users\miche\programming\lec-extraction-prog\history"
-  private readonly string HistoryFolderPath;
+  private readonly string HistoryPreloadFolderPath;
 
   // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
   private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig und warte dann auf meine nächsten Anweisungen.";
@@ -107,7 +107,7 @@ public class GoogleAIStudioChatSession
     _attachmentHandler = attachmentHandler;
     IsAiStudio = isAiStudio;
     UploadFolderPath = config.UploadFolder;
-    HistoryFolderPath = config.HistoryFolder;
+    HistoryPreloadFolderPath = config.HistoryPreloadFolder;
     LogFolderPath = config.LogFolder;
     GcsBucketName = config.GcsBucketName;
     SystemInstructionPath = config.SystemInstructionPath;
@@ -504,12 +504,12 @@ public class GoogleAIStudioChatSession
   /// </summary>
   private string? GetInitialHistoryCommand()
   {
-    if (string.IsNullOrWhiteSpace(HistoryFolderPath) || !Directory.Exists(HistoryFolderPath))
+    if (string.IsNullOrWhiteSpace(HistoryPreloadFolderPath) || !Directory.Exists(HistoryPreloadFolderPath))
     {
       return null;
     }
 
-    string[] historyFiles = Directory.GetFiles(HistoryFolderPath, "*.*", SearchOption.AllDirectories);
+    string[] historyFiles = Directory.GetFiles(HistoryPreloadFolderPath, "*.*", SearchOption.AllDirectories);
 
     // Verhindert, dass die System Instruction versehentlich als History geladen wird, 
     // falls der Nutzer sie physisch im History-Ordner abgelegt hat.
@@ -523,10 +523,10 @@ public class GoogleAIStudioChatSession
       return null;
     }
 
-    WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryFolderPath}' gefunden:");
+    WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryPreloadFolderPath}' gefunden:");
     foreach (var file in historyFiles)
     {
-      string relativePath = Path.GetRelativePath(HistoryFolderPath, file);
+      string relativePath = Path.GetRelativePath(HistoryPreloadFolderPath, file);
       WriteLine($"  - {relativePath}");
     }
 

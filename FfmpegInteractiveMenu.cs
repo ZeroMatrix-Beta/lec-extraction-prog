@@ -24,10 +24,10 @@ namespace FfmpegUtilities
     private string DefaultDestinationFolder;
     private readonly FfmpegToolkit _toolkit;
 
-    public FfmpegInteractiveSession(string sourceFolder, string destinationFolder)
+    public FfmpegInteractiveSession(FfmpegSessionConfig config)
     {
-      DefaultSourceFolder = sourceFolder;
-      DefaultDestinationFolder = destinationFolder;
+      DefaultSourceFolder = config.SourceFolder;
+      DefaultDestinationFolder = config.TargetFolder;
       _toolkit = new FfmpegToolkit();
     }
 

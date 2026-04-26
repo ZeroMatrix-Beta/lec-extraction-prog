@@ -43,7 +43,7 @@ public class VertexAiConfig
   // [AI Context] Region for Vertex AI execution. Must support the requested Gemini models.
   public string Location { get; set; } = "global";
   public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
-  public string HistoryFolder { get; set; } = @"D:\gemini-chat-history";
+  public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
   // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
   public string GcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
@@ -62,7 +62,7 @@ public class VertexAiConfig
 public class VertexAiChatSession
 {
   private readonly string UploadFolderPath;
-  private readonly string HistoryFolderPath;
+  private readonly string HistoryPreloadFolderPath;
   private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig und warte dann auf meine nächsten Anweisungen.";
   private readonly string GcsBucketName;
   private readonly string LogFolderPath;
@@ -80,7 +80,7 @@ public class VertexAiChatSession
     _sessionLogger = logger;
     _attachmentHandler = attachmentHandler;
     UploadFolderPath = config.UploadFolder;
-    HistoryFolderPath = config.HistoryFolder;
+    HistoryPreloadFolderPath = config.HistoryPreloadFolder;
     LogFolderPath = config.LogFolder;
     GcsBucketName = config.GcsBucketName;
     SystemInstructionPath = config.SystemInstructionPath;
@@ -399,9 +399,9 @@ public class VertexAiChatSession
 
   private string? GetInitialHistoryCommand()
   {
-    if (string.IsNullOrWhiteSpace(HistoryFolderPath) || !Directory.Exists(HistoryFolderPath)) return null;
+    if (string.IsNullOrWhiteSpace(HistoryPreloadFolderPath) || !Directory.Exists(HistoryPreloadFolderPath)) return null;
 
-    string[] historyFiles = Directory.GetFiles(HistoryFolderPath, "*.*", SearchOption.AllDirectories);
+    string[] historyFiles = Directory.GetFiles(HistoryPreloadFolderPath, "*.*", SearchOption.AllDirectories);
 
     if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
     {
@@ -413,10 +413,10 @@ public class VertexAiChatSession
       return null;
     }
 
-    WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryFolderPath}' gefunden:");
+    WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryPreloadFolderPath}' gefunden:");
     foreach (var file in historyFiles)
     {
-      string relativePath = Path.GetRelativePath(HistoryFolderPath, file);
+      string relativePath = Path.GetRelativePath(HistoryPreloadFolderPath, file);
       WriteLine($"  - {relativePath}");
     }
 
