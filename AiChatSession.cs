@@ -278,17 +278,35 @@ public class GoogleAIStudioChatSession
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      try
+      int backoff = 5;
+      int maxRetries = 5;
+
+      for (int attempt = 1; attempt <= maxRetries; attempt++)
       {
-        // [AI Context] Hands off to streaming handler. Mutates 'history' internally.
-        await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
-      }
-      catch (Exception ex)
-      {
-        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
-        WriteLine($"\nHoppla, da gab es einen Fehler: {ex.Message}");
-        // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
-        history.RemoveAt(history.Count - 1);
+        try
+        {
+          // [AI Context] Hands off to streaming handler. Mutates 'history' internally.
+          await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
+          break; // Erfolg
+        }
+        catch (Exception ex)
+        {
+          bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
+          if (attempt < maxRetries && isOverloaded)
+          {
+            WriteLine($"\n[Server überlastet] Versuch {attempt}/{maxRetries} fehlgeschlagen. Warte {backoff} Sekunden... ({ex.Message})");
+            await Task.Delay(backoff * 1000);
+            backoff *= 2;
+          }
+          else
+          {
+            // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+            WriteLine($"\nHoppla, da gab es einen Fehler: {ex.Message}");
+            // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
+            history.RemoveAt(history.Count - 1);
+            break;
+          }
+        }
       }
     }
 

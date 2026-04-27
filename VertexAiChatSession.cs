@@ -224,22 +224,40 @@ public class VertexAiChatSession
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      try
+      int backoff = 5;
+      int maxRetries = 5;
+
+      for (int attempt = 1; attempt <= maxRetries; attempt++)
       {
-        await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
-      }
-      catch (Exception ex)
-      {
-        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
-        if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase))
+        try
         {
-          WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut! Originalfehler: {ex.Message}");
+          await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
+          break;
         }
-        else
+        catch (Exception ex)
         {
-          WriteLine($"\n[Vertex Error]: {ex.Message}");
+          bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
+
+          // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+          if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase))
+          {
+            WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut! Originalfehler: {ex.Message}");
+            history.RemoveAt(history.Count - 1);
+            break;
+          }
+          else if (attempt < maxRetries && isOverloaded)
+          {
+            WriteLine($"\n[Server überlastet] Versuch {attempt}/{maxRetries} fehlgeschlagen. Warte {backoff} Sekunden... ({ex.Message})");
+            await Task.Delay(backoff * 1000);
+            backoff *= 2;
+          }
+          else
+          {
+            WriteLine($"\n[Vertex Error]: {ex.Message}");
+            history.RemoveAt(history.Count - 1);
+            break;
+          }
         }
-        history.RemoveAt(history.Count - 1);
       }
     }
 

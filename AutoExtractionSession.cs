@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
+using System.Threading.Channels;
 using Google.GenAI;
 using Google.GenAI.Types;
 
@@ -12,9 +14,46 @@ namespace AiInteraction.AutoExtraction;
 // 1. Google AI Studio (Free/Developer Tier)
 // ==========================================
 
+internal static class VideoDateParser
+{
+  public static (DateTime Date, string Weekday, string DateString) Parse(string filePath)
+  {
+    string fileName = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
+    var match = System.Text.RegularExpressions.Regex.Match(fileName, @"^(?:(\d{2,4})-)?(\d{2})-(\d{2})-([a-z]+)");
+
+    int year = DateTime.Now.Year;
+    int month = 1;
+    int day = 1;
+    string weekday = "Unknown";
+    string dateString = "Unknown";
+
+    if (match.Success)
+    {
+      if (match.Groups[1].Success && !string.IsNullOrEmpty(match.Groups[1].Value))
+      {
+        year = int.Parse(match.Groups[1].Value);
+        if (year < 100) year += 2000;
+      }
+
+      month = int.Parse(match.Groups[2].Value);
+      day = int.Parse(match.Groups[3].Value);
+      weekday = match.Groups[4].Value;
+      weekday = char.ToUpper(weekday[0]) + weekday.Substring(1);
+
+      dateString = match.Groups[1].Success && !string.IsNullOrEmpty(match.Groups[1].Value)
+          ? $"{day:D2}.{month:D2}.{year}"
+          : $"{day:D2}.{month:D2}.";
+    }
+
+    DateTime sortDate = DateTime.MaxValue;
+    try { if (match.Success) sortDate = new DateTime(year, month, day); } catch { }
+
+    return (sortDate, weekday, dateString);
+  }
+}
+
 public class AiStudioAutoExtractionConfig
 {
-  public int ActiveApiProfile { get; set; } = 1;
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
   public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
@@ -161,33 +200,66 @@ public class AiStudioAutoExtractionSession
 
   private async Task ProcessFilesAsync(string[] files)
   {
+    // Chronologisch aufsteigend sortieren anhand des Dateinamens
+    files = files.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
+
     var toolkit = new FfmpegUtilities.FfmpegToolkit();
     string tmpFolder = Path.Combine(_config.TargetFolder, "tmp");
     if (!Directory.Exists(tmpFolder)) Directory.CreateDirectory(tmpFolder);
 
-    foreach (var file in files)
+    // [AI Context] Producer-Consumer Pipeline
+    // Wir limitieren das Fließband auf genau 1 Video. Das verhindert, dass FFmpeg 100 Videos 
+    // am Stück konvertiert und uns den Festplattenspeicher (tmp-Ordner) füllt, während Gemini noch bei Video 1 hängt.
+    var channel = Channel.CreateBounded<(string originalFile, List<string> parts, bool isCached)>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
+
+    // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
+    var producerTask = Task.Run(async () =>
     {
-      Console.WriteLine($"\n=== Starte Konvertierung für {Path.GetFileName(file)} ===");
-
-      // 1. Mono & Speed
-      Console.WriteLine("Schritt 1: Konvertiere nach Mono und beschleunige Video...");
-      Console.WriteLine("  -> Dieser Vorgang ist rechenintensiv und kann bei langen Videos einige Minuten dauern. Bitte haben Sie Geduld...");
-      string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _speed, fps: 1, downmixToMono: true);
-      if (speedVideo == null)
+      foreach (var file in files)
       {
-        Console.WriteLine("Fehler bei ProcessGeneralVideoAsync");
-        continue;
-      }
+        string baseName = Path.GetFileNameWithoutExtension(file);
+        string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+        var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-{dateStr}-part*.mp4").ToList();
+        bool useCache = false;
 
-      // 2. Split
-      Console.WriteLine("Schritt 2: Schneide Video in Teile mit Overlap...");
-      var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
-      if (parts.Count == 0)
-      {
-        Console.WriteLine("Fehler beim Splitten");
-        continue;
-      }
+        if (cachedParts.Count > 0)
+        {
+          var fileInfo = new FileInfo(cachedParts[0]);
+          if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2)
+          {
+            useCache = true;
+          }
+        }
 
+        if (useCache)
+        {
+          Console.WriteLine($"\n[Cache] FFmpeg übersprungen für {Path.GetFileName(file)}. Verwende gecachte Dateien (jünger als 2h).");
+          cachedParts.Sort();
+          await channel.Writer.WriteAsync((file, cachedParts, true));
+          continue;
+        }
+
+        Console.WriteLine($"\n[FFmpeg Producer] Starte Konvertierung für {Path.GetFileName(file)}...");
+        string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _speed, fps: 1, downmixToMono: true);
+        if (speedVideo == null) continue;
+
+        var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
+        if (parts.Count == 0) continue;
+
+        Console.WriteLine($"[FFmpeg Producer] {Path.GetFileName(file)} erfolgreich konvertiert! Lege es aufs Fließband für Gemini...");
+        await channel.Writer.WriteAsync((file, parts, false));
+      }
+      channel.Writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
+    });
+
+    // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
+    await foreach (var job in channel.Reader.ReadAllAsync())
+    {
+      string file = job.originalFile;
+      var parts = job.parts;
+      bool isCached = job.isCached;
+
+      Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
       List<string> generatedTexFiles = new List<string>();
       string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
       string baseName = Path.GetFileNameWithoutExtension(file);
@@ -195,30 +267,32 @@ public class AiStudioAutoExtractionSession
       for (int i = 0; i < parts.Count; i++)
       {
         string partFile = parts[i];
-        string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
-        int copy = 1;
-        while (System.IO.File.Exists(safePartPath))
+        string safePartPath = isCached ? partFile : Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
+
+        if (!isCached)
         {
-          safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}-kopie{copy++}.mp4");
+          if (System.IO.File.Exists(safePartPath))
+          {
+            System.IO.File.Delete(safePartPath);
+          }
+          System.IO.File.Move(partFile, safePartPath);
         }
-        System.IO.File.Move(partFile, safePartPath);
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
 
-        string texOutput = await ProcessPartWithGeminiAsync(safePartPath, i + 1, generatedTexFiles, file);
+        string texOutput = await ProcessPartWithGeminiAsync(safePartPath, i + 1, parts.Count, generatedTexFiles, file);
 
         if (!string.IsNullOrWhiteSpace(texOutput))
         {
           string cleanTex = texOutput;
-          if (cleanTex.Contains("```latex"))
-          {
-            int start = cleanTex.IndexOf("```latex") + 8;
-            int end = cleanTex.LastIndexOf("```");
-            if (end > start)
-            {
-              cleanTex = cleanTex.Substring(start, end - start).Trim();
-            }
-          }
+
+          // [AI Context] Regex-based cleanup ensures that even if the output is split across multiple continuation chunks,
+          // all markdown blocks and system messages are fully stripped, preventing compilation errors.
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"\[SYSTEM\] Segment complete.*?prompt ""Continue"".*?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"\[SYSTEM\] Video complete.*?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+          cleanTex = cleanTex.Trim();
 
           string texPath = Path.ChangeExtension(safePartPath, ".tex");
           await System.IO.File.WriteAllTextAsync(texPath, cleanTex);
@@ -228,16 +302,29 @@ public class AiStudioAutoExtractionSession
 
       Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Die Teile liegen im tmp Ordner: {tmpFolder}");
     }
+
+    // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
+    await producerTask;
+    Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig abgeschlossen!");
   }
 
-  private async Task<string> ProcessPartWithGeminiAsync(string partFile, int partNumber, List<string> previousTexFiles, string originalFileName)
+  private async Task<string> ProcessPartWithGeminiAsync(string partFile, int partNumber, int totalParts, List<string> previousTexFiles, string originalFileName)
   {
+    var dateInfo = VideoDateParser.Parse(originalFileName);
     string prompt = _config.Prompt;
+
+    prompt += $"\n\n[Meta-Information]: These {totalParts} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
+    prompt += $"\n\nThe uploaded video is part {partNumber} of {totalParts} from this lecture.";
+    prompt += $"\n\nThe video is played back / scaled to {_speed}x speed.";
+
     if (partNumber > 1)
     {
-      prompt += $"\n\nDieses Video ist Teil {partNumber} einer Vorlesung. Im Kontext sind die bereits generierten LaTeX Dokumente der vorherigen Teile (siehe --- DOKUMENT START ---). " +
-                "Bitte nutze diese für den Kontext. WICHTIG: Du musst für das 'spoken-clean' Environment KEINEN Zeit-Offset berechnen. Du darfst ganz normal bei 00:00:00 starten.";
+      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
+      prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
     }
+
+    prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
+    prompt += "\n\nWhen in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
     if (!uploadSuccess || attachmentParts.Count == 0) return "";
@@ -316,7 +403,8 @@ public class AiStudioAutoExtractionSession
       }
       catch (Exception ex)
       {
-        if (ex.Message.Contains("429") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase))
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        if (isOverloaded)
         {
           Console.WriteLine($"\n[Rate Limit] Warte {backoff} Sekunden... ({ex.Message})");
           await Task.Delay(backoff * 1000);
@@ -399,6 +487,8 @@ public class VertexAutoExtractionSession
       return;
     }
 
+    filesToProcess = filesToProcess.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
+
     Console.WriteLine($"[AutoExtraction] {filesToProcess.Length} Datei(en) gefunden. Starte Verarbeitung...");
 
     var toolkit = new FfmpegUtilities.FfmpegToolkit();
@@ -418,22 +508,55 @@ public class VertexAutoExtractionSession
       {
         Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
 
-        Console.WriteLine($"Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
-        string? processedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _config.SpeedMultiplier, fps: 1, downmixToMono: true, scaleTo720p: true);
+        string baseName = Path.GetFileNameWithoutExtension(file);
+        string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+        var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-{dateStr}-part*.mp4").ToList();
+        bool useCache = false;
 
-        if (processedVideo == null)
+        if (cachedParts.Count > 0)
         {
-          Console.WriteLine($"  [Fehler] Konvertierung fehlgeschlagen. Überspringe.");
-          continue;
+          var fileInfo = new FileInfo(cachedParts[0]);
+          if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2)
+          {
+            useCache = true;
+          }
         }
 
-        Console.WriteLine("Schritt 2: Schneide Video in Teile mit Overlap...");
-        var videoParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
+        List<string> videoParts = new List<string>();
 
-        if (videoParts.Count == 0)
+        if (useCache)
         {
-          Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
-          continue;
+          Console.WriteLine($"  [Cache] FFmpeg übersprungen für {Path.GetFileName(file)}. Verwende gecachte Dateien (jünger als 2h).");
+          cachedParts.Sort();
+          videoParts = cachedParts;
+        }
+        else
+        {
+          Console.WriteLine($"  Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
+          string? processedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _config.SpeedMultiplier, fps: 1, downmixToMono: true, scaleTo720p: true);
+
+          if (processedVideo == null)
+          {
+            Console.WriteLine($"  [Fehler] Konvertierung fehlgeschlagen. Überspringe.");
+            continue;
+          }
+
+          Console.WriteLine("  Schritt 2: Schneide Video in Teile mit Overlap...");
+          var rawParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
+
+          if (rawParts.Count == 0)
+          {
+            Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
+            continue;
+          }
+
+          for (int i = 0; i < rawParts.Count; i++)
+          {
+            string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
+            if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
+            System.IO.File.Move(rawParts[i], safePartPath);
+            videoParts.Add(safePartPath);
+          }
         }
 
         List<string> generatedTexFiles = new List<string>();
@@ -445,10 +568,20 @@ public class VertexAutoExtractionSession
           Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
 
           string prompt = _config.Prompt;
+          var dateInfo = VideoDateParser.Parse(file);
+
+          prompt += $"\n\n[Meta-Information]: These {videoParts.Count} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
+          prompt += $"\n\nThe uploaded video is part {i + 1} of {videoParts.Count} from this lecture.";
+          prompt += $"\n\nThe video is played back / scaled to {_config.SpeedMultiplier}x speed.";
+
           if (i > 0)
           {
-            prompt += $"\n\nDieses Video ist Teil {i + 1} einer Vorlesung. Im Kontext sind die bereits generierten LaTeX Dokumente der vorherigen Teile. Bitte nutze diese für den Kontext.";
+            prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
+            prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
           }
+
+          prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
+          prompt += "\n\nTranscribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing script will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
           var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
           if (!uploadSuccess || attachmentParts.Count == 0)
@@ -478,14 +611,44 @@ public class VertexAutoExtractionSession
           if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
           if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
 
-          Console.WriteLine($"  [API] Sende Anfrage an {_config.Model}...");
-          var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
+          int backoff = 15;
+          int maxRetries = 5;
+          string outputText = "";
 
-          string outputText = response.Text ?? "";
-          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + outputText;
+          for (int attempt = 1; attempt <= maxRetries; attempt++)
+          {
+            try
+            {
+              Console.WriteLine($"  [API] Sende Anfrage an {_config.Model} (Versuch {attempt}/{maxRetries})...");
+              var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
+              outputText = response.Text ?? "";
+              break;
+            }
+            catch (Exception ex)
+            {
+              bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+              if (attempt < maxRetries && isOverloaded)
+              {
+                Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... ({ex.Message})");
+                await Task.Delay(backoff * 1000);
+                backoff *= 2;
+              }
+              else
+              {
+                throw;
+              }
+            }
+          }
+
+          string cleanTex = outputText;
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+          cleanTex = cleanTex.Trim();
+
+          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
 
           string partTexFile = Path.ChangeExtension(partFile, ".tex");
-          await System.IO.File.WriteAllTextAsync(partTexFile, outputText);
+          await System.IO.File.WriteAllTextAsync(partTexFile, cleanTex);
           generatedTexFiles.Add(partTexFile);
 
           // [AI Context] Cost Mitigation Strategy:

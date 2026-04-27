@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
+using DocumentUtilities;
 
 namespace AiInteraction;
 
@@ -72,9 +73,11 @@ public class LatexRefinementSession
     var parts = new List<Part>();
     parts.Add(new Part
     {
-      Text = "Hier sind die generierten Vorlesungsteile (im LaTeX Format), die mit einer alten System-Instruktion generiert wurden.\n" +
-                                "Bitte kümmere dich um die Kompilierfähigkeit, füge die Teile logisch zusammen und behebe strukturelle Fehler.\n\n" +
-                                "=== ALTE INSTRUKTION ===\n" + geminiMdContent + "\n=== ENDE ALTE INSTRUKTION ==="
+      Text = "Here are the generated lecture parts (in LaTeX format) that were transcribed from overlapping video segments.\n" +
+             "CRITICAL: The original video segments were cut with a **3-minute overlap**. This means the end of one part and the beginning of the next part contain duplicate transcribed content.\n" +
+             "Your primary task is to PERFECTLY MERGE these overlapping parts into a single, cohesive, and continuous document! Identify the overlapping regions, eliminate all duplicate sentences and equations, and stitch the narrative seamlessly together.\n" +
+             "Ensure the final output is fully compilable, fix any structural LaTeX errors, and guarantee no overlapping artifacts remain.\n\n" +
+             "=== SYSTEM INSTRUCTION USED FOR EXTRACTION ===\n" + geminiMdContent + "\n=== END SYSTEM INSTRUCTION ==="
     });
 
     foreach (var file in files)
@@ -93,31 +96,54 @@ public class LatexRefinementSession
     };
 
     Console.WriteLine($"\nSende Refinement-Anfrage an Gemini ({_config.Model})...");
-    try
+    int maxRetries = 5;
+    int backoff = 15;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
     {
-      var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
-      string fullText = "";
-
-      await foreach (var chunk in responseStream)
+      try
       {
-        string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-        Console.Write(text);
-        fullText += text;
-      }
+        if (attempt > 1) Console.WriteLine($"\n[API] Sende Anfrage (Versuch {attempt}/{maxRetries})...");
+        var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
+        string fullText = "";
 
-      string targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;
-      if (!Directory.Exists(targetFolder))
+        await foreach (var chunk in responseStream)
+        {
+          string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+          Console.Write(text);
+          fullText += text;
+        }
+
+        string targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;
+        if (!Directory.Exists(targetFolder))
+        {
+          Directory.CreateDirectory(targetFolder);
+        }
+
+        string outPath = Path.Combine(targetFolder, "refined_output.tex");
+        await System.IO.File.WriteAllTextAsync(outPath, fullText);
+        Console.WriteLine($"\n\n[Erfolg] Refined LaTeX erfolgreich gespeichert unter: {outPath}");
+
+        // Automatische PDF Kompilierung im Hintergrund
+        var latexToolkit = new LatexToolkit();
+        await latexToolkit.CompilePdfAsync(outPath);
+        break;
+      }
+      catch (Exception ex)
       {
-        Directory.CreateDirectory(targetFolder);
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
+        if (attempt < maxRetries && isOverloaded)
+        {
+          Console.WriteLine($"\n[Rate Limit / Überlastung] Versuch {attempt}/{maxRetries} fehlgeschlagen. Warte {backoff} Sekunden... ({ex.Message})");
+          await Task.Delay(backoff * 1000);
+          backoff *= 2;
+        }
+        else
+        {
+          Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten: {ex.Message}");
+          break;
+        }
       }
-
-      string outPath = Path.Combine(targetFolder, "refined_output.tex");
-      await System.IO.File.WriteAllTextAsync(outPath, fullText);
-      Console.WriteLine($"\n\n[Erfolg] Refined LaTeX erfolgreich gespeichert unter: {outPath}");
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten: {ex.Message}");
     }
   }
 }
