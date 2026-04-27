@@ -97,7 +97,7 @@ public class LatexRefinementSession
 
     Console.WriteLine($"\nSende Refinement-Anfrage an Gemini ({_config.Model})...");
     int maxRetries = 5;
-    int backoff = 15;
+    int backoff = 35;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++)
     {

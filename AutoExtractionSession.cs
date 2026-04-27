@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
 using System.Threading.Channels;
+using System.Threading;
 using Google.GenAI;
 using Google.GenAI.Types;
 
@@ -72,6 +73,7 @@ public class AiStudioAutoExtractionSession
   private double _speed = 1.2;
   private string _systemInstructionText = "";
   private string _historyText = "";
+  private List<Content> _debugChatHistory = new List<Content>();
 
   public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger)
   {
@@ -141,33 +143,47 @@ public class AiStudioAutoExtractionSession
     await ReplLoopAsync();
   }
 
-  private void ShowCommands()
-  {
-    Console.WriteLine("\nBefehle:");
-    Console.WriteLine("  show commands        -> Zeigt diese Befehle und Infos zur Konfiguration");
-    Console.WriteLine("  set speed [wert]     -> Setzt die Video-Geschwindigkeit (z.B. set speed 1.2). Standard: 1.2");
-    Console.WriteLine("  convert chosen video -> Wählt ein Video interaktiv aus und startet Konvertierung");
-    Console.WriteLine("  convert all videos   -> Konvertiert alle Videos im Quellordner");
-    Console.WriteLine("  exit / quit          -> Beendet");
-    Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
-  }
-
   private async Task ReplLoopAsync()
   {
-    ShowCommands();
+    Console.WriteLine("\nBefehle:");
+    Console.WriteLine("  1) Befehle anzeigen");
+    Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
+    Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
+    Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
+    Console.WriteLine("  5) Beenden (exit/quit)");
+    Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
+    Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+
     while (true)
     {
       Console.Write("\nAutoExt> ");
       string input = Console.ReadLine()?.Trim() ?? "";
-      if (input.Equals("exit", StringComparison.OrdinalIgnoreCase) || input.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
+      if (string.IsNullOrWhiteSpace(input)) continue;
 
-      if (input.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+      if (input == "5" || input.Equals("exit", StringComparison.OrdinalIgnoreCase) || input.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
+
+      if (input == "1" || input.Equals("show commands", StringComparison.OrdinalIgnoreCase))
       {
-        ShowCommands();
+        Console.WriteLine("\nBefehle:");
+        Console.WriteLine("  1) Befehle anzeigen");
+        Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
+        Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
+        Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
+        Console.WriteLine("  5) Beenden (exit/quit)");
+        Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
+        Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
       }
-      else if (input.StartsWith("set speed", StringComparison.OrdinalIgnoreCase))
+      else if (input == "2" || input.StartsWith("2 ") || input.StartsWith("set speed", StringComparison.OrdinalIgnoreCase))
       {
-        string val = input.Substring(9).Trim();
+        string val = "";
+        if (input.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = input.Substring(9).Trim();
+        else if (input.StartsWith("2 ")) val = input.Substring(2).Trim();
+        else if (input == "2")
+        {
+          Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
+          val = Console.ReadLine()?.Trim() ?? "";
+        }
+
         if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double s))
         {
           _speed = s;
@@ -178,7 +194,7 @@ public class AiStudioAutoExtractionSession
           Console.WriteLine("Ungültiger Wert für speed.");
         }
       }
-      else if (input.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase))
+      else if (input == "3" || input.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase))
       {
         var files = FfmpegUtilities.ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
         if (files.Length > 0)
@@ -186,16 +202,101 @@ public class AiStudioAutoExtractionSession
           await ProcessFilesAsync(files);
         }
       }
-      else if (input.Equals("convert all videos", StringComparison.OrdinalIgnoreCase))
+      else if (input == "4" || input.Equals("convert all videos", StringComparison.OrdinalIgnoreCase))
       {
         var files = Directory.GetFiles(_config.SourceFolder, "*.mp4");
         await ProcessFilesAsync(files);
       }
+      else if (input.Equals("clear", StringComparison.OrdinalIgnoreCase))
+      {
+        _debugChatHistory.Clear();
+        Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
+      }
       else
       {
-        Console.WriteLine("Unbekannter Befehl.");
+        await DebugChatAsync(input);
       }
     }
+  }
+
+  private async Task DebugChatAsync(string input)
+  {
+    _debugChatHistory.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = input } } });
+
+    var requestConfig = new GenerateContentConfig
+    {
+      Temperature = 0.7f,
+      MaxOutputTokens = 8192
+    };
+
+    if (!string.IsNullOrWhiteSpace(_systemInstructionText))
+    {
+      requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+    }
+
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    {
+      requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+    }
+
+    Console.Write($"\n[Debug Chat] {_config.Model} (Strg+C zum Abbrechen): ");
+    string fullResponse = "";
+
+    using var cts = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+    Console.CancelKeyPress += cancelHandler;
+
+    int maxRetries = 5;
+    int backoff = 35;
+    bool exceptionCaught = false;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
+    {
+      try
+      {
+        if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
+        var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _debugChatHistory, requestConfig);
+        await foreach (var chunk in responseStream.WithCancellation(cts.Token))
+        {
+          if (cts.IsCancellationRequested) break;
+          string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+          Console.Write(txt);
+          fullResponse += txt;
+        }
+        Console.WriteLine();
+        break; // Erfolg
+      }
+      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+      {
+        exceptionCaught = true;
+        break;
+      }
+      catch (Exception ex)
+      {
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        if (attempt < maxRetries && isOverloaded)
+        {
+          Console.WriteLine($"\n[Rate Limit / Überlastung] Versuch {attempt}/{maxRetries} fehlgeschlagen. Warte {backoff} Sekunden... ({ex.Message})");
+          await Task.Delay(backoff * 1000);
+          backoff *= 2;
+        }
+        else
+        {
+          Console.WriteLine($"\n[Fehler] {ex.Message}");
+          break;
+        }
+      }
+    }
+
+    Console.CancelKeyPress -= cancelHandler;
+
+    if (exceptionCaught || cts.IsCancellationRequested)
+    {
+      Console.WriteLine("\n\n[INFO] Chat durch Benutzer abgebrochen.");
+    }
+
+    if (!string.IsNullOrWhiteSpace(fullResponse)) _debugChatHistory.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+    else _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
   }
 
   private async Task ProcessFilesAsync(string[] files)
@@ -362,7 +463,7 @@ public class AiStudioAutoExtractionSession
     }
 
     string fullResponse = "";
-    int backoff = 15;
+    int backoff = 35;
     int currentRequest = 1;
     int maxRequests = 5;
 
@@ -394,7 +495,7 @@ public class AiStudioAutoExtractionSession
           Console.WriteLine("\n\n[AutoExtraction] Sende 'Continue'...");
           history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
           history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Continue" } } });
-          backoff = 15; // reset backoff on success
+          backoff = 35; // reset backoff on success
           currentRequest++;
           continue;
         }
@@ -611,7 +712,7 @@ public class VertexAutoExtractionSession
           if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
           if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
 
-          int backoff = 15;
+          int backoff = 35;
           int maxRetries = 5;
           string outputText = "";
 

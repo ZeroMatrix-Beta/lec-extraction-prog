@@ -278,7 +278,7 @@ public class GoogleAIStudioChatSession
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      int backoff = 5;
+      int backoff = 35;
       int maxRetries = 5;
 
       for (int attempt = 1; attempt <= maxRetries; attempt++)
