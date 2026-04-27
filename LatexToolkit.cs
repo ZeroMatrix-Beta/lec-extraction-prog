@@ -6,11 +6,17 @@ using System.Threading.Tasks;
 namespace DocumentUtilities;
 
 /// <summary>
+/// [AI Context] This class acts as an autonomous local build agent. It does not interact with GenAI models.
+/// It assumes a valid LaTeX distribution (like MiKTeX or TeX Live) is available in the host environment's PATH.
+/// [Human] Diese Klasse kümmert sich komplett autonom um das Bauen der finalen PDF-Datei aus dem generierten LaTeX-Code.
 /// Führt lokale LaTeX-Kompilierungen durch.
 /// Unabhängig von der KI, ruft direkt pdflatex auf dem System auf.
 /// </summary>
 public class LatexToolkit
 {
+  /// <summary>
+  /// [AI Context] Spawns an external pdflatex process to compile a .tex file to a .pdf. Captures standard output and errors for debugging.
+  /// </summary>
   public async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath)
   {
     if (!File.Exists(texFilePath))
@@ -23,7 +29,8 @@ public class LatexToolkit
 
     Console.WriteLine($"\n  [LatexToolkit] Starte pdflatex für {fileName}...");
 
-    // -interaction=nonstopmode verhindert, dass pdflatex bei einem Fehler auf Benutzereingaben wartet
+    // [AI Context] -interaction=nonstopmode and -halt-on-error are critical for automated CI/CD-like pipelines to prevent the process from hanging indefinitely on syntax errors.
+    // [Human] -interaction=nonstopmode verhindert, dass pdflatex bei einem Syntaxfehler unendlich lange einfriert und auf Benutzereingaben wartet.
     var startInfo = new ProcessStartInfo
     {
       FileName = "pdflatex",

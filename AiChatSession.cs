@@ -82,7 +82,7 @@ public class GoogleAIStudioChatSession
   private readonly string HistoryPreloadFolderPath;
 
   // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
-  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig und warte dann auf meine nächsten Anweisungen.";
+  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
 
   // [GCS] Der Name deines Google Cloud Storage Buckets
   // Z.B.: "en-linalg-biran-gemini-videos"
@@ -245,6 +245,12 @@ public class GoogleAIStudioChatSession
       }
       else
       {
+        // [AI Context] Flush the input buffer before asking for new input.
+        // Prevents confusing "ghost inputs" if the user typed something while the AI was generating or waiting in a Task.Delay backoff loop.
+        if (!Console.IsInputRedirected)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+        }
         Write($"\n{userName}: ");
         input = ReadLine();
       }
@@ -278,7 +284,7 @@ public class GoogleAIStudioChatSession
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      int backoff = 35;
+      int backoff = 30;
       int maxRetries = 5;
 
       for (int attempt = 1; attempt <= maxRetries; attempt++)
@@ -291,12 +297,22 @@ public class GoogleAIStudioChatSession
         }
         catch (Exception ex)
         {
-          bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
+          bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
           if (attempt < maxRetries && isOverloaded)
           {
-            WriteLine($"\n[Server überlastet] Versuch {attempt}/{maxRetries} fehlgeschlagen. Warte {backoff} Sekunden... ({ex.Message})");
-            await Task.Delay(backoff * 1000);
-            backoff *= 2;
+            var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+            {
+              int waitTime = serverSuggestedDelay + 2;
+              WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+              await SmartDelayAsync(waitTime);
+            }
+            else
+            {
+              WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+              await SmartDelayAsync(backoff);
+              backoff *= 2;
+            }
           }
           else
           {
@@ -312,6 +328,20 @@ public class GoogleAIStudioChatSession
 
     WriteLine("\n[INFO] Chat beendet. Räume temporäre Dateien im Cloud Storage auf...");
     await CleanupGcsBucketAsync();
+  }
+
+  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
+    int delaySteps = seconds * 10;
+    for (int i = 0; i < delaySteps; i++)
+    {
+      await Task.Delay(100);
+      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      {
+        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+        WriteLine($"\n[System] {message}");
+      }
+    }
   }
 
   private void ShowCommands()
@@ -470,6 +500,20 @@ public class GoogleAIStudioChatSession
     };
     Console.CancelKeyPress += cancelHandler;
 
+    bool isGenerating = true;
+    var inputInterceptorTask = Task.Run(async () =>
+    {
+      while (isGenerating)
+      {
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          WriteLine("\n[System] Still waiting for the acknowledgment / response. Please wait...");
+        }
+        await Task.Delay(100);
+      }
+    });
+
     try
     {
       // Streaming aktivieren
@@ -491,6 +535,8 @@ public class GoogleAIStudioChatSession
     }
     finally
     {
+      isGenerating = false;
+      await inputInterceptorTask; // Warte kurz, bis der Input-Blocker sauber beendet ist
       Console.CancelKeyPress -= cancelHandler;
       if (exceptionCaught || cts.IsCancellationRequested)
       {

@@ -15,6 +15,11 @@ namespace AiInteraction.AutoExtraction;
 // 1. Google AI Studio (Free/Developer Tier)
 // ==========================================
 
+/// <summary>
+/// [AI Context] Parses specific date/weekday formats from video filenames. 
+/// Crucial for ensuring that overlapping lecture chunks are fed to the AI strictly in chronological order.
+/// [Human] Liest das Datum aus dem Dateinamen aus, damit die Videos in der exakt richtigen Reihenfolge verarbeitet werden.
+/// </summary>
 internal static class VideoDateParser
 {
   public static (DateTime Date, string Weekday, string DateString) Parse(string filePath)
@@ -53,10 +58,15 @@ internal static class VideoDateParser
   }
 }
 
+/// <summary>
+/// [AI Context] Configuration DTO for unattended batch processing using AI Studio endpoints.
+/// Defines source/target directories and the critical extraction prompt.
+/// [Human] Konfiguration für den automatisierten Extraktions-Modus mit dem kostenlosen AI Studio.
+/// </summary>
 public class AiStudioAutoExtractionConfig
 {
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
-  public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination";
+  public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
   public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
@@ -64,6 +74,11 @@ public class AiStudioAutoExtractionConfig
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 }
 
+/// <summary>
+/// [AI Context] Orchestrates the fully automated transcription pipeline. 
+/// Combines local FFmpeg preprocessing (producer) with Gemini API sequential extraction (consumer).
+/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos.
+/// </summary>
 public class AiStudioAutoExtractionSession
 {
   private readonly Client _client;
@@ -143,6 +158,11 @@ public class AiStudioAutoExtractionSession
     await ReplLoopAsync();
   }
 
+  /// <summary>
+  /// [AI Context] Interactive control loop for the AutoExtraction mode. 
+  /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
+  /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
+  /// </summary>
   private async Task ReplLoopAsync()
   {
     Console.WriteLine("\nBefehle:");
@@ -247,7 +267,7 @@ public class AiStudioAutoExtractionSession
     Console.CancelKeyPress += cancelHandler;
 
     int maxRetries = 5;
-    int backoff = 35;
+    int backoff = 30;
     bool exceptionCaught = false;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++)
@@ -273,12 +293,22 @@ public class AiStudioAutoExtractionSession
       }
       catch (Exception ex)
       {
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-        if (attempt < maxRetries && isOverloaded)
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        if (isOverloaded && attempt < maxRetries)
         {
-          Console.WriteLine($"\n[Rate Limit / Überlastung] Versuch {attempt}/{maxRetries} fehlgeschlagen. Warte {backoff} Sekunden... ({ex.Message})");
-          await Task.Delay(backoff * 1000);
-          backoff *= 2;
+          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+          {
+            int waitTime = serverSuggestedDelay + 2;
+            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+            await Task.Delay(waitTime * 1000);
+          }
+          else
+          {
+            Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+            await Task.Delay(backoff * 1000);
+            backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
+          }
         }
         else
         {
@@ -299,6 +329,11 @@ public class AiStudioAutoExtractionSession
     else _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
   }
 
+  /// <summary>
+  /// [AI Context] Executes the batch processing workflow.
+  /// Uses System.Threading.Channels to run FFmpeg processing in the background (Producer) while Gemini processes chunks sequentially (Consumer), maximizing hardware and API throughput.
+  /// [Human] Das asynchrone Fließband: FFmpeg bereitet Videos im Hintergrund vor, während Gemini sie der Reihe nach abarbeitet.
+  /// </summary>
   private async Task ProcessFilesAsync(string[] files)
   {
     // Chronologisch aufsteigend sortieren anhand des Dateinamens
@@ -391,8 +426,8 @@ public class AiStudioAutoExtractionSession
           // all markdown blocks and system messages are fully stripped, preventing compilation errors.
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"\[SYSTEM\] Segment complete.*?prompt ""Continue"".*?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"\[SYSTEM\] Video complete.*?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+          // [AI Context] Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
           cleanTex = cleanTex.Trim();
 
           string texPath = Path.ChangeExtension(safePartPath, ".tex");
@@ -409,6 +444,11 @@ public class AiStudioAutoExtractionSession
     Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig abgeschlossen!");
   }
 
+  /// <summary>
+  /// [AI Context] Core prompt engineering logic for processing isolated video chunks.
+  /// Injects historical LaTeX context from previously processed segments to maintain narrative and mathematical continuity across the 3-minute overlap boundaries.
+  /// [Human] Baut den exakten KI-Prompt für jeden einzelnen Videoteil zusammen und fügt alte LaTeX-Dateien als Kontext hinzu, damit Sätze nicht in der Mitte abbrechen.
+  /// </summary>
   private async Task<string> ProcessPartWithGeminiAsync(string partFile, int partNumber, int totalParts, List<string> previousTexFiles, string originalFileName)
   {
     var dateInfo = VideoDateParser.Parse(originalFileName);
@@ -430,22 +470,28 @@ public class AiStudioAutoExtractionSession
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
     if (!uploadSuccess || attachmentParts.Count == 0) return "";
 
-    var parts = new List<Part>(attachmentParts);
-
-    if (!string.IsNullOrEmpty(_historyText))
-    {
-      parts.Add(new Part { Text = "=== HISTORY START ===\n" + _historyText + "\n=== HISTORY ENDE ===" });
-    }
+    var userPromptParts = new List<Part>(attachmentParts);
 
     foreach (var texFile in previousTexFiles)
     {
       string content = await System.IO.File.ReadAllTextAsync(texFile);
-      parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+      userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
     }
 
-    parts.Add(new Part { Text = parsedPrompt });
+    userPromptParts.Add(new Part { Text = parsedPrompt });
 
-    var history = new List<Content> { new Content { Role = "user", Parts = parts } };
+    var history = new List<Content>();
+
+    // [AI Context] Simulated Multi-Turn Initialization.
+    // By faking the model's acknowledgment of the history, we guarantee the AI transitions into the correct state for transcription
+    // without wasting a real API call (and rate limits) just to get the "Material received" confirmation.
+    if (!string.IsNullOrEmpty(_historyText))
+    {
+      history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.\n\n=== HISTORY START ===\n" + _historyText + "\n=== HISTORY ENDE ===" } } });
+      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions." } } });
+    }
+
+    history.Add(new Content { Role = "user", Parts = userPromptParts });
 
     var requestConfig = new GenerateContentConfig
     {
@@ -463,9 +509,11 @@ public class AiStudioAutoExtractionSession
     }
 
     string fullResponse = "";
-    int backoff = 35;
+    int backoff = 30;
     int currentRequest = 1;
     int maxRequests = 5;
+    int attempt = 1; // Zähler für API-Fehlschläge
+    int maxRetries = 5;
 
     while (true)
     {
@@ -485,7 +533,8 @@ public class AiStudioAutoExtractionSession
         fullResponse += chunkResp;
         await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt, _config.Model, chunkResp, "AutoExtraction");
 
-        if (chunkResp.Contains("[SYSTEM] Segment complete", StringComparison.OrdinalIgnoreCase))
+        // [AI Context] Fuzzy check allowing markdown symbols or additional text between [SYSTEM] and "Segment complete"
+        if (System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
         {
           if (currentRequest >= maxRequests)
           {
@@ -495,7 +544,8 @@ public class AiStudioAutoExtractionSession
           Console.WriteLine("\n\n[AutoExtraction] Sende 'Continue'...");
           history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
           history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Continue" } } });
-          backoff = 35; // reset backoff on success
+          backoff = 30; // Reset backoff on success
+          attempt = 1;  // Reset Fehlerzähler
           currentRequest++;
           continue;
         }
@@ -504,12 +554,23 @@ public class AiStudioAutoExtractionSession
       }
       catch (Exception ex)
       {
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-        if (isOverloaded)
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        if (isOverloaded && attempt <= maxRetries)
         {
-          Console.WriteLine($"\n[Rate Limit] Warte {backoff} Sekunden... ({ex.Message})");
-          await Task.Delay(backoff * 1000);
-          backoff *= 2;
+          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+          {
+            int waitTime = serverSuggestedDelay + 2;
+            Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+            await Task.Delay(waitTime * 1000);
+          }
+          else
+          {
+            Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+            await Task.Delay(backoff * 1000);
+            backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
+          }
+          attempt++;
         }
         else
         {
@@ -527,8 +588,10 @@ public class AiStudioAutoExtractionSession
 // 2. Google Cloud Vertex AI (Enterprise Tier)
 // ==========================================
 
-// [AI Context] Configuration for the enterprise Vertex AI tier.
-// Binds to a specific GCP Project and Region, requiring an active billing account and a dedicated GCS bucket for multimodal payloads.
+/// <summary>
+/// [AI Context] Configuration for the enterprise Vertex AI tier.
+/// Binds to a specific GCP Project and Region, requiring an active billing account and a dedicated GCS bucket for multimodal payloads.
+/// </summary>
 public class VertexAutoExtractionConfig
 {
   public string ProjectId { get; set; } = "vertex-ai-experiments-494320";
@@ -537,11 +600,17 @@ public class VertexAutoExtractionConfig
   public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a\new";
   public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+  public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
   public string Model { get; set; } = "gemini-3-flash-preview";
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
   public double SpeedMultiplier { get; set; } = 1.2;
 }
 
+/// <summary>
+/// [AI Context] Orchestrates the enterprise-grade automated transcription pipeline using Vertex AI.
+/// Handles stringent GCS bucket cleanups after each chunk to prevent runaway cloud storage billing.
+/// [Human] Enterprise-Version der Batch-Verarbeitung. Löscht zwingend die Cloud-Speicher-Uploads nach jedem Video, um GCP-Kosten zu minimieren.
+/// </summary>
 public class VertexAutoExtractionSession
 {
   private readonly Client _client;
@@ -575,10 +644,30 @@ public class VertexAutoExtractionSession
     await CleanupBucketAsync(); // Clean up before starting
 
     string systemInstruction = "";
-    if (System.IO.File.Exists(_config.SystemInstructionPath))
+    Console.Write($"\nSystem Instruction aus '{_config.SystemInstructionPath}' laden? (j/n): ");
+    if (Console.ReadLine()?.Trim().ToLower() == "j" && System.IO.File.Exists(_config.SystemInstructionPath))
     {
       systemInstruction = await System.IO.File.ReadAllTextAsync(_config.SystemInstructionPath);
-      Console.WriteLine($"[INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
+      Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
+    }
+
+    string historyText = "";
+    Console.Write($"\nHistory (alte Chat-Verläufe) aus '{_config.HistoryPreloadFolder}' mitschicken? (j/n): ");
+    if (Console.ReadLine()?.Trim().ToLower() == "j" && Directory.Exists(_config.HistoryPreloadFolder))
+    {
+      var histFiles = Directory.GetFiles(_config.HistoryPreloadFolder, "*.*", SearchOption.AllDirectories);
+      bool anyLoaded = false;
+      Console.WriteLine("  [INFO] Lade History-Dateien:");
+      foreach (var hf in histFiles)
+      {
+        if (!string.Equals(Path.GetFullPath(hf), Path.GetFullPath(_config.SystemInstructionPath), StringComparison.OrdinalIgnoreCase))
+        {
+          historyText += $"\n--- HISTORY DATEI: {Path.GetFileName(hf)} ---\n" + await System.IO.File.ReadAllTextAsync(hf) + "\n";
+          Console.WriteLine($"    - {Path.GetFileName(hf)}");
+          anyLoaded = true;
+        }
+      }
+      if (!anyLoaded) Console.WriteLine("    (Keine passenden Dateien gefunden)");
     }
 
     string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
@@ -691,17 +780,27 @@ public class VertexAutoExtractionSession
             continue;
           }
 
-          var parts = new List<Part>(attachmentParts);
+          var userPromptParts = new List<Part>(attachmentParts);
 
           // [AI Context] Context stitching for the Enterprise model. Maintains rigid notation consistency across segment boundaries.
           foreach (var texFile in generatedTexFiles)
           {
             string content = await System.IO.File.ReadAllTextAsync(texFile);
-            parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+            userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
           }
 
-          parts.Add(new Part { Text = parsedPrompt });
-          var contents = new List<Content> { new Content { Role = "user", Parts = parts } };
+          userPromptParts.Add(new Part { Text = parsedPrompt });
+          
+          var contents = new List<Content>();
+
+          // [AI Context] Simulated Multi-Turn Initialization for Vertex.
+          if (!string.IsNullOrEmpty(historyText))
+          {
+            contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.\n\n=== HISTORY START ===\n" + historyText + "\n=== HISTORY ENDE ===" } } });
+            contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions." } } });
+          }
+
+          contents.Add(new Content { Role = "user", Parts = userPromptParts });
 
           var requestConfig = new GenerateContentConfig
           {
@@ -712,7 +811,7 @@ public class VertexAutoExtractionSession
           if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
           if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
 
-          int backoff = 35;
+          int backoff = 30;
           int maxRetries = 5;
           string outputText = "";
 
@@ -727,12 +826,22 @@ public class VertexAutoExtractionSession
             }
             catch (Exception ex)
             {
-              bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-              if (attempt < maxRetries && isOverloaded)
+              bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+              if (isOverloaded && attempt < maxRetries)
               {
-                Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... ({ex.Message})");
-                await Task.Delay(backoff * 1000);
-                backoff *= 2;
+                var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+                if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+                {
+                  int waitTime = serverSuggestedDelay + 2;
+                  Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+                  await Task.Delay(waitTime * 1000);
+                }
+                else
+                {
+                  Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+                  await Task.Delay(backoff * 1000);
+                  backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
+                }
               }
               else
               {
@@ -744,6 +853,8 @@ public class VertexAutoExtractionSession
           string cleanTex = outputText;
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+          // [AI Context] Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
+          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
           cleanTex = cleanTex.Trim();
 
           fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;

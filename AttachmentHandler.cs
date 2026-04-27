@@ -211,7 +211,15 @@ public class AttachmentHandler
         while (string.Equals(fileInfo?.State?.ToString(), "PROCESSING", StringComparison.OrdinalIgnoreCase))
         {
           Write(".");
-          await Task.Delay(5000); // 5 Sekunden warten und erneut abfragen
+          for (int i = 0; i < 50; i++)
+          {
+            await Task.Delay(100);
+            if (!Console.IsInputRedirected && Console.KeyAvailable)
+            {
+              while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+              Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
+            }
+          }
           fileInfo = await _client.Files.GetAsync(remoteFileName);
         }
         WriteLine();
