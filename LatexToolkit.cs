@@ -65,7 +65,9 @@ public class LatexToolkit
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"  [Error] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert? \nFehlermeldung: {ex.Message}");
+      Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+      Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+      Console.WriteLine($"  [Error] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
       return (false, ex.Message);
     }
   }

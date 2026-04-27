@@ -236,8 +236,9 @@ public class AttachmentHandler
       }
       catch (Exception ex)
       {
-        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
-        WriteLine($"  [Fehler] Beim Upload über File API ist ein Fehler aufgetreten: {ex.Message}");
+        WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        WriteLine($"Originaler Fehlertext: {ex.Message}");
+        WriteLine($"  [Fehler] Upload über File API fehlgeschlagen.");
         return false;
       }
     }
@@ -262,8 +263,9 @@ public class AttachmentHandler
       }
       catch (Exception ex)
       {
-        // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
-        WriteLine($"  [Fehler] Beim Upload in GCS ist ein Fehler aufgetreten:\n{ex}");
+        WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        WriteLine($"Originaler Fehlertext: {ex.Message}");
+        WriteLine($"  [Fehler] Upload in GCS fehlgeschlagen.");
         return false;
       }
     }

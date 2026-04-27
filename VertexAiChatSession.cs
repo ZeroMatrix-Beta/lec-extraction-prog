@@ -236,9 +236,11 @@ public class VertexAiChatSession
         }
         catch (Exception ex)
         {
+          WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+          WriteLine($"Originaler Fehlertext: {ex.Message}");
+
           bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
 
-          // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
           if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase))
           {
             WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut! Originalfehler: {ex.Message}");
@@ -520,7 +522,9 @@ public class VertexAiChatSession
     }
     catch (Exception ex)
     {
-      // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+      WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+      WriteLine($"Originaler Fehlertext: {ex.Message}");
+
       WriteLine($"\n  --- GCS ERROR DUMP ---");
       WriteLine($"{ex}");
       WriteLine($"  ----------------------\n");

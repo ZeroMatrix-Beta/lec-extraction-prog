@@ -297,6 +297,9 @@ public class GoogleAIStudioChatSession
         }
         catch (Exception ex)
         {
+          WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+          WriteLine($"Originaler Fehlertext: {ex.Message}");
+
           bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
           if (attempt < maxRetries && isOverloaded)
           {
@@ -316,8 +319,7 @@ public class GoogleAIStudioChatSession
           }
           else
           {
-            // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
-            WriteLine($"\nHoppla, da gab es einen Fehler: {ex.Message}");
+            WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
             // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
             history.RemoveAt(history.Count - 1);
             break;
@@ -633,7 +635,9 @@ public class GoogleAIStudioChatSession
     }
     catch (Exception ex)
     {
-      // [AI Context] RULE: Always include the original exception message (ex.Message or ex.ToString()) in error outputs to aid debugging.
+      WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+      WriteLine($"Originaler Fehlertext: {ex.Message}");
+
       if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
           ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
           ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase))

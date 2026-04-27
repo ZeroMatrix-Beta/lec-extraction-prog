@@ -141,6 +141,9 @@ public class LatexRefinementSession
       }
       catch (Exception ex)
       {
+        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
         if (attempt < maxRetries && isOverloaded)
         {

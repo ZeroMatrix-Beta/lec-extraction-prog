@@ -176,6 +176,10 @@ public class AiStudioAutoExtractionSession
 
     while (true)
     {
+      if (!Console.IsInputRedirected)
+      {
+        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+      }
       Console.Write("\nAutoExt> ");
       string input = Console.ReadLine()?.Trim() ?? "";
       if (string.IsNullOrWhiteSpace(input)) continue;
@@ -272,6 +276,20 @@ public class AiStudioAutoExtractionSession
 
     for (int attempt = 1; attempt <= maxRetries; attempt++)
     {
+      bool isGenerating = true;
+      var inputInterceptorTask = Task.Run(async () =>
+      {
+        while (isGenerating)
+        {
+          if (!Console.IsInputRedirected && Console.KeyAvailable)
+          {
+            while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+            Console.WriteLine("\n[System] Still waiting for the acknowledgment / response. Please wait...");
+          }
+          await Task.Delay(100);
+        }
+      });
+
       try
       {
         if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
@@ -284,15 +302,25 @@ public class AiStudioAutoExtractionSession
           fullResponse += txt;
         }
         Console.WriteLine();
+        isGenerating = false;
+        await inputInterceptorTask;
         break; // Erfolg
       }
       catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
       {
+        isGenerating = false;
+        await inputInterceptorTask;
         exceptionCaught = true;
         break;
       }
       catch (Exception ex)
       {
+        isGenerating = false;
+        await inputInterceptorTask;
+
+        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt < maxRetries)
         {
@@ -301,12 +329,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await Task.Delay(waitTime * 1000);
+            await SmartDelayAsync(waitTime);
           }
           else
           {
             Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await Task.Delay(backoff * 1000);
+            await SmartDelayAsync(backoff);
             backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
           }
         }
@@ -517,6 +545,20 @@ public class AiStudioAutoExtractionSession
 
     while (true)
     {
+      bool isGenerating = true;
+      var inputInterceptorTask = Task.Run(async () =>
+      {
+        while (isGenerating)
+        {
+          if (!Console.IsInputRedirected && Console.KeyAvailable)
+          {
+            while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+            Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
+          }
+          await Task.Delay(100);
+        }
+      });
+
       try
       {
         Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequests})...");
@@ -529,6 +571,9 @@ public class AiStudioAutoExtractionSession
           Console.Write(txt);
           chunkResp += txt;
         }
+
+        isGenerating = false;
+        await inputInterceptorTask;
 
         fullResponse += chunkResp;
         await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt, _config.Model, chunkResp, "AutoExtraction");
@@ -554,6 +599,12 @@ public class AiStudioAutoExtractionSession
       }
       catch (Exception ex)
       {
+        isGenerating = false;
+        await inputInterceptorTask;
+
+        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt <= maxRetries)
         {
@@ -562,12 +613,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await Task.Delay(waitTime * 1000);
+            await SmartDelayAsync(waitTime);
           }
           else
           {
             Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await Task.Delay(backoff * 1000);
+            await SmartDelayAsync(backoff);
             backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
           }
           attempt++;
@@ -581,6 +632,20 @@ public class AiStudioAutoExtractionSession
     }
 
     return fullResponse;
+  }
+
+  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
+    int delaySteps = seconds * 10;
+    for (int i = 0; i < delaySteps; i++)
+    {
+      await Task.Delay(100);
+      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      {
+        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+        Console.WriteLine($"\n[System] {message}");
+      }
+    }
   }
 }
 
@@ -817,15 +882,37 @@ public class VertexAutoExtractionSession
 
           for (int attempt = 1; attempt <= maxRetries; attempt++)
           {
+            bool isGenerating = true;
+            var inputInterceptorTask = Task.Run(async () =>
+            {
+              while (isGenerating)
+              {
+                if (!Console.IsInputRedirected && Console.KeyAvailable)
+                {
+                  while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+                  Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
+                }
+                await Task.Delay(100);
+              }
+            });
+
             try
             {
               Console.WriteLine($"  [API] Sende Anfrage an {_config.Model} (Versuch {attempt}/{maxRetries})...");
               var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
               outputText = response.Text ?? "";
+              isGenerating = false;
+              await inputInterceptorTask;
               break;
             }
             catch (Exception ex)
             {
+              isGenerating = false;
+              await inputInterceptorTask;
+
+              Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+              Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+
               bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
               if (isOverloaded && attempt < maxRetries)
               {
@@ -834,12 +921,12 @@ public class VertexAutoExtractionSession
                 {
                   int waitTime = serverSuggestedDelay + 2;
                   Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-                  await Task.Delay(waitTime * 1000);
+                  await SmartDelayAsync(waitTime);
                 }
                 else
                 {
                   Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-                  await Task.Delay(backoff * 1000);
+                  await SmartDelayAsync(backoff);
                   backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
                 }
               }
@@ -874,7 +961,9 @@ public class VertexAutoExtractionSession
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"\n  [Fehler] Abbruch bei {Path.GetFileName(file)}: {ex.Message}");
+        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+        Console.WriteLine($"  [Fehler] Abbruch bei {Path.GetFileName(file)}.");
       }
       finally
       {
@@ -904,7 +993,23 @@ public class VertexAutoExtractionSession
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen: {ex.Message}");
+      Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+      Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+      Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
+    }
+  }
+
+  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
+    int delaySteps = seconds * 10;
+    for (int i = 0; i < delaySteps; i++)
+    {
+      await Task.Delay(100);
+      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      {
+        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+        Console.WriteLine($"\n[System] {message}");
+      }
     }
   }
 }
