@@ -96,42 +96,51 @@ public class VertexAiChatSession
 
   public async Task StartAsync()
   {
-    string selectedModel = SelectModel();
-
-    WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
-
-    // ALWAYS clean up the bucket completely before starting a session (crash recovery)
-    await ForcePurgeGcsBucketAsync();
-
-    _sessionLogger.InitializeSession();
-
-    bool loadedSysPrompt = false;
-    Write($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
-    if (ReadLine()?.Trim().ToLower() == "j")
+    while (true)
     {
-      if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
+      string selectedModel = await SelectModelAsync();
+      if (selectedModel == "__EXIT__") return;
+
+      WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
+
+      // ALWAYS clean up the bucket completely before starting a session (crash recovery)
+      await ForcePurgeGcsBucketAsync();
+
+      _sessionLogger.InitializeSession();
+
+      bool loadedSysPrompt = false;
+      string sysPromptChoice = await PromptWithCommandsAsync($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+      if (sysPromptChoice == "__EXIT__") return;
+
+      if (sysPromptChoice.Trim().ToLower() == "j")
       {
-        _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-        WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
-        loadedSysPrompt = true;
+        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
+        {
+          _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+          WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+          loadedSysPrompt = true;
+        }
+        else
+        {
+          WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+        }
       }
       else
       {
-        WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+        WriteLine("  [INFO] System Instruction wird ignoriert.");
       }
+
+      string? initialInput = await GetInitialHistoryCommandAsync();
+      if (initialInput == "__EXIT__") return;
+
+      bool loadedHistory = initialInput != null;
+
+      _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
+      await _sessionLogger.LogSessionSetupAsync();
+
+      await RunChatSessionAsync(selectedModel, initialInput);
+      break; // Session beendet, zurück zu Program.cs
     }
-    else
-    {
-      WriteLine("  [INFO] System Instruction wird ignoriert.");
-    }
-
-    string? initialInput = GetInitialHistoryCommand();
-    bool loadedHistory = initialInput != null;
-
-    _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
-    await _sessionLogger.LogSessionSetupAsync();
-
-    await RunChatSessionAsync(selectedModel, initialInput);
   }
 
   /// <summary>
@@ -140,7 +149,7 @@ public class VertexAiChatSession
   /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
   /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
   /// </summary>
-  private string SelectModel()
+  private async Task<string> SelectModelAsync()
   {
     WriteLine("\n=== Model Selection (Vertex AI) ===");
     WriteLine("Wähle ein Modell:");
@@ -161,9 +170,10 @@ public class VertexAiChatSession
     WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
     WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
     WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
-    Write("Auswahl (1-11) [Standard: 4]: ");
 
-    string? choice = ReadLine()?.Trim();
+    string choice = await PromptWithCommandsAsync("Auswahl (1-11) [Standard: 4]: ");
+    if (choice == "__EXIT__") return choice;
+
     return choice switch
     {
       "1" => "gemini-3.1-flash-lite-preview",
@@ -215,7 +225,7 @@ public class VertexAiChatSession
 
       if (isCommandHandled)
       {
-        if (!input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
+        if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
         if (parts.Count == 0) continue;
       }
 
@@ -254,12 +264,22 @@ public class VertexAiChatSession
             {
               int waitTime = serverSuggestedDelay + 2;
               WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-              await SmartDelayAsync(waitTime);
+              if (!await SmartDelayAsync(waitTime))
+              {
+                WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
+                history.RemoveAt(history.Count - 1);
+                break;
+              }
             }
             else
             {
               WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-              await SmartDelayAsync(backoff);
+              if (!await SmartDelayAsync(backoff))
+              {
+                WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
+                history.RemoveAt(history.Count - 1);
+                break;
+              }
               backoff *= 2;
             }
           }
@@ -279,17 +299,55 @@ public class VertexAiChatSession
     await ForcePurgeGcsBucketAsync();
   }
 
-  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  private async Task<string> PromptWithCommandsAsync(string promptMessage)
   {
-    int delaySteps = seconds * 10;
-    for (int i = 0; i < delaySteps; i++)
+    while (true)
     {
-      await Task.Delay(100);
-      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      Write(promptMessage);
+      string? input = ReadLine()?.Trim();
+      if (string.IsNullOrWhiteSpace(input)) continue;
+
+      string normalizedInput = input.TrimStart('/');
+      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase))
       {
-        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-        WriteLine($"\n[System] {message}");
+        return "__EXIT__";
       }
+
+      // Placeholder for future setup-time commands in Vertex mode
+      // if (input.StartsWith("some-vertex-command")) { ...; continue; }
+
+      return input; // Return the non-command input
+    }
+  }
+
+  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
+    bool delayCanceled = false;
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
+    {
+      e.Cancel = true;
+      delayCanceled = true;
+    };
+    Console.CancelKeyPress += cancelHandler;
+
+    try
+    {
+      int delaySteps = seconds * 10;
+      for (int i = 0; i < delaySteps; i++)
+      {
+        if (delayCanceled) return false;
+        await Task.Delay(100);
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          WriteLine($"\n[System] {message}");
+        }
+      }
+      return true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
     }
   }
 
@@ -306,13 +364,15 @@ public class VertexAiChatSession
 
   private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText)
   {
-    if (input.Equals("help", StringComparison.OrdinalIgnoreCase) || input.Equals("commands", StringComparison.OrdinalIgnoreCase) || input.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+    string normalizedInput = input.TrimStart('/');
+
+    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase))
     {
       ShowCommands();
       return true;
     }
 
-    if (input.Equals("clear", StringComparison.OrdinalIgnoreCase) || input.Equals("reset", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase))
     {
       history.Clear();
       history.AddRange(initialHistory);
@@ -320,9 +380,9 @@ public class VertexAiChatSession
       return true;
     }
 
-    if (input.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
     {
-      string tempValueStr = input.Substring(9).Trim();
+      string tempValueStr = normalizedInput.Substring(9).Trim();
       if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
       {
         AIParams.Temperature = newTemp;
@@ -331,9 +391,9 @@ public class VertexAiChatSession
       return true;
     }
 
-    if (input.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
     {
-      string tokenValueStr = input.Substring(11).Trim();
+      string tokenValueStr = normalizedInput.Substring(11).Trim();
       if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
       {
         AIParams.MaxOutputTokens = newTokens;
@@ -342,9 +402,9 @@ public class VertexAiChatSession
       return true;
     }
 
-    if (input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
     {
-      var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(input);
+      var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput);
 
       if (!success) return true;
 
@@ -457,7 +517,7 @@ public class VertexAiChatSession
     }
   }
 
-  private string? GetInitialHistoryCommand()
+  private async Task<string?> GetInitialHistoryCommandAsync()
   {
     if (string.IsNullOrWhiteSpace(HistoryPreloadFolderPath) || !Directory.Exists(HistoryPreloadFolderPath)) return null;
 
@@ -480,8 +540,10 @@ public class VertexAiChatSession
       WriteLine($"  - {relativePath}");
     }
 
-    Write("Sollen diese Dateien als History geladen werden? (j/n): ");
-    bool loadHistory = ReadLine()?.Trim().ToLower() == "j";
+    string historyChoice = await PromptWithCommandsAsync("Sollen diese Dateien als History geladen werden? (j/n): ");
+    if (historyChoice == "__EXIT__") return historyChoice;
+
+    bool loadHistory = historyChoice.Trim().ToLower() == "j";
 
     if (!loadHistory) return null;
 

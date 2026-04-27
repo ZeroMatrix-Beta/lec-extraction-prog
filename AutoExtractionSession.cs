@@ -81,7 +81,7 @@ public class AiStudioAutoExtractionConfig
 /// </summary>
 public class AiStudioAutoExtractionSession
 {
-  private readonly Client _client;
+  private Client _client;
   private readonly AiStudioAutoExtractionConfig _config;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
@@ -171,6 +171,7 @@ public class AiStudioAutoExtractionSession
     Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
     Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
     Console.WriteLine("  5) Beenden (exit/quit)");
+    Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2')");
     Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
     Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
 
@@ -184,9 +185,10 @@ public class AiStudioAutoExtractionSession
       string input = Console.ReadLine()?.Trim() ?? "";
       if (string.IsNullOrWhiteSpace(input)) continue;
 
-      if (input == "5" || input.Equals("exit", StringComparison.OrdinalIgnoreCase) || input.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
+      string normalizedInput = input.TrimStart('/');
+      if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
 
-      if (input == "1" || input.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+      if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase))
       {
         Console.WriteLine("\nBefehle:");
         Console.WriteLine("  1) Befehle anzeigen");
@@ -194,15 +196,16 @@ public class AiStudioAutoExtractionSession
         Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
         Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) Beenden (exit/quit)");
+        Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2')");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
       }
-      else if (input == "2" || input.StartsWith("2 ") || input.StartsWith("set speed", StringComparison.OrdinalIgnoreCase))
+      else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase))
       {
         string val = "";
-        if (input.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = input.Substring(9).Trim();
-        else if (input.StartsWith("2 ")) val = input.Substring(2).Trim();
-        else if (input == "2")
+        if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput.Substring(9).Trim();
+        else if (normalizedInput.StartsWith("2 ")) val = normalizedInput.Substring(2).Trim();
+        else if (normalizedInput == "2")
         {
           Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
           val = Console.ReadLine()?.Trim() ?? "";
@@ -218,7 +221,7 @@ public class AiStudioAutoExtractionSession
           Console.WriteLine("Ungültiger Wert für speed.");
         }
       }
-      else if (input == "3" || input.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase))
+      else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase))
       {
         var files = FfmpegUtilities.ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
         if (files.Length > 0)
@@ -226,19 +229,37 @@ public class AiStudioAutoExtractionSession
           await ProcessFilesAsync(files);
         }
       }
-      else if (input == "4" || input.Equals("convert all videos", StringComparison.OrdinalIgnoreCase))
+      else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase))
       {
         var files = Directory.GetFiles(_config.SourceFolder, "*.mp4");
         await ProcessFilesAsync(files);
       }
-      else if (input.Equals("clear", StringComparison.OrdinalIgnoreCase))
+      else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase))
       {
         _debugChatHistory.Clear();
         Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
       }
+      else if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+      {
+        var match = System.Text.RegularExpressions.Regex.Match(normalizedInput, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 1 && newProfile <= 3)
+        {
+          string? newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
+          if (!string.IsNullOrEmpty(newApiKey))
+          {
+            _client = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
+            _attachmentHandler.UpdateClient(_client);
+            Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt!");
+          }
+        }
+        else
+        {
+          Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
+        }
+      }
       else
       {
-        await DebugChatAsync(input);
+        await DebugChatAsync(input); // Chat erhält den originalen Input
       }
     }
   }
@@ -250,7 +271,7 @@ public class AiStudioAutoExtractionSession
     var requestConfig = new GenerateContentConfig
     {
       Temperature = 0.7f,
-      MaxOutputTokens = 8192
+      MaxOutputTokens = 65535
     };
 
     if (!string.IsNullOrWhiteSpace(_systemInstructionText))
@@ -329,12 +350,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await SmartDelayAsync(waitTime);
+            if (!await SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
           }
           else
           {
             Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await SmartDelayAsync(backoff);
+            if (!await SmartDelayAsync(backoff)) { exceptionCaught = true; break; }
             backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
           }
         }
@@ -613,12 +634,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await SmartDelayAsync(waitTime);
+            if (!await SmartDelayAsync(waitTime)) break;
           }
           else
           {
             Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await SmartDelayAsync(backoff);
+            if (!await SmartDelayAsync(backoff)) break;
             backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
           }
           attempt++;
@@ -634,17 +655,34 @@ public class AiStudioAutoExtractionSession
     return fullResponse;
   }
 
-  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
   {
-    int delaySteps = seconds * 10;
-    for (int i = 0; i < delaySteps; i++)
+    bool delayCanceled = false;
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
     {
-      await Task.Delay(100);
-      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      e.Cancel = true;
+      delayCanceled = true;
+    };
+    Console.CancelKeyPress += cancelHandler;
+
+    try
+    {
+      int delaySteps = seconds * 10;
+      for (int i = 0; i < delaySteps; i++)
       {
-        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-        Console.WriteLine($"\n[System] {message}");
+        if (delayCanceled) return false;
+        await Task.Delay(100);
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          Console.WriteLine($"\n[System] {message}");
+        }
       }
+      return true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
     }
   }
 }
@@ -855,7 +893,7 @@ public class VertexAutoExtractionSession
           }
 
           userPromptParts.Add(new Part { Text = parsedPrompt });
-          
+
           var contents = new List<Content>();
 
           // [AI Context] Simulated Multi-Turn Initialization for Vertex.
@@ -878,66 +916,104 @@ public class VertexAutoExtractionSession
 
           int backoff = 30;
           int maxRetries = 5;
-          string outputText = "";
+          string outputTextForPart = "";
+          int currentRequest = 1;
+          int maxRequests = 5;
 
-          for (int attempt = 1; attempt <= maxRetries; attempt++)
+          while (true)
           {
-            bool isGenerating = true;
-            var inputInterceptorTask = Task.Run(async () =>
+            string chunkOutput = "";
+            int attempt = 1;
+            for (; attempt <= maxRetries; attempt++)
             {
-              while (isGenerating)
+              bool isGenerating = true;
+              var inputInterceptorTask = Task.Run(async () =>
               {
-                if (!Console.IsInputRedirected && Console.KeyAvailable)
+                while (isGenerating)
                 {
-                  while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                  Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
+                  if (!Console.IsInputRedirected && Console.KeyAvailable)
+                  {
+                    while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+                    Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
+                  }
+                  await Task.Delay(100);
                 }
-                await Task.Delay(100);
-              }
-            });
+              });
 
-            try
-            {
-              Console.WriteLine($"  [API] Sende Anfrage an {_config.Model} (Versuch {attempt}/{maxRetries})...");
-              var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
-              outputText = response.Text ?? "";
-              isGenerating = false;
-              await inputInterceptorTask;
-              break;
-            }
-            catch (Exception ex)
-            {
-              isGenerating = false;
-              await inputInterceptorTask;
-
-              Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-              Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-              bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-              if (isOverloaded && attempt < maxRetries)
+              try
               {
-                var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-                if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+                Console.WriteLine($"  [API] Sende Anfrage an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+                var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
+                chunkOutput = response.Text ?? "";
+                isGenerating = false;
+                await inputInterceptorTask;
+                break;
+              }
+              catch (Exception ex)
+              {
+                isGenerating = false;
+                await inputInterceptorTask;
+
+                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+
+                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+                if (isOverloaded && attempt < maxRetries)
                 {
-                  int waitTime = serverSuggestedDelay + 2;
-                  Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-                  await SmartDelayAsync(waitTime);
+                  var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+                  if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+                  {
+                    int waitTime = serverSuggestedDelay + 2;
+                    Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+                    if (!await SmartDelayAsync(waitTime)) break;
+                  }
+                  else
+                  {
+                    Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+                    if (!await SmartDelayAsync(backoff)) break;
+                    backoff *= 2;
+                  }
                 }
                 else
                 {
-                  Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-                  await SmartDelayAsync(backoff);
-                  backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
+                  throw;
                 }
               }
-              else
-              {
-                throw;
-              }
             }
+
+            outputTextForPart += chunkOutput;
+
+            bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (!videoComplete)
+            {
+              if (currentRequest >= maxRequests)
+              {
+                Console.WriteLine($"\n  [WARNUNG] Max Requests ({maxRequests}) erreicht. Breche ab.");
+                break;
+              }
+
+              if (segmentComplete) Console.WriteLine("\n  [Vertex] Segment Limit erreicht. Sende 'Continue'...");
+              else Console.WriteLine("\n  [Vertex] KI hat abgebrochen (Max Tokens). Sende automatisiert 'Continue'...");
+
+              // Hole nur die letzten 300 Zeichen als Anker, um extrem viele Tokens zu sparen!
+              string snippet = chunkOutput.Length > 300 ? "...\n" + chunkOutput.Substring(chunkOutput.Length - 300) : chunkOutput;
+              string continuePrompt = "[IMPORTANT] Your response has been cut by the system's automatic length-detection. Your last latex block ended with:\n\n" +
+                                      $"```latex\n{snippet}\n```\n\n" +
+                                      "Please \"continue\" exactly where you left off...";
+
+              contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkOutput } } });
+              contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+              backoff = 30; // Reset für den nächsten Request
+              currentRequest++;
+              continue;
+            }
+
+            break; // Finished
           }
 
-          string cleanTex = outputText;
+          string cleanTex = outputTextForPart;
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
           // [AI Context] Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
@@ -999,17 +1075,34 @@ public class VertexAutoExtractionSession
     }
   }
 
-  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
   {
-    int delaySteps = seconds * 10;
-    for (int i = 0; i < delaySteps; i++)
+    bool delayCanceled = false;
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
     {
-      await Task.Delay(100);
-      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      e.Cancel = true;
+      delayCanceled = true;
+    };
+    Console.CancelKeyPress += cancelHandler;
+
+    try
+    {
+      int delaySteps = seconds * 10;
+      for (int i = 0; i < delaySteps; i++)
       {
-        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-        Console.WriteLine($"\n[System] {message}");
+        if (delayCanceled) return false;
+        await Task.Delay(100);
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          Console.WriteLine($"\n[System] {message}");
+        }
       }
+      return true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
     }
   }
 }

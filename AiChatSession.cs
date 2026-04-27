@@ -131,45 +131,57 @@ public class GoogleAIStudioChatSession
   /// </summary>
   public async Task StartAsync()
   {
-    string selectedModel = SelectModel();
-
-    // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
-    await CleanupGcsBucketAsync();
-
-    // [AI Context] Implements session persistence by isolating text/LaTeX outputs in discrete timestamped directories.
-    // [Human] Erstellt für jede neue Chat-Sitzung einen eigenen Ordner, damit nichts aus Versehen überschrieben wird.
-    // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
-    _sessionLogger.InitializeSession();
-
-    // [AI Context] Load System Instructions (Persona & Rules) into memory.
-    bool loadedSysPrompt = false;
-    Write($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
-    if (ReadLine()?.Trim().ToLower() == "j")
+    while (true)
     {
-      if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
+      string selectedModel = await SelectModelAsync();
+      if (selectedModel == "__EXIT__") return;
+      if (selectedModel == "__CHANGED_KEY__") continue;
+
+      // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
+      await CleanupGcsBucketAsync();
+
+      // [AI Context] Implements session persistence by isolating text/LaTeX outputs in discrete timestamped directories.
+      // [Human] Erstellt für jede neue Chat-Sitzung einen eigenen Ordner, damit nichts aus Versehen überschrieben wird.
+      // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
+      _sessionLogger.InitializeSession();
+
+      // [AI Context] Load System Instructions (Persona & Rules) into memory.
+      bool loadedSysPrompt = false;
+      string sysPromptChoice = await PromptWithCommandsAsync($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+      if (sysPromptChoice == "__EXIT__") return;
+      if (sysPromptChoice == "__CHANGED_KEY__") continue;
+
+      if (sysPromptChoice.Trim().ToLower() == "j")
       {
-        _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-        WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
-        loadedSysPrompt = true;
+        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
+        {
+          _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+          WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+          loadedSysPrompt = true;
+        }
+        else
+        {
+          WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+        }
       }
       else
       {
-        WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+        WriteLine("  [INFO] System Instruction wird ignoriert.");
       }
+
+      string? initialInput = await GetInitialHistoryCommandAsync();
+      if (initialInput == "__EXIT__") return;
+      if (initialInput == "__CHANGED_KEY__") continue;
+
+      bool loadedHistory = initialInput != null;
+
+      _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
+      await _sessionLogger.LogSessionSetupAsync();
+
+      // 4. Starte die Haupt-Chat-Schleife
+      await RunChatSessionAsync(selectedModel, initialInput);
+      break; // Beendet den aktuellen Setup-Loop und geht komplett ins Hauptmenü zurück
     }
-    else
-    {
-      WriteLine("  [INFO] System Instruction wird ignoriert.");
-    }
-
-    string? initialInput = GetInitialHistoryCommand();
-    bool loadedHistory = initialInput != null;
-
-    _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
-    await _sessionLogger.LogSessionSetupAsync();
-
-    // 4. Starte die Haupt-Chat-Schleife
-    await RunChatSessionAsync(selectedModel, initialInput);
   }
 
   /// <summary>
@@ -178,7 +190,7 @@ public class GoogleAIStudioChatSession
   /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
   /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
   /// </summary>
-  private string SelectModel()
+  private async Task<string> SelectModelAsync()
   {
     WriteLine($"\n=== Model Selection (AI Studio) ===");
     WriteLine("Wähle ein Modell:");
@@ -193,9 +205,10 @@ public class GoogleAIStudioChatSession
     WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
     WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
     WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
-    Write("Auswahl (1-11) [Standard: 4]: ");
 
-    string? choice = ReadLine()?.Trim();
+    string choice = await PromptWithCommandsAsync("Auswahl (1-11) [Standard: 4]: ");
+    if (choice == "__EXIT__" || choice == "__CHANGED_KEY__") return choice;
+
     return choice switch
     {
       "1" => "gemini-3.1-flash-lite-preview",
@@ -269,7 +282,7 @@ public class GoogleAIStudioChatSession
       if (isCommandHandled)
       {
         // The only exception is the 'attach' command, which modifies our parts/prompt and STILL wants to talk to Gemini
-        if (!input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
+        if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
         {
           continue;
         }
@@ -308,12 +321,22 @@ public class GoogleAIStudioChatSession
             {
               int waitTime = serverSuggestedDelay + 2;
               WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-              await SmartDelayAsync(waitTime);
+              if (!await SmartDelayAsync(waitTime))
+              {
+                WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
+                history.RemoveAt(history.Count - 1);
+                break;
+              }
             }
             else
             {
               WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-              await SmartDelayAsync(backoff);
+              if (!await SmartDelayAsync(backoff))
+              {
+                WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
+                history.RemoveAt(history.Count - 1);
+                break;
+              }
               backoff *= 2;
             }
           }
@@ -332,17 +355,58 @@ public class GoogleAIStudioChatSession
     await CleanupGcsBucketAsync();
   }
 
-  private async Task SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
   {
-    int delaySteps = seconds * 10;
-    for (int i = 0; i < delaySteps; i++)
+    bool delayCanceled = false;
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
     {
-      await Task.Delay(100);
-      if (!Console.IsInputRedirected && Console.KeyAvailable)
+      e.Cancel = true;
+      delayCanceled = true;
+    };
+    Console.CancelKeyPress += cancelHandler;
+
+    try
+    {
+      int delaySteps = seconds * 10;
+      for (int i = 0; i < delaySteps; i++)
       {
-        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-        WriteLine($"\n[System] {message}");
+        if (delayCanceled) return false;
+        await Task.Delay(100);
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          WriteLine($"\n[System] {message}");
+        }
       }
+      return true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
+    }
+  }
+
+  private async Task<string> PromptWithCommandsAsync(string promptMessage)
+  {
+    while (true)
+    {
+      Write(promptMessage);
+      string? input = ReadLine()?.Trim();
+      if (string.IsNullOrWhiteSpace(input)) continue;
+
+      string normalizedInput = input.TrimStart('/');
+
+      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase))
+      {
+        return "__EXIT__";
+      }
+
+      if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+      {
+        HandleChangeKey(normalizedInput);
+        return "__CHANGED_KEY__";
+      }
+      return input; // Return the non-command input
     }
   }
 
@@ -365,13 +429,15 @@ public class GoogleAIStudioChatSession
   /// </summary>
   private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText)
   {
-    if (input.Equals("help", StringComparison.OrdinalIgnoreCase) || input.Equals("commands", StringComparison.OrdinalIgnoreCase) || input.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+    string normalizedInput = input.TrimStart('/');
+
+    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase))
     {
       ShowCommands();
       return true;
     }
 
-    if (input.Equals("clear", StringComparison.OrdinalIgnoreCase) || input.Equals("reset", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase))
     {
       history.Clear();
       history.AddRange(initialHistory);
@@ -379,9 +445,9 @@ public class GoogleAIStudioChatSession
       return true;
     }
 
-    if (input.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
     {
-      string tempValueStr = input.Substring(9).Trim();
+      string tempValueStr = normalizedInput.Substring(9).Trim();
       if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
       {
         AIParams.Temperature = newTemp;
@@ -394,9 +460,9 @@ public class GoogleAIStudioChatSession
       return true;
     }
 
-    if (input.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
     {
-      string tokenValueStr = input.Substring(11).Trim();
+      string tokenValueStr = normalizedInput.Substring(11).Trim();
       if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
       {
         AIParams.MaxOutputTokens = newTokens;
@@ -409,36 +475,15 @@ public class GoogleAIStudioChatSession
       return true;
     }
 
-    if (input.StartsWith("change-key ", StringComparison.OrdinalIgnoreCase))
+    if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
     {
-      string keyStr = input.Substring(11).Trim();
-      if (int.TryParse(keyStr, out int newProfile) && newProfile >= 1 && newProfile <= 3)
-      {
-        System.Environment.SetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", newProfile.ToString(), EnvironmentVariableTarget.User);
-
-        string? newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
-        if (!string.IsNullOrEmpty(newApiKey))
-        {
-          _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
-          _attachmentHandler.UpdateClient(_client);
-          _activeApiProfile = newProfile;
-          WriteLine($"[INFO] API-Key Profil erfolgreich auf {newProfile} gewechselt und dauerhaft in den Windows-Umgebungsvariablen gespeichert!");
-        }
-        else
-        {
-          WriteLine($"[Fehler] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
-        }
-      }
-      else
-      {
-        WriteLine("[Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
-      }
+      HandleChangeKey(normalizedInput);
       return true;
     }
 
-    if (input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
+    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
     {
-      var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(input);
+      var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput);
 
       if (!success) return true; // Handled, but failed. Returning true with empty 'parts' forces the main loop to cleanly skip the turn.
 
@@ -568,7 +613,7 @@ public class GoogleAIStudioChatSession
   /// Fragt den Nutzer, ob eine bestehende History geladen werden soll, 
   /// und baut den entsprechenden /attach Befehl zusammen.
   /// </summary>
-  private string? GetInitialHistoryCommand()
+  private async Task<string?> GetInitialHistoryCommandAsync()
   {
     if (string.IsNullOrWhiteSpace(HistoryPreloadFolderPath) || !Directory.Exists(HistoryPreloadFolderPath))
     {
@@ -596,8 +641,10 @@ public class GoogleAIStudioChatSession
       WriteLine($"  - {relativePath}");
     }
 
-    Write("Sollen diese Dateien als History geladen werden? (j/n): ");
-    bool loadHistory = ReadLine()?.Trim().ToLower() == "j";
+    string historyChoice = await PromptWithCommandsAsync("Sollen diese Dateien als History geladen werden? (j/n): ");
+    if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;
+
+    bool loadHistory = historyChoice.Trim().ToLower() == "j";
 
     if (!loadHistory) return null;
 
@@ -605,6 +652,32 @@ public class GoogleAIStudioChatSession
     // Wir können sie direkt verwenden und für den Befehl in Anführungszeichen setzen.
     string fileList = string.Join(", ", historyFiles.Select(p => $"\"{p}\""));
     return $"attach {fileList} | {InitialHistoryPrompt}";
+  }
+
+  private void HandleChangeKey(string input)
+  {
+    var match = System.Text.RegularExpressions.Regex.Match(input, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 1 && newProfile <= 3)
+    {
+      System.Environment.SetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", newProfile.ToString(), EnvironmentVariableTarget.User);
+
+      string? newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
+      if (!string.IsNullOrEmpty(newApiKey))
+      {
+        _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
+        _attachmentHandler.UpdateClient(_client);
+        _activeApiProfile = newProfile;
+        WriteLine($"  [INFO] API-Key Profil erfolgreich auf {newProfile} gewechselt und dauerhaft in den Windows-Umgebungsvariablen gespeichert!");
+      }
+      else
+      {
+        WriteLine($"[Fehler] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
+      }
+    }
+    else
+    {
+      WriteLine("[Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
+    }
   }
 
   /// <summary>
