@@ -152,14 +152,22 @@ public class LatexRefinementSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await Task.Delay(waitTime * 1000);
+            if (!await SmartDelayAsync(waitTime))
+            {
+              Console.WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
+              break; // Exit retry loop if user cancels
+            }
           }
           else
           {
             Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            await Task.Delay(backoff * 1000);
-            backoff *= 2;
+            if (!await SmartDelayAsync(backoff))
+            {
+              Console.WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
+              break; // Exit retry loop if user cancels
+            }
           }
+          backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
         }
         else
         {
@@ -167,6 +175,36 @@ public class LatexRefinementSession
           break;
         }
       }
+    }
+  }
+
+  /// <summary>
+  /// Implements an interactive delay with user cancellation.
+  /// Allows the user to interrupt long backoff periods by pressing any key.
+  /// </summary>
+  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
+    bool delayCanceled = false;
+    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; delayCanceled = true; };
+    Console.CancelKeyPress += cancelHandler;
+    try
+    {
+      int delaySteps = seconds * 10;
+      for (int i = 0; i < delaySteps; i++)
+      {
+        if (delayCanceled) return false;
+        await Task.Delay(100);
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          Console.WriteLine($"\n[System] {message}");
+        }
+      }
+      return true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
     }
   }
 }

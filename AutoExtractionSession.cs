@@ -7,6 +7,7 @@ using Google.Cloud.Storage.V1;
 using System.Threading.Channels;
 using System.Threading;
 using Google.GenAI;
+using Config;
 using Google.GenAI.Types;
 
 namespace AiInteraction.AutoExtraction;
@@ -68,7 +69,7 @@ public class AiStudioAutoExtractionConfig
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
   public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
-  public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
+  public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
   public string LogFolder { get; set; } = @"D:\gemini-logs";
   public string Model { get; set; } = "gemini-3-flash-preview";
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
@@ -87,7 +88,8 @@ public class AiStudioAutoExtractionSession
   private readonly SessionLogger _sessionLogger;
   private double _speed = 1.2;
   private string _systemInstructionText = "";
-  private string _historyText = "";
+  private List<Part> _historyParts = new List<Part>();
+  private bool _historyWasLoaded = false;
   private List<Content> _debugChatHistory = new List<Content>();
 
   public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger)
@@ -133,26 +135,53 @@ public class AiStudioAutoExtractionSession
       Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
     }
 
-    Console.Write($"\nHistory (alte Chat-Verläufe) aus '{_config.HistoryPreloadFolder}' mitschicken? (j/n): ");
-    if (Console.ReadLine()?.Trim().ToLower() == "j" && Directory.Exists(_config.HistoryPreloadFolder))
+    Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
+    if (Console.ReadLine()?.Trim().ToLower() == "j")
     {
-      var histFiles = Directory.GetFiles(_config.HistoryPreloadFolder, "*.*", SearchOption.AllDirectories);
-      bool anyLoaded = false;
-      Console.WriteLine("  [INFO] Lade History-Dateien:");
-      foreach (var hf in histFiles)
+      var allHistoryFiles = new List<string>();
+      var notFoundPaths = new List<string>();
+
+      if (_config.HistoryPreloadPaths != null)
       {
-        if (!string.Equals(Path.GetFullPath(hf), Path.GetFullPath(_config.SystemInstructionPath), StringComparison.OrdinalIgnoreCase))
+        foreach (var path in _config.HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
         {
-          _historyText += $"\n--- HISTORY DATEI: {Path.GetFileName(hf)} ---\n" + await System.IO.File.ReadAllTextAsync(hf) + "\n";
-          Console.WriteLine($"    - {Path.GetFileName(hf)}");
-          anyLoaded = true;
+          if (System.IO.File.Exists(path))
+          {
+            allHistoryFiles.Add(Path.GetFullPath(path));
+          }
+          else if (Directory.Exists(path))
+          {
+            allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+          }
+          else
+          {
+            notFoundPaths.Add(path);
+          }
         }
       }
-      if (!anyLoaded) Console.WriteLine("    (Keine passenden Dateien gefunden)");
+
+      var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+      if (distinctFiles.Any())
+      {
+        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
+        if (success && attachmentParts.Any())
+        {
+          _historyParts.AddRange(attachmentParts);
+          _historyWasLoaded = true;
+          Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
+        }
+        else
+        {
+          Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+        }
+      }
     }
 
     _sessionLogger.InitializeSession();
-    _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), !string.IsNullOrEmpty(_historyText));
+    _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
     await _sessionLogger.LogSessionSetupAsync();
 
     await ReplLoopAsync();
@@ -349,19 +378,21 @@ public class AiStudioAutoExtractionSession
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
           {
             int waitTime = serverSuggestedDelay + 2;
-            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
           }
           else
           {
             Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await SmartDelayAsync(backoff)) { exceptionCaught = true; break; }
-            backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
           }
+          backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
         }
         else
         {
-          Console.WriteLine($"\n[Fehler] {ex.Message}");
+          Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+          // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
+          _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
           break;
         }
       }
@@ -371,11 +402,18 @@ public class AiStudioAutoExtractionSession
 
     if (exceptionCaught || cts.IsCancellationRequested)
     {
-      Console.WriteLine("\n\n[INFO] Chat durch Benutzer abgebrochen.");
+      Console.WriteLine("\n\n[INFO] Debug-Chat durch Benutzer abgebrochen.");
     }
 
-    if (!string.IsNullOrWhiteSpace(fullResponse)) _debugChatHistory.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-    else _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
+    if (!string.IsNullOrWhiteSpace(fullResponse))
+    {
+      _debugChatHistory.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+    }
+    else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user")
+    {
+      // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
+      _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
+    }
   }
 
   /// <summary>
@@ -534,11 +572,12 @@ public class AiStudioAutoExtractionSession
     var history = new List<Content>();
 
     // [AI Context] Simulated Multi-Turn Initialization.
-    // By faking the model's acknowledgment of the history, we guarantee the AI transitions into the correct state for transcription
-    // without wasting a real API call (and rate limits) just to get the "Material received" confirmation.
-    if (!string.IsNullOrEmpty(_historyText))
+    // By faking the model's acknowledgment of the history, we guarantee the AI transitions into the correct state for transcription.
+    if (_historyWasLoaded)
     {
-      history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.\n\n=== HISTORY START ===\n" + _historyText + "\n=== HISTORY ENDE ===" } } });
+      var historyPromptParts = new List<Part>(_historyParts);
+      historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+      history.Add(new Content { Role = "user", Parts = historyPromptParts });
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions." } } });
     }
 
@@ -620,6 +659,14 @@ public class AiStudioAutoExtractionSession
 
         break; // Finished
       }
+      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+      {
+        isGenerating = false;
+        await inputInterceptorTask;
+        Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
+        // Break out of the while loop for this part and return what we have so far.
+        return fullResponse;
+      }
       catch (Exception ex)
       {
         isGenerating = false;
@@ -629,26 +676,26 @@ public class AiStudioAutoExtractionSession
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-        if (isOverloaded && attempt <= maxRetries)
+        if (isOverloaded && attempt < maxRetries)
         {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
           {
             int waitTime = serverSuggestedDelay + 2;
-            Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+            Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await SmartDelayAsync(waitTime)) break;
           }
           else
           {
             Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await SmartDelayAsync(backoff)) break;
-            backoff *= 2; // Nur den eigenen Backoff-Wert erhöhen
           }
+          backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
           attempt++;
-        }
+        } // Unrecoverable error
         else
         {
-          Console.WriteLine($"\n[Fehler] {ex.Message}");
+          Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
           break;
         }
       }
@@ -657,6 +704,11 @@ public class AiStudioAutoExtractionSession
     return fullResponse;
   }
 
+  /// <summary>
+  /// [AI Context] Implements an interactive delay with user cancellation.
+  /// Allows the user to interrupt long backoff periods by pressing any key.
+  /// [Human] Eine intelligente Wartefunktion, die der Nutzer mit Tastendruck abbrechen kann.
+  /// </summary>
   private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
   {
     bool delayCanceled = false;
@@ -689,10 +741,6 @@ public class AiStudioAutoExtractionSession
   }
 }
 
-// ==========================================
-// 2. Google Cloud Vertex AI (Enterprise Tier)
-// ==========================================
-
 /// <summary>
 /// [AI Context] Configuration for the enterprise Vertex AI tier.
 /// Binds to a specific GCP Project and Region, requiring an active billing account and a dedicated GCS bucket for multimodal payloads.
@@ -705,7 +753,7 @@ public class VertexAutoExtractionConfig
   public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a\new";
   public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
-  public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
+  public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
   public string Model { get; set; } = "gemini-3-flash-preview";
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
   public double SpeedMultiplier { get; set; } = 1.2;
@@ -756,23 +804,51 @@ public class VertexAutoExtractionSession
       Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
     }
 
-    string historyText = "";
-    Console.Write($"\nHistory (alte Chat-Verläufe) aus '{_config.HistoryPreloadFolder}' mitschicken? (j/n): ");
-    if (Console.ReadLine()?.Trim().ToLower() == "j" && Directory.Exists(_config.HistoryPreloadFolder))
+    var historyParts = new List<Part>();
+    bool historyWasLoaded = false;
+    Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
+    if (Console.ReadLine()?.Trim().ToLower() == "j")
     {
-      var histFiles = Directory.GetFiles(_config.HistoryPreloadFolder, "*.*", SearchOption.AllDirectories);
-      bool anyLoaded = false;
-      Console.WriteLine("  [INFO] Lade History-Dateien:");
-      foreach (var hf in histFiles)
+      var allHistoryFiles = new List<string>();
+      var notFoundPaths = new List<string>();
+
+      if (_config.HistoryPreloadPaths != null)
       {
-        if (!string.Equals(Path.GetFullPath(hf), Path.GetFullPath(_config.SystemInstructionPath), StringComparison.OrdinalIgnoreCase))
+        foreach (var path in _config.HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
         {
-          historyText += $"\n--- HISTORY DATEI: {Path.GetFileName(hf)} ---\n" + await System.IO.File.ReadAllTextAsync(hf) + "\n";
-          Console.WriteLine($"    - {Path.GetFileName(hf)}");
-          anyLoaded = true;
+          if (System.IO.File.Exists(path))
+          {
+            allHistoryFiles.Add(Path.GetFullPath(path));
+          }
+          else if (Directory.Exists(path))
+          {
+            allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+          }
+          else
+          {
+            notFoundPaths.Add(path);
+          }
         }
       }
-      if (!anyLoaded) Console.WriteLine("    (Keine passenden Dateien gefunden)");
+
+      var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+      if (distinctFiles.Any())
+      {
+        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
+        if (success && attachmentParts.Any())
+        {
+          historyParts.AddRange(attachmentParts);
+          historyWasLoaded = true;
+          Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
+        }
+        else
+        {
+          Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+        }
+      }
     }
 
     string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
@@ -899,9 +975,11 @@ public class VertexAutoExtractionSession
           var contents = new List<Content>();
 
           // [AI Context] Simulated Multi-Turn Initialization for Vertex.
-          if (!string.IsNullOrEmpty(historyText))
+          if (historyWasLoaded)
           {
-            contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.\n\n=== HISTORY START ===\n" + historyText + "\n=== HISTORY ENDE ===" } } });
+            var historyPromptParts = new List<Part>(historyParts);
+            historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+            contents.Add(new Content { Role = "user", Parts = historyPromptParts });
             contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions." } } });
           }
 
@@ -926,6 +1004,7 @@ public class VertexAutoExtractionSession
           {
             string chunkOutput = "";
             int attempt = 1;
+            bool partFailed = false;
             for (; attempt <= maxRetries; attempt++)
             {
               bool isGenerating = true;
@@ -951,6 +1030,14 @@ public class VertexAutoExtractionSession
                 await inputInterceptorTask;
                 break;
               }
+              catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+              {
+                isGenerating = false;
+                await inputInterceptorTask;
+                Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
+                partFailed = true;
+                break;
+              }
               catch (Exception ex)
               {
                 isGenerating = false;
@@ -966,22 +1053,26 @@ public class VertexAutoExtractionSession
                   if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
                   {
                     int waitTime = serverSuggestedDelay + 2;
-                    Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await SmartDelayAsync(waitTime)) break;
+                    Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+                    if (!await SmartDelayAsync(waitTime)) { partFailed = true; break; }
                   }
                   else
                   {
                     Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await SmartDelayAsync(backoff)) break;
-                    backoff *= 2;
+                    if (!await SmartDelayAsync(backoff)) { partFailed = true; break; }
                   }
+                  backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
                 }
                 else
                 {
-                  throw;
+                  Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Breche Verarbeitung für diesen Teil ab.");
+                  partFailed = true;
+                  break;
                 }
               }
             }
+
+            if (partFailed) break;
 
             outputTextForPart += chunkOutput;
 

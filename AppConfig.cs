@@ -11,9 +11,12 @@ public static class AppConfig
 {
   // --- Basis-Verzeichnisse (Directories) ---
   public static readonly string BaseLectureFolder = @"D:\lecture-videos";
-  public static readonly string UploadFolder = @"D:\gemin-upload-folder";
-  public static readonly string HistoryPreloadFolder = @"D:\gemini-chat-history";
+  public static readonly string UploadFolder = @"D:\gemini-upload-folder";
   public static readonly string LogFolder = @"D:\gemini-logs";
+  public static readonly string[] HistoryPreloadPaths = new[] {
+    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-chat-history",
+    @"D:\ETH HS 2025\Analysis I HS 2025\Analysis_I_Skript_I_25-12-22.pdf"
+  };
 
   // --- Dynamisch zusammengesetzte Pfade ---
   public static readonly string AutoExtractionSourceFolder = Path.Combine(BaseLectureFolder, "analysis2");

@@ -7,6 +7,7 @@ using System.Threading;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
+using Config;
 using AiInteraction;
 using static System.Console;
 
@@ -41,9 +42,9 @@ public class VertexAiConfig
   // [AI Context] The Google Cloud Platform (GCP) Project ID associated with the billing account.
   public string ProjectId { get; set; } = "vertex-ai-experiments-494320";
   // [AI Context] Region for Vertex AI execution. Must support the requested Gemini models.
-  public string Location { get; set; } = "global";
-  public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
-  public string HistoryPreloadFolder { get; set; } = @"D:\gemini-chat-history";
+  public string Location { get; set; } = "global"; // Changed from "us-central1" to "global"
+  public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
+  public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
   public string LogFolder { get; set; } = @"D:\gemini-logs";
   // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
   public string GcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
@@ -62,7 +63,7 @@ public class VertexAiConfig
 public class VertexAiChatSession
 {
   private readonly string UploadFolderPath;
-  private readonly string HistoryPreloadFolderPath;
+  private readonly string[] HistoryPreloadPaths;
   private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
   private readonly string GcsBucketName;
   private readonly string LogFolderPath;
@@ -80,7 +81,7 @@ public class VertexAiChatSession
     _sessionLogger = logger;
     _attachmentHandler = attachmentHandler;
     UploadFolderPath = config.UploadFolder;
-    HistoryPreloadFolderPath = config.HistoryPreloadFolder;
+    HistoryPreloadPaths = config.HistoryPreloadPaths;
     LogFolderPath = config.LogFolder;
     GcsBucketName = config.GcsBucketName;
     SystemInstructionPath = config.SystemInstructionPath;
@@ -519,25 +520,53 @@ public class VertexAiChatSession
 
   private async Task<string?> GetInitialHistoryCommandAsync()
   {
-    if (string.IsNullOrWhiteSpace(HistoryPreloadFolderPath) || !Directory.Exists(HistoryPreloadFolderPath)) return null;
-
-    string[] historyFiles = Directory.GetFiles(HistoryPreloadFolderPath, "*.*", SearchOption.AllDirectories);
-
-    if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
-    {
-      historyFiles = historyFiles.Where(f => !string.Equals(Path.GetFullPath(f), Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToArray();
-    }
-
-    if (historyFiles.Length == 0)
+    if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0)
     {
       return null;
     }
 
-    WriteLine($"\n[Setup] Folgende History-Dateien wurden in '{HistoryPreloadFolderPath}' gefunden:");
-    foreach (var file in historyFiles)
+    var allHistoryFiles = new List<string>();
+    var notFoundPaths = new List<string>();
+
+    foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
     {
-      string relativePath = Path.GetRelativePath(HistoryPreloadFolderPath, file);
-      WriteLine($"  - {relativePath}");
+      if (System.IO.File.Exists(path))
+      {
+        allHistoryFiles.Add(Path.GetFullPath(path));
+      }
+      else if (Directory.Exists(path))
+      {
+        allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+      }
+      else
+      {
+        notFoundPaths.Add(path);
+      }
+    }
+
+    if (notFoundPaths.Any())
+    {
+      WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
+      foreach (var path in notFoundPaths)
+      {
+        WriteLine($"  - {path}");
+      }
+    }
+
+    var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+    // Verhindert, dass die System Instruction versehentlich als History geladen wird
+    if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
+    {
+      distinctFiles = distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    if (distinctFiles.Count == 0) return null;
+
+    WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+    foreach (var file in distinctFiles)
+    {
+      WriteLine($"  - {file}");
     }
 
     string historyChoice = await PromptWithCommandsAsync("Sollen diese Dateien als History geladen werden? (j/n): ");
@@ -547,7 +576,7 @@ public class VertexAiChatSession
 
     if (!loadHistory) return null;
 
-    string fileList = string.Join(", ", historyFiles.Select(p => $"\"{p}\""));
+    string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
     return $"attach {fileList} | {InitialHistoryPrompt}";
   }
 
