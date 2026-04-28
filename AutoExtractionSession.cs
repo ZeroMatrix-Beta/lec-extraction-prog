@@ -60,6 +60,73 @@ internal static class VideoDateParser
 }
 
 /// <summary>
+/// [AI Context] Shared utility methods to reduce code duplication across different extraction session types.
+/// </summary>
+internal static class ExtractionHelpers
+{
+  /// <summary>
+  /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
+  /// </summary>
+  public static List<string> ResolveHistoryFiles(string[] paths)
+  {
+    var allHistoryFiles = new List<string>();
+    if (paths == null) return allHistoryFiles;
+
+    foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)))
+    {
+      if (System.IO.File.Exists(path))
+        allHistoryFiles.Add(Path.GetFullPath(path));
+      else if (Directory.Exists(path))
+        allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+    }
+    return allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+  }
+
+  /// <summary>
+  /// [AI Context] Regex-based cleanup ensures that even if the output is split across multiple continuation chunks,
+  /// all markdown blocks and system messages are fully stripped, preventing compilation errors.
+  /// </summary>
+  public static string CleanLatexResponse(string rawResponse)
+  {
+    string cleanTex = rawResponse;
+    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+    // Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
+    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
+    return cleanTex.Trim();
+  }
+
+  /// <summary>
+  /// Implements an interactive delay with user cancellation. Allows interrupting long backoff periods.
+  /// </summary>
+  public static async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
+    bool delayCanceled = false;
+    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; delayCanceled = true; };
+    Console.CancelKeyPress += cancelHandler;
+    try
+    {
+      int delaySteps = seconds * 10;
+      for (int i = 0; i < delaySteps; i++)
+      {
+        if (delayCanceled) return false;
+        await Task.Delay(100);
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
+          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+          Console.WriteLine($"\n[System] {message}");
+        }
+      }
+      return true;
+    }
+    finally
+    {
+      Console.CancelKeyPress -= cancelHandler;
+    }
+  }
+}
+
+/// <summary>
 /// [AI Context] Configuration DTO for unattended batch processing using AI Studio endpoints.
 /// Defines source/target directories and the critical extraction prompt.
 /// [Human] Konfiguration für den automatisierten Extraktions-Modus mit dem kostenlosen AI Studio.
@@ -141,29 +208,7 @@ public class AiStudioAutoExtractionSession
     Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
     if (Console.ReadLine()?.Trim().ToLower() == "j")
     {
-      var allHistoryFiles = new List<string>();
-      var notFoundPaths = new List<string>();
-
-      if (_config.HistoryPreloadPaths != null)
-      {
-        foreach (var path in _config.HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
-        {
-          if (System.IO.File.Exists(path))
-          {
-            allHistoryFiles.Add(Path.GetFullPath(path));
-          }
-          else if (Directory.Exists(path))
-          {
-            allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
-          }
-          else
-          {
-            notFoundPaths.Add(path);
-          }
-        }
-      }
-
-      var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+      var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
 
       if (distinctFiles.Any())
       {
@@ -384,12 +429,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
+            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
           }
           else
           {
             Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(backoff)) { exceptionCaught = true; break; }
+            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { exceptionCaught = true; break; }
           }
           backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
         }
@@ -488,12 +533,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(waitTime)) { break; }
+            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
           }
           else
           {
             Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(backoff)) { break; }
+            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { break; }
           }
           backoff *= 2;
         }
@@ -512,7 +557,7 @@ public class AiStudioAutoExtractionSession
     if (success && !string.IsNullOrWhiteSpace(fullResponse))
     {
       _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-      await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text, _config.Model, fullResponse, "AutoExtractionSetup");
+      await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text ?? "", _config.Model, fullResponse, "AutoExtractionSetup");
     }
     else
     {
@@ -613,15 +658,7 @@ public class AiStudioAutoExtractionSession
 
         if (!string.IsNullOrWhiteSpace(texOutput))
         {
-          string cleanTex = texOutput;
-
-          // [AI Context] Regex-based cleanup ensures that even if the output is split across multiple continuation chunks,
-          // all markdown blocks and system messages are fully stripped, preventing compilation errors.
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
-          // [AI Context] Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
-          cleanTex = cleanTex.Trim();
+          string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
 
           string texPath = Path.ChangeExtension(safePartPath, ".tex");
           await System.IO.File.WriteAllTextAsync(texPath, cleanTex);
@@ -737,7 +774,7 @@ public class AiStudioAutoExtractionSession
         await inputInterceptorTask;
 
         fullResponse += chunkResp;
-        await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt, _config.Model, chunkResp, "AutoExtraction");
+        await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt ?? "", _config.Model, chunkResp, "AutoExtraction");
 
         bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -799,12 +836,12 @@ public class AiStudioAutoExtractionSession
           {
             int waitTime = serverSuggestedDelay + 2;
             Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(waitTime)) break;
+            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) break;
           }
           else
           {
             Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(backoff)) break;
+            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) break;
           }
           backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
           attempt++;
@@ -818,42 +855,6 @@ public class AiStudioAutoExtractionSession
     }
 
     return fullResponse;
-  }
-
-  /// <summary>
-  /// [AI Context] Implements an interactive delay with user cancellation.
-  /// Allows the user to interrupt long backoff periods by pressing any key.
-  /// [Human] Eine intelligente Wartefunktion, die der Nutzer mit Tastendruck abbrechen kann.
-  /// </summary>
-  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
-  {
-    bool delayCanceled = false;
-    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
-    {
-      e.Cancel = true;
-      delayCanceled = true;
-    };
-    Console.CancelKeyPress += cancelHandler;
-
-    try
-    {
-      int delaySteps = seconds * 10;
-      for (int i = 0; i < delaySteps; i++)
-      {
-        if (delayCanceled) return false;
-        await Task.Delay(100);
-        if (!Console.IsInputRedirected && Console.KeyAvailable)
-        {
-          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          Console.WriteLine($"\n[System] {message}");
-        }
-      }
-      return true;
-    }
-    finally
-    {
-      Console.CancelKeyPress -= cancelHandler;
-    }
   }
 }
 
@@ -932,29 +933,7 @@ public class VertexAutoExtractionSession
     Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
     if (Console.ReadLine()?.Trim().ToLower() == "j")
     {
-      var allHistoryFiles = new List<string>();
-      var notFoundPaths = new List<string>();
-
-      if (_config.HistoryPreloadPaths != null)
-      {
-        foreach (var path in _config.HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
-        {
-          if (System.IO.File.Exists(path))
-          {
-            allHistoryFiles.Add(Path.GetFullPath(path));
-          }
-          else if (Directory.Exists(path))
-          {
-            allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
-          }
-          else
-          {
-            notFoundPaths.Add(path);
-          }
-        }
-      }
-
-      var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+      var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
 
       if (distinctFiles.Any())
       {
@@ -1200,12 +1179,12 @@ public class VertexAutoExtractionSession
                   {
                     int waitTime = serverSuggestedDelay + 2;
                     Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await SmartDelayAsync(waitTime)) { userCancelled = true; break; }
+                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { userCancelled = true; break; }
                   }
                   else
                   {
                     Console.WriteLine($"\n  [Rate Limit / Überlastung / Verbindungsabbruch] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await SmartDelayAsync(backoff)) { userCancelled = true; break; }
+                    if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { userCancelled = true; break; }
                   }
                   backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
                 }
@@ -1221,7 +1200,7 @@ public class VertexAutoExtractionSession
             if (userCancelled) break;
 
             outputTextForPart += chunkOutput;
-            await _sessionLogger.LogChatAsync($"[Part {i + 1}] {Path.GetFileName(file)}", prompt, _config.Model, chunkOutput, "VertexAutoExtraction");
+            await _sessionLogger.LogChatAsync($"[Part {i + 1}] {Path.GetFileName(file)}", prompt ?? "", _config.Model, chunkOutput, "VertexAutoExtraction");
 
             bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -1256,12 +1235,7 @@ public class VertexAutoExtractionSession
 
           Console.CancelKeyPress -= cancelHandler;
 
-          string cleanTex = outputTextForPart;
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
-          // [AI Context] Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
-          cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
-          cleanTex = cleanTex.Trim();
+          string cleanTex = ExtractionHelpers.CleanLatexResponse(outputTextForPart);
 
           fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
 
@@ -1315,37 +1289,6 @@ public class VertexAutoExtractionSession
       Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
       Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
       Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
-    }
-  }
-
-  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
-  {
-    bool delayCanceled = false;
-    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
-    {
-      e.Cancel = true;
-      delayCanceled = true;
-    };
-    Console.CancelKeyPress += cancelHandler;
-
-    try
-    {
-      int delaySteps = seconds * 10;
-      for (int i = 0; i < delaySteps; i++)
-      {
-        if (delayCanceled) return false;
-        await Task.Delay(100);
-        if (!Console.IsInputRedirected && Console.KeyAvailable)
-        {
-          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          Console.WriteLine($"\n[System] {message}");
-        }
-      }
-      return true;
-    }
-    finally
-    {
-      Console.CancelKeyPress -= cancelHandler;
     }
   }
 }
