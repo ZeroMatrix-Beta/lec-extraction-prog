@@ -88,6 +88,7 @@ public class AiStudioAutoExtractionSession
   private readonly SessionLogger _sessionLogger;
   private double _speed = 1.2;
   private string _systemInstructionText = "";
+  // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
   private List<Part> _historyParts = new List<Part>();
   private List<Content> _sessionPreamble = new List<Content>();
   private bool _historyWasLoaded = false;
@@ -103,6 +104,7 @@ public class AiStudioAutoExtractionSession
 
   public async Task StartAsync()
   {
+    // [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     Console.WriteLine($"\n[AutoExtraction] Starte AI Studio Extraction Session...");
     Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
     Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
@@ -419,6 +421,11 @@ public class AiStudioAutoExtractionSession
     }
   }
 
+  /// <summary>
+  /// [AI Context] Forces a real API call to explicitly acknowledge the history payload. 
+  /// This guarantees the model context is correctly primed before batch processing starts and provides immediate visual feedback.
+  /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
+  /// </summary>
   private async Task AcknowledgeHistoryAsync()
   {
     var historyPromptParts = new List<Part>(_historyParts);
@@ -532,6 +539,7 @@ public class AiStudioAutoExtractionSession
     // [AI Context] Producer-Consumer Pipeline
     // Wir limitieren das Fließband auf genau 1 Video. Das verhindert, dass FFmpeg 100 Videos 
     // am Stück konvertiert und uns den Festplattenspeicher (tmp-Ordner) füllt, während Gemini noch bei Video 1 hängt.
+    // [AI Context] Bounded channel with capacity 1 acts as a strict backpressure mechanism.
     var channel = Channel.CreateBounded<(string originalFile, List<string> parts, bool isCached)>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
     // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
@@ -568,8 +576,17 @@ public class AiStudioAutoExtractionSession
         var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
         if (parts.Count == 0) continue;
 
+        List<string> safeParts = new List<string>();
+        for (int i = 0; i < parts.Count; i++)
+        {
+          string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
+          if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
+          System.IO.File.Move(parts[i], safePartPath);
+          safeParts.Add(safePartPath);
+        }
+
         Console.WriteLine($"[FFmpeg Producer] {Path.GetFileName(file)} erfolgreich konvertiert! Lege es aufs Fließband für Gemini...");
-        await channel.Writer.WriteAsync((file, parts, false));
+        await channel.Writer.WriteAsync((file, safeParts, false));
       }
       channel.Writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
     });
@@ -588,17 +605,7 @@ public class AiStudioAutoExtractionSession
 
       for (int i = 0; i < parts.Count; i++)
       {
-        string partFile = parts[i];
-        string safePartPath = isCached ? partFile : Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
-
-        if (!isCached)
-        {
-          if (System.IO.File.Exists(safePartPath))
-          {
-            System.IO.File.Delete(safePartPath);
-          }
-          System.IO.File.Move(partFile, safePartPath);
-        }
+        string safePartPath = parts[i];
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
 
@@ -642,6 +649,8 @@ public class AiStudioAutoExtractionSession
     var dateInfo = VideoDateParser.Parse(originalFileName);
     string prompt = _config.Prompt;
 
+    // [AI Context] Dynamic prompt engineering. Instructs the model to treat the chunk as part of a larger whole, 
+    // providing absolute timestamps and previously generated LaTeX to maintain cross-chunk continuity.
     prompt += $"\n\n[Meta-Information]: These {totalParts} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
     prompt += $"\n\nThe uploaded video is part {partNumber} of {totalParts} from this lecture.";
     prompt += $"\n\nThe video is played back / scaled to {_speed}x speed.";
@@ -878,6 +887,7 @@ public class VertexAutoExtractionSession
   private readonly VertexAutoExtractionConfig _config;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
+  // [AI Context] Enterprise session state. Note the absence of the REPL loop, as this is intended for unattended bulk operations.
 
   public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger)
   {
@@ -889,6 +899,7 @@ public class VertexAutoExtractionSession
 
   public async Task StartAsync()
   {
+    // [Human] Die Hauptschleife für die Vertex-Verarbeitung. Arbeitet die Videos strikt chronologisch ab und bereitet die Umgebung vor.
     Console.WriteLine("\n[AutoExtraction] Starte Vertex AI Enterprise Extraction Session...");
     Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
     Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
@@ -1112,11 +1123,17 @@ public class VertexAutoExtractionSession
           int currentRequest = 1;
           int maxRequests = 5;
 
+          using var cts = new CancellationTokenSource();
+          ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+          Console.CancelKeyPress += cancelHandler;
+
           while (true)
           {
             string chunkOutput = "";
+            bool streamDropped = false;
+            bool userCancelled = false;
+
             int attempt = 1;
-            bool partFailed = false;
             for (; attempt <= maxRetries; attempt++)
             {
               bool isGenerating = true;
@@ -1136,18 +1153,20 @@ public class VertexAutoExtractionSession
               try
               {
                 Console.WriteLine($"  [API] Sende Anfrage an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
-                var response = await _client.Models.GenerateContentAsync(_config.Model, contents, requestConfig);
-                chunkOutput = response.Text ?? "";
+
+                var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, contents, requestConfig);
+                await foreach (var chunk in responseStream.WithCancellation(cts.Token))
+                {
+                  if (cts.IsCancellationRequested) break;
+                  string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                  Console.Write(txt);
+                  chunkOutput += txt;
+                }
+
                 isGenerating = false;
                 await inputInterceptorTask;
-                break;
-              }
-              catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
-              {
-                isGenerating = false;
-                await inputInterceptorTask;
-                Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
-                partFailed = true;
+
+                if (cts.IsCancellationRequested) userCancelled = true;
                 break;
               }
               catch (Exception ex)
@@ -1155,10 +1174,25 @@ public class VertexAutoExtractionSession
                 isGenerating = false;
                 await inputInterceptorTask;
 
+                if (ex is OperationCanceledException && cts.IsCancellationRequested)
+                {
+                  userCancelled = true;
+                  break;
+                }
+
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+                // [AI Context] Vertex AI specific Rescue Strategy to salvage interrupted generation streams.
+                // [Human] Identisch zur AI Studio Version: Verhindert den Verlust von bereits generiertem LaTeX-Code bei unerwarteten Verbindungsabbrüchen.
+                if (chunkOutput.Length > 100)
+                {
+                  Console.WriteLine("\n[INFO] Verbindung während der Generierung abgebrochen. Versuche, die unvollständige Antwort zu retten und fortzusetzen...");
+                  streamDropped = true;
+                  break;
+                }
+
+                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase);
                 if (isOverloaded && attempt < maxRetries)
                 {
                   var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
@@ -1166,25 +1200,25 @@ public class VertexAutoExtractionSession
                   {
                     int waitTime = serverSuggestedDelay + 2;
                     Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await SmartDelayAsync(waitTime)) { partFailed = true; break; }
+                    if (!await SmartDelayAsync(waitTime)) { userCancelled = true; break; }
                   }
                   else
                   {
-                    Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await SmartDelayAsync(backoff)) { partFailed = true; break; }
+                    Console.WriteLine($"\n  [Rate Limit / Überlastung / Verbindungsabbruch] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+                    if (!await SmartDelayAsync(backoff)) { userCancelled = true; break; }
                   }
                   backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
                 }
                 else
                 {
                   Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Breche Verarbeitung für diesen Teil ab.");
-                  partFailed = true;
+                  userCancelled = true;
                   break;
                 }
               }
             }
 
-            if (partFailed) break;
+            if (userCancelled) break;
 
             outputTextForPart += chunkOutput;
             await _sessionLogger.LogChatAsync($"[Part {i + 1}] {Path.GetFileName(file)}", prompt, _config.Model, chunkOutput, "VertexAutoExtraction");
@@ -1201,6 +1235,7 @@ public class VertexAutoExtractionSession
               }
 
               if (segmentComplete) Console.WriteLine("\n  [Vertex] Segment Limit erreicht. Sende 'Continue'...");
+              else if (streamDropped) Console.WriteLine("\n  [Vertex] Stream abgebrochen. Sende automatisiert 'Continue' zur Wiederaufnahme...");
               else Console.WriteLine("\n  [Vertex] KI hat abgebrochen (Max Tokens). Sende automatisiert 'Continue'...");
 
               // Hole nur die letzten 300 Zeichen als Anker, um extrem viele Tokens zu sparen!
@@ -1218,6 +1253,8 @@ public class VertexAutoExtractionSession
 
             break; // Finished
           }
+
+          Console.CancelKeyPress -= cancelHandler;
 
           string cleanTex = outputTextForPart;
           cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
