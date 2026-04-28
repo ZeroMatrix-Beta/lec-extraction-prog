@@ -4,10 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace FfmpegUtilities
-{
-  public class FfmpegSessionConfig
-  {
+namespace FfmpegUtilities {
+  public class FfmpegSessionConfig {
     public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a/";
     public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a/new";
   }
@@ -17,22 +15,19 @@ namespace FfmpegUtilities
   /// Interactive console menu that acts as a frontend for the FfmpegToolkit.
   /// [Human] Dies ist die Menü-Oberfläche, wenn du im Hauptmenü "13" drückst. Sie regelt nur die Benutzerinteraktion.
   /// </summary>
-  public class FfmpegInteractiveSession
-  {
+  public class FfmpegInteractiveSession {
     // [AI Context] Configurable default fallback paths.
     private string DefaultSourceFolder;
     private string DefaultDestinationFolder;
     private readonly FfmpegToolkit _toolkit;
 
-    public FfmpegInteractiveSession(FfmpegSessionConfig config)
-    {
+    public FfmpegInteractiveSession(FfmpegSessionConfig config) {
       DefaultSourceFolder = config.SourceFolder;
       DefaultDestinationFolder = config.TargetFolder;
       _toolkit = new FfmpegToolkit();
     }
 
-    public async Task StartAsync()
-    {
+    public async Task StartAsync() {
       Console.WriteLine("======================================");
       Console.WriteLine("   FFmpeg Console Video Converter");
       Console.WriteLine("======================================");
@@ -42,8 +37,7 @@ namespace FfmpegUtilities
 
       // Phase 2: Preset Selection
       string mode = ShowMenuAndGetMode();
-      if (string.IsNullOrEmpty(mode) || !IsValidMode(mode))
-      {
+      if (string.IsNullOrEmpty(mode) || !IsValidMode(mode)) {
         Console.WriteLine("Invalid conversion option selected. Exiting.");
         return;
       }
@@ -51,8 +45,7 @@ namespace FfmpegUtilities
       // Phase 3: Construct Commands
       string customCommandTemplate = "";
       string customOutputExtension = ".mp4";
-      if (mode == "6" || mode == "12")
-      {
+      if (mode == "6" || mode == "12") {
         customCommandTemplate = GetCustomCommandTemplate(out customOutputExtension);
       }
 
@@ -65,8 +58,7 @@ namespace FfmpegUtilities
       // Human: The main processing loop!
       // Cleanly routes to dedicated semantic methods in the toolkit.
       // ====================================================================
-      foreach (string inputFile in filesToProcess)
-      {
+      foreach (string inputFile in filesToProcess) {
         await ExecuteToolkitActionAsync(mode, inputFile, destFolder, customCommandTemplate, customOutputExtension);
       }
       // ====================================================================
@@ -81,8 +73,7 @@ namespace FfmpegUtilities
     // Sub-Methods (Refactored Logic)
     // ========================================================================
 
-    private bool SetupDirectories(out string sourceFolder, out string destFolder)
-    {
+    private bool SetupDirectories(out string sourceFolder, out string destFolder) {
       // [Human] Interactive prompt to easily override the default hardcoded paths on the fly.
       // [AI Context] Enables runtime overriding of configured static defaults without recompilation.
       sourceFolder = DefaultSourceFolder;
@@ -93,8 +84,7 @@ namespace FfmpegUtilities
       Console.Write("\nDo you want to use the designated destination and source folders? (Y/N): ");
       string? useDefault = Console.ReadLine()?.Trim().ToUpper();
 
-      if (useDefault != "Y")
-      {
+      if (useDefault != "Y") {
         Console.Write("Set custom Source folder: ");
         sourceFolder = Console.ReadLine() ?? sourceFolder;
 
@@ -102,14 +92,12 @@ namespace FfmpegUtilities
         destFolder = Console.ReadLine() ?? destFolder;
       }
 
-      if (!Directory.Exists(sourceFolder))
-      {
+      if (!Directory.Exists(sourceFolder)) {
         Console.WriteLine($"Error: Source folder '{sourceFolder}' does not exist.");
         return false;
       }
 
-      if (!Directory.Exists(destFolder))
-      {
+      if (!Directory.Exists(destFolder)) {
         Console.WriteLine($"Creating destination folder '{destFolder}'...");
         Directory.CreateDirectory(destFolder);
       }
@@ -122,8 +110,7 @@ namespace FfmpegUtilities
     /// RULE: If a new preset is added (e.g., option 13), you MUST update four synchronized locations: 
     /// ShowMenuAndGetMode() (UI Text), IsValidMode() (Validation), SelectFilesToProcess() (Routing logic), and ExecuteToolkitActionAsync() (Execution mapping).
     /// </summary>
-    private string ShowMenuAndGetMode()
-    {
+    private string ShowMenuAndGetMode() {
       Console.WriteLine("\nConversion Options:");
       Console.WriteLine("\n--- Single File Options ---");
       Console.WriteLine("1. Fixed 720p, 1.5x Speed, 1 FPS (Legacy Code Hardcoded Bitrates)");
@@ -147,8 +134,7 @@ namespace FfmpegUtilities
 
     private bool IsValidMode(string mode) => int.TryParse(mode, out int m) && m >= 1 && m <= 12;
 
-    private string GetCustomCommandTemplate(out string outputExtension)
-    {
+    private string GetCustomCommandTemplate(out string outputExtension) {
       Console.WriteLine("\nEnter custom parameters.");
       Console.WriteLine("Tip: Use {0} as the placeholder for the input file path, and {1} for the output file path.");
       Console.WriteLine("Example: -i \"{0}\" -vcodec libx264 \"{1}\"");
@@ -162,14 +148,12 @@ namespace FfmpegUtilities
       return template;
     }
 
-    private string[] SelectFilesToProcess(string sourceFolder, string mode)
-    {
+    private string[] SelectFilesToProcess(string sourceFolder, string mode) {
       // We safely parse since IsValidMode already verified it's an integer between 1-12.
       int modeNum = int.Parse(mode);
 
       // Interactive single-file selection (Options 1-6)
-      if (modeNum >= 1 && modeNum <= 6)
-      {
+      if (modeNum >= 1 && modeNum <= 6) {
         return ConsoleUiHelper.SelectSingleFile(sourceFolder);
       }
 
@@ -177,10 +161,8 @@ namespace FfmpegUtilities
       return ConsoleUiHelper.SelectBatchFiles(sourceFolder);
     }
 
-    private async Task ExecuteToolkitActionAsync(string mode, string inputFile, string destFolder, string customTemplate, string customExt)
-    {
-      switch (mode)
-      {
+    private async Task ExecuteToolkitActionAsync(string mode, string inputFile, string destFolder, string customTemplate, string customExt) {
+      switch (mode) {
         case "1":
         case "7":
           await _toolkit.LegacyCodeProcessFast720pVideoAsync(inputFile, destFolder); break;

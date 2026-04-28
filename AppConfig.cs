@@ -7,8 +7,7 @@ namespace Config;
 /// [AI Context] Centralized 'Single Point of Truth' for all hardcoded paths and default parameters.
 /// [Human] Hier kannst du alle Festplatten-Pfade, Cloud-Buckets und Standard-Prompts an einem einzigen Ort ändern.
 /// </summary>
-public static class AppConfig
-{
+public static class AppConfig {
   // --- Basis-Verzeichnisse (Directories) ---
   public static readonly string BaseLectureFolder = @"D:\lecture-videos";
   public static readonly string UploadFolder = @"D:\gemini-upload-folder";

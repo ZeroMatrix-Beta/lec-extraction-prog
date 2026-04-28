@@ -4,8 +4,7 @@ using System.Threading.Tasks;
 
 namespace AiInteraction;
 
-public class SessionLoggerConfig
-{
+public class SessionLoggerConfig {
   public string LogFolderPath { get; set; } = @"D:\gemini-logs";
 }
 
@@ -13,8 +12,7 @@ public class SessionLoggerConfig
 /// [AI Context] Handles file I/O operations for a chat session.
 /// Responsible for creating timestamped session folders and saving Markdown/LaTeX logs.
 /// </summary>
-public class SessionLogger
-{
+public class SessionLogger {
   private readonly string _logFolderPath;
   private string _currentSessionLogPath = "";
   private string _currentSessionDateSuffix = "";
@@ -22,33 +20,26 @@ public class SessionLogger
   private bool _loadedSystemInstruction;
   private bool _loadedHistory;
 
-  public SessionLogger(SessionLoggerConfig config)
-  {
+  public SessionLogger(SessionLoggerConfig config) {
     _logFolderPath = config.LogFolderPath;
   }
 
-  public void InitializeSession()
-  {
+  public void InitializeSession() {
     _currentSessionDateSuffix = GetFormattedDateString(DateTime.Now);
 
-    if (!string.IsNullOrWhiteSpace(_logFolderPath))
-    {
+    if (!string.IsNullOrWhiteSpace(_logFolderPath)) {
       // [AI Context] Scans the designated log directory for existing "folder-X-" prefixes.
       // Dynamically extracts the numeric index (X) to generate a monotonically increasing session ID, ensuring no logs are overwritten.
-      if (!Directory.Exists(_logFolderPath))
-      {
+      if (!Directory.Exists(_logFolderPath)) {
         Directory.CreateDirectory(_logFolderPath);
       }
 
       int maxIndex = 0;
-      foreach (var dir in Directory.GetDirectories(_logFolderPath))
-      {
+      foreach (var dir in Directory.GetDirectories(_logFolderPath)) {
         string dirName = Path.GetFileName(dir);
-        if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase))
-        {
+        if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase)) {
           string[] dirParts = dirName.Split('-');
-          if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int parsedIndex))
-          {
+          if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int parsedIndex)) {
             if (parsedIndex > maxIndex) maxIndex = parsedIndex;
           }
         }
@@ -60,20 +51,17 @@ public class SessionLogger
     }
   }
 
-  public void SetSessionMetadata(bool loadedSystemInstruction, bool loadedHistory)
-  {
+  public void SetSessionMetadata(bool loadedSystemInstruction, bool loadedHistory) {
     _loadedSystemInstruction = loadedSystemInstruction;
     _loadedHistory = loadedHistory;
   }
 
-  public async Task LogSessionSetupAsync()
-  {
+  public async Task LogSessionSetupAsync() {
     string setupLog = $"\n=== Neue Chat-Sitzung ({DateTime.Now}) ===\n- System Prompt geladen: {_loadedSystemInstruction}\n- History geladen: {_loadedHistory}\n---\n";
     await File.AppendAllTextAsync("chat_log.md", setupLog);
   }
 
-  public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName)
-  {
+  public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName) {
     // Markdown Verlauf mitprotokollieren
     string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
     await File.AppendAllTextAsync("chat_log.md", $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
@@ -81,8 +69,7 @@ public class SessionLogger
     // LaTeX Response speichern
     // [AI Context] Isolates the raw model output into dedicated .tex files.
     // This is a core feature for academic workflows, allowing immediate compilation of the AI's response without copy-pasting from a Markdown log.
-    if (!string.IsNullOrWhiteSpace(_currentSessionLogPath))
-    {
+    if (!string.IsNullOrWhiteSpace(_currentSessionLogPath)) {
       string texFilePath = Path.Combine(_currentSessionLogPath, $"response-{_responseCount}-{_currentSessionDateSuffix}.tex");
 
       string formattedPrompt = logInput.Replace("\r\n", "\n").Replace("\n", "\n% ");
@@ -100,8 +87,7 @@ public class SessionLogger
     }
   }
 
-  private string GetFormattedDateString(DateTime date)
-  {
+  private string GetFormattedDateString(DateTime date) {
     string month = date.ToString("MMMM", System.Globalization.CultureInfo.InvariantCulture).ToLower();
     int day = date.Day;
     string suffix = (day % 10 == 1 && day != 11) ? "st"

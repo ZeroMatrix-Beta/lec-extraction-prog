@@ -13,14 +13,11 @@ using AiInteraction.AutoExtraction;
 /// either to the FFmpeg processing toolkit or the Gemini chat session based on user input.
 /// [Human] Die Hauptklasse, die beim Start des Programms als erstes aufgerufen wird.
 /// </summary>
-class Program
-{
-  static async Task Main(string[] args)
-  {
+class Program {
+  static async Task Main(string[] args) {
     // [AI Context] Bootstrapper. Demonstrates manual Dependency Injection (DI) pattern.
     // Determines the runtime environment (Vertex vs AI Studio) and wires up the respective isolated dependencies.
-    while (true)
-    {
+    while (true) {
       Console.WriteLine("\n==================================================");
       Console.WriteLine("     Welcome to AI Extraction & Processing        ");
       Console.WriteLine("==================================================");
@@ -35,13 +32,11 @@ class Program
 
       string? mainChoice = Console.ReadLine()?.Trim().ToLower();
 
-      if (mainChoice == "exit" || mainChoice == "quit")
-      {
+      if (mainChoice == "exit" || mainChoice == "quit") {
         break;
       }
 
-      if (mainChoice == "4")
-      {
+      if (mainChoice == "4") {
         Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
         Console.WriteLine(" 1) Google AI Studio");
         Console.WriteLine(" 2) Google Cloud Vertex AI");
@@ -50,8 +45,7 @@ class Program
 
         if (extChoice == "exit" || extChoice == "quit") continue;
 
-        if (extChoice == "2")
-        {
+        if (extChoice == "2") {
           var config = new VertexAutoExtractionConfig();
           Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
           var attConfig = new AttachmentHandlerConfig { UploadFolder = config.SourceFolder, IncludePaths = new[] { config.SourceFolder }, IsAiStudio = false, GcsBucketName = config.GcsBucketName };
@@ -61,8 +55,7 @@ class Program
           var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
           await session.StartAsync();
         }
-        else
-        {
+        else {
           var config = new AiStudioAutoExtractionConfig();
           string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
           Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
@@ -76,8 +69,7 @@ class Program
         continue;
       }
 
-      if (mainChoice == "5")
-      {
+      if (mainChoice == "5") {
         // Lade den exklusiven Key für das Refinement
         string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
@@ -87,8 +79,7 @@ class Program
         continue;
       }
 
-      if (mainChoice == "3")
-      {
+      if (mainChoice == "3") {
         var ffmpegConfig = new FfmpegSessionConfig();
         var ffmpegMenu = new FfmpegInteractiveSession(ffmpegConfig);
         await ffmpegMenu.StartAsync();
@@ -97,8 +88,7 @@ class Program
 
       bool isVertex = mainChoice == "2";
 
-      if (isVertex)
-      {
+      if (isVertex) {
         // Wire up dependencies for Vertex AI
         var config = new VertexAiConfig();
         Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
@@ -110,8 +100,7 @@ class Program
         var chatSession = new VertexAiChatSession(client, config, sessionLogger, attachmentHandler);
         await chatSession.StartAsync();
       }
-      else if (mainChoice == "1")
-      {
+      else if (mainChoice == "1") {
         // Wire up dependencies for AI Studio
         var config = new GoogleAIStudioConfig();
         string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
@@ -124,8 +113,7 @@ class Program
         var chatSession = new GoogleAIStudioChatSession(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
         await chatSession.StartAsync();
       }
-      else
-      {
+      else {
         Console.WriteLine("Invalid choice.");
       }
     }

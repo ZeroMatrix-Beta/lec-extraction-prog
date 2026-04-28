@@ -12,15 +12,12 @@ namespace DocumentUtilities;
 /// Führt lokale LaTeX-Kompilierungen durch.
 /// Unabhängig von der KI, ruft direkt pdflatex auf dem System auf.
 /// </summary>
-public class LatexToolkit
-{
+public class LatexToolkit {
   /// <summary>
   /// [AI Context] Spawns an external pdflatex process to compile a .tex file to a .pdf. Captures standard output and errors for debugging.
   /// </summary>
-  public async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath)
-  {
-    if (!File.Exists(texFilePath))
-    {
+  public async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath) {
+    if (!File.Exists(texFilePath)) {
       return (false, $"File not found: {texFilePath}");
     }
 
@@ -31,8 +28,7 @@ public class LatexToolkit
 
     // [AI Context] -interaction=nonstopmode and -halt-on-error are critical for automated CI/CD-like pipelines to prevent the process from hanging indefinitely on syntax errors.
     // [Human] -interaction=nonstopmode verhindert, dass pdflatex bei einem Syntaxfehler unendlich lange einfriert und auf Benutzereingaben wartet.
-    var startInfo = new ProcessStartInfo
-    {
+    var startInfo = new ProcessStartInfo {
       FileName = "pdflatex",
       Arguments = $"-interaction=nonstopmode -halt-on-error \"{fileName}\"",
       WorkingDirectory = workDir,
@@ -42,8 +38,7 @@ public class LatexToolkit
       CreateNoWindow = true
     };
 
-    try
-    {
+    try {
       using var process = Process.Start(startInfo);
       if (process == null) return (false, "Could not start pdflatex process.");
 
@@ -52,19 +47,16 @@ public class LatexToolkit
 
       await process.WaitForExitAsync();
 
-      if (process.ExitCode == 0)
-      {
+      if (process.ExitCode == 0) {
         Console.WriteLine($"  [SUCCESS] PDF erfolgreich generiert!");
         return (true, output);
       }
-      else
-      {
+      else {
         Console.WriteLine($"  [FAILED] pdflatex hat Fehler gemeldet.");
         return (false, output + "\n" + error);
       }
     }
-    catch (Exception ex)
-    {
+    catch (Exception ex) {
       Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
       Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
       Console.WriteLine($"  [Error] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
