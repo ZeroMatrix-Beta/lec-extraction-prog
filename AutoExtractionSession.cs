@@ -896,6 +896,7 @@ public class AiStudioAutoExtractionSession
 /// <summary>
 /// [AI Context] Configuration for the enterprise Vertex AI tier.
 /// Binds to a specific GCP Project and Region, requiring an active billing account and a dedicated GCS bucket for multimodal payloads.
+/// [Human] Konfiguration für den professionellen Google Cloud Modus. Erfordert ein eingerichtetes Rechnungskonto und Cloud Storage.
 /// </summary>
 public class VertexAutoExtractionConfig
 {
@@ -936,9 +937,12 @@ public class VertexAutoExtractionSession
     _sessionLogger = sessionLogger;
   }
 
+  /// <summary>
+  /// [AI Context] Main execution loop for the Vertex AI batch processing. Enforces chronological order and strict caching.
+  /// [Human] Die Hauptschleife für die Vertex-Verarbeitung. Arbeitet die Videos strikt chronologisch ab und bereitet die Umgebung vor.
+  /// </summary>
   public async Task StartAsync()
   {
-    // [Human] Die Hauptschleife für die Vertex-Verarbeitung. Arbeitet die Videos strikt chronologisch ab und bereitet die Umgebung vor.
     Console.WriteLine("\n[AutoExtraction] Starte Vertex AI Enterprise Extraction Session...");
     Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
     Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
@@ -1014,321 +1018,353 @@ public class VertexAutoExtractionSession
 
     foreach (var file in filesToProcess)
     {
-      string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
-      if (System.IO.File.Exists(targetFilePath))
-      {
-        Console.WriteLine($"\n[Übersprungen] {Path.GetFileName(file)} wurde bereits verarbeitet.");
-        continue;
-      }
-
-      try
-      {
-        Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
-
-        string baseName = Path.GetFileNameWithoutExtension(file);
-        string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
-        var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-{dateStr}-part*.mp4").ToList();
-        bool useCache = false;
-
-        if (cachedParts.Count > 0)
-        {
-          var fileInfo = new FileInfo(cachedParts[0]);
-          if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2)
-          {
-            // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs.
-            // We expect exactly 3 parts. If fewer are found, the cache is corrupted or incomplete.
-            if (cachedParts.Count >= 3)
-            {
-              useCache = true;
-            }
-            else
-            {
-              Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für {baseName} ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
-              foreach (var f in cachedParts) { try { System.IO.File.Delete(f); } catch { } }
-            }
-          }
-        }
-
-        List<string> videoParts = new List<string>();
-
-        if (useCache)
-        {
-          Console.WriteLine($"  [Cache] FFmpeg übersprungen für {Path.GetFileName(file)}. Verwende gecachte Dateien (jünger als 2h).");
-          cachedParts.Sort();
-          videoParts = cachedParts;
-        }
-        else
-        {
-          Console.WriteLine($"  Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
-          string? processedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _config.SpeedMultiplier, fps: 1, downmixToMono: true, scaleTo720p: true);
-
-          if (processedVideo == null)
-          {
-            Console.WriteLine($"  [Fehler] Konvertierung fehlgeschlagen. Überspringe.");
-            continue;
-          }
-
-          Console.WriteLine("  Schritt 2: Schneide Video in Teile mit Overlap...");
-          var rawParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
-
-          if (rawParts.Count == 0)
-          {
-            Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
-            continue;
-          }
-
-          for (int i = 0; i < rawParts.Count; i++)
-          {
-            string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
-            if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
-            System.IO.File.Move(rawParts[i], safePartPath);
-            videoParts.Add(safePartPath);
-          }
-        }
-
-        List<string> generatedTexFiles = new List<string>();
-        string fullOutputText = "";
-
-        for (int i = 0; i < videoParts.Count; i++)
-        {
-          string partFile = videoParts[i];
-          Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
-
-          string prompt = _config.Prompt;
-          var dateInfo = VideoDateParser.Parse(file);
-
-          prompt += $"\n\n[Meta-Information]: These {videoParts.Count} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
-          prompt += $"\n\nThe uploaded video is part {i + 1} of {videoParts.Count} from this lecture.";
-          prompt += $"\n\nThe video is played back / scaled to {_config.SpeedMultiplier}x speed.";
-
-          if (i > 0)
-          {
-            prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
-            prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
-          }
-
-          prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
-          prompt += "\n\nTranscribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing script will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
-
-          var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
-          if (!uploadSuccess || attachmentParts.Count == 0)
-          {
-            Console.WriteLine($"\n  [Fehler] Upload fehlgeschlagen für Teil {i + 1}. Überspringe.");
-            continue;
-          }
-
-          var userPromptParts = new List<Part>(attachmentParts);
-
-          // [AI Context] Context stitching for the Enterprise model. Maintains rigid notation consistency across segment boundaries.
-          foreach (var texFile in generatedTexFiles)
-          {
-            string content = await System.IO.File.ReadAllTextAsync(texFile);
-            userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
-          }
-
-          userPromptParts.Add(new Part { Text = parsedPrompt });
-
-          var contents = new List<Content>();
-
-          // [AI Context] Simulated Multi-Turn Initialization for Vertex.
-          contents.AddRange(sessionPreamble);
-
-          contents.Add(new Content { Role = "user", Parts = userPromptParts });
-
-          var requestConfig = new GenerateContentConfig
-          {
-            Temperature = 0.0f,
-            MaxOutputTokens = 65535
-          };
-
-          if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
-          if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
-
-          int backoff = 30;
-          int maxRetries = 5;
-          string outputTextForPart = "";
-          int currentRequest = 1;
-          int maxRequests = 15;
-
-          using var cts = new CancellationTokenSource();
-          ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
-          Console.CancelKeyPress += cancelHandler;
-
-          while (true)
-          {
-            string chunkOutput = "";
-            bool streamDropped = false;
-            bool userCancelled = false;
-
-            int attempt = 1;
-            for (; attempt <= maxRetries; attempt++)
-            {
-              bool isGenerating = true;
-              var inputInterceptorTask = Task.Run(async () =>
-              {
-                while (isGenerating)
-                {
-                  if (!Console.IsInputRedirected && Console.KeyAvailable)
-                  {
-                    while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                    Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
-                  }
-                  await Task.Delay(100);
-                }
-              });
-
-              try
-              {
-                if (currentRequest == 1)
-                  Console.WriteLine($"  [API] Sende initiale Anfrage für Part {i + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
-                else
-                  Console.WriteLine($"  [API] Sende Fortsetzungs-Anfrage (Continue) für Part {i + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
-
-                var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, contents, requestConfig);
-                await foreach (var chunk in responseStream.WithCancellation(cts.Token))
-                {
-                  if (cts.IsCancellationRequested) break;
-                  string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                  Console.Write(txt);
-                  chunkOutput += txt;
-                }
-
-                isGenerating = false;
-                await inputInterceptorTask;
-
-                if (cts.IsCancellationRequested) userCancelled = true;
-                break;
-              }
-              catch (Exception ex)
-              {
-                isGenerating = false;
-                await inputInterceptorTask;
-
-                if (ex is OperationCanceledException && cts.IsCancellationRequested)
-                {
-                  userCancelled = true;
-                  break;
-                }
-
-                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-                // [AI Context] Vertex AI specific Rescue Strategy to salvage interrupted generation streams.
-                // [Human] Identisch zur AI Studio Version: Verhindert den Verlust von bereits generiertem LaTeX-Code bei unerwarteten Verbindungs- oder Stream-Abbrüchen.
-                if (chunkOutput.Length > 100)
-                {
-                  Console.WriteLine("\n[INFO] Verbindung während der Generierung abgebrochen. Versuche, die unvollständige Antwort zu retten und fortzusetzen...");
-                  streamDropped = true;
-                  break;
-                }
-
-                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase);
-                if (isOverloaded && attempt < maxRetries)
-                {
-                  var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-                  if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
-                  {
-                    int waitTime = serverSuggestedDelay + 15;
-                    Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { userCancelled = true; break; }
-                  }
-                  else
-                  {
-                    Console.WriteLine($"\n  [Rate Limit / Überlastung / Verbindungsabbruch] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-                    if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { userCancelled = true; break; }
-                  }
-                  backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
-                }
-                else
-                {
-                  Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Breche Verarbeitung für diesen Teil ab.");
-                  userCancelled = true;
-                  break;
-                }
-              }
-            }
-
-            if (userCancelled) break;
-
-            outputTextForPart += chunkOutput;
-            await _sessionLogger.LogChatAsync($"[Part {i + 1}] {Path.GetFileName(file)}", prompt ?? "", _config.Model, chunkOutput, "VertexAutoExtraction");
-
-            bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-            if (!videoComplete)
-            {
-              if (currentRequest >= maxRequests)
-              {
-                Console.WriteLine($"\n  [WARNUNG] Max Requests ({maxRequests}) erreicht. Breche ab.");
-                break;
-              }
-
-              if (segmentComplete) Console.WriteLine("\n  [Vertex] Segment-Limit erreicht. Bereite 'Continue'-Prompt vor...");
-              else if (streamDropped) Console.WriteLine("\n  [Vertex] Stream abgebrochen. Bereite automatisierten 'Continue'-Prompt zur Wiederaufnahme vor...");
-              else Console.WriteLine("\n  [Vertex] KI hat abgebrochen (Max Tokens). Bereite automatisierten 'Continue'-Prompt vor...");
-
-              // Hole nur die letzten 300 Zeichen als Anker, um extrem viele Tokens zu sparen!
-              string snippet = chunkOutput.Length > 300 ? "...\n" + chunkOutput.Substring(chunkOutput.Length - 300) : chunkOutput;
-              string continuePrompt = "[IMPORTANT] Your response has been cut by the system's automatic length-detection. Your last latex block ended with:\n\n" +
-                                      $"```latex\n{snippet}\n```\n\n" +
-                                      "Please \"continue\" exactly where you left off...";
-
-              Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
-
-              contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkOutput } } });
-              contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
-              backoff = 30; // Reset für den nächsten Request
-              currentRequest++;
-              continue;
-            }
-
-            break; // Finished
-          }
-
-          Console.CancelKeyPress -= cancelHandler;
-
-          string cleanTex = ExtractionHelpers.CleanLatexResponse(outputTextForPart);
-
-          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
-
-          string partTexFile = Path.ChangeExtension(partFile, ".tex");
-          await System.IO.File.WriteAllTextAsync(partTexFile, cleanTex);
-          generatedTexFiles.Add(partTexFile);
-
-          // [AI Context] Create an accessible copy of each individual part directly in the TargetFolder.
-          string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
-          await System.IO.File.WriteAllTextAsync(targetPartPath, cleanTex);
-
-          // [AI Context] Cost Mitigation Strategy:
-          // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.
-          await CleanupBucketAsync();
-        }
-
-        string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% ==========================================\n\n";
-        await System.IO.File.WriteAllTextAsync(targetFilePath, header + fullOutputText);
-        Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {targetFilePath}");
-      }
-      catch (Exception ex)
-      {
-        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-        Console.WriteLine($"  [Fehler] Abbruch bei {Path.GetFileName(file)}.");
-      }
-      finally
-      {
-        // ALWAYS clean up GCS after each file to minimize enterprise storage costs!
-        await CleanupBucketAsync();
-      }
+      await ProcessSingleFileAsync(file, toolkit, tmpFolder, sessionPreamble, systemInstruction);
     }
     Console.WriteLine("\n[AutoExtraction] Vertex Batch-Verarbeitung abgeschlossen!");
   }
 
+  private async Task ProcessSingleFileAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, List<Content> sessionPreamble, string systemInstruction)
+  {
+    string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
+    if (System.IO.File.Exists(targetFilePath))
+    {
+      Console.WriteLine($"\n[Übersprungen] {Path.GetFileName(file)} wurde bereits verarbeitet.");
+      return;
+    }
+
+    try
+    {
+      Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
+
+      List<string> videoParts = await PrepareVideoPartsAsync(file, toolkit, tmpFolder);
+      if (videoParts == null || videoParts.Count == 0) return;
+
+      List<string> generatedTexFiles = new List<string>();
+      string fullOutputText = "";
+      string baseName = Path.GetFileNameWithoutExtension(file);
+
+      for (int i = 0; i < videoParts.Count; i++)
+      {
+        string partFile = videoParts[i];
+        Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
+
+        string cleanTex = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction);
+        if (string.IsNullOrEmpty(cleanTex)) continue;
+
+        fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
+
+        string partTexFile = Path.ChangeExtension(partFile, ".tex");
+        await System.IO.File.WriteAllTextAsync(partTexFile, cleanTex);
+        generatedTexFiles.Add(partTexFile);
+
+        string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
+        await System.IO.File.WriteAllTextAsync(targetPartPath, cleanTex);
+
+        // [AI Context] Cost Mitigation Strategy:
+        // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.
+        await CleanupBucketAsync();
+      }
+
+      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% ==========================================\n\n";
+      await System.IO.File.WriteAllTextAsync(targetFilePath, header + fullOutputText);
+      Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {targetFilePath}");
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+      Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+      Console.WriteLine($"  [Fehler] Abbruch bei {Path.GetFileName(file)}.");
+    }
+    finally
+    {
+      // ALWAYS clean up GCS after each file to minimize enterprise storage costs!
+      await CleanupBucketAsync();
+    }
+  }
+
+  private async Task<List<string>> PrepareVideoPartsAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder)
+  {
+    string baseName = Path.GetFileNameWithoutExtension(file);
+    string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
+    var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-{dateStr}-part*.mp4").ToList();
+    bool useCache = false;
+
+    bool isCacheRecent = cachedParts.Count > 0 && (DateTime.Now - new FileInfo(cachedParts[0]).LastWriteTime).TotalHours <= 2;
+
+    if (isCacheRecent && cachedParts.Count >= 3)
+    {
+      useCache = true;
+    }
+    else if (isCacheRecent)
+    {
+      Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für {baseName} ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
+      foreach (var f in cachedParts)
+      {
+        try { System.IO.File.Delete(f); }
+        catch (Exception ex)
+        {
+          Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+          Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+          Console.WriteLine($"  [Cache] Fehler beim Löschen der gecachten Datei {f}");
+        }
+      }
+    }
+
+    List<string> videoParts = new List<string>();
+
+    if (useCache)
+    {
+      Console.WriteLine($"  [Cache] FFmpeg übersprungen für {Path.GetFileName(file)}. Verwende gecachte Dateien (jünger als 2h).");
+      cachedParts.Sort();
+      videoParts = cachedParts;
+    }
+    else
+    {
+      Console.WriteLine($"  Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
+      string? processedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _config.SpeedMultiplier, fps: 1, downmixToMono: true, scaleTo720p: true);
+
+      if (processedVideo == null)
+      {
+        Console.WriteLine($"  [Fehler] Konvertierung fehlgeschlagen. Überspringe.");
+        return videoParts;
+      }
+
+      Console.WriteLine("  Schritt 2: Schneide Video in Teile mit Overlap...");
+      var rawParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
+
+      if (rawParts.Count == 0)
+      {
+        Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
+        return videoParts;
+      }
+
+      for (int i = 0; i < rawParts.Count; i++)
+      {
+        string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
+        if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
+        System.IO.File.Move(rawParts[i], safePartPath);
+        videoParts.Add(safePartPath);
+      }
+    }
+
+    return videoParts;
+  }
+
+  private async Task<string> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction)
+  {
+    string prompt = _config.Prompt;
+    var dateInfo = VideoDateParser.Parse(originalFile);
+
+    prompt += $"\n\n[Meta-Information]: These {totalParts} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
+    prompt += $"\n\nThe uploaded video is part {partIndex + 1} of {totalParts} from this lecture.";
+    prompt += $"\n\nThe video is played back / scaled to {_config.SpeedMultiplier}x speed.";
+
+    if (partIndex > 0)
+    {
+      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
+      prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
+    }
+
+    prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
+    prompt += "\n\nTranscribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing script will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
+
+    var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
+    if (!uploadSuccess || attachmentParts.Count == 0)
+    {
+      Console.WriteLine($"\n  [Fehler] Upload fehlgeschlagen für Teil {partIndex + 1}. Überspringe.");
+      return string.Empty;
+    }
+
+    var userPromptParts = new List<Part>(attachmentParts);
+
+    foreach (var texFile in generatedTexFiles)
+    {
+      string content = await System.IO.File.ReadAllTextAsync(texFile);
+      userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+    }
+
+    userPromptParts.Add(new Part { Text = parsedPrompt });
+
+    var contents = new List<Content>();
+    contents.AddRange(sessionPreamble);
+    contents.Add(new Content { Role = "user", Parts = userPromptParts });
+
+    var requestConfig = new GenerateContentConfig
+    {
+      Temperature = 0.0f,
+      MaxOutputTokens = 65535
+    };
+
+    if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+
+    using var cts = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+    Console.CancelKeyPress += cancelHandler;
+
+    string outputTextForPart = await GenerateWithContinuationsAsync(contents, requestConfig, partIndex, originalFile, prompt, cts);
+
+    Console.CancelKeyPress -= cancelHandler;
+
+    return ExtractionHelpers.CleanLatexResponse(outputTextForPart);
+  }
+
+  private async Task<string> GenerateWithContinuationsAsync(List<Content> contents, GenerateContentConfig requestConfig, int partIndex, string originalFile, string prompt, CancellationTokenSource cts)
+  {
+    int backoff = 30;
+    int maxRetries = 5;
+    string outputTextForPart = "";
+    int currentRequest = 1;
+    int maxRequests = 15;
+
+    while (true)
+    {
+      var result = await TryStreamChunkAsync(contents, requestConfig, partIndex, currentRequest, maxRequests, maxRetries, backoff, cts);
+      backoff = result.newBackoff;
+
+      if (result.userCancelled) break;
+
+      outputTextForPart += result.chunkOutput;
+      await _sessionLogger.LogChatAsync($"[Part {partIndex + 1}] {Path.GetFileName(originalFile)}", prompt ?? "", _config.Model, result.chunkOutput, "VertexAutoExtraction");
+
+      bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+      bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+      if (!videoComplete)
+      {
+        if (currentRequest >= maxRequests)
+        {
+          Console.WriteLine($"\n  [WARNUNG] Max Requests ({maxRequests}) erreicht. Breche ab.");
+          break;
+        }
+
+        if (segmentComplete) Console.WriteLine("\n  [Vertex] Segment-Limit erreicht. Bereite 'Continue'-Prompt vor...");
+        else if (result.streamDropped) Console.WriteLine("\n  [Vertex] Stream abgebrochen. Bereite automatisierten 'Continue'-Prompt zur Wiederaufnahme vor...");
+        else Console.WriteLine("\n  [Vertex] KI hat abgebrochen (Max Tokens). Bereite automatisierten 'Continue'-Prompt vor...");
+
+        string snippet = result.chunkOutput.Length > 300 ? "...\n" + result.chunkOutput.Substring(result.chunkOutput.Length - 300) : result.chunkOutput;
+        string continuePrompt = "[IMPORTANT] Your response has been cut by the system's automatic length-detection. Your last latex block ended with:\n\n" +
+                                $"```latex\n{snippet}\n```\n\n" +
+                                "Please \"continue\" exactly where you left off...";
+
+        Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
+
+        contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = result.chunkOutput } } });
+        contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+        backoff = 30;
+        currentRequest++;
+        continue;
+      }
+
+      break; // Finished
+    }
+
+    return outputTextForPart;
+  }
+
+  private async Task<(string chunkOutput, bool userCancelled, bool streamDropped, int newBackoff)> TryStreamChunkAsync(
+    List<Content> contents, GenerateContentConfig requestConfig, int partIndex, int currentRequest, int maxRequests, int maxRetries, int backoff, CancellationTokenSource cts)
+  {
+    string chunkOutput = "";
+    bool streamDropped = false;
+    bool userCancelled = false;
+
+    int attempt = 1;
+    for (; attempt <= maxRetries; attempt++)
+    {
+      bool isGenerating = true;
+      var inputInterceptorTask = Task.Run(async () =>
+      {
+        while (isGenerating)
+        {
+          if (!Console.IsInputRedirected && Console.KeyAvailable)
+          {
+            while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+            Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
+          }
+          await Task.Delay(100);
+        }
+      });
+
+      try
+      {
+        if (currentRequest == 1)
+          Console.WriteLine($"  [API] Sende initiale Anfrage für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+        else
+          Console.WriteLine($"  [API] Sende Fortsetzungs-Anfrage (Continue) für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+
+        var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, contents, requestConfig);
+        await foreach (var chunk in responseStream.WithCancellation(cts.Token))
+        {
+          if (cts.IsCancellationRequested) break;
+          string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+          Console.Write(txt);
+          chunkOutput += txt;
+        }
+
+        isGenerating = false;
+        await inputInterceptorTask;
+
+        if (cts.IsCancellationRequested) userCancelled = true;
+        break;
+      }
+      catch (Exception ex)
+      {
+        isGenerating = false;
+        await inputInterceptorTask;
+
+        if (ex is OperationCanceledException && cts.IsCancellationRequested)
+        {
+          userCancelled = true;
+          break;
+        }
+
+        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+
+        if (chunkOutput.Length > 100)
+        {
+          Console.WriteLine("\n[INFO] Verbindung während der Generierung abgebrochen. Versuche, die unvollständige Antwort zu retten und fortzusetzen...");
+          streamDropped = true;
+          break;
+        }
+
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase);
+        if (isOverloaded && attempt < maxRetries)
+        {
+          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+          {
+            int waitTime = serverSuggestedDelay + 15;
+            Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { userCancelled = true; break; }
+          }
+          else
+          {
+            Console.WriteLine($"\n  [Rate Limit / Überlastung / Verbindungsabbruch] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { userCancelled = true; break; }
+          }
+          backoff *= 2;
+        }
+        else
+        {
+          Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Breche Verarbeitung für diesen Teil ab.");
+          userCancelled = true;
+          break;
+        }
+      }
+    }
+
+    return (chunkOutput, userCancelled, streamDropped, backoff);
+  }
+
+  /// <summary>
+  /// [AI Context] Financial Guardrail: Ensures the cloud storage bucket is purged immediately after processing to prevent accumulating storage costs for massive temporary video files.
+  /// [Human] Löscht sofort nach der Verarbeitung alle temporären Videodateien aus dem Cloud-Speicher, um unnötige GCP-Kosten zu vermeiden.
+  /// </summary>
   private async Task CleanupBucketAsync()
   {
     if (string.IsNullOrWhiteSpace(_config.GcsBucketName)) return;
-    // [AI Context] Financial Guardrail:
-    // Ensures the cloud storage bucket is purged immediately after processing to prevent accumulating storage costs for massive temporary video files.
     try
     {
       var storageClient = await StorageClient.CreateAsync();
