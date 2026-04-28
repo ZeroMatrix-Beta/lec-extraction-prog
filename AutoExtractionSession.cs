@@ -481,6 +481,8 @@ public class AiStudioAutoExtractionSession
 
           string texPath = Path.ChangeExtension(safePartPath, ".tex");
           await System.IO.File.WriteAllTextAsync(texPath, cleanTex);
+
+          // Hier werden .tex dateien geschrieben:
           generatedTexFiles.Add(texPath);
         }
       }
