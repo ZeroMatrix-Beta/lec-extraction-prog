@@ -56,7 +56,9 @@ class Program
           Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
           var attConfig = new AttachmentHandlerConfig { UploadFolder = config.SourceFolder, IncludePaths = new[] { config.SourceFolder }, IsAiStudio = false, GcsBucketName = config.GcsBucketName };
           var attachmentHandler = new AttachmentHandler(client, attConfig);
-          var session = new VertexAutoExtractionSession(client, config, attachmentHandler);
+          var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
+          var sessionLogger = new SessionLogger(loggerConfig);
+          var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
           await session.StartAsync();
         }
         else

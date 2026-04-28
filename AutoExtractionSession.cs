@@ -89,6 +89,7 @@ public class AiStudioAutoExtractionSession
   private double _speed = 1.2;
   private string _systemInstructionText = "";
   private List<Part> _historyParts = new List<Part>();
+  private List<Content> _sessionPreamble = new List<Content>();
   private bool _historyWasLoaded = false;
   private List<Content> _debugChatHistory = new List<Content>();
 
@@ -172,6 +173,7 @@ public class AiStudioAutoExtractionSession
           _historyParts.AddRange(attachmentParts);
           _historyWasLoaded = true;
           Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
+          await AcknowledgeHistoryAsync();
         }
         else
         {
@@ -180,8 +182,9 @@ public class AiStudioAutoExtractionSession
       }
     }
 
-    _sessionLogger.InitializeSession();
+    // Update metadata in case AcknowledgeHistoryAsync failed and reset the flag
     _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
+    _sessionLogger.InitializeSession();
     await _sessionLogger.LogSessionSetupAsync();
 
     await ReplLoopAsync();
@@ -416,6 +419,102 @@ public class AiStudioAutoExtractionSession
     }
   }
 
+  private async Task AcknowledgeHistoryAsync()
+  {
+    var historyPromptParts = new List<Part>(_historyParts);
+    historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+    var userContent = new Content { Role = "user", Parts = historyPromptParts };
+
+    _sessionPreamble.Add(userContent);
+
+    var requestConfig = new GenerateContentConfig { Temperature = 0.0f, MaxOutputTokens = 1024 };
+    if (!string.IsNullOrWhiteSpace(_systemInstructionText))
+    {
+      requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+    }
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    {
+      requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+    }
+
+    Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
+    string fullResponse = "";
+    int backoff = 30;
+    int maxRetries = 5;
+    bool success = false;
+
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
+    {
+      using var cts = new CancellationTokenSource();
+      ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+      Console.CancelKeyPress += cancelHandler;
+
+      try
+      {
+        if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
+        var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _sessionPreamble, requestConfig);
+        await foreach (var chunk in responseStream.WithCancellation(cts.Token))
+        {
+          if (cts.IsCancellationRequested) break;
+          string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+          Console.Write(txt);
+          fullResponse += txt;
+        }
+        Console.WriteLine();
+        success = true;
+        break; // Success
+      }
+      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+      {
+        Console.WriteLine("\n[INFO] Bestätigung durch Benutzer abgebrochen.");
+        break;
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        if (isOverloaded && attempt < maxRetries)
+        {
+          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
+          {
+            int waitTime = serverSuggestedDelay + 2;
+            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+            if (!await SmartDelayAsync(waitTime)) { break; }
+          }
+          else
+          {
+            Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+            if (!await SmartDelayAsync(backoff)) { break; }
+          }
+          backoff *= 2;
+        }
+        else
+        {
+          Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+          break;
+        }
+      }
+      finally
+      {
+        Console.CancelKeyPress -= cancelHandler;
+      }
+    }
+
+    if (success && !string.IsNullOrWhiteSpace(fullResponse))
+    {
+      _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+      await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text, _config.Model, fullResponse, "AutoExtractionSetup");
+    }
+    else
+    {
+      Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Die History wird für diese Session ignoriert.");
+      _sessionPreamble.Clear();
+      _historyWasLoaded = false;
+    }
+  }
+
   /// <summary>
   /// [AI Context] Executes the batch processing workflow.
   /// Uses System.Threading.Channels to run FFmpeg processing in the background (Producer) while Gemini processes chunks sequentially (Consumer), maximizing hardware and API throughput.
@@ -571,16 +670,7 @@ public class AiStudioAutoExtractionSession
 
     var history = new List<Content>();
 
-    // [AI Context] Simulated Multi-Turn Initialization.
-    // By faking the model's acknowledgment of the history, we guarantee the AI transitions into the correct state for transcription.
-    if (_historyWasLoaded)
-    {
-      var historyPromptParts = new List<Part>(_historyParts);
-      historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
-      history.Add(new Content { Role = "user", Parts = historyPromptParts });
-      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions." } } });
-    }
-
+    history.AddRange(_sessionPreamble);
     history.Add(new Content { Role = "user", Parts = userPromptParts });
 
     var requestConfig = new GenerateContentConfig
@@ -640,19 +730,36 @@ public class AiStudioAutoExtractionSession
         fullResponse += chunkResp;
         await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt, _config.Model, chunkResp, "AutoExtraction");
 
-        // [AI Context] Fuzzy check allowing markdown symbols or additional text between [SYSTEM] and "Segment complete"
-        if (System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!videoComplete)
         {
           if (currentRequest >= maxRequests)
           {
-            Console.WriteLine("\n\n[WARNUNG] Maximale Anzahl an Requests (5) erreicht. Breche Generierung für diesen Teil ab.");
+            Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequests}) für diesen Teil erreicht. Breche ab.");
             break;
           }
-          Console.WriteLine("\n\n[AutoExtraction] Sende 'Continue'...");
+
+          if (segmentComplete)
+          {
+            Console.WriteLine("\n\n[AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
+          }
+          else
+          {
+            Console.WriteLine("\n\n[AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Sende 'Continue'...");
+          }
+
+          string snippet = chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp;
+          string continuePrompt = "[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
+                                  $"```latex\n{snippet}\n```\n\n" +
+                                  "Please \"continue\" exactly where you left off...";
+
           history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
-          history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = "Continue" } } });
-          backoff = 30; // Reset backoff on success
-          attempt = 1;  // Reset Fehlerzähler
+          history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+
+          backoff = 30;
+          attempt = 1;
           currentRequest++;
           continue;
         }
@@ -754,6 +861,7 @@ public class VertexAutoExtractionConfig
   public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
   public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
+  public string LogFolder { get; set; } = AppConfig.LogFolder;
   public string Model { get; set; } = "gemini-3-flash-preview";
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
   public double SpeedMultiplier { get; set; } = 1.2;
@@ -769,12 +877,14 @@ public class VertexAutoExtractionSession
   private readonly Client _client;
   private readonly VertexAutoExtractionConfig _config;
   private readonly AttachmentHandler _attachmentHandler;
+  private readonly SessionLogger _sessionLogger;
 
-  public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler)
+  public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger)
   {
     _client = client;
     _config = config;
     _attachmentHandler = attachmentHandler;
+    _sessionLogger = sessionLogger;
   }
 
   public async Task StartAsync()
@@ -795,6 +905,8 @@ public class VertexAutoExtractionSession
     }
 
     await CleanupBucketAsync(); // Clean up before starting
+
+    _sessionLogger.InitializeSession();
 
     string systemInstruction = "";
     Console.Write($"\nSystem Instruction aus '{_config.SystemInstructionPath}' laden? (j/n): ");
@@ -850,6 +962,12 @@ public class VertexAutoExtractionSession
         }
       }
     }
+
+    var sessionPreamble = new List<Content>();
+
+    bool loadedSysPrompt = !string.IsNullOrEmpty(systemInstruction);
+    _sessionLogger.SetSessionMetadata(loadedSysPrompt, historyWasLoaded);
+    await _sessionLogger.LogSessionSetupAsync();
 
     string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
     if (filesToProcess.Length == 0)
@@ -975,13 +1093,7 @@ public class VertexAutoExtractionSession
           var contents = new List<Content>();
 
           // [AI Context] Simulated Multi-Turn Initialization for Vertex.
-          if (historyWasLoaded)
-          {
-            var historyPromptParts = new List<Part>(historyParts);
-            historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
-            contents.Add(new Content { Role = "user", Parts = historyPromptParts });
-            contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = "[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions." } } });
-          }
+          contents.AddRange(sessionPreamble);
 
           contents.Add(new Content { Role = "user", Parts = userPromptParts });
 
@@ -1075,6 +1187,7 @@ public class VertexAutoExtractionSession
             if (partFailed) break;
 
             outputTextForPart += chunkOutput;
+            await _sessionLogger.LogChatAsync($"[Part {i + 1}] {Path.GetFileName(file)}", prompt, _config.Model, chunkOutput, "VertexAutoExtraction");
 
             bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkOutput, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
