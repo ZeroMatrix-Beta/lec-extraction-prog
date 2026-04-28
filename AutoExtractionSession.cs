@@ -92,7 +92,7 @@ internal static class ExtractionHelpers
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
     // Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
-    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
+    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_|%)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
     return cleanTex.Trim();
   }
 
@@ -133,12 +133,18 @@ internal static class ExtractionHelpers
 /// </summary>
 public class AiStudioAutoExtractionConfig
 {
+  // [AI Context] Directory containing the raw, unprocessed lecture .mp4 files.
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
+  // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
   public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
+  // [AI Context] Absolute path to the overarching Director's Cut persona and instruction markdown.
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+  // [AI Context] Centralized fallback paths for loading historical reference materials into the context window.
   public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
   public string LogFolder { get; set; } = @"D:\gemini-logs";
+  // [AI Context] Default model selection for developer-tier batch processing.
   public string Model { get; set; } = "gemini-3-flash-preview";
+  // [AI Context] The core prompt template dynamically appended to every video chunk.
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 }
 
@@ -157,8 +163,10 @@ public class AiStudioAutoExtractionSession
   private string _systemInstructionText = "";
   // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
   private List<Part> _historyParts = new List<Part>();
+  // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
   private List<Content> _sessionPreamble = new List<Content>();
   private bool _historyWasLoaded = false;
+  // [AI Context] Stateful history exclusively for the REPL loop's debug chat.
   private List<Content> _debugChatHistory = new List<Content>();
 
   public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger)
@@ -343,6 +351,11 @@ public class AiStudioAutoExtractionSession
     }
   }
 
+  /// <summary>
+  /// [AI Context] A dedicated REPL chat for testing prompts against the model without initializing the full FFmpeg pipeline.
+  /// Contains identical retry/backoff logic to the main extraction loop to accurately simulate API conditions.
+  /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
+  /// </summary>
   private async Task DebugChatAsync(string input)
   {
     _debugChatHistory.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = input } } });
@@ -427,7 +440,7 @@ public class AiStudioAutoExtractionSession
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
           {
-            int waitTime = serverSuggestedDelay + 2;
+            int waitTime = serverSuggestedDelay + 15;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
           }
@@ -531,7 +544,7 @@ public class AiStudioAutoExtractionSession
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
           {
-            int waitTime = serverSuggestedDelay + 2;
+            int waitTime = serverSuggestedDelay + 15;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
           }
@@ -602,7 +615,18 @@ public class AiStudioAutoExtractionSession
           var fileInfo = new FileInfo(cachedParts[0]);
           if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2)
           {
-            useCache = true;
+            // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs.
+            // We expect exactly 3 parts. If fewer are found, the cache is corrupted or incomplete.
+            // [Human] Wenn ein alter Lauf abgebrochen ist, liegen vielleicht nur 1-2 Teile im Cache. Das wird hier verhindert!
+            if (cachedParts.Count >= 3)
+            {
+              useCache = true;
+            }
+            else
+            {
+              Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für {baseName} ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
+              foreach (var f in cachedParts) { try { System.IO.File.Delete(f); } catch { } }
+            }
           }
         }
 
@@ -637,6 +661,7 @@ public class AiStudioAutoExtractionSession
     });
 
     // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
+    // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
     await foreach (var job in channel.Reader.ReadAllAsync())
     {
       string file = job.originalFile;
@@ -647,6 +672,7 @@ public class AiStudioAutoExtractionSession
       List<string> generatedTexFiles = new List<string>();
       string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
       string baseName = Path.GetFileNameWithoutExtension(file);
+      string fullOutputText = "";
 
       for (int i = 0; i < parts.Count; i++)
       {
@@ -660,6 +686,8 @@ public class AiStudioAutoExtractionSession
         {
           string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
 
+          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
+
           string texPath = Path.ChangeExtension(safePartPath, ".tex");
           await System.IO.File.WriteAllTextAsync(texPath, cleanTex);
 
@@ -668,7 +696,10 @@ public class AiStudioAutoExtractionSession
         }
       }
 
-      Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Die Teile liegen im tmp Ordner: {tmpFolder}");
+      string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
+      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% ==========================================\n\n";
+      await System.IO.File.WriteAllTextAsync(targetFilePath, header + fullOutputText);
+      Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {targetFilePath}");
     }
 
     // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
@@ -694,10 +725,12 @@ public class AiStudioAutoExtractionSession
 
     if (partNumber > 1)
     {
+      // [AI Context] Continuous State Injection: Appends the exact LaTeX output of the previous chunks so the model can seamlessly finish mid-sentence derivations.
       prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
       prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
     }
 
+    // [AI Context] Explicitly disables temporal scaling logic within the model, forcing it to transcribe the burned-in UI timestamps directly.
     prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
     prompt += "\n\nWhen in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
@@ -801,6 +834,8 @@ public class AiStudioAutoExtractionSession
                                   $"```latex\n{snippet}\n```\n\n" +
                                   "Please \"continue\" exactly where you left off...";
 
+          Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
+
           history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
           history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
 
@@ -864,8 +899,11 @@ public class AiStudioAutoExtractionSession
 /// </summary>
 public class VertexAutoExtractionConfig
 {
+  // [AI Context] The Google Cloud Platform (GCP) Project ID associated with the billing account.
   public string ProjectId { get; set; } = "vertex-ai-experiments-494320";
+  // [AI Context] Region for Vertex AI execution. Must support the requested Gemini models.
   public string Location { get; set; } = "global";
+  // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
   public string GcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
   public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a\new";
   public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
@@ -997,7 +1035,17 @@ public class VertexAutoExtractionSession
           var fileInfo = new FileInfo(cachedParts[0]);
           if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2)
           {
-            useCache = true;
+            // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs.
+            // We expect exactly 3 parts. If fewer are found, the cache is corrupted or incomplete.
+            if (cachedParts.Count >= 3)
+            {
+              useCache = true;
+            }
+            else
+            {
+              Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für {baseName} ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
+              foreach (var f in cachedParts) { try { System.IO.File.Delete(f); } catch { } }
+            }
           }
         }
 
@@ -1100,7 +1148,7 @@ public class VertexAutoExtractionSession
           int maxRetries = 5;
           string outputTextForPart = "";
           int currentRequest = 1;
-          int maxRequests = 5;
+          int maxRequests = 15;
 
           using var cts = new CancellationTokenSource();
           ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
@@ -1131,7 +1179,10 @@ public class VertexAutoExtractionSession
 
               try
               {
-                Console.WriteLine($"  [API] Sende Anfrage an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+                if (currentRequest == 1)
+                  Console.WriteLine($"  [API] Sende initiale Anfrage für Part {i + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+                else
+                  Console.WriteLine($"  [API] Sende Fortsetzungs-Anfrage (Continue) für Part {i + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
 
                 var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, contents, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token))
@@ -1163,7 +1214,7 @@ public class VertexAutoExtractionSession
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
                 // [AI Context] Vertex AI specific Rescue Strategy to salvage interrupted generation streams.
-                // [Human] Identisch zur AI Studio Version: Verhindert den Verlust von bereits generiertem LaTeX-Code bei unerwarteten Verbindungsabbrüchen.
+                // [Human] Identisch zur AI Studio Version: Verhindert den Verlust von bereits generiertem LaTeX-Code bei unerwarteten Verbindungs- oder Stream-Abbrüchen.
                 if (chunkOutput.Length > 100)
                 {
                   Console.WriteLine("\n[INFO] Verbindung während der Generierung abgebrochen. Versuche, die unvollständige Antwort zu retten und fortzusetzen...");
@@ -1177,7 +1228,7 @@ public class VertexAutoExtractionSession
                   var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
                   if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
                   {
-                    int waitTime = serverSuggestedDelay + 2;
+                    int waitTime = serverSuggestedDelay + 15;
                     Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
                     if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { userCancelled = true; break; }
                   }
@@ -1213,15 +1264,17 @@ public class VertexAutoExtractionSession
                 break;
               }
 
-              if (segmentComplete) Console.WriteLine("\n  [Vertex] Segment Limit erreicht. Sende 'Continue'...");
-              else if (streamDropped) Console.WriteLine("\n  [Vertex] Stream abgebrochen. Sende automatisiert 'Continue' zur Wiederaufnahme...");
-              else Console.WriteLine("\n  [Vertex] KI hat abgebrochen (Max Tokens). Sende automatisiert 'Continue'...");
+              if (segmentComplete) Console.WriteLine("\n  [Vertex] Segment-Limit erreicht. Bereite 'Continue'-Prompt vor...");
+              else if (streamDropped) Console.WriteLine("\n  [Vertex] Stream abgebrochen. Bereite automatisierten 'Continue'-Prompt zur Wiederaufnahme vor...");
+              else Console.WriteLine("\n  [Vertex] KI hat abgebrochen (Max Tokens). Bereite automatisierten 'Continue'-Prompt vor...");
 
               // Hole nur die letzten 300 Zeichen als Anker, um extrem viele Tokens zu sparen!
               string snippet = chunkOutput.Length > 300 ? "...\n" + chunkOutput.Substring(chunkOutput.Length - 300) : chunkOutput;
               string continuePrompt = "[IMPORTANT] Your response has been cut by the system's automatic length-detection. Your last latex block ended with:\n\n" +
                                       $"```latex\n{snippet}\n```\n\n" +
                                       "Please \"continue\" exactly where you left off...";
+
+              Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
               contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkOutput } } });
               contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
@@ -1242,6 +1295,10 @@ public class VertexAutoExtractionSession
           string partTexFile = Path.ChangeExtension(partFile, ".tex");
           await System.IO.File.WriteAllTextAsync(partTexFile, cleanTex);
           generatedTexFiles.Add(partTexFile);
+
+          // [AI Context] Create an accessible copy of each individual part directly in the TargetFolder.
+          string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
+          await System.IO.File.WriteAllTextAsync(targetPartPath, cleanTex);
 
           // [AI Context] Cost Mitigation Strategy:
           // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.
