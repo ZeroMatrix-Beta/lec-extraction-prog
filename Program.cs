@@ -6,7 +6,7 @@ using AiInteraction.Vertex;
 using FfmpegUtilities;
 using GoogleGenAi;
 using Google.GenAI;
-using AiInteraction.AutoExtraction;
+using AutoExtraction;
 
 /// <summary>
 /// [AI Context] Main application entry point. Orchestrates the execution flow by delegating
