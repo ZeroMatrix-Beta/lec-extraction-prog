@@ -60,7 +60,13 @@ class Program {
           }
           else {
             var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
-            string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
+            string apiKey;
+            if (config.ActiveApiProfile == 0) {
+              apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
+            }
+            else {
+              apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
+            }
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, true, "");
             var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
@@ -92,25 +98,25 @@ class Program {
 
         if (isVertex) {
           // Wire up dependencies for Vertex AI
-          var config = ConfigLoader<VertexAiConfig>.Load();
+          var config = ConfigLoader<DirectAiChatSessionVertexConfig>.Load();
           Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
           var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, false, config.GcsBucketName);
           var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
           var sessionLogger = new SessionLogger(loggerConfig);
 
-          var chatSession = new VertexAiChatSession(client, config, sessionLogger, attachmentHandler);
+          var chatSession = new DirectAiChatSessionVertex(client, config, sessionLogger, attachmentHandler);
           await chatSession.StartAsync();
         }
         else if (mainChoice == "1") {
           // Wire up dependencies for AI Studio
-          var config = ConfigLoader<AiStudioChatSessionConfig>.Load();
+          var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
           string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
           Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
           var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
           var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
           var sessionLogger = new SessionLogger(loggerConfig);
 
-          var chatSession = new AiStudioChatSession(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
+          var chatSession = new DirectAiChatSessionAiStudio(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
           await chatSession.StartAsync();
         }
         else {

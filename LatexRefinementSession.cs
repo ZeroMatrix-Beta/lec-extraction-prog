@@ -135,7 +135,7 @@ public class LatexRefinementSession {
           if (metricMatch.Success) Console.WriteLine($"  [Quota-Info] Limit erreicht für: {metricMatch.Groups[1].Value.Trim()}");
 
           var retryTimeMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Please retry in ([^s]+s)");
-          if (retryTimeMatch.Success) Console.WriteLine($"  [Quota-Info] API-Sperre aktiv für: {retryTimeMatch.Value}");
+          if (retryTimeMatch.Success) Console.WriteLine($"  [Quota-Info] API-Sperre aktiv für: {retryTimeMatch.Groups[1].Value}");
         }
 
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
@@ -181,7 +181,7 @@ public class LatexRefinementSession {
         await Task.Delay(100);
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          Console.WriteLine($"\n[System] {message}");
+          Console.WriteLine($"\n[AI-Model] {message}");
         }
       }
       return true;

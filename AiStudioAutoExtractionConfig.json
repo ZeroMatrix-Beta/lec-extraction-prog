@@ -1,0 +1,11 @@
+{
+  "SourceFolder": "D:\\lecture-videos\\analysis2",
+  "TargetFolder": "D:\\lecture-videos\\analysis2\\destination2",
+  "SystemInstructionPath": "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
+  "HistoryPreloadPaths": [
+    "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini-chat-history"
+  ],
+  "LogFolder": "D:\\gemini-logs",
+  "Model": "gemini-3-flash-preview",
+  "Prompt": "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions."
+}

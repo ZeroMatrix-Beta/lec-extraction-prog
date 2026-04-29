@@ -8,6 +8,9 @@ namespace AutoExtraction;
 /// [Human] Konfiguration für den automatisierten Extraktions-Modus mit dem kostenlosen AI Studio.
 /// </summary>
 public class AiStudioAutoExtractionConfig {
+  // [AI Context] Selects the environment variable API key profile to use (1-3).
+  // If 0, uses the dedicated API_KEY-automated-content-extraction.
+  public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
   // [AI Context] Directory containing the raw, unprocessed lecture .mp4 files.
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
   // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
