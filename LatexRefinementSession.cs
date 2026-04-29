@@ -6,7 +6,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using DocumentUtilities;
 
-namespace AiInteraction;
+namespace DirectChatAiInteraction;
 
 // [AI Context] Configuration specifically for the post-processing phase. TargetFolder specifies where the compiled, polished .tex/.pdf will be dropped.
 public class LatexRefinementConfig {

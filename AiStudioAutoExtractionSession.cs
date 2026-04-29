@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using AiInteraction;
+using DirectChatAiInteraction;
 using Google.GenAI;
 using Google.GenAI.Types;
 

@@ -1,8 +1,8 @@
 ﻿﻿using System;
 using System.Threading.Tasks;
-using AiInteraction;
-using AiInteraction.GoogleAIStudio;
-using AiInteraction.Vertex;
+using DirectChatAiInteraction;
+using DirectChatAiInteraction.GoogleAIStudio;
+using DirectChatAiInteraction.Vertex;
 using FfmpegUtilities;
 using GoogleGenAi;
 using Google.GenAI;

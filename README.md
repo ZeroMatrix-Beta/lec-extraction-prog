@@ -1,103 +1,125 @@
-# AI Extraction & Processing Tool 🤖🎥
+# 🤖🎥 AI Lecture Extraction & Processing Pipeline
 
-Dieses Projekt ist ein spezialisiertes C#-Konsolenwerkzeug, das entwickelt wurde, um Vorlesungsvideos (insbesondere im mathematisch-akademischen Bereich) effizient vorzuverarbeiten und durch multimodale KI-Modelle (Google Gemini) in hochwertige LaTeX-Skripte und Transkripte zu übersetzen.
+*(See below for the German version / Deutsche Version unten)*
 
-Es kombiniert leistungsstarke lokale **FFmpeg-Verarbeitung** zur Token-Optimierung mit einer interaktiven **REPL-Chat-Umgebung** (Read-Eval-Print Loop), die sowohl Google AI Studio als auch Google Cloud Vertex AI (Enterprise) unterstützt.
+## 🇬🇧 English
 
----
+This project is a C# console utility designed to automate the transcription and translation of academic lecture videos into LaTeX documents using Google Gemini's multimodal capabilities.
 
-## ✨ Hauptfeatures
-
-- **Zwei KI-Modi:** Unterstützt kostenlose/Developer Endpunkte (Google AI Studio File API) sowie Enterprise Endpunkte (Vertex AI mit Google Cloud Storage).
-- **FFmpeg Video-Optimierung:** Schneidet und komprimiert stundenlange Vorlesungen blitzschnell. Reduziert Videos auf 1 FPS (perfekt für Tafeln!) und mischt Audio zu Mono ab, um massiv KI-Tokens, Kosten und Upload-Zeit zu sparen.
-- **Multimodaler Chat & Datei-Upload:** Lade Bilder, PDFs, Code-Dateien und riesige Videos über den `/attach` Befehl direkt in den Kontext der KI.
-- **Automatisches Session-Logging:** Jeder Chat-Verlauf wird als Markdown (`chat_log.md`) gespeichert. Alle KI-Antworten werden fortlaufend nummeriert als fertige `.tex` Dateien gesichert.
-- **Dynamische KI-Parameter:** Passe `Temperature` und `MaxOutputTokens` dynamisch während des Chats an, um die Kreativität oder Präzision (z.B. für strikten LaTeX-Code) der Antworten zu steuern.
+It bridges the gap between local video preprocessing (FFmpeg) and cloud-based AI inference, supporting both an **Interactive Chat Mode** and an **Automated Batch Extraction Pipeline**. It supports free/developer environments via **Google AI Studio** and enterprise workloads via **Google Cloud Vertex AI**.
 
 ---
 
-## 📂 Projektstruktur & Architektur
+### ✨ Core Features
 
-Das Projekt ist in verschiedene logische Namespaces unterteilt, um das Prinzip der *Single Responsibility* (SRP) zu wahren.
-
-### 🌐 1. Namespace: `AiInteraction`
-Das Herzstück der Konversation. Hier wird der Chatbot gesteuert, Dateien verwaltet und die Ausgaben geloggt.
-
-- **`AiChatSession`**
-  Der Haupt-REPL-Manager für den **Google AI Studio** Modus. Verwaltet den Chatverlauf, sendet Prompts an Gemini, streamt die Antworten in die Konsole und kümmert sich um den State (Speicher) der KI.
-
-- **`VertexAiChatSession`**
-  Das Enterprise-Pendant zur `AiChatSession`. Komplett isoliert, um mit **Google Cloud Vertex AI** zu kommunizieren. Handhabt zusätzlich das Bereinigen (`ForcePurgeGcsBucketAsync`) der GCS-Buckets, um Cloud-Kosten zu minimieren.
-
-- **`AttachmentHandler`**
-  Ein intelligentes "Trüffelschwein" für Dateien. Löst lokale Dateipfade auf (sucht in Arbeitsverzeichnissen, Upload-Ordnern etc.) und orchestriert den Upload. Textdateien werden direkt in den Prompt eingebettet, Medien (Video/Audio/Bilder) werden über die Google File API oder GCS hochgeladen.
-
-- **`SessionLogger`**
-  Kümmert sich um die Persistenz. Erstellt für jede gestartete Sitzung einen eigenen, mit Zeitstempel versehenen Ordner (`folder-X-month-day-year`) und speichert dort Markdown-Logs sowie `.tex`-Outputs.
-
-- **`IUserInterface` & `ConsoleUserInterface`**
-  Eine Abstraktionsschicht für die Benutzeroberfläche. Ermöglicht es dem Code, Eingaben zu lesen und Ausgaben zu schreiben, ohne fest an die Windows-Konsole gebunden zu sein (erleichtert zukünftige GUI-Updates oder automatisiertes Testing).
-
-### 🎬 2. Namespace: `FfmpegUtilities`
-Verantwortlich für die lokale Audio- und Videoverarbeitung vor dem KI-Upload.
-
-- **`FfmpegToolkit`**
-  Das Herzstück der Videoverarbeitung (Headless). Baut komplexe FFmpeg-Befehle zusammen. 
-  *Highlights:* `ProcessSplitVideoAsync` (Schneidet Videos in überlappende Segmente, damit die KI keine Sätze abschneidet) und `ProcessGeneralVideoAsync` (1 FPS Video, Mono Audio, Speedups).
-
-- **`FfmpegInteractiveMenu`**
-  Die textbasierte Konsolenoberfläche (Frontend) für das `FfmpegToolkit`. Führt den Benutzer durch verschiedene Voreinstellungen (Presets) und Batch-Verarbeitungsmodi.
-
-- **`ConsoleUiHelper`**
-  Eine Hilfsklasse zum Zeichnen von sauberen Auswahlmenüs (z.B. Dateilisten) in der Konsole, hält die Logik aus dem Hauptmenü heraus.
-
-- **`FfmpegProcessor`**
-  *Legacy (Veraltet).* Eine ältere Iteration der FFmpeg-Implementierung, die für Abwärtskompatibilität noch im Projekt liegt, aber weitgehend vom Toolkit abgelöst wurde.
-
-### 🔑 3. Namespace: `GoogleGenAi`
-Alles rund um die Authentifizierung und Verbindungsaufbau zu den Google Servern.
-
-- **`GoogleAiClientBuilder`**
-  Sucht sicher nach API-Keys in den Windows-Umgebungsvariablen (`API_KEY-ai-studio-test-project-X`) und instanziiert den offiziellen `Google.GenAI.Client`. Entscheidet anhand der Konfiguration, ob ein AI Studio- oder ein Vertex AI-Client gebaut wird.
-
-### ⚙️ 4. Namespace: `Config`
-Zentrale Steuerung aller Parameter des Programms.
-
-- **`AppConfig` (Statische Klasse)**
-  Der "Single Point of Truth" für das gesamte Programm. Beinhaltet absolute Pfade zu Arbeitsverzeichnissen, Upload-Ordnern, History-Ordnern und System-Prompts (`gemini.md`). Definiert außerdem die Standard-Modellparameter (`Temperature`, `MaxOutputTokens`, etc.).
-
-- **`ChatConfig`, `VertexAiConfig`, `AIConfig` (DTOs)**
-  Datenklassen, die zur Strukturierung der Konfiguration innerhalb von `AppConfig` genutzt werden. Erlauben es, Sitzungen Parameter als sauberes Objekt zu übergeben.
-
-### 🚀 Einstiegspunkt (Kein expliziter Namespace)
-- **`Program`**
-  Die Hauptklasse (`Main`-Methode). Begrüßt den Benutzer mit dem Startmenü, fragt den gewünschten Betriebsmodus ab (AI Studio, Vertex AI oder lokales FFmpeg) und orchestriert die Instanziierung der entsprechenden Klassen. Hier sind auch die KI-Modelle (z.B. `gemini-2.5-pro`, `gemini-3.1-flash-lite-preview`) samt Preisinformationen hinterlegt.
+- **Two AI Ecosystems:** Switch between Google AI Studio (using the File API) and Vertex AI (using Google Cloud Storage buckets).
+- **Automated Extraction Pipeline:** Process folders of lecture videos. Videos are sliced into overlapping chunks to prevent context loss, transcribed sequentially by the AI, and cached locally.
+- **LaTeX Refinement & Merging:** A post-processing session that merges overlapping `.tex` chunks generated by the AI into a single, compilable document.
+- **FFmpeg Token Optimization:** Compresses video framerates to 1 FPS (ideal for blackboard content) and downmixes audio to mono, saving API tokens, cloud storage costs, and upload time.
+- **Interactive Multimodal REPL:** Chat directly with the models. Use the `/attach` command to load code, PDFs, or large videos directly into the model's context.
 
 ---
 
-## 💻 Bedienung & Befehle im Chat
+### 📂 Project Structure & Architecture
 
-Sobald du eine AI-Sitzung gestartet hast, kannst du normal mit der KI chatten. Zusätzlich gibt es spezielle "Built-in Commands":
+#### ⚙️ 1. Namespace: `AutoExtraction` (The Batch Pipeline)
+An automated pipeline for processing video folders.
 
-- **`attach datei1.mp4, code.tex | Deine Frage`**
-  Sucht die angegebenen Dateien, lädt sie hoch (GCS oder File API) und hängt sie unsichtbar an deine Nachricht an. Das `|` Zeichen trennt die Dateinamen von deinem tatsächlichen Prompt.
+- **`AiStudioAutoExtractionSession`**: Utilizes a **Producer-Consumer pattern** via `System.Threading.Channels`. FFmpeg processes videos in a background task (Producer) while Gemini processes the output sequentially via the API (Consumer) to improve throughput.
+- **`VertexAutoExtractionSession`**: The enterprise batch processor. Features cleanup routines that purge temporary Google Cloud Storage buckets after *each video chunk* to prevent unnecessary cloud storage billing.
 
-- **`clear` / `reset`**
-  Löscht das Kurzzeitgedächtnis (den Chat-Verlauf) der KI und setzt sie auf den Zustand unmittelbar nach dem Laden der System-Instruction / History zurück.
+#### 💬 2. Namespace: `DirectChatAiInteraction` (Interactive & Post-Processing)
+Handles all manual interactions, file resolution, and the final LaTeX assembly.
 
-- **`set temp 0.1`**
-  Ändert die Kreativität der KI dynamisch für die nächsten Anfragen (0.0 = extrem präzise/deterministisch, gut für Code; 1.0+ = sehr kreativ).
+- **`LatexRefinementSession`**: The final step in the pipeline. It reads all fragmented `.tex` files generated by the extraction phase and tasks a deterministic Gemini model (Temperature = 0.0) to merge overlapping sentences and equations into a final `refined_output.tex`.
+- **`GoogleAIStudioChatSession` & `VertexAiChatSession`**: The core REPL managers for interactive chatting, dynamic parameter tuning (`/set temp`), and manual prompt debugging.
+- **`AttachmentHandler`**: A file discovery system. Finds local files across multiple fallback directories and orchestrates uploads (Text is embedded directly; Media is pushed to File API or GCS).
+- **`SessionLogger`**: Automatically creates timestamped directories for every session, storing Markdown logs (`chat_log.md`) and numbering all raw LaTeX outputs.
 
-- **`set tokens 65535`**
-  Erhöht oder verringert das maximale Token-Limit für KI-Antworten.
+#### 🎬 3. Namespace: `FfmpegUtilities`
+Responsible for local audio and video processing prior to AI upload.
 
-- **`exit` / `quit`**
-  Beendet die Chat-Sitzung ordnungsgemäß und bereinigt Cloud-Speicher (löscht temporäre GCS-Uploads).
+- **`FfmpegToolkit`**: Headless FFmpeg command builder. Used for `ProcessSplitVideoAsync` (cutting lectures into exactly 3-minute overlapping segments to prevent sentence truncation) and `ProcessGeneralVideoAsync`.
+
+#### 🚀 4. Main Menu Workflow (`Program.cs`)
+Upon starting the application, you are presented with 5 operational modes:
+1. **Google AI Studio Chat:** Interactive developer endpoint session.
+2. **Vertex AI Chat:** Interactive enterprise endpoint session.
+3. **FFmpeg Manager:** Manual, local video optimization utility.
+4. **Automated Content Extraction:** The batch processing pipeline.
+5. **LaTeX Refinement:** Post-processing merger for generated transcripts.
 
 ---
 
-## 🛠️ Vorbedingungen & Setup
+### 🛠️ Prerequisites & Setup
+
+1. **FFmpeg:** Must be installed on the system and accessible as a global environment variable (PATH).
+2. **Google AI Studio:** Requires environment variables for specific API Keys depending on the mode:
+   - `API_KEY-ai-studio-test-project-1` (Interactive Chat)
+   - `API_KEY-automated-content-extraction` (AutoExtraction Pipeline)
+   - `API_KEY-latex-refinement` (Refinement Pipeline)
+3. **Google Cloud Vertex AI:** Requires the Google Cloud CLI (`gcloud`) to be installed and authenticated via `gcloud auth application-default login`. The linked project must have an active Billing Account.
+4. **System Instruction (`gemini.md`):** The application relies on a comprehensive system prompt file that dictates the strict LaTeX formatting rules and custom environments (e.g., `\begin{spoken-clean}`). You must configure the absolute path to this file in the application's configuration classes before running.
+
+<br>
+
+---
+
+## 🇩🇪 Deutsch
+
+Dieses Projekt ist ein C#-Konsolenwerkzeug, das entwickelt wurde, um die Transkription und Übersetzung von akademischen Vorlesungsvideos in LaTeX-Skripte mithilfe von Google Geminis multimodalen Fähigkeiten zu automatisieren.
+
+Es schlägt die Brücke zwischen lokaler Videovorverarbeitung (FFmpeg) und cloudbasierter KI-Inferenz und unterstützt sowohl einen **interaktiven Chat-Modus** als auch eine **automatisierte Batch-Extraktions-Pipeline**. Es unterstützt kostenlose/Developer-Umgebungen via **Google AI Studio** sowie Enterprise-Workloads via **Google Cloud Vertex AI**.
+
+---
+
+### ✨ Hauptfeatures
+
+- **Zwei KI-Ökosysteme:** Wechsel zwischen Google AI Studio (über die File API) und Vertex AI (über Google Cloud Storage Buckets).
+- **Automatisierte Extraktions-Pipeline:** Verarbeitet Ordner von Vorlesungsvideos. Videos werden in überlappende Segmente geschnitten (um Kontextverlust zu verhindern), sequenziell von der KI transkribiert und lokal zwischengespeichert.
+- **LaTeX Refinement & Merging:** Ein Post-Processing-Schritt, der überlappende `.tex`-Stücke zu einem einzigen, kompilierbaren Gesamtdokument verschmilzt.
+- **FFmpeg Token-Optimierung:** Komprimiert Videos auf 1 FPS (ideal für Tafeln) und mischt Audio zu Mono ab, was API-Tokens, Cloud-Speicherkosten und Upload-Zeit spart.
+- **Interaktive REPL:** Chatte direkt mit den Modellen. Nutze den Befehl `/attach`, um Code, PDFs oder große Videos direkt in den Kontext des Modells zu laden.
+
+---
+
+### 📂 Projektstruktur & Architektur
+
+#### ⚙️ 1. Namespace: `AutoExtraction` (Die Batch Pipeline)
+Eine automatisierte Pipeline zur Verarbeitung von Video-Ordnern.
+
+- **`AiStudioAutoExtractionSession`**: Nutzt ein **Producer-Consumer-Muster** via `System.Threading.Channels`. FFmpeg verarbeitet Videos im Hintergrund (Producer), während Gemini die Ergebnisse sequenziell abarbeitet (Consumer), um den Durchsatz zu verbessern.
+- **`VertexAutoExtractionSession`**: Der Enterprise-Batch-Prozessor. Verfügt über Bereinigungsroutinen, die temporäre Google Cloud Storage Buckets nach *jedem einzelnen Video-Teil* löschen, um unnötige Cloud-Kosten zu verhindern.
+
+#### 💬 2. Namespace: `DirectChatAiInteraction` (Interaktiv & Post-Processing)
+Kümmert sich um manuelle Interaktionen, Dateiauflösung und den finalen LaTeX-Zusammenbau.
+
+- **`LatexRefinementSession`**: Der letzte Schritt in der Pipeline. Er liest alle von der Extraktion generierten `.tex`-Fragmente und beauftragt ein deterministisches Gemini-Modell (Temperature = 0.0), überlappende Sätze und Gleichungen in einem `refined_output.tex` zusammenzuführen.
+- **`GoogleAIStudioChatSession` & `VertexAiChatSession`**: Die Haupt-REPL-Manager für das interaktive Chatten, dynamische Parameter-Tuning (`/set temp`) und manuelle Prompt-Debugging.
+- **`AttachmentHandler`**: Ein Dateisuchsystem. Sucht in konfigurierten Ordnern nach Dateien und orchestriert den Upload.
+- **`SessionLogger`**: Erstellt automatisch für jede Sitzung einen Ordner (`folder-X-date`) und sichert dort Markdown-Logs sowie fortlaufend nummerierte `.tex`-Outputs.
+
+#### 🎬 3. Namespace: `FfmpegUtilities`
+Verantwortlich für die lokale Videoverarbeitung vor dem KI-Upload.
+
+- **`FfmpegToolkit`**: Headless FFmpeg Builder. Essenziell für `ProcessSplitVideoAsync` (schneidet Vorlesungen in überlappende 3-Minuten-Fragmente, damit Sätze nicht in der Mitte abbrechen).
+
+#### 🚀 4. Hauptmenü Workflow (`Program.cs`)
+Beim Start der Anwendung stehen 5 Betriebsmodi zur Verfügung:
+1. **Google AI Studio Chat:** Interaktive Chat-Sitzung (Developer Endpoint).
+2. **Vertex AI Chat:** Interaktive Chat-Sitzung (Enterprise Endpoint).
+3. **FFmpeg Manager:** Lokale, manuelle Video-Optimierung.
+4. **Automated Content Extraction:** Die vollautomatisierte Batch-Pipeline.
+5. **LaTeX Refinement:** Post-Processing, um die generierten Transkripte zu verschmelzen.
+
+---
+
+### 🛠️ Vorbedingungen & Setup
 
 1. **FFmpeg:** Muss auf dem System installiert und als globale Umgebungsvariable (PATH) erreichbar sein.
-2. **Google AI Studio:** Lege eine Umgebungsvariable namens `API_KEY-ai-studio-test-project-1` an und füge dort deinen Gemini API-Key ein.
+2. **Google AI Studio:** Erfordert Windows-Umgebungsvariablen für spezifische API-Keys (je nach Modus):
+   - `API_KEY-ai-studio-test-project-1` (Für den interaktiven Chat)
+   - `API_KEY-automated-content-extraction` (Für die AutoExtraction Pipeline)
+   - `API_KEY-latex-refinement` (Für das Post-Processing)
 3. **Google Cloud Vertex AI:** Setzt voraus, dass du die Google Cloud CLI (`gcloud`) installiert hast und über `gcloud auth application-default login` authentifiziert bist. Das verknüpfte Projekt muss über ein aktives Rechnungskonto (Billing Account) verfügen.
+4. **System Instruction (`gemini.md`):** Die Anwendung benötigt zwingend eine System-Instruktionsdatei, die der KI die genauen LaTeX-Formatierungsregeln und Custom-Environments (z.B. `\begin{spoken-clean}`) vorgibt. Der absolute Pfad zu dieser Datei muss vor dem Start in den Konfigurationsklassen des Programms hinterlegt werden.

@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace AiInteraction;
+namespace DirectChatAiInteraction;
 
 public class SessionLoggerConfig {
   public string LogFolderPath { get; set; } = @"D:\gemini-logs";

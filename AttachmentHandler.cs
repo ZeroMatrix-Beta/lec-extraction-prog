@@ -8,7 +8,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using static System.Console;
 
-namespace AiInteraction;
+namespace DirectChatAiInteraction;
 
 public class AttachmentHandlerConfig {
   public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";

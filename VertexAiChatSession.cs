@@ -8,10 +8,10 @@ using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Config;
-using AiInteraction;
+using DirectChatAiInteraction;
 using static System.Console;
 
-namespace AiInteraction.Vertex;
+namespace DirectChatAiInteraction.Vertex;
 
 /// <summary>
 /// [AI Context] Localized generation parameters for the Vertex AI Enterprise session.

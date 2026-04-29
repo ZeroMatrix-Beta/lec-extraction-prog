@@ -1,49 +1,83 @@
 using System;
 using System.IO;
+using Microsoft.Extensions.Configuration;
 
 namespace Config;
 
-/// <summary>
-/// [AI Context] Centralized 'Single Point of Truth' for all hardcoded paths and default parameters.
-/// [Human] Hier kannst du alle Festplatten-Pfade, Cloud-Buckets und Standard-Prompts an einem einzigen Ort ändern.
-/// </summary>
-public static class AppConfig {
-  // --- Basis-Verzeichnisse (Directories) ---
-  public static readonly string BaseLectureFolder = @"D:\lecture-videos";
-  public static readonly string UploadFolder = @"D:\gemini-upload-folder";
-  public static readonly string LogFolder = @"D:\gemini-logs";
-  public static readonly string[] HistoryPreloadPaths = new[] {
+// [AI Context] The DTO that directly maps to the structure of the appsettings.json file.
+// We provide default fallback values here just in case the JSON file is missing or malformed.
+public class AppConfigOptions {
+  public string BaseLectureFolder { get; set; } = @"D:\lecture-videos";
+  public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
+  public string LogFolder { get; set; } = @"D:\gemini-logs";
+  public string[] HistoryPreloadPaths { get; set; } = new[] {
     @"C:\Users\miche\latex\directors-cut-analysis2\gemini-chat-history",
     @"D:\ETH HS 2025\Analysis I HS 2025\Analysis_I_Skript_I_25-12-22.pdf"
   };
+  public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+  public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
+  public string VertexLocation { get; set; } = "global";
+  public string VertexGcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
+  public string DefaultModel { get; set; } = "gemini-3-flash-preview";
+  public string RefinementModel { get; set; } = "gemini-2.5-pro";
+  public float DefaultTemperature { get; set; } = 0.1f;
+  public float DefaultTopP { get; set; } = 0.9f;
+  public int DefaultTopK { get; set; } = 10;
+  public int DefaultMaxOutputTokens { get; set; } = 65535;
+  public string AutoExtractionPrompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
+}
+
+/// <summary>
+/// [AI Context] Centralized 'Single Point of Truth' for all hardcoded paths and default parameters.
+/// Uses the Microsoft.Extensions.Configuration binder to dynamically load values from appsettings.json.
+/// </summary>
+public static class AppConfig {
+  private static readonly AppConfigOptions _options;
+
+  static AppConfig() {
+    // [AI Context] Automatically looks for appsettings.json in the compiled output directory.
+    var configuration = new ConfigurationBuilder()
+        .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+        .Build();
+
+    _options = new AppConfigOptions();
+    configuration.GetSection("AppConfig").Bind(_options);
+  }
+
+  // --- Basis-Verzeichnisse (Directories) ---
+  public static string BaseLectureFolder => _options.BaseLectureFolder;
+  public static string UploadFolder => _options.UploadFolder;
+  public static string LogFolder => _options.LogFolder;
+  public static string[] HistoryPreloadPaths => _options.HistoryPreloadPaths;
 
   // --- Dynamisch zusammengesetzte Pfade ---
-  public static readonly string AutoExtractionSourceFolder = Path.Combine(BaseLectureFolder, "analysis2");
-  public static readonly string AutoExtractionTargetFolder = Path.Combine(BaseLectureFolder, @"analysis2\destination2");
+  public static string AutoExtractionSourceFolder => Path.Combine(BaseLectureFolder, "analysis2");
+  public static string AutoExtractionTargetFolder => Path.Combine(BaseLectureFolder, @"analysis2\destination2");
 
-  public static readonly string VertexAutoExtractionSourceFolder = Path.Combine(BaseLectureFolder, @"d-und-a\new");
-  public static readonly string VertexAutoExtractionTargetFolder = Path.Combine(BaseLectureFolder, @"d-und-a\extracted");
+  public static string VertexAutoExtractionSourceFolder => Path.Combine(BaseLectureFolder, @"d-und-a\new");
+  public static string VertexAutoExtractionTargetFolder => Path.Combine(BaseLectureFolder, @"d-und-a\extracted");
 
-  public static readonly string LatexRefinementSourceFolder = Path.Combine(BaseLectureFolder, @"analysis2\destination\tex-refinement");
-  public static readonly string LatexRefinementTargetFolder = Path.Combine(BaseLectureFolder, @"analysis2\destination\tex-refinement\refined");
+  public static string LatexRefinementSourceFolder => Path.Combine(BaseLectureFolder, @"analysis2\destination\tex-refinement");
+  public static string LatexRefinementTargetFolder => Path.Combine(BaseLectureFolder, @"analysis2\destination\tex-refinement\refined");
 
-  public static readonly string FfmpegSourceFolder = Path.Combine(BaseLectureFolder, "d-und-a");
-  public static readonly string FfmpegTargetFolder = Path.Combine(BaseLectureFolder, @"d-und-a\new");
+  public static string FfmpegSourceFolder => Path.Combine(BaseLectureFolder, "d-und-a");
+  public static string FfmpegTargetFolder => Path.Combine(BaseLectureFolder, @"d-und-a\new");
 
   // --- Dateien (Files) ---
-  public static readonly string SystemInstructionPath = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+  public static string SystemInstructionPath => _options.SystemInstructionPath;
 
   // --- Cloud & API ---
-  public static readonly string VertexProjectId = "vertex-ai-experiments-494320";
-  public static readonly string VertexLocation = "global";
-  public static readonly string VertexGcsBucketName = "vertex-ai-experiments-upload-bucket-us";
+  public static string VertexProjectId => _options.VertexProjectId;
+  public static string VertexLocation => _options.VertexLocation;
+  public static string VertexGcsBucketName => _options.VertexGcsBucketName;
 
   // --- Standard KI-Parameter ---
-  public static readonly string DefaultModel = "gemini-3-flash-preview";
-  public static readonly string RefinementModel = "gemini-2.5-pro";
-  public static readonly float DefaultTemperature = 0.1f;
-  public static readonly float DefaultTopP = 0.9f;
-  public static readonly int DefaultTopK = 10;
-  public static readonly int DefaultMaxOutputTokens = 65535;
-  public static readonly string AutoExtractionPrompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
+  public static string DefaultModel => _options.DefaultModel;
+  public static string RefinementModel => _options.RefinementModel;
+  public static float DefaultTemperature => _options.DefaultTemperature;
+  public static float DefaultTopP => _options.DefaultTopP;
+  public static int DefaultTopK => _options.DefaultTopK;
+  public static int DefaultMaxOutputTokens => _options.DefaultMaxOutputTokens;
+  public static string AutoExtractionPrompt => _options.AutoExtractionPrompt;
 }

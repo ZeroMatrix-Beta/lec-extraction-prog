@@ -9,10 +9,10 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using GoogleGenAi;
 using Config;
-using AiInteraction;
+using DirectChatAiInteraction;
 using static System.Console;
 
-namespace AiInteraction.GoogleAIStudio;
+namespace DirectChatAiInteraction.GoogleAIStudio;
 
 /// <summary>
 /// [AI Context] Localized generation parameters for the Google AI Studio session.
