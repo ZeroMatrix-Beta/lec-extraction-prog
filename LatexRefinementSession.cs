@@ -130,11 +130,19 @@ public class LatexRefinementSession {
         Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
+        if (ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase)) {
+          var metricMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Quota exceeded for metric: ([^,]+)");
+          if (metricMatch.Success) Console.WriteLine($"  [Quota-Info] Limit erreicht für: {metricMatch.Groups[1].Value.Trim()}");
+
+          var retryTimeMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Please retry in ([^s]+s)");
+          if (retryTimeMatch.Success) Console.WriteLine($"  [Quota-Info] API-Sperre aktiv für: {retryTimeMatch.Value}");
+        }
+
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
         if (attempt < maxRetries && isOverloaded) {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 2;
+            int waitTime = serverSuggestedDelay + 10;
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await SmartDelayAsync(waitTime)) {
               Console.WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");

@@ -202,6 +202,12 @@ public class AttachmentHandler {
       catch (Exception ex) {
         WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         WriteLine($"Originaler Fehlertext: {ex.Message}");
+
+        if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException || ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase)) {
+          WriteLine("  [Netzwerk-Fehler] Der Google-Server konnte nicht erreicht werden.");
+          WriteLine("  Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
+        }
+
         WriteLine($"  [Fehler] Upload über File API fehlgeschlagen.");
         return false;
       }
@@ -226,6 +232,12 @@ public class AttachmentHandler {
       catch (Exception ex) {
         WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         WriteLine($"Originaler Fehlertext: {ex.Message}");
+
+        if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException || ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase)) {
+          WriteLine("  [Netzwerk-Fehler] Der Google Cloud Storage konnte nicht erreicht werden.");
+          WriteLine("  Bitte prüfe deine Internetverbindung.");
+        }
+
         WriteLine($"  [Fehler] Upload in GCS fehlgeschlagen.");
         return false;
       }
