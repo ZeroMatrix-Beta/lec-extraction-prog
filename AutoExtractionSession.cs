@@ -153,6 +153,8 @@ public class AiStudioAutoExtractionSession {
   private bool _historyWasLoaded = false;
   // [AI Context] Stateful history exclusively for the REPL loop's debug chat.
   private List<Content> _debugChatHistory = new List<Content>();
+  private int _sessionTotalInputTokens = 0;
+  private int _sessionTotalOutputTokens = 0;
 
   public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger) {
     _client = client;
@@ -185,38 +187,50 @@ public class AiStudioAutoExtractionSession {
       }
     }
 
-    Console.Write($"\nSystem Instruction aus '{_config.SystemInstructionPath}' laden? (j/n): ");
-    if (Console.ReadLine()?.Trim().ToLower() == "j" && System.IO.File.Exists(_config.SystemInstructionPath)) {
-      _systemInstructionText = await System.IO.File.ReadAllTextAsync(_config.SystemInstructionPath);
-      Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
+    await ReplLoopAsync();
+  }
+
+  private async Task SetupContextAndProcessAsync(string[] files) {
+    if (files == null || files.Length == 0) {
+      Console.WriteLine("Keine Dateien ausgewählt.");
+      return;
     }
 
-    Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
-    if (Console.ReadLine()?.Trim().ToLower() == "j") {
-      var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+    if (string.IsNullOrEmpty(_systemInstructionText)) {
+      Console.Write($"\nSystem Instruction aus '{_config.SystemInstructionPath}' laden? (j/n): ");
+      if (Console.ReadLine()?.Trim().ToLower() == "j" && System.IO.File.Exists(_config.SystemInstructionPath)) {
+        _systemInstructionText = await System.IO.File.ReadAllTextAsync(_config.SystemInstructionPath);
+        Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
+      }
+    }
 
-      if (distinctFiles.Any()) {
-        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
-        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
-        if (success && attachmentParts.Any()) {
-          _historyParts.AddRange(attachmentParts);
-          _historyWasLoaded = true;
-          Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-          await AcknowledgeHistoryAsync();
-        }
-        else {
-          Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+    if (!_historyWasLoaded) {
+      Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
+      if (Console.ReadLine()?.Trim().ToLower() == "j") {
+        var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+
+        if (distinctFiles.Any()) {
+          Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+          string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+          var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
+          if (success && attachmentParts.Any()) {
+            _historyParts.AddRange(attachmentParts);
+            _historyWasLoaded = true;
+            Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
+            await AcknowledgeHistoryAsync();
+          }
+          else {
+            Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+          }
         }
       }
     }
 
-    // Update metadata in case AcknowledgeHistoryAsync failed and reset the flag
     _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
     _sessionLogger.InitializeSession();
     await _sessionLogger.LogSessionSetupAsync();
 
-    await ReplLoopAsync();
+    await ProcessFilesAsync(files);
   }
 
   /// <summary>
@@ -277,12 +291,12 @@ public class AiStudioAutoExtractionSession {
       else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) {
         var files = FfmpegUtilities.ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
         if (files.Length > 0) {
-          await ProcessFilesAsync(files);
+          await SetupContextAndProcessAsync(files);
         }
       }
       else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
         var files = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-        await ProcessFilesAsync(files);
+        await SetupContextAndProcessAsync(files);
       }
       else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
         _debugChatHistory.Clear();
@@ -354,13 +368,26 @@ public class AiStudioAutoExtractionSession {
 
       try {
         if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
+        int requestInputTokens = 0;
+        int requestOutputTokens = 0;
+
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _debugChatHistory, requestConfig);
         await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
           if (cts.IsCancellationRequested) break;
           string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           fullResponse += txt;
+          if (chunk.UsageMetadata != null) {
+            if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+          }
         }
+
+        _sessionTotalInputTokens += requestInputTokens;
+        _sessionTotalOutputTokens += requestOutputTokens;
+        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+        Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+
         Console.WriteLine();
         isGenerating = false;
         await inputInterceptorTask;
@@ -450,13 +477,27 @@ public class AiStudioAutoExtractionSession {
 
       try {
         if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
+
+        int requestInputTokens = 0;
+        int requestOutputTokens = 0;
+
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _sessionPreamble, requestConfig);
         await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
           if (cts.IsCancellationRequested) break;
           string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           fullResponse += txt;
+          if (chunk.UsageMetadata != null) {
+            if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+          }
         }
+
+        _sessionTotalInputTokens += requestInputTokens;
+        _sessionTotalOutputTokens += requestOutputTokens;
+        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+        Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+
         Console.WriteLine();
         success = true;
         break; // Success
@@ -692,6 +733,9 @@ public class AiStudioAutoExtractionSession {
     int attempt = 1; // Zähler für API-Fehlschläge
     int maxRetries = 5;
 
+    int interactionInputTokens = 0;
+    int interactionOutputTokens = 0;
+
     while (true) {
       bool isGenerating = true;
       var inputInterceptorTask = Task.Run(async () => {
@@ -707,13 +751,29 @@ public class AiStudioAutoExtractionSession {
       try {
         Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequests})...");
 
+        int requestInputTokens = 0;
+        int requestOutputTokens = 0;
+
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
         string chunkResp = "";
         await foreach (var chunk in responseStream) {
           string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           chunkResp += txt;
+          if (chunk.UsageMetadata != null) {
+            if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+          }
         }
+
+        interactionInputTokens += requestInputTokens;
+        interactionOutputTokens += requestOutputTokens;
+        _sessionTotalInputTokens += requestInputTokens;
+        _sessionTotalOutputTokens += requestOutputTokens;
+
+        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+        Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens}");
+        Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
         isGenerating = false;
         await inputInterceptorTask;
@@ -831,6 +891,8 @@ public class VertexAutoExtractionSession {
   private readonly VertexAutoExtractionConfig _config;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
+  private int _sessionTotalInputTokens = 0;
+  private int _sessionTotalOutputTokens = 0;
   // [AI Context] Enterprise session state. Note the absence of the REPL loop, as this is intended for unattended bulk operations.
 
   public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger) {
@@ -859,6 +921,27 @@ public class VertexAutoExtractionSession {
     }
 
     await CleanupBucketAsync(); // Clean up before starting
+
+    Console.WriteLine("\nVerarbeitungsmodus wählen:");
+    Console.WriteLine(" 1) Ein einzelnes Video interaktiv auswählen");
+    Console.WriteLine(" 2) Alle Videos im Quellordner verarbeiten");
+    Console.Write("Auswahl (1-2) [Standard: 2]: ");
+    string modeChoice = Console.ReadLine()?.Trim() ?? "2";
+
+    string[] filesToProcess;
+    if (modeChoice == "1") {
+      filesToProcess = FfmpegUtilities.ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
+    }
+    else {
+      filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+    }
+
+    if (filesToProcess == null || filesToProcess.Length == 0) {
+      Console.WriteLine("[AutoExtraction] Keine Dateien zum Verarbeiten gefunden oder Auswahl abgebrochen.");
+      return;
+    }
+
+    filesToProcess = filesToProcess.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
 
     _sessionLogger.InitializeSession();
 
@@ -896,13 +979,97 @@ public class VertexAutoExtractionSession {
     _sessionLogger.SetSessionMetadata(loadedSysPrompt, historyWasLoaded);
     await _sessionLogger.LogSessionSetupAsync();
 
-    string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-    if (filesToProcess.Length == 0) {
-      Console.WriteLine("[AutoExtraction] Keine Dateien zum Verarbeiten gefunden.");
-      return;
-    }
+    if (historyWasLoaded && historyParts.Any()) {
+      var historyPromptParts = new List<Part>(historyParts);
+      historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+      sessionPreamble.Add(new Content { Role = "user", Parts = historyPromptParts });
 
-    filesToProcess = filesToProcess.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
+      var requestConfig = new GenerateContentConfig { Temperature = 0.0f, MaxOutputTokens = 1024 };
+      if (!string.IsNullOrWhiteSpace(systemInstruction)) {
+        requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
+      }
+      if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+      }
+
+      Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
+      string fullResponse = "";
+      int backoff = 30;
+      int maxRetries = 5;
+      bool success = false;
+
+      for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        using var cts = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+        Console.CancelKeyPress += cancelHandler;
+
+        try {
+          if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
+          int requestInputTokens = 0;
+          int requestOutputTokens = 0;
+
+          var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, sessionPreamble, requestConfig);
+          await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
+            if (cts.IsCancellationRequested) break;
+            string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+            Console.Write(txt);
+            fullResponse += txt;
+            if (chunk.UsageMetadata != null) {
+              if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+              if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+            }
+          }
+
+          _sessionTotalInputTokens += requestInputTokens;
+          _sessionTotalOutputTokens += requestOutputTokens;
+          Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+          Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+
+          Console.WriteLine();
+          success = true;
+          break; // Success
+        }
+        catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
+          Console.WriteLine("\n[INFO] Bestätigung durch Benutzer abgebrochen.");
+          break;
+        }
+        catch (Exception ex) {
+          Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+          Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+          bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+          if (isOverloaded && attempt < maxRetries) {
+            var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
+              int waitTime = serverSuggestedDelay + 15;
+              Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
+              if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
+            }
+            else {
+              Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
+              if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { break; }
+            }
+            backoff *= 2;
+          }
+          else {
+            Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+            break;
+          }
+        }
+        finally {
+          Console.CancelKeyPress -= cancelHandler;
+        }
+      }
+
+      if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
+        sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+        await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text ?? "", _config.Model, fullResponse, "AutoExtractionSetup");
+      }
+      else {
+        Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Die History wird für diese Session ignoriert.");
+        sessionPreamble.Clear();
+        historyWasLoaded = false;
+      }
+    }
 
     Console.WriteLine($"[AutoExtraction] {filesToProcess.Length} Datei(en) gefunden. Starte Verarbeitung...");
 
@@ -1100,10 +1267,21 @@ public class VertexAutoExtractionSession {
     string outputTextForPart = "";
     int currentRequest = 1;
     int maxRequests = 15;
+    int interactionInputTokens = 0;
+    int interactionOutputTokens = 0;
 
     while (true) {
       var result = await TryStreamChunkAsync(contents, requestConfig, partIndex, currentRequest, maxRequests, maxRetries, backoff, cts);
       backoff = result.newBackoff;
+
+      interactionInputTokens += result.requestInputTokens;
+      interactionOutputTokens += result.requestOutputTokens;
+      _sessionTotalInputTokens += result.requestInputTokens;
+      _sessionTotalOutputTokens += result.requestOutputTokens;
+
+      Console.WriteLine($"\n  [Request Tokens] Input: {result.requestInputTokens} | Output: {result.requestOutputTokens}");
+      Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens}");
+      Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
       if (result.userCancelled) break;
 
@@ -1143,11 +1321,13 @@ public class VertexAutoExtractionSession {
     return outputTextForPart;
   }
 
-  private async Task<(string chunkOutput, bool userCancelled, bool streamDropped, int newBackoff)> TryStreamChunkAsync(
+  private async Task<(string chunkOutput, bool userCancelled, bool streamDropped, int newBackoff, int requestInputTokens, int requestOutputTokens)> TryStreamChunkAsync(
     List<Content> contents, GenerateContentConfig requestConfig, int partIndex, int currentRequest, int maxRequests, int maxRetries, int backoff, CancellationTokenSource cts) {
     string chunkOutput = "";
     bool streamDropped = false;
     bool userCancelled = false;
+    int requestInputTokens = 0;
+    int requestOutputTokens = 0;
 
     int attempt = 1;
     for (; attempt <= maxRetries; attempt++) {
@@ -1174,6 +1354,10 @@ public class VertexAutoExtractionSession {
           string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           chunkOutput += txt;
+          if (chunk.UsageMetadata != null) {
+            if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+          }
         }
 
         isGenerating = false;
@@ -1222,7 +1406,7 @@ public class VertexAutoExtractionSession {
       }
     }
 
-    return (chunkOutput, userCancelled, streamDropped, backoff);
+    return (chunkOutput, userCancelled, streamDropped, backoff, requestInputTokens, requestOutputTokens);
   }
 
   /// <summary>

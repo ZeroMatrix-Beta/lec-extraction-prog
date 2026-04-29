@@ -70,6 +70,8 @@ public class VertexAiChatSession {
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
   private readonly Client _client;
+  private int _sessionTotalInputTokens = 0;
+  private int _sessionTotalOutputTokens = 0;
 
   // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
   public VertexAiChatSession(Client client, VertexAiConfig config, SessionLogger logger, AttachmentHandler attachmentHandler) {
@@ -446,7 +448,10 @@ public class VertexAiChatSession {
       Console.CancelKeyPress -= cancelHandler;
 
       if (outputTokens > 0) {
-        WriteLine($"\n[Token-Verbrauch] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+        _sessionTotalInputTokens += inputTokens;
+        _sessionTotalOutputTokens += outputTokens;
+        WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+        WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
       }
 
       if (exceptionCaught || cts.IsCancellationRequested) {

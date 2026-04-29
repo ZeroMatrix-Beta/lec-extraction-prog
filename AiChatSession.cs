@@ -96,6 +96,8 @@ public class GoogleAIStudioChatSession {
   private readonly SessionLogger _sessionLogger;
   private Client _client;
   private int _activeApiProfile;
+  private int _sessionTotalInputTokens = 0;
+  private int _sessionTotalOutputTokens = 0;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
   public GoogleAIStudioChatSession(Client client, GoogleAIStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
@@ -531,7 +533,10 @@ public class GoogleAIStudioChatSession {
       Console.CancelKeyPress -= cancelHandler;
 
       if (outputTokens > 0) {
-        WriteLine($"\n[Token-Verbrauch] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+        _sessionTotalInputTokens += inputTokens;
+        _sessionTotalOutputTokens += outputTokens;
+        WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+        WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
       }
 
       if (exceptionCaught || cts.IsCancellationRequested) {
