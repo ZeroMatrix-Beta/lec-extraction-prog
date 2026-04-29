@@ -5,15 +5,16 @@ using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
 using DocumentUtilities;
+using Config;
 
 namespace DirectChatAiInteraction;
 
 // [AI Context] Configuration specifically for the post-processing phase. TargetFolder specifies where the compiled, polished .tex/.pdf will be dropped.
 public class LatexRefinementConfig {
-  public string GeminiMdPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
-  public string Model { get; set; } = "gemini-2.5-pro";
-  public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination\tex-refinement\refined";
-  public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2\destination\tex-refinement";
+  public string GeminiMdPath { get; set; } = AppConfig.SystemInstructionPath;
+  public string Model { get; set; } = AppConfig.RefinementModel;
+  public string TargetFolder { get; set; } = AppConfig.LatexRefinementTargetFolder;
+  public string SourceFolder { get; set; } = AppConfig.LatexRefinementSourceFolder;
 }
 
 /// <summary>
@@ -95,13 +96,14 @@ public class LatexRefinementSession {
     Console.WriteLine($"\nSende Refinement-Anfrage an Gemini ({_config.Model})...");
     int maxRetries = 5;
     int backoff = 30;
+    string fullText = "";
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      fullText = "";
       // [AI Context] Implements an exponential backoff retry mechanism specifically tuned for Google APIs handling massive payload sizes.
       try {
         if (attempt > 1) Console.WriteLine($"\n[API] Sende Anfrage (Versuch {attempt}/{maxRetries})...");
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
-        string fullText = "";
 
         await foreach (var chunk in responseStream) {
           string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";

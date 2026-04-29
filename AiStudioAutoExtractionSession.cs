@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using DirectChatAiInteraction;
+using Infrastructure;
 using Google.GenAI;
 using Google.GenAI.Types;
 
@@ -94,7 +95,7 @@ public class AiStudioAutoExtractionSession {
             _historyParts.AddRange(attachmentParts);
             _historyWasLoaded = true;
             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-            await AcknowledgeHistoryAsync();
+            if (!await AcknowledgeHistoryAsync()) return;
           }
           else {
             Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
@@ -123,6 +124,7 @@ public class AiStudioAutoExtractionSession {
     Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
     Console.WriteLine("  5) Beenden (exit/quit)");
     Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2')");
+    Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
     Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
     Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
 
@@ -145,6 +147,7 @@ public class AiStudioAutoExtractionSession {
         Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) Beenden (exit/quit)");
         Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2')");
+        Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
       }
@@ -193,10 +196,47 @@ public class AiStudioAutoExtractionSession {
           Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
         }
       }
+      else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
+        _config.Model = await SelectModelAsync();
+        Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt.");
+      }
       else {
         await DebugChatAsync(input); // Chat erhält den originalen Input
       }
     }
+  }
+
+  private async Task<string> SelectModelAsync() {
+    Console.WriteLine($"\n=== Model Selection (AI Studio) ===");
+    Console.WriteLine("Wähle ein Modell:");
+    Console.WriteLine(" 1) gemini-3.1-flash-lite-preview");
+    Console.WriteLine(" 2) gemini-3-flash-preview");
+    Console.WriteLine(" 3) gemini-3.1-pro-preview");
+    Console.WriteLine(" 4) gemini-2.5-flash");
+    Console.WriteLine(" 5) gemini-2.5-flash-lite");
+    Console.WriteLine(" 6) gemini-2.5-pro");
+    Console.WriteLine(" 7) gemma-3-27b-it");
+    Console.WriteLine(" 8) gemini-1.5-flash");
+    Console.WriteLine(" 9) gemini-1.5-pro");
+    Console.WriteLine("10) gemini-robotics-er-1.6-preview");
+    Console.Write($"Auswahl (1-10) [Aktuell: {_config.Model}]: ");
+
+    string choice = Console.ReadLine()?.Trim() ?? "";
+    if (string.IsNullOrEmpty(choice)) return _config.Model;
+
+    return choice switch {
+      "1" => "gemini-3.1-flash-lite-preview",
+      "2" => "gemini-3-flash-preview",
+      "3" => "gemini-3.1-pro-preview",
+      "4" => "gemini-2.5-flash",
+      "5" => "gemini-2.5-flash-lite",
+      "6" => "gemini-2.5-pro",
+      "7" => "gemma-3-27b-it",
+      "8" => "gemini-1.5-flash",
+      "9" => "gemini-1.5-pro",
+      "10" => "gemini-robotics-er-1.6-preview",
+      _ => choice.Contains("-") ? choice : _config.Model
+    };
   }
 
   /// <summary>
@@ -221,23 +261,24 @@ public class AiStudioAutoExtractionSession {
     }
 
     Console.Write($"\n[Debug Chat] {_config.Model} (Strg+C zum Abbrechen): ");
-    string fullResponse = "";
 
     using var cts = new CancellationTokenSource();
     ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
     Console.CancelKeyPress += cancelHandler;
 
-    int maxRetries = 5;
+    int maxRetries = 8;
     int backoff = 30;
+    string fullResponse = "";
     bool exceptionCaught = false;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      fullResponse = "";
       bool isGenerating = true;
       var inputInterceptorTask = Task.Run(async () => {
         while (isGenerating) {
           if (!Console.IsInputRedirected && Console.KeyAvailable) {
             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-            Console.WriteLine("\n[System] Still waiting for the acknowledgment / response. Please wait...");
+            Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
           }
           await Task.Delay(100);
         }
@@ -283,7 +324,7 @@ public class AiStudioAutoExtractionSession {
         Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt < maxRetries) {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
@@ -326,9 +367,9 @@ public class AiStudioAutoExtractionSession {
   /// This guarantees the model context is correctly primed before batch processing starts and provides immediate visual feedback.
   /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
   /// </summary>
-  private async Task AcknowledgeHistoryAsync() {
+  private async Task<bool> AcknowledgeHistoryAsync() {
     var historyPromptParts = new List<Part>(_historyParts);
-    historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+    historyPromptParts.Add(new Part { Text = $"Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
     var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
     _sessionPreamble.Add(userContent);
@@ -342,12 +383,13 @@ public class AiStudioAutoExtractionSession {
     }
 
     Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
-    string fullResponse = "";
     int backoff = 30;
-    int maxRetries = 5;
+    int maxRetries = 10;
     bool success = false;
+    string fullResponse = "";
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      fullResponse = "";
       using var cts = new CancellationTokenSource();
       ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
       Console.CancelKeyPress += cancelHandler;
@@ -377,7 +419,7 @@ public class AiStudioAutoExtractionSession {
 
         Console.WriteLine();
         success = true;
-        break; // Success
+        break;
       }
       catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
         Console.WriteLine("\n[INFO] Bestätigung durch Benutzer abgebrochen.");
@@ -386,7 +428,7 @@ public class AiStudioAutoExtractionSession {
       catch (Exception ex) {
         Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt < maxRetries) {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
@@ -413,11 +455,13 @@ public class AiStudioAutoExtractionSession {
     if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
       _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
       await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text ?? "", _config.Model, fullResponse, "AutoExtractionSetup");
+      return true;
     }
     else {
-      Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Die History wird für diese Session ignoriert.");
+      Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Breche Extraktion ab.");
       _sessionPreamble.Clear();
       _historyWasLoaded = false;
+      return false;
     }
   }
 
@@ -608,7 +652,7 @@ public class AiStudioAutoExtractionSession {
     int currentRequest = 1;
     int maxRequests = 5;
     int attempt = 1; // Zähler für API-Fehlschläge
-    int maxRetries = 5;
+    int maxRetries = 8;
 
     int interactionInputTokens = 0;
     int interactionOutputTokens = 0;
@@ -658,8 +702,8 @@ public class AiStudioAutoExtractionSession {
         fullResponse += chunkResp;
         await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt ?? "", _config.Model, chunkResp, "AutoExtraction");
 
-        bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         if (!videoComplete) {
           if (currentRequest >= maxRequests) {
@@ -688,7 +732,6 @@ public class AiStudioAutoExtractionSession {
           Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen...");
           await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
 
-          backoff = 30;
           attempt = 1;
           currentRequest++;
           continue;
@@ -710,7 +753,7 @@ public class AiStudioAutoExtractionSession {
         Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt < maxRetries) {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {

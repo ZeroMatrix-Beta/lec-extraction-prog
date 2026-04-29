@@ -8,14 +8,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using static System.Console;
 
-namespace DirectChatAiInteraction;
-
-public class AttachmentHandlerConfig {
-  public string UploadFolder { get; set; } = @"D:\gemin-upload-folder";
-  public string[] IncludePaths { get; set; } = Array.Empty<string>();
-  public bool IsAiStudio { get; set; } = true;
-  public string GcsBucketName { get; set; } = "";
-}
+namespace Infrastructure;
 
 /// <summary>
 /// [AI Context] Specialized handler for parsing commands, discovering local files, and securely uploading them to Google APIs.
@@ -30,12 +23,12 @@ public class AttachmentHandler {
   private Client _client;
 
   // [AI Context] Injects required runtime dependencies.
-  public AttachmentHandler(Client client, AttachmentHandlerConfig config) {
+  public AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName) {
     _client = client;
-    _uploadFolder = config.UploadFolder;
-    _includePaths = config.IncludePaths ?? Array.Empty<string>();
-    _isAiStudio = config.IsAiStudio;
-    _gcsBucketName = config.GcsBucketName;
+    _uploadFolder = uploadFolder;
+    _includePaths = includePaths ?? Array.Empty<string>();
+    _isAiStudio = isAiStudio;
+    _gcsBucketName = gcsBucketName;
   }
 
   public void UpdateClient(Client newClient) {

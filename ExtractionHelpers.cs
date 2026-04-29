@@ -35,7 +35,7 @@ internal static class ExtractionHelpers {
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
     // Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
-    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_|%)*\[SYSTEM\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
+    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_|%)*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
     return cleanTex.Trim();
   }
 
@@ -53,7 +53,7 @@ internal static class ExtractionHelpers {
         await Task.Delay(100);
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          Console.WriteLine($"\n[System] {message}");
+          Console.WriteLine($"\n[AI-Model] {message}");
         }
       }
       return true;

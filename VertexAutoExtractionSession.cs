@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DirectChatAiInteraction;
+using Infrastructure;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
@@ -51,6 +52,8 @@ public class VertexAutoExtractionSession {
     }
 
     await CleanupBucketAsync(); // Clean up before starting
+
+    _config.Model = await SelectModelAsync();
 
     Console.WriteLine("\nVerarbeitungsmodus wählen:");
     Console.WriteLine(" 1) Ein einzelnes Video interaktiv auswählen");
@@ -111,7 +114,7 @@ public class VertexAutoExtractionSession {
 
     if (historyWasLoaded && historyParts.Any()) {
       var historyPromptParts = new List<Part>(historyParts);
-      historyPromptParts.Add(new Part { Text = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+      historyPromptParts.Add(new Part { Text = $"Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
       sessionPreamble.Add(new Content { Role = "user", Parts = historyPromptParts });
 
       var requestConfig = new GenerateContentConfig { Temperature = 0.0f, MaxOutputTokens = 1024 };
@@ -195,9 +198,8 @@ public class VertexAutoExtractionSession {
         await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text ?? "", _config.Model, fullResponse, "AutoExtractionSetup");
       }
       else {
-        Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Die History wird für diese Session ignoriert.");
-        sessionPreamble.Clear();
-        historyWasLoaded = false;
+        Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Breche Extraktion ab.");
+        return;
       }
     }
 
@@ -211,6 +213,41 @@ public class VertexAutoExtractionSession {
       await ProcessSingleFileAsync(file, toolkit, tmpFolder, sessionPreamble, systemInstruction);
     }
     Console.WriteLine("\n[AutoExtraction] Vertex Batch-Verarbeitung abgeschlossen!");
+  }
+
+  private async Task<string> SelectModelAsync() {
+    Console.WriteLine("\n=== Model Selection (Vertex AI Enterprise) ===");
+    Console.WriteLine("Wähle ein Modell für die Batch-Extraktion:");
+    Console.WriteLine(" 1) gemini-3.1-flash-lite-preview || (Most cost-efficient)");
+    Console.WriteLine(" 2) gemini-3-flash-preview");
+    Console.WriteLine(" 3) gemini-3.1-pro-preview        || (High logic, expensive)");
+    Console.WriteLine(" 4) gemini-2.5-flash              || (Recommended default)");
+    Console.WriteLine(" 5) gemini-2.5-flash-lite");
+    Console.WriteLine(" 6) gemini-2.5-pro");
+    Console.WriteLine(" 7) gemini-1.5-flash");
+    Console.WriteLine(" 8) gemini-1.5-pro");
+    Console.WriteLine(" 9) gemini-robotics-er-1.6-preview");
+
+    Console.Write($"Auswahl (1-9) [Aktuell: {_config.Model}]: ");
+    string choice = Console.ReadLine()?.Trim() ?? "";
+
+    if (string.IsNullOrEmpty(choice)) return _config.Model;
+
+    string selected = choice switch {
+      "1" => "gemini-3.1-flash-lite-preview",
+      "2" => "gemini-3-flash-preview",
+      "3" => "gemini-3.1-pro-preview",
+      "4" => "gemini-2.5-flash",
+      "5" => "gemini-2.5-flash-lite",
+      "6" => "gemini-2.5-pro",
+      "7" => "gemini-1.5-flash",
+      "8" => "gemini-1.5-pro",
+      "9" => "gemini-robotics-er-1.6-preview",
+      _ => choice.Contains("-") ? choice : _config.Model
+    };
+
+    Console.WriteLine($"  [INFO] Modell gesetzt auf: {selected}");
+    return selected;
   }
 
   private async Task ProcessSingleFileAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, List<Content> sessionPreamble, string systemInstruction) {
@@ -418,8 +455,8 @@ public class VertexAutoExtractionSession {
       outputTextForPart += result.chunkOutput;
       await _sessionLogger.LogChatAsync($"[Part {partIndex + 1}] {Path.GetFileName(originalFile)}", prompt ?? "", _config.Model, result.chunkOutput, "VertexAutoExtraction");
 
-      bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[SYSTEM\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-      bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[SYSTEM\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+      bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+      bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
       if (!videoComplete) {
         if (currentRequest >= maxRequests) {
@@ -466,7 +503,7 @@ public class VertexAutoExtractionSession {
         while (isGenerating) {
           if (!Console.IsInputRedirected && Console.KeyAvailable) {
             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-            Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
+            Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / processing...");
           }
           await Task.Delay(100);
         }

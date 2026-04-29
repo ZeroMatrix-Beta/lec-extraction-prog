@@ -8,6 +8,7 @@ using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Config;
+using Infrastructure;
 using DirectChatAiInteraction;
 using static System.Console;
 
@@ -38,15 +39,15 @@ public class VertexAIConfig {
 /// </summary>
 public class VertexAiConfig {
   // [AI Context] The Google Cloud Platform (GCP) Project ID associated with the billing account.
-  public string ProjectId { get; set; } = "vertex-ai-experiments-494320";
+  public string ProjectId { get; set; } = AppConfig.VertexProjectId;
   // [AI Context] Region for Vertex AI execution. Must support the requested Gemini models.
-  public string Location { get; set; } = "global"; // Changed from "us-central1" to "global"
-  public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
+  public string Location { get; set; } = AppConfig.VertexLocation;
+  public string UploadFolder { get; set; } = AppConfig.UploadFolder;
   public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
-  public string LogFolder { get; set; } = @"D:\gemini-logs";
+  public string LogFolder { get; set; } = AppConfig.LogFolder;
   // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
-  public string GcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
-  public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+  public string GcsBucketName { get; set; } = AppConfig.VertexGcsBucketName;
+  public string SystemInstructionPath { get; set; } = AppConfig.SystemInstructionPath;
   public string[] IncludePaths { get; set; } = new[] {
     @"D:\lecture-videos\d-und-a/",
     @"D:\lecture-videos\d-und-a/new"
@@ -61,7 +62,7 @@ public class VertexAiConfig {
 public class VertexAiChatSession {
   private readonly string UploadFolderPath;
   private readonly string[] HistoryPreloadPaths;
-  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
+  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
   private readonly string GcsBucketName;
   private readonly string LogFolderPath;
   private readonly string SystemInstructionPath;
@@ -307,7 +308,7 @@ public class VertexAiChatSession {
         await Task.Delay(100);
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          WriteLine($"\n[System] {message}");
+          WriteLine($"\n[AI-Model] {message}");
         }
       }
       return true;
@@ -416,7 +417,7 @@ public class VertexAiChatSession {
       while (isGenerating) {
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          WriteLine("\n[System] Still waiting for the acknowledgment / response. Please wait...");
+          WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
         }
         await Task.Delay(100);
       }
@@ -520,7 +521,7 @@ public class VertexAiChatSession {
     if (!loadHistory) return null;
 
     string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-    return $"attach {fileList} | {InitialHistoryPrompt}";
+    return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
   }
 
   /// <summary>

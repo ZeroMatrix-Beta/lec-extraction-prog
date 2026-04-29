@@ -10,65 +10,17 @@ using Google.GenAI.Types;
 using GoogleGenAi;
 using Config;
 using DirectChatAiInteraction;
+using Infrastructure;
 using static System.Console;
+using DirectChatAiInteraction.AiStudio;
 
-namespace DirectChatAiInteraction.GoogleAIStudio;
-
-/// <summary>
-/// [AI Context] Localized generation parameters for the Google AI Studio session.
-/// Dictates the deterministic vs. creative output distribution of the LLM.
-/// </summary>
-public class GoogleAIStudioAIConfig {
-  // [AI Context] Temperature (0.0 - 2.0). 0.0 = purely deterministic (best for strict code/math/transcripts). 1.0+ = highly creative (risk of hallucinations).
-  public float Temperature { get; set; } = 0.1f;
-
-  // [AI Context] TopP (Nucleus Sampling). 0.0 - 1.0. Lower values restrict vocabulary to the most probable tokens, cutting off the "long tail" of creative/random words.
-  public float TopP { get; set; } = 0.9f;
-
-  // [AI Context] TopK. Limits the vocabulary to the top K most likely next tokens. TopK=1 is greedy decoding (perfect for LaTeX generation).
-  public int TopK { get; set; } = 10;
-
-  // [AI Context] Hard cutoff limit for output generation. Does NOT affect verbosity, only truncates if exceeded. Set to maximum (65535) for large LaTeX scripts.
-  public int MaxOutputTokens { get; set; } = 65535;
-
-  // [AI Context] "Thinking" params introduced for the latest Gemini 2.5 and 3.x models. Strictly required for the 2.5 series.
-  public int? ThinkingBudget { get; set; } = 4096;
-
-  // [AI Context] Controls the internal reasoning time for the Gemini 3.x series (e.g., MINIMAL, LOW, MEDIUM, HIGH).
-  public string? ThinkingLevel { get; set; } = "HIGH";
-}
-
-/// <summary>
-/// [AI Context] DTO for Google AI Studio specific session configurations.
-/// Separated from VertexAI to prevent accidental contamination of free-tier and enterprise logic.
-/// </summary>
-public class GoogleAIStudioConfig {
-  // [AI Context] Selects the environment variable API key profile to use (1-3).
-  public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
-  public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
-  public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
-  public string LogFolder { get; set; } = @"D:\gemini-logs";
-
-  // [AI Context] Unused in AI Studio free tier, but retained for interface compatibility with the AttachmentHandler if needed.
-  public string GcsBucketName { get; set; } = "biran-linalg-source-material";
-  public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
-
-  // [AI Context] Defines fallback directories for the AttachmentHandler's ResolveFilePath method.
-  public string[] IncludePaths { get; set; } = new[] {
-    @"D:\lecture-videos\d-und-a/",
-    @"D:\lecture-videos\d-und-a/new"
-  };
-
-  // [AI Context] Nested generation config explicitly for AI Studio models.
-  public GoogleAIStudioAIConfig AI { get; set; } = new GoogleAIStudioAIConfig();
-}
-
+namespace DirectChatAiInteraction.AiStudio;
 /// <summary>
 /// [AI Context] Core REPL (Read-Eval-Print Loop) manager for the conversational AI interface.
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary>
-public class GoogleAIStudioChatSession {
+public class AiStudioChatSession {
   // [AI Context] Global state for file resolution. 
   // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
   // Konfigurierbarer Basis-Pfad für deine Uploads. 
@@ -80,7 +32,7 @@ public class GoogleAIStudioChatSession {
   private readonly string[] HistoryPreloadPaths;
 
   // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
-  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[SYSTEM] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
+  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
 
   // [GCS] Der Name deines Google Cloud Storage Buckets
   // Z.B.: "en-linalg-biran-gemini-videos"
@@ -90,7 +42,7 @@ public class GoogleAIStudioChatSession {
   private readonly string LogFolderPath;
   private readonly string SystemInstructionPath;
   private string? _systemInstructionText;
-  private GoogleAIStudioAIConfig AIParams;
+  private AiStudioGenerationConfig AIParams;
   private readonly bool IsAiStudio;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
@@ -100,7 +52,7 @@ public class GoogleAIStudioChatSession {
   private int _sessionTotalOutputTokens = 0;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
-  public GoogleAIStudioChatSession(Client client, GoogleAIStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
+  public AiStudioChatSession(Client client, AiStudioChatSessionConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
     _client = client;
     _sessionLogger = logger;
     _attachmentHandler = attachmentHandler;
@@ -115,7 +67,7 @@ public class GoogleAIStudioChatSession {
     // [AI Context] Creates a localized deep copy of AI parameters.
     // [Human] Kopiert die Standard-Werte, damit wir sie später mit "/set temp" im Chat verändern können, ohne das Original zu überschreiben.
     // Wir legen eine lokale Kopie an, damit /set Befehle nur diese Sitzung modifizieren
-    AIParams = new GoogleAIStudioAIConfig {
+    AIParams = new AiStudioGenerationConfig {
       Temperature = config.AI.Temperature,
       TopP = config.AI.TopP,
       TopK = config.AI.TopK,
@@ -314,7 +266,6 @@ public class GoogleAIStudioChatSession {
               }
               backoff *= 2;
             }
-            backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
           }
           else {
             WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -345,7 +296,7 @@ public class GoogleAIStudioChatSession {
         await Task.Delay(100);
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          WriteLine($"\n[System] {message}");
+          WriteLine($"\n[AI-Model] {message}");
         }
       }
       return true;
@@ -500,7 +451,7 @@ public class GoogleAIStudioChatSession {
       while (isGenerating) {
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          WriteLine("\n[System] Still waiting for the acknowledgment / response. Please wait...");
+          WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
         }
         await Task.Delay(100);
       }
@@ -617,7 +568,7 @@ public class GoogleAIStudioChatSession {
     // Die `historyFiles` enthalten bereits die vollen, absoluten Pfade.
     // Wir können sie direkt verwenden und für den Befehl in Anführungszeichen setzen.
     string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-    return $"attach {fileList} | {InitialHistoryPrompt}";
+    return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
   }
 
   private void HandleChangeKey(string input) {

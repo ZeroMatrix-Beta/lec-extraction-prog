@@ -3,11 +3,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using Config;
 
 namespace FfmpegUtilities {
   public class FfmpegSessionConfig {
-    public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a/";
-    public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a/new";
+    public string SourceFolder { get; set; } = AppConfig.FfmpegSourceFolder;
+    public string TargetFolder { get; set; } = AppConfig.FfmpegTargetFolder;
   }
 
   /// <summary>

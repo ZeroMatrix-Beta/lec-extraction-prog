@@ -2,7 +2,37 @@ using System;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 
+using DirectChatAiInteraction.AiStudio;
+
 namespace Config;
+
+/// <summary>
+/// Generic configuration loader implementing the hierarchy:
+/// corresponding .json > appconfig.json > C# static variable > C# app static
+/// </summary>
+public static class ConfigLoader<T> where T : class, new() {
+  public static T Load(string? sectionName = null) {
+    var config = new T();
+    sectionName ??= typeof(T).Name;
+
+    var basePath = AppDomain.CurrentDomain.BaseDirectory;
+
+    // 1. Global appsettings.json
+    var globalBuilder = new ConfigurationBuilder()
+        .SetBasePath(basePath)
+        .AddJsonFile("appsettings.json", optional: true);
+    globalBuilder.Build().GetSection("AppConfig").GetSection(sectionName).Bind(config);
+
+    // 2. Component-specific .json file (e.g., AiStudioChatSessionConfig.json)
+    var specificBuilder = new ConfigurationBuilder()
+        .SetBasePath(basePath)
+        .AddJsonFile($"{typeof(T).Name}.json", optional: true);
+    specificBuilder.Build().Bind(config);
+
+    return config;
+  }
+}
+
 
 // [AI Context] The DTO that directly maps to the structure of the appsettings.json file.
 // We provide default fallback values here just in case the JSON file is missing or malformed.
