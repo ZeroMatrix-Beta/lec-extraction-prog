@@ -375,6 +375,9 @@ public class VertexAiChatSession {
     Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
 
+    int inputTokens = 0;
+    int outputTokens = 0;
+
     var config = new GenerateContentConfig {
       Temperature = AIParams.Temperature,
       TopP = AIParams.TopP,
@@ -427,6 +430,11 @@ public class VertexAiChatSession {
         string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
         Write(chunkText);
         fullResponse += chunkText;
+
+        if (chunk.UsageMetadata != null) {
+          if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+        }
       }
     }
     catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
@@ -436,6 +444,11 @@ public class VertexAiChatSession {
       isGenerating = false;
       await inputInterceptorTask;
       Console.CancelKeyPress -= cancelHandler;
+
+      if (outputTokens > 0) {
+        WriteLine($"\n[Token-Verbrauch] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+      }
+
       if (exceptionCaught || cts.IsCancellationRequested) {
         WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
       }
@@ -446,7 +459,7 @@ public class VertexAiChatSession {
 
     if (!string.IsNullOrWhiteSpace(fullResponse)) {
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName);
+      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
     }
     else {
       history.RemoveAt(history.Count - 1);

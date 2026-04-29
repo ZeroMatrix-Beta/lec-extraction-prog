@@ -114,18 +114,18 @@ namespace FfmpegUtilities {
       Console.WriteLine("\nConversion Options:");
       Console.WriteLine("\n--- Single File Options ---");
       Console.WriteLine("1. Fixed 720p, 1.5x Speed, 1 FPS (Legacy Code Hardcoded Bitrates)");
-      Console.WriteLine("2. Universal AI Format (1.3x Speed, 1 FPS, 256k Mono) [Okay Quality]");
-      Console.WriteLine("3. High-Fidelity AI Format (1.2x Speed, 1 FPS, 256k Mono) [Good Quality]");
-      Console.WriteLine("4. Gold Standard AI Format (1.0x Speed, 1 FPS, 256k Mono) [Best Quality]");
-      Console.WriteLine("5. Split into 3 parts (1 FPS, 256k Mono, 3-min overlap)");
+      Console.WriteLine("2. Universal AI Format (1.3x Speed, 1 FPS, 96k Mono) [Okay Quality]");
+      Console.WriteLine("3. High-Fidelity AI Format (1.2x Speed, 1 FPS, 96k Mono) [Good Quality]");
+      Console.WriteLine("4. Gold Standard AI Format (1.0x Speed, 1 FPS, 96k Mono) [Best Quality]");
+      Console.WriteLine("5. Split into 3 parts (1 FPS, 96k Mono, 3-min overlap)");
       Console.WriteLine("6. Custom: Provide your own specific FFmpeg parameters");
 
       Console.WriteLine("\n--- Batch Folder Options ---");
       Console.WriteLine("7.  Fixed 720p, 1.5x Speed, 1 FPS (Legacy Code Hardcoded Bitrates)");
-      Console.WriteLine("8.  Universal AI Format (1.3x Speed, 1 FPS, 256k Mono) [Okay Quality]");
-      Console.WriteLine("9.  High-Fidelity AI Format (1.2x Speed, 1 FPS, 256k Mono) [Good Quality]");
-      Console.WriteLine("10. Gold Standard AI Format (1.0x Speed, 1 FPS, 256k Mono) [Best Quality]");
-      Console.WriteLine("11. Split into 3 parts (1 FPS, 256k Mono, 3-min overlap)");
+      Console.WriteLine("8.  Universal AI Format (1.3x Speed, 1 FPS, 96k Mono) [Okay Quality]");
+      Console.WriteLine("9.  High-Fidelity AI Format (1.2x Speed, 1 FPS, 96k Mono) [Good Quality]");
+      Console.WriteLine("10. Gold Standard AI Format (1.0x Speed, 1 FPS, 96k Mono) [Best Quality]");
+      Console.WriteLine("11. Split into 3 parts (1 FPS, 96k Mono, 3-min overlap)");
       Console.WriteLine("12. Custom: Provide your own specific FFmpeg parameters");
       Console.Write("\nChoose an option (1-12)?: ");
 

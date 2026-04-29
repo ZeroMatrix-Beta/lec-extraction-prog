@@ -38,7 +38,7 @@ namespace FfmpegUtilities {
       // [AI Context] Mono audio effectively halves the bandwidth and token size for speech-to-text models
       // without losing any transcription accuracy. The 'aformat' filter enforces correct metadata.
       // [Human] KI-Spracherkennung braucht kein Stereo. Mono spart uns gigantische Mengen an Tokens, Geld und Upload-Zeit.
-      string audioArgs = downmixToMono ? "-c:a aac -b:a 256k -ac 1 -ar 48000 -af \"aformat=channel_layouts=mono\"" : "-c:a copy";
+      string audioArgs = downmixToMono ? "-c:a aac -b:a 96k -ac 1 -ar 48000 -af \"aformat=channel_layouts=mono\"" : "-c:a copy";
 
       if (duration <= overlapSeconds * 2 || parts <= 1) {
         Console.WriteLine("  Warning: Video is too short to meaningfully split (or parts=1). Processing as a single file.");
@@ -105,7 +105,7 @@ namespace FfmpegUtilities {
 
       // Wenn wir Speed ändern, in Mono konvertieren oder die Samplerate ändern wollen, müssen wir recoden (aac)
       if (downmixToMono || speedMultiplier != 1.0 || audioSampleRate.HasValue) {
-        audioArgs = "-c:a aac -b:a 256k";
+        audioArgs = "-c:a aac -b:a 96k";
 
         if (downmixToMono) {
           audioArgs += " -ac 1";
@@ -269,7 +269,7 @@ namespace FfmpegUtilities {
     private async Task<bool> RunFfmpegAsync(string arguments) {
       var processInfo = new ProcessStartInfo {
         FileName = "ffmpeg",
-        Arguments = $"-y -nostdin {arguments} -hide_banner -stats",
+        Arguments = $"-y -nostdin -v error -stats {arguments}",
         RedirectStandardOutput = true,
         RedirectStandardError = true, // Wir leiten um und leeren den Puffer aktiv
         UseShellExecute = false,

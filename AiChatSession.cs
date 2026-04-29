@@ -455,6 +455,9 @@ public class GoogleAIStudioChatSession {
     Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
 
+    int inputTokens = 0;
+    int outputTokens = 0;
+
     // [AI Context] Maps current dynamic AI params to the Request payload.
     // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
     var config = new GenerateContentConfig {
@@ -512,6 +515,11 @@ public class GoogleAIStudioChatSession {
         string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
         Write(chunkText);
         fullResponse += chunkText;
+
+        if (chunk.UsageMetadata != null) {
+          if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+        }
       }
     }
     catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
@@ -521,6 +529,11 @@ public class GoogleAIStudioChatSession {
       isGenerating = false;
       await inputInterceptorTask; // Warte kurz, bis der Input-Blocker sauber beendet ist
       Console.CancelKeyPress -= cancelHandler;
+
+      if (outputTokens > 0) {
+        WriteLine($"\n[Token-Verbrauch] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+      }
+
       if (exceptionCaught || cts.IsCancellationRequested) {
         WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
       }
@@ -532,7 +545,7 @@ public class GoogleAIStudioChatSession {
     // 7. KI-Antwort in die Historie aufnehmen
     if (!string.IsNullOrWhiteSpace(fullResponse)) {
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName);
+      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
     }
     else {
       // [AI Context] Falls abgebrochen wurde, bevor die KI etwas gesagt hat, 

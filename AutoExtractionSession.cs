@@ -144,7 +144,7 @@ public class AiStudioAutoExtractionSession {
   private readonly AiStudioAutoExtractionConfig _config;
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
-  private double _speed = 1.2;
+  private double _speed = 1.0;
   private string _systemInstructionText = "";
   // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
   private List<Part> _historyParts = new List<Part>();
@@ -589,8 +589,22 @@ public class AiStudioAutoExtractionSession {
 
       for (int i = 0; i < parts.Count; i++) {
         string safePartPath = parts[i];
+        string texPath = Path.ChangeExtension(safePartPath, ".tex");
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
+
+        if (System.IO.File.Exists(texPath) && new FileInfo(texPath).Length > 0) {
+          Console.WriteLine($"  [Resume] Überspringe API-Aufruf. Verwende bereits existierende Datei: {Path.GetFileName(texPath)}");
+          string existingTex = await System.IO.File.ReadAllTextAsync(texPath);
+          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + existingTex;
+          generatedTexFiles.Add(texPath);
+          continue;
+        }
+
+        if (i > 0) {
+          Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...");
+          await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
+        }
 
         string texOutput = await ProcessPartWithGeminiAsync(safePartPath, i + 1, parts.Count, generatedTexFiles, file);
 
@@ -599,7 +613,6 @@ public class AiStudioAutoExtractionSession {
 
           fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
 
-          string texPath = Path.ChangeExtension(safePartPath, ".tex");
           await System.IO.File.WriteAllTextAsync(texPath, cleanTex);
 
           // Hier werden .tex dateien geschrieben:
@@ -717,22 +730,26 @@ public class AiStudioAutoExtractionSession {
             break;
           }
 
+          string continuePrompt;
           if (segmentComplete) {
-            Console.WriteLine("\n\n[AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
+            Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
+            continuePrompt = "Continue";
           }
           else {
-            Console.WriteLine("\n\n[AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Sende 'Continue'...");
+            Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
+            string snippet = chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp;
+            continuePrompt = "[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
+                                    $"```latex\n{snippet}\n```\n\n" +
+                                    "Please \"continue\" exactly where you left off...";
           }
-
-          string snippet = chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp;
-          string continuePrompt = "[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                                  $"```latex\n{snippet}\n```\n\n" +
-                                  "Please \"continue\" exactly where you left off...";
 
           Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
           history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
           history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+
+          Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen...");
+          await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
 
           backoff = 30;
           attempt = 1;
@@ -918,7 +935,21 @@ public class VertexAutoExtractionSession {
 
       for (int i = 0; i < videoParts.Count; i++) {
         string partFile = videoParts[i];
+        string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
         Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
+
+        if (System.IO.File.Exists(targetPartPath) && new FileInfo(targetPartPath).Length > 0 && (DateTime.Now - new FileInfo(targetPartPath).LastWriteTime).TotalHours <= 2) {
+          Console.WriteLine($"  [Resume] Überspringe API-Aufruf. Verwende bereits existierende Datei (jünger als 2h): {Path.GetFileName(targetPartPath)}");
+          string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
+          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + existingTex;
+          generatedTexFiles.Add(targetPartPath);
+          continue;
+        }
+
+        if (i > 0) {
+          Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...");
+          await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
+        }
 
         string cleanTex = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction);
         if (string.IsNullOrEmpty(cleanTex)) continue;
@@ -927,10 +958,9 @@ public class VertexAutoExtractionSession {
 
         string partTexFile = Path.ChangeExtension(partFile, ".tex");
         await System.IO.File.WriteAllTextAsync(partTexFile, cleanTex);
-        generatedTexFiles.Add(partTexFile);
 
-        string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
         await System.IO.File.WriteAllTextAsync(targetPartPath, cleanTex);
+        generatedTexFiles.Add(targetPartPath);
 
         // [AI Context] Cost Mitigation Strategy:
         // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.

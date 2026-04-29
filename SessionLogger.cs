@@ -61,10 +61,11 @@ public class SessionLogger {
     await File.AppendAllTextAsync("chat_log.md", setupLog);
   }
 
-  public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName) {
+  public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName, int inputTokens = 0, int outputTokens = 0) {
     // Markdown Verlauf mitprotokollieren
     string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
-    await File.AppendAllTextAsync("chat_log.md", $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}\n---\n");
+    string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Input {inputTokens}, Output {outputTokens})*" : "";
+    await File.AppendAllTextAsync("chat_log.md", $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
 
     // LaTeX Response speichern
     // [AI Context] Isolates the raw model output into dedicated .tex files.
@@ -77,6 +78,7 @@ public class SessionLogger {
                          $"% Session Info:\n" +
                          $"% System Prompt loaded: {_loadedSystemInstruction}\n" +
                          $"% History loaded: {_loadedHistory}\n" +
+                         $"% Tokens: Input {inputTokens}, Output {outputTokens}\n" +
                          $"% \n" +
                          $"% {userName} Prompt:\n" +
                          $"% {formattedPrompt}\n" +
