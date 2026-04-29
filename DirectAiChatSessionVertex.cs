@@ -11,49 +11,9 @@ using Config;
 using Infrastructure;
 using DirectChatAiInteraction;
 using static System.Console;
+using DirectChatAiInteraction.Vertex; // Added for the config classes
 
 namespace DirectChatAiInteraction.Vertex;
-
-/// <summary>
-/// [AI Context] Localized generation parameters for the Vertex AI Enterprise session.
-/// Ensures Vertex workloads can be tuned independently of AI Studio workloads.
-/// </summary>
-public class DirectAiChatSessionVertexAIConfig {
-  // [AI Context] Temperature (0.0 - 2.0). 0.0 = purely deterministic.
-  public float Temperature { get; set; } = 0.1f;
-  // [AI Context] TopP (Nucleus Sampling). 0.0 - 1.0.
-  public float TopP { get; set; } = 0.9f;
-  // [AI Context] TopK. Limits the vocabulary. TopK=1 is greedy decoding.
-  public int TopK { get; set; } = 10;
-  // [AI Context] Hard cutoff limit for output generation.
-  public int MaxOutputTokens { get; set; } = 65535;
-  // [AI Context] Explicitly maps to Vertex Gemini 2.5 thinking budget.
-  public int? ThinkingBudget { get; set; } = 4096;
-  // [AI Context] Explicitly maps to Vertex Gemini 3.x reasoning effort.
-  public string? ThinkingLevel { get; set; } = "MEDIUM";
-}
-
-/// <summary>
-/// [AI Context] DTO for Vertex AI specific configurations.
-/// Requires valid GCP ProjectId and Location for IAM authentication.
-/// </summary>
-public class DirectAiChatSessionVertexConfig {
-  // [AI Context] The Google Cloud Platform (GCP) Project ID associated with the billing account.
-  public string ProjectId { get; set; } = AppConfig.VertexProjectId;
-  // [AI Context] Region for Vertex AI execution. Must support the requested Gemini models.
-  public string Location { get; set; } = AppConfig.VertexLocation;
-  public string UploadFolder { get; set; } = AppConfig.UploadFolder;
-  public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
-  public string LogFolder { get; set; } = AppConfig.LogFolder;
-  // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
-  public string GcsBucketName { get; set; } = AppConfig.VertexGcsBucketName;
-  public string SystemInstructionPath { get; set; } = AppConfig.SystemInstructionPath;
-  public string[] IncludePaths { get; set; } = new[] {
-    @"D:\lecture-videos\d-und-a/",
-    @"D:\lecture-videos\d-und-a/new"
-  };
-  public DirectAiChatSessionVertexAIConfig AI { get; set; } = new DirectAiChatSessionVertexAIConfig();
-}
 
 /// <summary>
 /// [AI Context] Core REPL manager specifically for Google Cloud Vertex AI interactions.
