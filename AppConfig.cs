@@ -12,22 +12,28 @@ namespace Config;
 /// </summary>
 public static class ConfigLoader<T> where T : class, new() {
   public static T Load(string? sectionName = null) {
-    var config = new T();
     sectionName ??= typeof(T).Name;
-
     var basePath = AppDomain.CurrentDomain.BaseDirectory;
 
-    // 1. Global appsettings.json
-    var globalBuilder = new ConfigurationBuilder()
+    // Build a single configuration object with a clear hierarchy.
+    // The last source added wins for keys at the same path.
+    var configuration = new ConfigurationBuilder()
         .SetBasePath(basePath)
-        .AddJsonFile("appsettings.json", optional: true);
-    globalBuilder.Build().GetSection("AppConfig").GetSection(sectionName).Bind(config);
+        .AddJsonFile("appsettings.json", optional: true) // 2. Base settings from global file.
+        .AddJsonFile($"{typeof(T).Name}.json", optional: true) // 3. Specific file overrides global.
+        .Build();
 
-    // 2. Component-specific .json file (e.g., AiStudioChatSessionConfig.json)
-    var specificBuilder = new ConfigurationBuilder()
-        .SetBasePath(basePath)
-        .AddJsonFile($"{typeof(T).Name}.json", optional: true);
-    specificBuilder.Build().Bind(config);
+    // 1. Start with a new instance, which will have the C# default values.
+    var config = new T();
+
+    // Bind from the "AppConfig:TypeName" section of the combined configuration.
+    // This handles values defined within the AppConfig block in appsettings.json.
+    configuration.GetSection("AppConfig").GetSection(sectionName).Bind(config);
+
+    // Bind from the root of the combined configuration.
+    // This allows the specific {TypeName}.json to have settings at the root level,
+    // overriding any values that were previously bound.
+    configuration.Bind(config);
 
     return config;
   }

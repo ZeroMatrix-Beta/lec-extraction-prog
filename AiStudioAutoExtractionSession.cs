@@ -4,8 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
-using System.Threading.Tasks;
-using DirectChatAiInteraction;
+using System.Threading.Tasks; // Removed DirectChatAiInteraction as SessionLogger is now in Infrastructure
 using Infrastructure;
 using Google.GenAI;
 using Google.GenAI.Types;

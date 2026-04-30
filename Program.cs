@@ -40,87 +40,25 @@ class Program {
           break;
         }
 
-        if (mainChoice == "4") {
-          Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
-          Console.WriteLine(" 1) Google AI Studio");
-          Console.WriteLine(" 2) Google Cloud Vertex AI");
-          Console.Write("Wahl (1-2) oder 'exit': ");
-          string? extChoice = Console.ReadLine()?.Trim().ToLower();
-
-          if (extChoice == "exit" || extChoice == "quit") continue;
-
-          if (extChoice == "2") {
-            var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
-            Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, false, config.GcsBucketName);
-            var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
-            var sessionLogger = new SessionLogger(loggerConfig);
-            var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
-            await session.StartAsync();
-          }
-          else {
-            var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
-            string apiKey;
-            if (config.ActiveApiProfile == 0) {
-              apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
-            }
-            else {
-              apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
-            }
-            Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, true, "");
-            var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
-            var sessionLogger = new SessionLogger(loggerConfig);
-            var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
-            await session.StartAsync();
-          }
-          continue;
-        }
-
-        if (mainChoice == "5") {
-          // Lade den exklusiven Key für das Refinement
-          string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
-          Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-          var config = ConfigLoader<LatexRefinementConfig>.Load();
-          var session = new LatexRefinementSession(client, config);
-          await session.StartAsync();
-          continue;
-        }
-
-        if (mainChoice == "3") {
-          var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
-          var ffmpegMenu = new FfmpegInteractiveSession(ffmpegConfig);
-          await ffmpegMenu.StartAsync();
-          continue;
-        }
-
-        bool isVertex = mainChoice == "2";
-
-        if (isVertex) {
-          // Wire up dependencies for Vertex AI
-          var config = ConfigLoader<DirectAiChatSessionVertexConfig>.Load();
-          Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-          var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, false, config.GcsBucketName);
-          var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
-          var sessionLogger = new SessionLogger(loggerConfig);
-
-          var chatSession = new DirectAiChatSessionVertex(client, config, sessionLogger, attachmentHandler);
-          await chatSession.StartAsync();
-        }
-        else if (mainChoice == "1") {
-          // Wire up dependencies for AI Studio
-          var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
-          string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
-          Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-          var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
-          var loggerConfig = new SessionLoggerConfig { LogFolderPath = config.LogFolder };
-          var sessionLogger = new SessionLogger(loggerConfig);
-
-          var chatSession = new DirectAiChatSessionAiStudio(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
-          await chatSession.StartAsync();
-        }
-        else {
-          Console.WriteLine("Invalid choice.");
+        switch (mainChoice) {
+          case "1":
+            await RunDirectAiStudioChatAsync();
+            break;
+          case "2":
+            await RunDirectVertexChatAsync();
+            break;
+          case "3":
+            await RunFfmpegSessionAsync();
+            break;
+          case "4":
+            await RunAutoExtractionAsync();
+            break;
+          case "5":
+            await RunLatexRefinementAsync();
+            break;
+          default:
+            Console.WriteLine("Invalid choice.");
+            break;
         }
       }
     }
@@ -140,5 +78,73 @@ class Program {
     finally {
       Console.WriteLine("\n[System] Session ended.");
     }
+  }
+
+  private static async Task RunDirectAiStudioChatAsync() {
+    var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
+    string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
+    Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
+    var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
+    var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
+    var chatSession = new DirectAiChatSessionAiStudio(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
+    await chatSession.StartAsync();
+  }
+
+  private static async Task RunDirectVertexChatAsync() {
+    var config = ConfigLoader<DirectAiChatSessionVertexConfig>.Load();
+    Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
+    var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, false, config.GcsBucketName);
+    var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
+    var chatSession = new DirectAiChatSessionVertex(client, config, sessionLogger, attachmentHandler);
+    await chatSession.StartAsync();
+  }
+
+  private static async Task RunFfmpegSessionAsync() {
+    var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
+    var ffmpegMenu = new FfmpegInteractiveSession(ffmpegConfig);
+    await ffmpegMenu.StartAsync();
+  }
+
+  private static async Task RunAutoExtractionAsync() {
+    Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
+    Console.WriteLine(" 1) Google AI Studio");
+    Console.WriteLine(" 2) Google Cloud Vertex AI");
+    Console.Write("Wahl (1-2) oder 'exit': ");
+    string? extChoice = Console.ReadLine()?.Trim().ToLower();
+
+    if (extChoice == "exit" || extChoice == "quit") return;
+
+    if (extChoice == "2") {
+      var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
+      Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
+      var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, false, config.GcsBucketName);
+      var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
+      var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
+      await session.StartAsync();
+    }
+    else {
+      var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
+      string apiKey;
+      if (config.ActiveApiProfile == 0) {
+        apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
+      }
+      else {
+        apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
+      }
+      Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
+      var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, true, "");
+      var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
+      var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger);
+      await session.StartAsync();
+    }
+  }
+
+  private static async Task RunLatexRefinementAsync() {
+    // Lade den exklusiven Key für das Refinement
+    string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+    Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
+    var config = ConfigLoader<LatexRefinementConfig>.Load();
+    var session = new LatexRefinementSession(client, config);
+    await session.StartAsync();
   }
 }

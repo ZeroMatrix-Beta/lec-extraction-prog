@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DirectChatAiInteraction;
 using Infrastructure;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;

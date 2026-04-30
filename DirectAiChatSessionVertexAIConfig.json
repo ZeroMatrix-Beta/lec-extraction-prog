@@ -1,8 +1,0 @@
-{
-  "Temperature": 0.1,
-  "TopP": 0.9,
-  "TopK": 10,
-  "MaxOutputTokens": 65535,
-  "ThinkingBudget": 4096,
-  "ThinkingLevel": "MEDIUM"
-}

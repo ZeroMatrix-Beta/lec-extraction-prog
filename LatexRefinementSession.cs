@@ -6,6 +6,8 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using DocumentUtilities;
 using Config;
+using AutoExtraction;
+using Infrastructure;
 
 namespace DirectChatAiInteraction;
 
@@ -94,100 +96,35 @@ public class LatexRefinementSession {
     };
 
     Console.WriteLine($"\nSende Refinement-Anfrage an Gemini ({_config.Model})...");
-    int maxRetries = 5;
-    int backoff = 30;
-    string fullText = "";
 
-    for (int attempt = 1; attempt <= maxRetries; attempt++) {
-      fullText = "";
-      // [AI Context] Implements an exponential backoff retry mechanism specifically tuned for Google APIs handling massive payload sizes.
-      try {
-        if (attempt > 1) Console.WriteLine($"\n[API] Sende Anfrage (Versuch {attempt}/{maxRetries})...");
-        var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
+    string? fullText = await ApiResilience.ExecuteWithRetryAsync(async () => {
+      string responseText = "";
+      var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
 
-        await foreach (var chunk in responseStream) {
-          string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-          Console.Write(text);
-          fullText += text;
-        }
-
-        string targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;
-        if (!Directory.Exists(targetFolder)) {
-          Directory.CreateDirectory(targetFolder);
-        }
-
-        string outPath = Path.Combine(targetFolder, "refined_output.tex");
-        await System.IO.File.WriteAllTextAsync(outPath, fullText);
-        Console.WriteLine($"\n\n[Erfolg] Refined LaTeX erfolgreich gespeichert unter: {outPath}");
-
-        // [AI Context] Triggers the local LatexToolkit to immediately verify the compilation integrity of the AI's output.
-        // [Human] Automatische PDF Kompilierung im Hintergrund, um sofort zu testen, ob die KI valides LaTeX erzeugt hat.
-        var latexToolkit = new LatexToolkit();
-        await latexToolkit.CompilePdfAsync(outPath);
-        break;
+      await foreach (var chunk in responseStream) {
+        string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+        Console.Write(text);
+        responseText += text;
       }
-      catch (Exception ex) {
-        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+      return responseText;
+    }, maxRetries: 5);
 
-        if (ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase)) {
-          var metricMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Quota exceeded for metric: ([^,]+)");
-          if (metricMatch.Success) Console.WriteLine($"  [Quota-Info] Limit erreicht für: {metricMatch.Groups[1].Value.Trim()}");
-
-          var retryTimeMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Please retry in ([^s]+s)");
-          if (retryTimeMatch.Success) Console.WriteLine($"  [Quota-Info] API-Sperre aktiv für: {retryTimeMatch.Groups[1].Value}");
-        }
-
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
-        if (attempt < maxRetries && isOverloaded) {
-          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 10;
-            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(waitTime)) {
-              Console.WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
-              break; // Exit retry loop if user cancels
-            }
-          }
-          else {
-            Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await SmartDelayAsync(backoff)) {
-              Console.WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
-              break; // Exit retry loop if user cancels
-            }
-          }
-          backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
-        }
-        else {
-          Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten: {ex.Message}");
-          break;
-        }
+    if (!string.IsNullOrEmpty(fullText)) {
+      string targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;
+      if (!Directory.Exists(targetFolder)) {
+        Directory.CreateDirectory(targetFolder);
       }
+
+      string outPath = Path.Combine(targetFolder, "refined_output.tex");
+      await System.IO.File.WriteAllTextAsync(outPath, fullText);
+      Console.WriteLine($"\n\n[Erfolg] Refined LaTeX erfolgreich gespeichert unter: {outPath}");
+
+      var latexToolkit = new LatexToolkit();
+      await latexToolkit.CompilePdfAsync(outPath);
+    }
+    else {
+      Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
     }
   }
 
-  /// <summary>
-  /// Implements an interactive delay with user cancellation.
-  /// Allows the user to interrupt long backoff periods by pressing any key.
-  /// </summary>
-  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...") {
-    bool delayCanceled = false;
-    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; delayCanceled = true; };
-    Console.CancelKeyPress += cancelHandler;
-    try {
-      int delaySteps = seconds * 10;
-      for (int i = 0; i < delaySteps; i++) {
-        if (delayCanceled) return false;
-        await Task.Delay(100);
-        if (!Console.IsInputRedirected && Console.KeyAvailable) {
-          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          Console.WriteLine($"\n[AI-Model] {message}");
-        }
-      }
-      return true;
-    }
-    finally {
-      Console.CancelKeyPress -= cancelHandler;
-    }
-  }
 }

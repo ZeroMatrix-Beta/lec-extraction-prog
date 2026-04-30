@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoExtraction;
 using System.Threading;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
@@ -180,59 +181,21 @@ public class DirectAiChatSessionVertex {
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      int backoff = 30;
-      int maxRetries = 5;
+      try {
+        await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
+      }
+      catch (Exception ex) {
+        WriteLine($"\n[Vertex Error]: {ex.Message}");
 
-      for (int attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
-          break;
+        if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
+          WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut!");
         }
-        catch (Exception ex) {
-          WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-          WriteLine($"Originaler Fehlertext: {ex.Message}");
+        else {
+          WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+        }
 
-          if (ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase)) {
-            var metricMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Quota exceeded for metric: ([^,]+)");
-            if (metricMatch.Success) WriteLine($"  [API-Limit] Metrik überschritten: {metricMatch.Groups[1].Value.Trim()}");
-
-            var retryTimeMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Please retry in ([^s]+s)");
-            if (retryTimeMatch.Success) WriteLine($"  [API-Limit] Erwartete Wartezeit: {retryTimeMatch.Groups[1].Value}");
-          }
-
-          bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase);
-
-          if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
-            WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut! Originalfehler: {ex.Message}");
-            history.RemoveAt(history.Count - 1);
-            break;
-          }
-          else if (attempt < maxRetries && isOverloaded) {
-            var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-              int waitTime = serverSuggestedDelay + 10;
-              WriteLine($"\n[Rate Limit] API schlägt Wartezeit vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-              if (!await SmartDelayAsync(waitTime)) {
-                WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
-                history.RemoveAt(history.Count - 1);
-                break;
-              }
-            }
-            else {
-              WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-              if (!await SmartDelayAsync(backoff)) {
-                WriteLine("\n[INFO] Wartezeit durch Benutzer abgebrochen.");
-                history.RemoveAt(history.Count - 1);
-                break;
-              }
-              backoff *= 2;
-            }
-          }
-          else {
-            WriteLine($"\n[Vertex Error]: {ex.Message}");
-            history.RemoveAt(history.Count - 1);
-            break;
-          }
+        if (history.Any() && history.Last().Role == "user") {
+          history.RemoveAt(history.Count - 1);
         }
       }
     }
@@ -258,31 +221,6 @@ public class DirectAiChatSessionVertex {
       // if (input.StartsWith("some-vertex-command")) { ...; continue; }
 
       return input; // Return the non-command input
-    }
-  }
-
-  private async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...") {
-    bool delayCanceled = false;
-    ConsoleCancelEventHandler cancelHandler = (sender, e) => {
-      e.Cancel = true;
-      delayCanceled = true;
-    };
-    Console.CancelKeyPress += cancelHandler;
-
-    try {
-      int delaySteps = seconds * 10;
-      for (int i = 0; i < delaySteps; i++) {
-        if (delayCanceled) return false;
-        await Task.Delay(100);
-        if (!Console.IsInputRedirected && Console.KeyAvailable) {
-          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          WriteLine($"\n[AI-Model] {message}");
-        }
-      }
-      return true;
-    }
-    finally {
-      Console.CancelKeyPress -= cancelHandler;
     }
   }
 
@@ -392,21 +330,23 @@ public class DirectAiChatSessionVertex {
     });
 
     try {
-      var responseStream = _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config);
-      await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
-        // Fallback-Break: Falls das CancellationToken vom Google SDK ignoriert wird, 
-        // brechen wir die Schleife manuell beim nächsten empfangenen Wort ab.
-        if (cts.IsCancellationRequested) break;
+      bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+          streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config),
+          onChunkReceived: async (chunk) => {
+            string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+            Write(chunkText);
+            fullResponse += chunkText;
 
-        string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-        Write(chunkText);
-        fullResponse += chunkText;
-
-        if (chunk.UsageMetadata != null) {
-          if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-        }
-      }
+            if (chunk.UsageMetadata != null) {
+              if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+              if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+            }
+            await Task.CompletedTask;
+          },
+          cancellationToken: cts.Token,
+          maxRetries: 5
+      );
+      if (!success) exceptionCaught = true;
     }
     catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
       exceptionCaught = true;
@@ -416,7 +356,7 @@ public class DirectAiChatSessionVertex {
       await inputInterceptorTask;
       Console.CancelKeyPress -= cancelHandler;
 
-      if (outputTokens > 0) {
+      if (inputTokens > 0 || outputTokens > 0) {
         _sessionTotalInputTokens += inputTokens;
         _sessionTotalOutputTokens += outputTokens;
         WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");

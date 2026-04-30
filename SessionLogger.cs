@@ -1,13 +1,9 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Infrastructure; // Added to reference SessionLoggerConfig
 
-namespace DirectChatAiInteraction;
-
-public class SessionLoggerConfig {
-  public string LogFolderPath { get; set; } = @"D:\gemini-logs";
-}
-
+namespace Infrastructure;
 /// <summary>
 /// [AI Context] Handles file I/O operations for a chat session.
 /// Responsible for creating timestamped session folders and saving Markdown/LaTeX logs.
