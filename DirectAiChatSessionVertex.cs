@@ -333,8 +333,35 @@ public class DirectAiChatSessionVertex {
       }
     }
 
+    var apiContents = history; // By default, use the original history
+
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
       config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+      // Gemma models (pre-v4) don't support the 'system' role.
+      // We prepend the instruction to the first user message instead.
+      if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4")) {
+        bool isFirstTurn = !history.Any(c => c.Role == "model");
+        if (isFirstTurn) {
+          var modifiedHistory = new List<Content>();
+          bool prepended = false;
+          foreach (var content in history) {
+            if (!prepended && content.Role == "user") {
+              var newParts = content.Parts?.ToList() ?? new List<Part>();
+              newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
+              modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
+              prepended = true;
+            }
+            else {
+              modifiedHistory.Add(content);
+            }
+          }
+          apiContents = modifiedHistory;
+          config.SystemInstruction = null;
+        }
+      }
+      else {
+        config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+      }
     }
 
     bool exceptionCaught = false;
@@ -358,7 +385,7 @@ public class DirectAiChatSessionVertex {
 
     try {
       bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
-          streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: history, config: config),
+          streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
           onChunkReceived: async (chunk) => {
             string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
             Write(chunkText);

@@ -659,9 +659,13 @@ public class AiStudioAutoExtractionSession {
 
     var userPromptParts = new List<Part>(attachmentParts);
 
-    foreach (var texFile in previousTexFiles) {
-      string content = await System.IO.File.ReadAllTextAsync(texFile);
-      userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+    if (previousTexFiles.Any()) {
+      Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
+      foreach (var texFile in previousTexFiles) {
+        Console.WriteLine($"    - {Path.GetFileName(texFile)}");
+        string content = await System.IO.File.ReadAllTextAsync(texFile);
+        userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+      }
     }
 
     userPromptParts.Add(new Part { Text = parsedPrompt });
@@ -691,141 +695,98 @@ public class AiStudioAutoExtractionSession {
     }
 
     string fullResponse = "";
-    int backoff = 30;
     int currentRequest = 1;
-    int maxRequestsPerPart = 6;
-    int attempt = 1; // Zähler für API-Fehlschläge
-    int maxRetries = 8;
+    int maxRequestsPerPart = 5;
 
     int interactionInputTokens = 0;
     int interactionOutputTokens = 0;
 
+    using var cts = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+    Console.CancelKeyPress += cancelHandler;
+
     while (true) {
-      bool isGenerating = true;
-      var inputInterceptorTask = Task.Run(async () => {
-        while (isGenerating) {
-          if (!Console.IsInputRedirected && Console.KeyAvailable) {
-            while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-            Console.WriteLine("\n[System] Still waiting for the acknowledgment / processing...");
-          }
-          await Task.Delay(100);
-        }
-      });
+      Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
+      string chunkResp = "";
+      int requestInputTokens = 0;
+      int requestOutputTokens = 0;
+      bool callSuccess = false;
 
       try {
-        Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
-
-        int requestInputTokens = 0;
-        int requestOutputTokens = 0;
-
-        var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig);
-        string chunkResp = "";
-        await foreach (var chunk in responseStream) {
-          string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-          Console.Write(txt);
-          chunkResp += txt;
-          if (chunk.UsageMetadata != null) {
-            if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-          }
-        }
-
-        interactionInputTokens += requestInputTokens;
-        interactionOutputTokens += requestOutputTokens;
-        _sessionTotalInputTokens += requestInputTokens;
-        _sessionTotalOutputTokens += requestOutputTokens;
-
-        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
-        Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens}");
-        Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
-
-        isGenerating = false;
-        await inputInterceptorTask;
-
-        fullResponse += chunkResp;
-        await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt ?? "", _config.Model, chunkResp, "AutoExtraction");
-
-        bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-
-        if (!videoComplete) {
-          if (currentRequest >= maxRequestsPerPart) {
-            Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht. Breche ab.\n  Teil: {partFile}");
-            break;
-          }
-
-          string continuePrompt;
-          if (segmentComplete) {
-            Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
-            continuePrompt = "Continue";
-          }
-          else {
-            Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
-            string snippet = chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp;
-            continuePrompt = "[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                                    $"```latex\n{snippet}\n```\n\n" +
-                                    "Please \"continue\" exactly where you left off...";
-          }
-
-          Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
-
-          history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
-          history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
-
-          Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen...");
-          await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
-
-          attempt = 1;
-          currentRequest++;
-          continue;
-        }
-
-        break; // Finished
-      }
-      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
-        isGenerating = false;
-        await inputInterceptorTask;
-        Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
-        // Break out of the while loop for this part and return what we have so far.
-        return fullResponse;
+        callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+            streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig),
+            onChunkReceived: async (chunk) => {
+              string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+              Console.Write(txt);
+              chunkResp += txt;
+              if (chunk.UsageMetadata != null) {
+                if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+                if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+              }
+              await Task.CompletedTask;
+            },
+            cancellationToken: cts.Token
+        );
       }
       catch (Exception ex) {
-        isGenerating = false;
-        await inputInterceptorTask;
-
-        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-        if (ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase)) {
-          var metricMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Quota exceeded for metric: ([^,]+)");
-          if (metricMatch.Success) Console.WriteLine($"  [Quota-Info] Limit erreicht für: {metricMatch.Groups[1].Value.Trim()}");
-
-          var retryTimeMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"Please retry in ([^s]+s)");
-          if (retryTimeMatch.Success) Console.WriteLine($"  [Quota-Info] API-Sperre aktiv für: {retryTimeMatch.Groups[1].Value}");
-        }
-
-        bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-        if (isOverloaded && attempt < maxRetries) {
-          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 10;
-            Console.WriteLine($"\n  [Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) break;
-          }
-          else {
-            Console.WriteLine($"\n  [Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) break;
-          }
-          backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
-          attempt++;
-        } // Unrecoverable error
-        else {
-          Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
-          break;
-        }
+        // ApiResilience re-throws unrecoverable errors
+        Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
+        Console.WriteLine($"Finaler Fehler: {ex.Message}");
+        break;
       }
+
+      if (!callSuccess) {
+        Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
+        break;
+      }
+
+      interactionInputTokens += requestInputTokens;
+      interactionOutputTokens += requestOutputTokens;
+      _sessionTotalInputTokens += requestInputTokens;
+      _sessionTotalOutputTokens += requestOutputTokens;
+
+      Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+      Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens}");
+      Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+
+      fullResponse += chunkResp;
+      await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt ?? "", _config.Model, chunkResp, "AutoExtraction");
+
+      bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+      bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+      if (videoComplete) {
+        break; // Finished
+      }
+
+      if (currentRequest >= maxRequestsPerPart) {
+        Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht. Breche ab.\n  Teil: {partFile}");
+        break;
+      }
+
+      string continuePrompt = segmentComplete ? "Continue" :
+          $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
+          $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp)}\n```\n\n" +
+          "Please \"continue\" exactly where you left off...";
+
+      if (segmentComplete) Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
+      else Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
+
+      Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
+
+      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
+      history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+
+      Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen...");
+      if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
+        Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
+        break;
+      }
+
+      currentRequest++;
     }
 
+    Console.CancelKeyPress -= cancelHandler;
     return fullResponse;
   }
 }

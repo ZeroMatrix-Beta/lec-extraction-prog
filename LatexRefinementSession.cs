@@ -11,14 +11,6 @@ using Infrastructure;
 
 namespace DirectChatAiInteraction;
 
-// [AI Context] Configuration specifically for the post-processing phase. TargetFolder specifies where the compiled, polished .tex/.pdf will be dropped.
-public class LatexRefinementConfig {
-  public string GeminiMdPath { get; set; } = AppConfig.SystemInstructionPath;
-  public string Model { get; set; } = AppConfig.RefinementModel;
-  public string TargetFolder { get; set; } = AppConfig.LatexRefinementTargetFolder;
-  public string SourceFolder { get; set; } = AppConfig.LatexRefinementSourceFolder;
-}
-
 /// <summary>
 /// [AI Context] A dedicated session for refining, formatting, and correcting raw LaTeX files.
 /// Uses its own isolated API Key (API_KEY-latex-refinement) to separate quotas from extraction workloads.
