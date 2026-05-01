@@ -296,7 +296,7 @@ public class AiStudioAutoExtractionSession {
     Console.CancelKeyPress += cancelHandler;
 
     int maxRetries = 8;
-    int backoff = 30;
+    int backoff = 45;
     string fullResponse = "";
     bool exceptionCaught = false;
 
@@ -357,7 +357,7 @@ public class AiStudioAutoExtractionSession {
         if (isOverloaded && attempt < maxRetries) {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 10;
+            int waitTime = serverSuggestedDelay + 20; // Be more generous with the buffer
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
           }
@@ -419,7 +419,7 @@ public class AiStudioAutoExtractionSession {
     }
 
     Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
-    int backoff = 30;
+    int backoff = 45;
     int maxRetries = 10;
     bool success = false;
     string fullResponse = "";
@@ -468,7 +468,7 @@ public class AiStudioAutoExtractionSession {
         if (isOverloaded && attempt < maxRetries) {
           var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
           if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 15;
+            int waitTime = serverSuggestedDelay + 20; // Be more generous with the buffer
             Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
             if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
           }
@@ -591,37 +591,56 @@ public class AiStudioAutoExtractionSession {
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
 
-        if (System.IO.File.Exists(texPath) && new FileInfo(texPath).Length > 0) {
-          Console.WriteLine($"  [Resume] Überspringe API-Aufruf. Verwende bereits existierende Datei: {Path.GetFileName(texPath)}");
-          string existingTex = await System.IO.File.ReadAllTextAsync(texPath);
-          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + existingTex;
-          generatedTexFiles.Add(texPath);
-          continue;
-        }
+        string texOutput;
 
         if (i > 0) {
-          Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...");
-          await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
-        }
+          // Start delay and upload in parallel for subsequent parts
+          var delayTask = Task.Run(async () => {
+            Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...");
+            await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
+          });
 
-        string texOutput = await ProcessPartWithGeminiAsync(safePartPath, i + 1, parts.Count, generatedTexFiles, file);
+          var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, parts.Count, file);
+
+          // Wait for both to complete. The upload will run concurrently with the delay.
+          await Task.WhenAll(delayTask, uploadTask);
+
+          var (uploadSuccess, parsedPrompt, attachmentParts) = uploadTask.Result;
+          if (!uploadSuccess) {
+            Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Überspringe.");
+            continue;
+          }
+
+          texOutput = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+        }
+        else {
+          // For the first part, no delay is needed, just upload and process.
+          var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, parts.Count, file);
+          if (!uploadSuccess) {
+            Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Überspringe.");
+            continue;
+          }
+          texOutput = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+        }
 
         if (!string.IsNullOrWhiteSpace(texOutput)) {
           string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
 
           fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
 
-          await System.IO.File.WriteAllTextAsync(texPath, cleanTex);
+          string uniqueTexPath = GetUniqueTexPath(texPath);
+          await System.IO.File.WriteAllTextAsync(uniqueTexPath, cleanTex);
 
           // Hier werden .tex dateien geschrieben:
-          generatedTexFiles.Add(texPath);
+          generatedTexFiles.Add(uniqueTexPath);
         }
       }
 
       string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
-      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% ==========================================\n\n";
-      await System.IO.File.WriteAllTextAsync(targetFilePath, header + fullOutputText);
-      Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {targetFilePath}");
+      string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
+      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% ==========================================\n\n";
+      await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
+      Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
     }
 
     // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
@@ -629,34 +648,49 @@ public class AiStudioAutoExtractionSession {
     Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig abgeschlossen!");
   }
 
-  /// <summary>
-  /// [AI Context] Core prompt engineering logic for processing isolated video chunks.
-  /// Injects historical LaTeX context from previously processed segments to maintain narrative and mathematical continuity across the 3-minute overlap boundaries.
-  /// [Human] Baut den exakten KI-Prompt für jeden einzelnen Videoteil zusammen und fügt alte LaTeX-Dateien als Kontext hinzu, damit Sätze nicht in der Mitte abbrechen.
-  /// </summary>
-  private async Task<string> ProcessPartWithGeminiAsync(string partFile, int partNumber, int totalParts, List<string> previousTexFiles, string originalFileName) {
+  private string GetUniqueTexPath(string originalPath) {
+    if (!System.IO.File.Exists(originalPath)) {
+      return originalPath;
+    }
+
+    Console.WriteLine($"  [Hinweis] Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.");
+    string dir = Path.GetDirectoryName(originalPath) ?? string.Empty;
+    string baseName = Path.GetFileNameWithoutExtension(originalPath);
+    string ext = Path.GetExtension(originalPath);
+    int copyIndex = 1;
+    string newPath;
+    do {
+      newPath = Path.Combine(dir, $"{baseName}-copy-{copyIndex}{ext}");
+      copyIndex++;
+    } while (System.IO.File.Exists(newPath));
+
+    Console.WriteLine($"  [Info] Neue Datei wird erstellt: '{Path.GetFileName(newPath)}'");
+    return newPath;
+  }
+
+  private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
     var dateInfo = VideoDateParser.Parse(originalFileName);
     string prompt = _config.Prompt;
 
-    // [AI Context] Dynamic prompt engineering. Instructs the model to treat the chunk as part of a larger whole, 
-    // providing absolute timestamps and previously generated LaTeX to maintain cross-chunk continuity.
     prompt += $"\n\n[Meta-Information]: These {totalParts} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
     prompt += $"\n\nThe uploaded video is part {partNumber} of {totalParts} from this lecture.";
     prompt += $"\n\nThe video is played back / scaled to {_speed}x speed.";
 
     if (partNumber > 1) {
-      // [AI Context] Continuous State Injection: Appends the exact LaTeX output of the previous chunks so the model can seamlessly finish mid-sentence derivations.
       prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
       prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
     }
 
-    // [AI Context] Explicitly disables temporal scaling logic within the model, forcing it to transcribe the burned-in UI timestamps directly.
     prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
     prompt += "\n\nWhen in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
-    if (!uploadSuccess || attachmentParts.Count == 0) return "";
+    if (!uploadSuccess || !attachmentParts.Any()) return (false, null, new List<Part>());
 
+    return (true, parsedPrompt, attachmentParts);
+  }
+
+  private async Task<string> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
     var userPromptParts = new List<Part>(attachmentParts);
 
     if (previousTexFiles.Any()) {
@@ -668,10 +702,11 @@ public class AiStudioAutoExtractionSession {
       }
     }
 
-    userPromptParts.Add(new Part { Text = parsedPrompt });
+    if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
+      userPromptParts.Add(new Part { Text = parsedPrompt });
+    }
 
     var history = new List<Content>();
-
     history.AddRange(_sessionPreamble);
     history.Add(new Content { Role = "user", Parts = userPromptParts });
 
@@ -680,24 +715,17 @@ public class AiStudioAutoExtractionSession {
       MaxOutputTokens = 65535
     };
 
-    if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
-      requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
-    }
+    if (!string.IsNullOrWhiteSpace(_systemInstructionText)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-      }
+      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
     }
     else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      if (_config.ThinkingBudget.HasValue) {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
-      }
+      if (_config.ThinkingBudget.HasValue) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
     }
 
     string fullResponse = "";
     int currentRequest = 1;
-    int maxRequestsPerPart = 5;
-
+    int maxRequestsPerPart = 6;
     int interactionInputTokens = 0;
     int interactionOutputTokens = 0;
 
@@ -729,7 +757,6 @@ public class AiStudioAutoExtractionSession {
         );
       }
       catch (Exception ex) {
-        // ApiResilience re-throws unrecoverable errors
         Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
         Console.WriteLine($"Finaler Fehler: {ex.Message}");
         break;
@@ -750,14 +777,12 @@ public class AiStudioAutoExtractionSession {
       Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
       fullResponse += chunkResp;
-      await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", prompt ?? "", _config.Model, chunkResp, "AutoExtraction");
+      await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", parsedPrompt ?? "", _config.Model, chunkResp, "AutoExtraction");
 
       bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
       bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-      if (videoComplete) {
-        break; // Finished
-      }
+      if (videoComplete) break;
 
       if (currentRequest >= maxRequestsPerPart) {
         Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht. Breche ab.\n  Teil: {partFile}");

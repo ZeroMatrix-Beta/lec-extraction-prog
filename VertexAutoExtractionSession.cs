@@ -133,7 +133,7 @@ public class VertexAutoExtractionSession {
 
       Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
       string fullResponse = "";
-      int backoff = 30;
+      int backoff = 45;
       int maxRetries = 5;
       bool success = false;
 
@@ -188,7 +188,7 @@ public class VertexAutoExtractionSession {
           if (isOverloaded && attempt < maxRetries) {
             var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
             if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-              int waitTime = serverSuggestedDelay + 10;
+              int waitTime = serverSuggestedDelay + 20; // Be more generous with the buffer
               Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
               if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
             }
@@ -267,10 +267,6 @@ public class VertexAutoExtractionSession {
 
   private async Task ProcessSingleFileAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, List<Content> sessionPreamble, string systemInstruction) {
     string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
-    if (System.IO.File.Exists(targetFilePath)) {
-      Console.WriteLine($"\n[Übersprungen] {Path.GetFileName(file)} wurde bereits verarbeitet.");
-      return;
-    }
 
     try {
       Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
@@ -287,14 +283,6 @@ public class VertexAutoExtractionSession {
         string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
         Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
 
-        if (System.IO.File.Exists(targetPartPath) && new FileInfo(targetPartPath).Length > 0 && (DateTime.Now - new FileInfo(targetPartPath).LastWriteTime).TotalHours <= 2) {
-          Console.WriteLine($"  [Resume] Überspringe API-Aufruf. Verwende bereits existierende Datei (jünger als 2h): {Path.GetFileName(targetPartPath)}");
-          string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
-          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + existingTex;
-          generatedTexFiles.Add(targetPartPath);
-          continue;
-        }
-
         if (i > 0) {
           Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...");
           await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
@@ -306,19 +294,22 @@ public class VertexAutoExtractionSession {
         fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
 
         string partTexFile = Path.ChangeExtension(partFile, ".tex");
-        await System.IO.File.WriteAllTextAsync(partTexFile, cleanTex);
+        string uniquePartTexFile = GetUniqueTexPath(partTexFile);
+        await System.IO.File.WriteAllTextAsync(uniquePartTexFile, cleanTex);
 
-        await System.IO.File.WriteAllTextAsync(targetPartPath, cleanTex);
-        generatedTexFiles.Add(targetPartPath);
+        string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
+        await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, cleanTex);
+        generatedTexFiles.Add(uniqueTargetPartPath);
 
         // [AI Context] Cost Mitigation Strategy:
         // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.
         await CleanupBucketAsync();
       }
 
-      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% ==========================================\n\n";
-      await System.IO.File.WriteAllTextAsync(targetFilePath, header + fullOutputText);
-      Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {targetFilePath}");
+      string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
+      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% ==========================================\n\n";
+      await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
+      Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {uniqueTargetFilePath}");
     }
     catch (Exception ex) {
       Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
@@ -329,6 +320,26 @@ public class VertexAutoExtractionSession {
       // ALWAYS clean up GCS after each file to minimize enterprise storage costs!
       await CleanupBucketAsync();
     }
+  }
+
+  private string GetUniqueTexPath(string originalPath) {
+    if (!System.IO.File.Exists(originalPath)) {
+      return originalPath;
+    }
+
+    Console.WriteLine($"  [Hinweis] Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.");
+    string dir = Path.GetDirectoryName(originalPath) ?? string.Empty;
+    string baseName = Path.GetFileNameWithoutExtension(originalPath);
+    string ext = Path.GetExtension(originalPath);
+    int copyIndex = 1;
+    string newPath;
+    do {
+      newPath = Path.Combine(dir, $"{baseName}-copy-{copyIndex}{ext}");
+      copyIndex++;
+    } while (System.IO.File.Exists(newPath));
+
+    Console.WriteLine($"  [Info] Neue Datei wird erstellt: '{Path.GetFileName(newPath)}'");
+    return newPath;
   }
 
   private async Task<List<string>> PrepareVideoPartsAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder) {

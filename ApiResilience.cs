@@ -27,7 +27,7 @@ public static class ApiResilience {
       Func<GenerateContentResponse, Task> onChunkReceived,
       CancellationToken cancellationToken,
       int maxRetries = 8,
-      int initialBackoff = 30) {
+      int initialBackoff = 45) {
     int backoff = initialBackoff;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
@@ -73,7 +73,7 @@ public static class ApiResilience {
   public static async Task<T?> ExecuteWithRetryAsync<T>(
       Func<Task<T>> apiCall,
       int maxRetries = 8,
-      int initialBackoff = 30) where T : class {
+      int initialBackoff = 45) where T : class {
     int backoff = initialBackoff;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
@@ -119,7 +119,7 @@ public static class ApiResilience {
     var retryMatch = Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
     bool waitSuccess;
     if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-      int waitTime = serverSuggestedDelay + 10; // Add a buffer
+      int waitTime = serverSuggestedDelay + 20; // Add a generous buffer
       Console.WriteLine($"\n[Rate Limit] API suggests waiting. Waiting {waitTime} seconds... (Attempt {attempt}/{maxRetries})");
       waitSuccess = await ExtractionHelpers.SmartDelayAsync(waitTime);
     }
