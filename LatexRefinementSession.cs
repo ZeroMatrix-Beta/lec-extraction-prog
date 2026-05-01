@@ -92,8 +92,18 @@ public class LatexRefinementSession {
     var requestConfig = new GenerateContentConfig {
       Temperature = 0.0f,
       MaxOutputTokens = 65535,
-      ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 }
     };
+
+    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+      }
+    }
+    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+      }
+    }
 
     Console.WriteLine($"\nSende Refinement-Anfrage an Gemini ({_config.Model})...");
 

@@ -20,6 +20,8 @@ public class VertexAutoExtractionConfig {
   public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
   public string LogFolder { get; set; } = AppConfig.LogFolder;
   public string Model { get; set; } = "gemini-3-flash-preview";
+  public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
+  public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
   public double SpeedMultiplier { get; set; } = 1.2;
 }

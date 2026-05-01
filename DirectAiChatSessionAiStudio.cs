@@ -283,6 +283,8 @@ public class DirectAiChatSessionAiStudio {
     WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
     WriteLine("  set temp [wert]           -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
     WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
+    WriteLine("  set thinking-budget [wert]  -> Setzt das Thinking Budget für Gemini 2.5 Modelle (z.B. 4096)");
+    WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
     WriteLine("  change-key [1-3]          -> Wechselt das API-Key Profil dynamisch und speichert die Wahl (z.B. change-key 2)");
   }
 
@@ -325,6 +327,31 @@ public class DirectAiChatSessionAiStudio {
       }
       else {
         WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
+      }
+      return true;
+    }
+
+    if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
+      string budgetValueStr = normalizedInput.Substring(18).Trim();
+      if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
+        AIParams.ThinkingBudget = newBudget;
+        WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
+      }
+      else {
+        WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
+      }
+      return true;
+    }
+
+    if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
+      string levelValueStr = normalizedInput.Substring(17).Trim().ToUpper();
+      var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
+      if (validLevels.Contains(levelValueStr)) {
+        AIParams.ThinkingLevel = levelValueStr;
+        WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
+      }
+      else {
+        WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
       }
       return true;
     }

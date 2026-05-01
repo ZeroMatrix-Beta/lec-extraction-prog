@@ -120,8 +120,15 @@ public class VertexAutoExtractionSession {
       if (!string.IsNullOrWhiteSpace(systemInstruction)) {
         requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
       }
-      if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+      if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
+          requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+        }
+      }
+      else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.ThinkingBudget.HasValue) {
+          requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+        }
       }
 
       Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
@@ -423,30 +430,39 @@ public class VertexAutoExtractionSession {
     };
 
     if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+      }
+    }
+    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+      }
+    }
 
     using var cts = new CancellationTokenSource();
     ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
     Console.CancelKeyPress += cancelHandler;
 
-    string outputTextForPart = await GenerateWithContinuationsAsync(contents, requestConfig, partIndex, originalFile, prompt, cts);
+    string outputTextForPart = await GenerateWithContinuationsAsync(contents, requestConfig, partIndex, originalFile, prompt, cts, partFile);
 
     Console.CancelKeyPress -= cancelHandler;
 
     return ExtractionHelpers.CleanLatexResponse(outputTextForPart);
   }
 
-  private async Task<string> GenerateWithContinuationsAsync(List<Content> contents, GenerateContentConfig requestConfig, int partIndex, string originalFile, string prompt, CancellationTokenSource cts) {
+  private async Task<string> GenerateWithContinuationsAsync(List<Content> contents, GenerateContentConfig requestConfig, int partIndex, string originalFile, string prompt, CancellationTokenSource cts, string partFile) {
     int backoff = 30;
     int maxRetries = 5;
     string outputTextForPart = "";
     int currentRequest = 1;
-    int maxRequests = 15;
+    int maxRequestsPerPart = 6;
     int interactionInputTokens = 0;
     int interactionOutputTokens = 0;
 
     while (true) {
-      var result = await TryStreamChunkAsync(contents, requestConfig, partIndex, currentRequest, maxRequests, maxRetries, backoff, cts);
+      var result = await TryStreamChunkAsync(contents, requestConfig, partIndex, currentRequest, maxRequestsPerPart, maxRetries, backoff, cts);
       backoff = result.newBackoff;
 
       interactionInputTokens += result.requestInputTokens;
@@ -467,8 +483,8 @@ public class VertexAutoExtractionSession {
       bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(result.chunkOutput, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
       if (!videoComplete) {
-        if (currentRequest >= maxRequests) {
-          Console.WriteLine($"\n  [WARNUNG] Max Requests ({maxRequests}) erreicht. Breche ab.");
+        if (currentRequest >= maxRequestsPerPart) {
+          Console.WriteLine($"\n  [WARNUNG] Max Requests ({maxRequestsPerPart}) erreicht. Breche ab.\n  Teil: {partFile}");
           break;
         }
 
@@ -497,7 +513,7 @@ public class VertexAutoExtractionSession {
   }
 
   private async Task<(string chunkOutput, bool userCancelled, bool streamDropped, int newBackoff, int requestInputTokens, int requestOutputTokens)> TryStreamChunkAsync(
-    List<Content> contents, GenerateContentConfig requestConfig, int partIndex, int currentRequest, int maxRequests, int maxRetries, int backoff, CancellationTokenSource cts) {
+    List<Content> contents, GenerateContentConfig requestConfig, int partIndex, int currentRequest, int maxRequestsPerPart, int maxRetries, int backoff, CancellationTokenSource cts) {
     string chunkOutput = "";
     bool streamDropped = false;
     bool userCancelled = false;
@@ -519,9 +535,9 @@ public class VertexAutoExtractionSession {
 
       try {
         if (currentRequest == 1)
-          Console.WriteLine($"  [API] Sende initiale Anfrage für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+          Console.WriteLine($"  [API] Sende initiale Anfrage für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart}, Versuch {attempt}/{maxRetries})...");
         else
-          Console.WriteLine($"  [API] Sende Fortsetzungs-Anfrage (Continue) für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequests}, Versuch {attempt}/{maxRetries})...");
+          Console.WriteLine($"  [API] Sende Fortsetzungs-Anfrage (Continue) für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart}, Versuch {attempt}/{maxRetries})...");
 
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, contents, requestConfig);
         await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {

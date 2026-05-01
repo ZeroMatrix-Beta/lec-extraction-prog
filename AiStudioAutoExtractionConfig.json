@@ -1,7 +1,10 @@
 {
   "SourceFolder": "D:\\lecture-videos\\analysis2",
   "TargetFolder": "D:\\lecture-videos\\analysis2\\destination2",
-  "SystemInstructionPath": "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
+  "SystemInstructionPaths": [
+    "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
+    "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini-big-examples.md"
+  ],
   "HistoryPreloadPaths": [
     "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini-chat-history"
   ],

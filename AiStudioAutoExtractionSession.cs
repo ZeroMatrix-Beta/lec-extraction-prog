@@ -74,19 +74,42 @@ public class AiStudioAutoExtractionSession {
     }
 
     if (string.IsNullOrEmpty(_systemInstructionText)) {
-      Console.Write($"\nSystem Instruction aus '{_config.SystemInstructionPath}' laden? (j/n): ");
-      if (Console.ReadLine()?.Trim().ToLower() == "j" && System.IO.File.Exists(_config.SystemInstructionPath)) {
-        _systemInstructionText = await System.IO.File.ReadAllTextAsync(_config.SystemInstructionPath);
-        Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(_config.SystemInstructionPath)}");
+      if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any()) {
+        Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
+        var validPaths = new List<string>();
+        foreach (var path in _config.SystemInstructionPaths) {
+          if (System.IO.File.Exists(path)) {
+            Console.WriteLine($"  - {path}");
+            validPaths.Add(path);
+          }
+          else {
+            Console.WriteLine($"  - [NICHT GEFUNDEN] {path}");
+          }
+        }
+
+        if (validPaths.Any()) {
+          Console.Write("System Instructions laden? (j/n): ");
+          if (Console.ReadLine()?.Trim().ToLower() == "j") {
+            var instructionBuilder = new System.Text.StringBuilder();
+            foreach (var path in validPaths) {
+              instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(path));
+              Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(path)}");
+            }
+            _systemInstructionText = instructionBuilder.ToString();
+          }
+        }
       }
     }
 
     if (!_historyWasLoaded) {
-      Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
-      if (Console.ReadLine()?.Trim().ToLower() == "j") {
-        var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-
-        if (distinctFiles.Any()) {
+      var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+      if (distinctFiles.Any()) {
+        Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+        foreach (var file in distinctFiles) {
+          Console.WriteLine($"  - {file}");
+        }
+        Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
+        if (Console.ReadLine()?.Trim().ToLower() == "j") {
           Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
           string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
           var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
@@ -255,8 +278,15 @@ public class AiStudioAutoExtractionSession {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
 
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+      }
+    }
+    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+      }
     }
 
     Console.Write($"\n[Debug Chat] {_config.Model} (Strg+C zum Abbrechen): ");
@@ -377,8 +407,15 @@ public class AiStudioAutoExtractionSession {
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+      }
+    }
+    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+      }
     }
 
     Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
@@ -642,14 +679,21 @@ public class AiStudioAutoExtractionSession {
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 4096 };
+    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+      }
+    }
+    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
+        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+      }
     }
 
     string fullResponse = "";
     int backoff = 30;
     int currentRequest = 1;
-    int maxRequests = 5;
+    int maxRequestsPerPart = 6;
     int attempt = 1; // Zähler für API-Fehlschläge
     int maxRetries = 8;
 
@@ -669,7 +713,7 @@ public class AiStudioAutoExtractionSession {
       });
 
       try {
-        Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequests})...");
+        Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
 
         int requestInputTokens = 0;
         int requestOutputTokens = 0;
@@ -705,8 +749,8 @@ public class AiStudioAutoExtractionSession {
         bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         if (!videoComplete) {
-          if (currentRequest >= maxRequests) {
-            Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequests}) für diesen Teil erreicht. Breche ab.");
+          if (currentRequest >= maxRequestsPerPart) {
+            Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht. Breche ab.\n  Teil: {partFile}");
             break;
           }
 

@@ -16,7 +16,7 @@ public class DirectAiChatSessionVertexAIConfig {
   // [AI Context] Hard cutoff limit for output generation.
   public int MaxOutputTokens { get; set; } = 65535;
   // [AI Context] Explicitly maps to Vertex Gemini 2.5 thinking budget.
-  public int? ThinkingBudget { get; set; } = 4096;
+  public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
   // [AI Context] Explicitly maps to Vertex Gemini 3.x reasoning effort.
-  public string? ThinkingLevel { get; set; } = "MEDIUM";
+  public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
 }

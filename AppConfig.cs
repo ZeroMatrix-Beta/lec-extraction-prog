@@ -60,6 +60,8 @@ public class AppConfigOptions {
   public float DefaultTopP { get; set; } = 0.9f;
   public int DefaultTopK { get; set; } = 10;
   public int DefaultMaxOutputTokens { get; set; } = 65535;
+  public int? DefaultThinkingBudget { get; set; } = 4096;
+  public string? DefaultThinkingLevel { get; set; } = "HIGH";
   public string AutoExtractionPrompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 }
 
@@ -115,5 +117,7 @@ public static class AppConfig {
   public static float DefaultTopP => _options.DefaultTopP;
   public static int DefaultTopK => _options.DefaultTopK;
   public static int DefaultMaxOutputTokens => _options.DefaultMaxOutputTokens;
+  public static int? DefaultThinkingBudget => _options.DefaultThinkingBudget;
+  public static string? DefaultThinkingLevel => _options.DefaultThinkingLevel;
   public static string AutoExtractionPrompt => _options.AutoExtractionPrompt;
 }

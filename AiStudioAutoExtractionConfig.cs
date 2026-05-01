@@ -15,13 +15,20 @@ public class AiStudioAutoExtractionConfig {
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
   // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
   public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
-  // [AI Context] Absolute path to the overarching Director's Cut persona and instruction markdown.
-  public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+  // [AI Context] Absolute paths to the overarching Director's Cut persona and instruction markdown files.
+  public string[] SystemInstructionPaths { get; set; } = new[] {
+    @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md",
+    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-big-examples.md"
+  };
   // [AI Context] Centralized fallback paths for loading historical reference materials into the context window.
-  public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
+  public string[] HistoryPreloadPaths { get; set; } = new[] {
+    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-chat-history"
+  };
   public string LogFolder { get; set; } = @"D:\gemini-logs";
   // [AI Context] Default model selection for developer-tier batch processing.
   public string Model { get; set; } = "gemini-3-flash-preview";
+  public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
+  public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
   // [AI Context] The core prompt template dynamically appended to every video chunk.
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 }
