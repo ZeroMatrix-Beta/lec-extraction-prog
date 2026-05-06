@@ -21,8 +21,15 @@ class Program {
       // [AI Context] Bootstrapper. Demonstrates manual Dependency Injection (DI) pattern.
       // Determines the runtime environment (Vertex vs AI Studio) and wires up the respective isolated dependencies.
       while (true) {
+        // Lade die Konfiguration für die Auto-Extraktion, um den aktuellen Status anzuzeigen
+        var autoExtConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
+        string autoExtProfileDisplay = autoExtConfig.ActiveApiProfile == 0
+            ? "Dedizierter Key (automated-content-extraction)"
+            : $"Profil {autoExtConfig.ActiveApiProfile}";
+
         Console.WriteLine("\n==================================================");
         Console.WriteLine("     Welcome to AI Extraction & Processing        ");
+        Console.WriteLine($" (Aktives AI Studio Profil für Auto-Extraktion: {autoExtProfileDisplay})");
         Console.WriteLine("==================================================");
         Console.WriteLine("Please choose your desired operational mode:");
         Console.WriteLine(" 1) Google AI Studio (API Key / Developer endpoints)");

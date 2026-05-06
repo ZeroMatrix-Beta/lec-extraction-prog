@@ -285,7 +285,7 @@ public class DirectAiChatSessionAiStudio {
     WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
     WriteLine("  set thinking-budget [wert]  -> Setzt das Thinking Budget für Gemini 2.5 Modelle (z.B. 4096)");
     WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
-    WriteLine("  change-key [1-3]          -> Wechselt das API-Key Profil dynamisch und speichert die Wahl (z.B. change-key 2)");
+    WriteLine("  change-key [0-3]          -> Wechselt das API-Key Profil für diese Session (z.B. 'change-key 2', 0 für dediziert)");
   }
 
   /// <summary>
@@ -575,22 +575,28 @@ public class DirectAiChatSessionAiStudio {
 
   private void HandleChangeKey(string input) {
     var match = System.Text.RegularExpressions.Regex.Match(input, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-    if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 1 && newProfile <= 3) {
-      System.Environment.SetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", newProfile.ToString(), EnvironmentVariableTarget.User);
+    if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
+      string? newApiKey;
+      if (newProfile == 0) {
+        // [AI Context] Profile 0 is a convention for the dedicated, high-quota extraction key.
+        newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
+      }
+      else {
+        newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
+      }
 
-      string? newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
       if (!string.IsNullOrEmpty(newApiKey)) {
         _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
         _attachmentHandler.UpdateClient(_client);
         _activeApiProfile = newProfile;
-        WriteLine($"  [INFO] API-Key Profil erfolgreich auf {newProfile} gewechselt und dauerhaft in den Windows-Umgebungsvariablen gespeichert!");
+        WriteLine($"  [INFO] API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
       }
       else {
         WriteLine($"[Fehler] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
       }
     }
     else {
-      WriteLine("[Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
+      WriteLine("[Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
     }
   }
 

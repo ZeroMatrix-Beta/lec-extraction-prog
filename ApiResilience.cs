@@ -115,20 +115,42 @@ public static class ApiResilience {
            msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
   }
 
-  private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int backoff) {
-    var retryMatch = Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-    bool waitSuccess;
-    if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-      int waitTime = serverSuggestedDelay + 20; // Add a generous buffer
-      Console.WriteLine($"\n[Rate Limit] API suggests waiting. Waiting {waitTime} seconds... (Attempt {attempt}/{maxRetries})");
-      waitSuccess = await ExtractionHelpers.SmartDelayAsync(waitTime);
+  // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
+  // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
+  // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
+  // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
+  private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int currentBackoff) {
+    int waitTime;
+    int nextBackoff;
+
+    // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
+    if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+      waitTime = 180; // 3 Minuten
+      Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries})");
+      nextBackoff = waitTime; // Behält diesen Zustand für den nächsten Versuch bei, falls der Fehler ein anderer ist.
     }
     else {
-      Console.WriteLine($"\n[Rate Limit / Overload] Waiting {backoff} seconds... (Attempt {attempt}/{maxRetries})");
-      waitSuccess = await ExtractionHelpers.SmartDelayAsync(backoff);
+      // On the very first failure, check for a server-suggested delay.
+      if (attempt == 1) {
+        var retryMatch = Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+        if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
+          waitTime = serverSuggestedDelay + 20;
+          Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+        }
+        else {
+          waitTime = currentBackoff; // Use the initial backoff from the caller
+          Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+        }
+        nextBackoff = waitTime;
+      }
+      else {
+        waitTime = currentBackoff + 30;
+        Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+        nextBackoff = waitTime;
+      }
     }
 
-    backoff *= 2; // Always increase backoff for next time
-    return (waitSuccess, backoff);
+    bool waitSuccess = await ExtractionHelpers.SmartDelayAsync(waitTime);
+    return (waitSuccess, nextBackoff);
   }
 }

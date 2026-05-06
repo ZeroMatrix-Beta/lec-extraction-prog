@@ -10,14 +10,16 @@ namespace AutoExtraction;
 public class AiStudioAutoExtractionConfig {
   // [AI Context] Selects the environment variable API key profile to use (1-3).
   // If 0, uses the dedicated API_KEY-automated-content-extraction.
-  public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
+  // [Human] Stanardmäßig wird hier Profil 0 (der dedizierte Key für die automatisierte Extraktion) verwendet.
+  // Dies kann bei Bedarf in der AiStudioAutoExtractionConfig.json überschrieben werden.
+  public int ActiveApiProfile { get; set; } = 0;
   // [AI Context] Directory containing the raw, unprocessed lecture .mp4 files.
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
   // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
   public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
   // [AI Context] Absolute paths to the overarching Director's Cut persona and instruction markdown files.
   public string[] SystemInstructionPaths { get; set; } = new[] {
-    @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md",
+    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-no-segment-time-restriction.md",
     @"C:\Users\miche\latex\directors-cut-analysis2\gemini-big-examples.md"
   };
   // [AI Context] Centralized fallback paths for loading historical reference materials into the context window.

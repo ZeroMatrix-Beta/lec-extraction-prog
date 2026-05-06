@@ -45,6 +45,12 @@ public class AiStudioAutoExtractionSession {
     Console.WriteLine($"\n[AutoExtraction] Starte AI Studio Extraction Session...");
     Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
     Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
+    if (_config.ActiveApiProfile == 0) {
+      Console.WriteLine($"[AutoExtraction] API-Key: Dedizierter Key für automatisierte Extraktion (API_KEY-automated-content-extraction)");
+    }
+    else {
+      Console.WriteLine($"[AutoExtraction] API-Key: Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
+    }
 
     if (!Directory.Exists(_config.SourceFolder)) {
       Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
@@ -145,7 +151,7 @@ public class AiStudioAutoExtractionSession {
     Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
     Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
     Console.WriteLine("  5) Beenden (exit/quit)");
-    Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2')");
+    Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
     Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
     Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
     Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
@@ -168,7 +174,7 @@ public class AiStudioAutoExtractionSession {
         Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
         Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) Beenden (exit/quit)");
-        Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2')");
+        Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
         Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
@@ -204,18 +210,41 @@ public class AiStudioAutoExtractionSession {
         _debugChatHistory.Clear();
         Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
       }
-      else if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) {
-        var match = System.Text.RegularExpressions.Regex.Match(normalizedInput, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 1 && newProfile <= 3) {
-          string? newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
+      else if (normalizedInput == "6" || normalizedInput.StartsWith("6 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
+        string val = "";
+        if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
+          val = normalizedInput.Substring("change-key".Length).Trim();
+        }
+        else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
+          val = normalizedInput.Substring("change key".Length).Trim();
+        }
+        else if (normalizedInput.StartsWith("6 ")) {
+          val = normalizedInput.Substring(2).Trim();
+        }
+
+        if (string.IsNullOrEmpty(val)) {
+          Console.Write("Neues API-Key Profil (0-3): ");
+          val = Console.ReadLine()?.Trim() ?? "";
+        }
+
+        if (int.TryParse(val, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
+          string? newApiKey;
+          if (newProfile == 0) {
+            newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
+          }
+          else {
+            newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
+          }
+
           if (!string.IsNullOrEmpty(newApiKey)) {
             _client = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
             _attachmentHandler.UpdateClient(_client);
+            _config.ActiveApiProfile = newProfile;
             Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt!");
           }
         }
         else {
-          Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (1, 2 oder 3) angeben.");
+          Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
         }
       }
       else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
@@ -332,7 +361,7 @@ public class AiStudioAutoExtractionSession {
 
         _sessionTotalInputTokens += requestInputTokens;
         _sessionTotalOutputTokens += requestOutputTokens;
-        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
         Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
         Console.WriteLine();
@@ -355,17 +384,35 @@ public class AiStudioAutoExtractionSession {
 
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt < maxRetries) {
-          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 20; // Be more generous with the buffer
-            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
+          // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
+          // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
+          // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
+          // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
+          int waitTime;
+          // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
+          if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+            waitTime = 180; // 3 Minuten
+            Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries})");
+            backoff = waitTime;
+          }
+          else if (attempt == 1) {
+            var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
+              waitTime = serverSuggestedDelay + 20;
+              Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+            }
+            else {
+              waitTime = backoff;
+              Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+            }
+            backoff = waitTime;
           }
           else {
-            Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { exceptionCaught = true; break; }
+            backoff += 30;
+            waitTime = backoff;
+            Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
           }
-          backoff *= 2; // Increment backoff for the next potential retry, regardless of whether server suggested a delay
+          if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
         }
         else {
           Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -450,7 +497,7 @@ public class AiStudioAutoExtractionSession {
 
         _sessionTotalInputTokens += requestInputTokens;
         _sessionTotalOutputTokens += requestOutputTokens;
-        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+        Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
         Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
         Console.WriteLine();
@@ -466,17 +513,35 @@ public class AiStudioAutoExtractionSession {
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
         if (isOverloaded && attempt < maxRetries) {
-          var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-          if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-            int waitTime = serverSuggestedDelay + 20; // Be more generous with the buffer
-            Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
+          // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
+          // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
+          // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
+          // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
+          int waitTime;
+          // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
+          if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+            waitTime = 180; // 3 Minuten
+            Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries})");
+            backoff = waitTime;
+          }
+          else if (attempt == 1) {
+            var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
+              waitTime = serverSuggestedDelay + 20;
+              Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+            }
+            else {
+              waitTime = backoff;
+              Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+            }
+            backoff = waitTime;
           }
           else {
-            Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-            if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { break; }
+            backoff += 30;
+            waitTime = backoff;
+            Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
           }
-          backoff *= 2;
+          if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
         }
         else {
           Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -545,8 +610,11 @@ public class AiStudioAutoExtractionSession {
         }
 
         if (useCache) {
-          Console.WriteLine($"\n[Cache] FFmpeg übersprungen für {Path.GetFileName(file)}. Verwende gecachte Dateien (jünger als 2h).");
+          Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
           cachedParts.Sort();
+          foreach (var part in cachedParts) {
+            Console.WriteLine($"  - {part}");
+          }
           await channel.Writer.WriteAsync((file, cachedParts, true));
           continue;
         }
@@ -584,6 +652,9 @@ public class AiStudioAutoExtractionSession {
       string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
       string baseName = Path.GetFileNameWithoutExtension(file);
       string fullOutputText = "";
+      int fileTotalInputTokens = 0;
+      int fileTotalOutputTokens = 0;
+      bool fileProcessingSuccess = true;
 
       for (int i = 0; i < parts.Count; i++) {
         string safePartPath = parts[i];
@@ -591,7 +662,7 @@ public class AiStudioAutoExtractionSession {
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
 
-        string texOutput;
+        (string texOutput, int partInputTokens, int partOutputTokens) result;
 
         if (i > 0) {
           // Start delay and upload in parallel for subsequent parts
@@ -611,7 +682,7 @@ public class AiStudioAutoExtractionSession {
             continue;
           }
 
-          texOutput = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+          result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
         }
         else {
           // For the first part, no delay is needed, just upload and process.
@@ -620,13 +691,16 @@ public class AiStudioAutoExtractionSession {
             Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Überspringe.");
             continue;
           }
-          texOutput = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+          result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
         }
 
-        if (!string.IsNullOrWhiteSpace(texOutput)) {
-          string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
+        fileTotalInputTokens += result.partInputTokens;
+        fileTotalOutputTokens += result.partOutputTokens;
 
-          fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
+        if (!string.IsNullOrWhiteSpace(result.texOutput)) {
+          string cleanTex = ExtractionHelpers.CleanLatexResponse(result.texOutput);
+
+          fullOutputText += $"\n\n% --- TEIL {i + 1} (Tokens: Input {result.partInputTokens}, Output {result.partOutputTokens}) ---\n" + cleanTex;
 
           string uniqueTexPath = GetUniqueTexPath(texPath);
           await System.IO.File.WriteAllTextAsync(uniqueTexPath, cleanTex);
@@ -634,13 +708,20 @@ public class AiStudioAutoExtractionSession {
           // Hier werden .tex dateien geschrieben:
           generatedTexFiles.Add(uniqueTexPath);
         }
+        else {
+          Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
+          fileProcessingSuccess = false;
+          break;
+        }
       }
 
-      string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
-      string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
-      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% ==========================================\n\n";
-      await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
-      Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
+      if (fileProcessingSuccess) {
+        string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
+        string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
+        string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n% ==========================================\n\n";
+        await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
+        Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
+      }
     }
 
     // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
@@ -690,7 +771,7 @@ public class AiStudioAutoExtractionSession {
     return (true, parsedPrompt, attachmentParts);
   }
 
-  private async Task<string> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+  private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
     var userPromptParts = new List<Part>(attachmentParts);
 
     if (previousTexFiles.Any()) {
@@ -772,8 +853,8 @@ public class AiStudioAutoExtractionSession {
       _sessionTotalInputTokens += requestInputTokens;
       _sessionTotalOutputTokens += requestOutputTokens;
 
-      Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
-      Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens}");
+      Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
+      Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens} (inkl. Thinking Tokens)");
       Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
       fullResponse += chunkResp;
@@ -812,6 +893,6 @@ public class AiStudioAutoExtractionSession {
     }
 
     Console.CancelKeyPress -= cancelHandler;
-    return fullResponse;
+    return (fullResponse, interactionInputTokens, interactionOutputTokens);
   }
 }

@@ -161,7 +161,7 @@ public class VertexAutoExtractionSession {
 
           _sessionTotalInputTokens += requestInputTokens;
           _sessionTotalOutputTokens += requestOutputTokens;
-          Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
+          Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
           Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
           Console.WriteLine();
@@ -186,17 +186,35 @@ public class VertexAutoExtractionSession {
 
           bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
           if (isOverloaded && attempt < maxRetries) {
-            var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-              int waitTime = serverSuggestedDelay + 20; // Be more generous with the buffer
-              Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Warte {waitTime} Sekunden... (Versuch {attempt}/{maxRetries})");
-              if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
+            // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
+            // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
+            // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
+            // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
+            int waitTime;
+            // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
+            if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+              waitTime = 180; // 3 Minuten
+              Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries})");
+              backoff = waitTime;
+            }
+            else if (attempt == 1) {
+              var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+              if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
+                waitTime = serverSuggestedDelay + 20;
+                Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+              }
+              else {
+                waitTime = backoff;
+                Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+              }
+              backoff = waitTime;
             }
             else {
-              Console.WriteLine($"\n[Rate Limit / Überlastung] Warte {backoff} Sekunden... (Versuch {attempt}/{maxRetries})");
-              if (!await ExtractionHelpers.SmartDelayAsync(backoff)) { break; }
+              backoff += 30;
+              waitTime = backoff;
+              Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
             }
-            backoff *= 2;
+            if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
           }
           else {
             Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -276,6 +294,9 @@ public class VertexAutoExtractionSession {
 
       List<string> generatedTexFiles = new List<string>();
       string fullOutputText = "";
+      int fileTotalInputTokens = 0;
+      int fileTotalOutputTokens = 0;
+      bool fileProcessingSuccess = true;
       string baseName = Path.GetFileNameWithoutExtension(file);
 
       for (int i = 0; i < videoParts.Count; i++) {
@@ -288,10 +309,17 @@ public class VertexAutoExtractionSession {
           await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
         }
 
-        string cleanTex = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction);
-        if (string.IsNullOrEmpty(cleanTex)) continue;
+        var (cleanTex, partInputTokens, partOutputTokens) = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction);
+        if (string.IsNullOrEmpty(cleanTex)) {
+          Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
+          fileProcessingSuccess = false;
+          break;
+        }
 
-        fullOutputText += $"\n\n% --- TEIL {i + 1} ---\n" + cleanTex;
+        fileTotalInputTokens += partInputTokens;
+        fileTotalOutputTokens += partOutputTokens;
+
+        fullOutputText += $"\n\n% --- TEIL {i + 1} (Tokens: Input {partInputTokens}, Output {partOutputTokens}) ---\n" + cleanTex;
 
         string partTexFile = Path.ChangeExtension(partFile, ".tex");
         string uniquePartTexFile = GetUniqueTexPath(partTexFile);
@@ -306,10 +334,12 @@ public class VertexAutoExtractionSession {
         await CleanupBucketAsync();
       }
 
-      string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
-      string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% ==========================================\n\n";
-      await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
-      Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {uniqueTargetFilePath}");
+      if (fileProcessingSuccess) {
+        string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
+        string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n% ==========================================\n\n";
+        await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
+        Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {uniqueTargetFilePath}");
+      }
     }
     catch (Exception ex) {
       Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
@@ -368,8 +398,11 @@ public class VertexAutoExtractionSession {
     List<string> videoParts = new List<string>();
 
     if (useCache) {
-      Console.WriteLine($"  [Cache] FFmpeg übersprungen für {Path.GetFileName(file)}. Verwende gecachte Dateien (jünger als 2h).");
+      Console.WriteLine($"  [Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
       cachedParts.Sort();
+      foreach (var part in cachedParts) {
+        Console.WriteLine($"    - {part}");
+      }
       videoParts = cachedParts;
     }
     else {
@@ -400,7 +433,7 @@ public class VertexAutoExtractionSession {
     return videoParts;
   }
 
-  private async Task<string> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction) {
+  private async Task<(string texOutput, int inputTokens, int outputTokens)> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction) {
     string prompt = _config.Prompt;
     var dateInfo = VideoDateParser.Parse(originalFile);
 
@@ -419,7 +452,7 @@ public class VertexAutoExtractionSession {
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
     if (!uploadSuccess || !attachmentParts.Any()) {
       Console.WriteLine($"\n  [Fehler] Upload fehlgeschlagen für Teil {partIndex + 1}. Überspringe.");
-      return string.Empty;
+      return (string.Empty, 0, 0);
     }
 
     var userPromptParts = new List<Part>(attachmentParts);
@@ -506,8 +539,8 @@ public class VertexAutoExtractionSession {
       _sessionTotalInputTokens += requestInputTokens;
       _sessionTotalOutputTokens += requestOutputTokens;
 
-      Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens}");
-      Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens}");
+      Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
+      Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens} (inkl. Thinking Tokens)");
       Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
       fullResponse += chunkResp;
@@ -540,7 +573,7 @@ public class VertexAutoExtractionSession {
 
     Console.CancelKeyPress -= cancelHandler;
 
-    return ExtractionHelpers.CleanLatexResponse(fullResponse);
+    return (ExtractionHelpers.CleanLatexResponse(fullResponse), interactionInputTokens, interactionOutputTokens);
   }
 
   /// <summary>

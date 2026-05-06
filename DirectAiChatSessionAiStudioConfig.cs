@@ -16,9 +16,9 @@ public class DirectAiChatSessionAiStudioGenerationConfig {
   // [AI Context] Hard cutoff limit for output generation. Does NOT affect verbosity, only truncates if exceeded. Set to maximum (65535) for large LaTeX scripts.
   public int MaxOutputTokens { get; set; } = 65535;
   // [AI Context] "Thinking" params introduced for the latest Gemini 2.5 and 3.x models. Strictly required for the 2.5 series.
-  public int? ThinkingBudget { get; set; } = 4096;
+  public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
   // [AI Context] Controls the internal reasoning time for the Gemini 3.x series (e.g., MINIMAL, LOW, MEDIUM, HIGH).
-  public string? ThinkingLevel { get; set; } = "HIGH";
+  public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
 }
 
 /// <summary>
