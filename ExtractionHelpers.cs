@@ -52,8 +52,16 @@ internal static class ExtractionHelpers {
         if (delayCanceled) return false;
         await Task.Delay(100);
         if (!Console.IsInputRedirected && Console.KeyAvailable) {
-          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          Console.WriteLine($"\n[AI-Model] {message}");
+          bool enterPressed = false;
+          while (Console.KeyAvailable) {
+            var keyInfo = Console.ReadKey(intercept: true);
+            if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
+          }
+          if (enterPressed) {
+            Console.WriteLine("\n[Skip] Wartezeit durch Benutzer (Enter) übersprungen.");
+            return true;
+          }
+          Console.WriteLine($"\n[AI-Model] {message} (Oder drücke Enter für sofortigen Retry/Skip)");
         }
       }
       return true;

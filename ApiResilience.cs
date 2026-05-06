@@ -126,7 +126,7 @@ public static class ApiResilience {
     // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
     if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
       waitTime = 180; // 3 Minuten
-      Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries})");
+      Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
       nextBackoff = waitTime; // Behält diesen Zustand für den nächsten Versuch bei, falls der Fehler ein anderer ist.
     }
     else {
@@ -135,17 +135,17 @@ public static class ApiResilience {
         var retryMatch = Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
         if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
           waitTime = serverSuggestedDelay + 20;
-          Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+          Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
         }
         else {
           waitTime = currentBackoff; // Use the initial backoff from the caller
-          Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+          Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
         }
         nextBackoff = waitTime;
       }
       else {
         waitTime = currentBackoff + 30;
-        Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries})");
+        Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
         nextBackoff = waitTime;
       }
     }
