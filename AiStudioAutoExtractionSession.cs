@@ -334,7 +334,7 @@ public class AiStudioAutoExtractionSession {
       bool isGenerating = true;
       var inputInterceptorTask = Task.Run(async () => {
         while (isGenerating) {
-          if (!Console.IsInputRedirected && Console.KeyAvailable) {
+          if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
             Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
           }
@@ -758,13 +758,10 @@ public class AiStudioAutoExtractionSession {
     var dateInfo = VideoDateParser.Parse(originalFileName);
     string prompt = _config.Prompt;
 
-    prompt += $"\n\n[Meta-Information]: These {totalParts} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
-    prompt += $"\n\nThe uploaded video is part {partNumber} of {totalParts} from this lecture.";
-    prompt += $"\n\nThe video is played back / scaled to {_speed}x speed.";
+    prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture.";
 
     if (partNumber > 1) {
-      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity. Those files are just for context and for using references (if needed) dont treat them as source material.";
-      prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
+      prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
     }
 
     prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
@@ -777,16 +774,20 @@ public class AiStudioAutoExtractionSession {
   }
 
   private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
-    var userPromptParts = new List<Part>(attachmentParts);
+    var userPromptParts = new List<Part>();
 
     if (previousTexFiles.Any()) {
       Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
+      string contextText = "Here are the context files from the previous parts of the lecture:\n\n";
       foreach (var texFile in previousTexFiles) {
         Console.WriteLine($"    - {Path.GetFileName(texFile)}");
         string content = await System.IO.File.ReadAllTextAsync(texFile);
-        userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+        contextText += $"=== REFERENCE CONTEXT: {Path.GetFileName(texFile)} ===\n{content}\n=== END OF REFERENCE CONTEXT ===\n\n";
       }
+      userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
     }
+
+    userPromptParts.AddRange(attachmentParts);
 
     if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
       userPromptParts.Add(new Part { Text = parsedPrompt });

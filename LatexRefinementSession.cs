@@ -74,7 +74,7 @@ public class LatexRefinementSession {
 
     foreach (var file in files) {
       string content = await System.IO.File.ReadAllTextAsync(file);
-      parts.Add(new Part { Text = $"\n\n--- TEIL: {Path.GetFileName(file)} ---\n{content}\n--- ENDE TEIL ---" });
+      parts.Add(new Part { Text = $"\n\n=== PART: {Path.GetFileName(file)} ===\n{content}\n=== END OF PART ===" });
     }
 
     var history = new List<Content> { new Content { Role = "user", Parts = parts } };

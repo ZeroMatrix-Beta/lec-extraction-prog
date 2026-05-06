@@ -45,7 +45,7 @@ public class FfmpegToolkit {
     if (duration <= overlapSeconds * 2 || parts <= 1) {
       Console.WriteLine("  Warning: Video is too short to meaningfully split (or parts=1). Processing as a single file.");
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
-      string ffmpegArgs = streamCopy ? $"-i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset medium -crf 24 -tune stillimage -g 30 {audioArgs} -r 1 \"{outputFile}\"";
+      string ffmpegArgs = streamCopy ? $"-i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset veryslow -crf 28 -tune stillimage -g 30 {audioArgs} -r 1 \"{outputFile}\"";
 
       if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add(outputFile);
       return generatedFiles;
@@ -59,7 +59,7 @@ public class FfmpegToolkit {
       if (end > duration) end = duration;
 
       string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_part{i + 1}-compressed", ".mp4");
-      string ffmpegArgs = streamCopy ? $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset medium -crf 24 -tune stillimage -g 30 {audioArgs} -r 1 \"{outputFile}\"";
+      string ffmpegArgs = streamCopy ? $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset veryslow -crf 28 -tune stillimage -g 120 {audioArgs} -r 1 \"{outputFile}\"";
 
       Console.WriteLine($"\n  [FFmpegToolkit] Part {i + 1}/{parts}: Start={start:F2}s, End={end:F2}s");
       if (!await RunFfmpegAsync(ffmpegArgs)) {
@@ -126,8 +126,8 @@ public class FfmpegToolkit {
     }
 
     // [AI Context] -g 30 allows for efficient inter-frame compression.
-    // -crf 24 and -tune stillimage drastically reduce file size for static lecture recordings.
-    string ffmpegArgs = $"-i \"{inputFile}\" -vf \"{videoFilter}\" -c:v libx264 -preset medium -crf 24 -tune stillimage -g 30 {audioArgs} -r {fps} \"{outputFile}\"";
+    // -crf 28, -preset veryslow and -tune stillimage drastically reduce file size for static lecture recordings.
+    string ffmpegArgs = $"-i \"{inputFile}\" -vf \"{videoFilter}\" -c:v libx264 -preset veryslow -crf 28 -tune stillimage -g 120 {audioArgs} -r {fps} \"{outputFile}\"";
 
     Console.WriteLine($"\n  [FFmpegToolkit] Processing AI Video ({speedMultiplier}x Speed, {fps} FPS): {Path.GetFileName(inputFile)}...");
 
@@ -270,7 +270,7 @@ public class FfmpegToolkit {
   private async Task<bool> RunFfmpegAsync(string arguments) {
     var processInfo = new ProcessStartInfo {
       FileName = "ffmpeg",
-      Arguments = $"-y -hide_banner -loglevel warning -stats {arguments}",
+      Arguments = $"-y -nostdin -hide_banner -loglevel warning -stats {arguments}",
       RedirectStandardOutput = true,
       RedirectStandardError = true, // Wir leiten um und leeren den Puffer aktiv
       UseShellExecute = false,

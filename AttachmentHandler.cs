@@ -138,7 +138,7 @@ public class AttachmentHandler {
     if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext)) {
       WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
       string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
-      parts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(filePath)}) ---\n{fileContent}\n--- DOKUMENT ENDE ---" });
+      parts.Add(new Part { Text = $"=== ATTACHED FILE: {Path.GetFileName(filePath)} ===\n{fileContent}\n=== END OF ATTACHED FILE ===\n\n" });
       return true;
     }
 
@@ -181,7 +181,7 @@ public class AttachmentHandler {
           Write(".");
           for (int i = 0; i < 50; i++) {
             await Task.Delay(100);
-            if (!Console.IsInputRedirected && Console.KeyAvailable) {
+            if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
               while (Console.KeyAvailable) Console.ReadKey(intercept: true);
               Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
             }

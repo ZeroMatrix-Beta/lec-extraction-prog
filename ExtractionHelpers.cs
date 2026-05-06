@@ -9,7 +9,10 @@ namespace AutoExtraction;
 /// <summary>
 /// [AI Context] Shared utility methods to reduce code duplication across different extraction session types.
 /// </summary>
-internal static class ExtractionHelpers {
+public static class ExtractionHelpers {
+  // [AI Context] Globale Flag, um Input-Intercepting-Tasks (z.B. im REPL) während eines Delays zu pausieren
+  public static volatile bool IsInSmartDelay = false;
+
   /// <summary>
   /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
   /// </summary>
@@ -46,6 +49,7 @@ internal static class ExtractionHelpers {
     bool delayCanceled = false;
     ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; delayCanceled = true; };
     Console.CancelKeyPress += cancelHandler;
+    IsInSmartDelay = true;
     try {
       int delaySteps = seconds * 10;
       for (int i = 0; i < delaySteps; i++) {
@@ -67,6 +71,7 @@ internal static class ExtractionHelpers {
       return true;
     }
     finally {
+      IsInSmartDelay = false;
       Console.CancelKeyPress -= cancelHandler;
     }
   }

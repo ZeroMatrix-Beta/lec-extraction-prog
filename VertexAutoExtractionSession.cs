@@ -443,13 +443,10 @@ public class VertexAutoExtractionSession {
     string prompt = _config.Prompt;
     var dateInfo = VideoDateParser.Parse(originalFile);
 
-    prompt += $"\n\n[Meta-Information]: These {totalParts} video parts (and corresponding .tex files) originate from the lecture on {dateInfo.Weekday}, {dateInfo.DateString}. Do not include this date in the compiled LaTeX code right now; it is just for your internal context.";
-    prompt += $"\n\nThe uploaded video is part {partIndex + 1} of {totalParts} from this lecture.";
-    prompt += $"\n\nThe video is played back / scaled to {_config.SpeedMultiplier}x speed.";
+    prompt += $"\n\nAs a reminder: You are currently transcribing Part {partIndex + 1} of {totalParts} from this lecture.";
 
     if (partIndex > 0) {
-      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity. Those files are just for context and for using references (if needed) dont treat them as source material.";
-      prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
+      prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
     }
 
     prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
@@ -461,17 +458,20 @@ public class VertexAutoExtractionSession {
       return (string.Empty, 0, 0);
     }
 
-    var userPromptParts = new List<Part>(attachmentParts);
+    var userPromptParts = new List<Part>();
 
     if (generatedTexFiles.Any()) {
       Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
+      string contextText = "Here are the context files from the previous parts of the lecture:\n\n";
       foreach (var texFile in generatedTexFiles) {
         Console.WriteLine($"    - {Path.GetFileName(texFile)}");
         string content = await System.IO.File.ReadAllTextAsync(texFile);
-        userPromptParts.Add(new Part { Text = $"--- DOKUMENT START ({Path.GetFileName(texFile)}) ---\n{content}\n--- DOKUMENT ENDE ---" });
+        contextText += $"=== REFERENCE CONTEXT: {Path.GetFileName(texFile)} ===\n{content}\n=== END OF REFERENCE CONTEXT ===\n\n";
       }
+      userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
     }
 
+    userPromptParts.AddRange(attachmentParts);
     userPromptParts.Add(new Part { Text = parsedPrompt });
 
     var contents = new List<Content>();

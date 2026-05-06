@@ -375,7 +375,7 @@ public class DirectAiChatSessionVertex {
     bool isGenerating = true;
     var inputInterceptorTask = Task.Run(async () => {
       while (isGenerating) {
-        if (!Console.IsInputRedirected && Console.KeyAvailable) {
+        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
           WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
         }
