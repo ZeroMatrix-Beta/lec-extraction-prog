@@ -123,7 +123,7 @@ public class AiStudioAutoExtractionSession {
             _historyParts.AddRange(attachmentParts);
             _historyWasLoaded = true;
             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-            if (!await AcknowledgeHistoryAsync()) return;
+            if (!await AcknowledgeHistoryAsync(fileList)) return;
           }
           else {
             Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
@@ -443,9 +443,9 @@ public class AiStudioAutoExtractionSession {
   /// This guarantees the model context is correctly primed before batch processing starts and provides immediate visual feedback.
   /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
   /// </summary>
-  private async Task<bool> AcknowledgeHistoryAsync() {
+  private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
     var historyPromptParts = new List<Part>(_historyParts);
-    historyPromptParts.Add(new Part { Text = $"Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+    historyPromptParts.Add(new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." });
     var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
     _sessionPreamble.Add(userContent);
@@ -470,6 +470,8 @@ public class AiStudioAutoExtractionSession {
     int maxRetries = 10;
     bool success = false;
     string fullResponse = "";
+    int finalInputTokens = 0;
+    int finalOutputTokens = 0;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       fullResponse = "";
@@ -497,6 +499,8 @@ public class AiStudioAutoExtractionSession {
 
         _sessionTotalInputTokens += requestInputTokens;
         _sessionTotalOutputTokens += requestOutputTokens;
+        finalInputTokens = requestInputTokens;
+        finalOutputTokens = requestOutputTokens;
         Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
         Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
@@ -555,7 +559,8 @@ public class AiStudioAutoExtractionSession {
 
     if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
       _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-      await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text ?? "", _config.Model, fullResponse, "AutoExtractionSetup");
+      string logMsg = $"[History Acknowledgment] Angehängte Dateien: {loadedFiles}\n\nPrompt:\n{historyPromptParts.Last().Text}";
+      await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens);
       return true;
     }
     else {
@@ -758,7 +763,7 @@ public class AiStudioAutoExtractionSession {
     prompt += $"\n\nThe video is played back / scaled to {_speed}x speed.";
 
     if (partNumber > 1) {
-      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
+      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity. Those files are just for context and for using references (if needed) dont treat them as source material.";
       prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
     }
 
@@ -810,6 +815,13 @@ public class AiStudioAutoExtractionSession {
     int interactionInputTokens = 0;
     int interactionOutputTokens = 0;
 
+    string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
+    if (previousTexFiles.Any()) {
+      logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+    }
+    logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
+    string currentLogPrompt = logContext;
+
     using var cts = new CancellationTokenSource();
     ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
     Console.CancelKeyPress += cancelHandler;
@@ -858,7 +870,7 @@ public class AiStudioAutoExtractionSession {
       Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
       fullResponse += chunkResp;
-      await _sessionLogger.LogChatAsync($"[Part {partNumber}] {originalFileName}", parsedPrompt ?? "", _config.Model, chunkResp, "AutoExtraction");
+      await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens);
 
       bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
       bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -882,6 +894,7 @@ public class AiStudioAutoExtractionSession {
 
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
       history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+      currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
       Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen...");
       if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {

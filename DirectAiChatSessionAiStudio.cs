@@ -33,7 +33,7 @@ public class DirectAiChatSessionAiStudio {
   private readonly string[] HistoryPreloadPaths;
 
   // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
-  private string InitialHistoryPrompt = "Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen.";
+  private string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
 
   // [GCS] Der Name deines Google Cloud Storage Buckets
   // Z.B.: "en-linalg-biran-gemini-videos"

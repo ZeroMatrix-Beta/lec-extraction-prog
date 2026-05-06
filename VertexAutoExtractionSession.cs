@@ -86,14 +86,15 @@ public class VertexAutoExtractionSession {
 
     var historyParts = new List<Part>();
     bool historyWasLoaded = false;
+    string historyFileList = "";
     Console.Write($"\nHistory (alte Chat-Verläufe) aus den konfigurierten Pfaden mitschicken? (j/n): ");
     if (Console.ReadLine()?.Trim().ToLower() == "j") {
       var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
 
       if (distinctFiles.Any()) {
         Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
-        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
+        historyFileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {historyFileList}");
         if (success && attachmentParts.Any()) {
           historyParts.AddRange(attachmentParts);
           historyWasLoaded = true;
@@ -113,7 +114,7 @@ public class VertexAutoExtractionSession {
 
     if (historyWasLoaded && historyParts.Any()) {
       var historyPromptParts = new List<Part>(historyParts);
-      historyPromptParts.Add(new Part { Text = $"Hier ist das Material aus meiner History. Bitte lies es sorgfältig durch. Bestätige mir den Erhalt ausnahmslos mit exakt folgendem Text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Warte danach auf meine nächsten Anweisungen." });
+      historyPromptParts.Add(new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." });
       sessionPreamble.Add(new Content { Role = "user", Parts = historyPromptParts });
 
       var requestConfig = new GenerateContentConfig { Temperature = 0.0f, MaxOutputTokens = 1024 };
@@ -136,6 +137,8 @@ public class VertexAutoExtractionSession {
       int backoff = 45;
       int maxRetries = 5;
       bool success = false;
+      int finalInputTokens = 0;
+      int finalOutputTokens = 0;
 
       for (int attempt = 1; attempt <= maxRetries; attempt++) {
         using var cts = new CancellationTokenSource();
@@ -161,6 +164,8 @@ public class VertexAutoExtractionSession {
 
           _sessionTotalInputTokens += requestInputTokens;
           _sessionTotalOutputTokens += requestOutputTokens;
+          finalInputTokens = requestInputTokens;
+          finalOutputTokens = requestOutputTokens;
           Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
           Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
@@ -228,7 +233,8 @@ public class VertexAutoExtractionSession {
 
       if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
         sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-        await _sessionLogger.LogChatAsync("[History Acknowledgment]", historyPromptParts.Last().Text ?? "", _config.Model, fullResponse, "AutoExtractionSetup");
+        string logMsg = $"[History Acknowledgment] Angehängte Dateien: {historyFileList}\n\nPrompt:\n{historyPromptParts.Last().Text}";
+        await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "VertexAutoExtractionSetup", finalInputTokens, finalOutputTokens);
       }
       else {
         Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Breche Extraktion ab.");
@@ -442,7 +448,7 @@ public class VertexAutoExtractionSession {
     prompt += $"\n\nThe video is played back / scaled to {_config.SpeedMultiplier}x speed.";
 
     if (partIndex > 0) {
-      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity.";
+      prompt += "\n\nThe previously generated LaTeX documents for the prior parts are included in the context (see --- DOKUMENT START ---). Please use them to maintain context continuity. Those files are just for context and for using references (if needed) dont treat them as source material.";
       prompt += "\n\nNote: Consecutive video parts have an intentional 3-minute overlap to prevent context loss. If the video starts mid-sentence, use the provided LaTeX context from the previous part to reconstruct the full sentence.";
     }
 
@@ -500,6 +506,13 @@ public class VertexAutoExtractionSession {
     int interactionInputTokens = 0;
     int interactionOutputTokens = 0;
 
+    string logContext = $"[Part {partIndex + 1}] {Path.GetFileName(originalFile)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
+    if (generatedTexFiles.Any()) {
+      logContext += $"\n[Kontext-Dateien]: {string.Join(", ", generatedTexFiles.Select(Path.GetFileName))}";
+    }
+    logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
+    string currentLogPrompt = logContext;
+
     while (true) {
       Console.WriteLine($"  [API] Sende Anfrage für Part {partIndex + 1} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
       string chunkResp = "";
@@ -544,7 +557,7 @@ public class VertexAutoExtractionSession {
       Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
       fullResponse += chunkResp;
-      await _sessionLogger.LogChatAsync($"[Part {partIndex + 1}] {Path.GetFileName(originalFile)}", parsedPrompt ?? "", _config.Model, chunkResp, "VertexAutoExtraction");
+      await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "VertexAutoExtraction", requestInputTokens, requestOutputTokens);
 
       bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
       bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -566,6 +579,7 @@ public class VertexAutoExtractionSession {
 
       contents.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
       contents.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+      currentLogPrompt = $"[Continue Prompt für Part {partIndex + 1}]:\n{continuePrompt}";
 
       if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) break;
       currentRequest++;
