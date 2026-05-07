@@ -27,13 +27,15 @@ public static class ApiResilience {
       Func<GenerateContentResponse, Task> onChunkReceived,
       CancellationToken cancellationToken,
       int maxRetries = 8,
-      int initialBackoff = 45) {
+      int initialBackoff = 45,
+      string retryContext = "") {
     int backoff = initialBackoff;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 1) {
-          Console.WriteLine($"\n[API Retry] Sending request (Attempt {attempt}/{maxRetries})...");
+          string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
+          Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
         }
 
         var responseStream = streamFactory();
@@ -52,7 +54,7 @@ public static class ApiResilience {
         Console.WriteLine($"Original Error: {ex.Message}");
 
         if (IsTransientError(ex) && attempt < maxRetries) {
-          var backoffResult = await HandleBackoffAsync(ex, attempt, maxRetries, backoff);
+          var backoffResult = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext);
           backoff = backoffResult.NewBackoff;
           if (!backoffResult.WaitSuccess) {
             return false; // User cancelled the wait
@@ -73,13 +75,15 @@ public static class ApiResilience {
   public static async Task<T?> ExecuteWithRetryAsync<T>(
       Func<Task<T>> apiCall,
       int maxRetries = 8,
-      int initialBackoff = 45) where T : class {
+      int initialBackoff = 45,
+      string retryContext = "") where T : class {
     int backoff = initialBackoff;
 
     for (int attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         if (attempt > 1) {
-          Console.WriteLine($"\n[API Retry] Sending request (Attempt {attempt}/{maxRetries})...");
+          string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
+          Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
         }
         return await apiCall();
       }
@@ -92,7 +96,7 @@ public static class ApiResilience {
         Console.WriteLine($"Original Error: {ex.Message}");
 
         if (IsTransientError(ex) && attempt < maxRetries) {
-          var backoffResult = await HandleBackoffAsync(ex, attempt, maxRetries, backoff);
+          var backoffResult = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext);
           backoff = backoffResult.NewBackoff;
           if (!backoffResult.WaitSuccess) {
             return null; // User cancelled the wait
@@ -119,14 +123,16 @@ public static class ApiResilience {
   // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
   // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
   // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
-  private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int currentBackoff) {
+  private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int currentBackoff, string retryContext) {
     int waitTime;
     int nextBackoff;
+
+    string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
 
     // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
     if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
       waitTime = 180; // 3 Minuten
-      Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+      Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke减drücke Enter für sofortigen Retry)");
       nextBackoff = waitTime; // Behält diesen Zustand für den nächsten Versuch bei, falls der Fehler ein anderer ist.
     }
     else {
@@ -135,17 +141,17 @@ public static class ApiResilience {
         var retryMatch = Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
         if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
           waitTime = serverSuggestedDelay + 20;
-          Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+          Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
         }
         else {
           waitTime = currentBackoff; // Use the initial backoff from the caller
-          Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+          Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
         }
         nextBackoff = waitTime;
       }
       else {
         waitTime = currentBackoff + 30;
-        Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+        Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
         nextBackoff = waitTime;
       }
     }

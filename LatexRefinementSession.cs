@@ -109,7 +109,7 @@ public class LatexRefinementSession {
         responseText += text;
       }
       return responseText;
-    }, maxRetries: 5);
+    }, maxRetries: 5, retryContext: "LaTeX Refinement");
 
     if (!string.IsNullOrEmpty(fullText)) {
       string targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;

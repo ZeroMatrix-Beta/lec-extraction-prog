@@ -473,7 +473,8 @@ public class DirectAiChatSessionAiStudio {
             await Task.CompletedTask;
           },
           cancellationToken: cts.Token,
-          maxRetries: 5
+          maxRetries: 5,
+          retryContext: "Chat-Antwort"
       );
       if (!success) exceptionCaught = true;
     }

@@ -196,28 +196,29 @@ public class VertexAutoExtractionSession {
             // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
             // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
             int waitTime;
+            string contextMsg = " [History Bestätigung]";
             // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
             if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
               waitTime = 180; // 3 Minuten
-              Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+              Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
               backoff = waitTime;
             }
             else if (attempt == 1) {
               var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
               if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                 waitTime = serverSuggestedDelay + 20;
-                Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+                Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
               }
               else {
                 waitTime = backoff;
-                Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+                Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
               }
               backoff = waitTime;
             }
             else {
               backoff += 30;
               waitTime = backoff;
-              Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+              Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
           }
@@ -248,10 +249,19 @@ public class VertexAutoExtractionSession {
     string tmpFolder = Path.Combine(_config.TargetFolder, "tmp");
     if (!Directory.Exists(tmpFolder)) Directory.CreateDirectory(tmpFolder);
 
+    bool hasErrors = false;
+
     foreach (var file in filesToProcess) {
-      await ProcessSingleFileAsync(file, toolkit, tmpFolder, sessionPreamble, systemInstruction);
+      bool success = await ProcessSingleFileAsync(file, toolkit, tmpFolder, sessionPreamble, systemInstruction);
+      if (!success) hasErrors = true;
     }
-    Console.WriteLine("\n[AutoExtraction] Vertex Batch-Verarbeitung abgeschlossen!");
+
+    if (hasErrors) {
+      Console.WriteLine("\n[AutoExtraction] Vertex Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
+    }
+    else {
+      Console.WriteLine("\n[AutoExtraction] Vertex Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
+    }
   }
 
   private async Task<string> SelectModelAsync() {
@@ -289,26 +299,34 @@ public class VertexAutoExtractionSession {
     return selected;
   }
 
-  private async Task ProcessSingleFileAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, List<Content> sessionPreamble, string systemInstruction) {
+  private async Task<bool> ProcessSingleFileAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, List<Content> sessionPreamble, string systemInstruction) {
     string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
+    bool fileProcessingSuccess = true;
 
     try {
       Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
 
       List<string> videoParts = await PrepareVideoPartsAsync(file, toolkit, tmpFolder);
-      if (videoParts == null || videoParts.Count == 0) return;
+      if (videoParts == null || videoParts.Count == 0) return false;
 
       List<string> generatedTexFiles = new List<string>();
       string fullOutputText = "";
       int fileTotalInputTokens = 0;
       int fileTotalOutputTokens = 0;
-      bool fileProcessingSuccess = true;
       string baseName = Path.GetFileNameWithoutExtension(file);
 
       for (int i = 0; i < videoParts.Count; i++) {
         string partFile = videoParts[i];
         string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
         Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
+
+        if (System.IO.File.Exists(targetPartPath)) {
+          Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
+          string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
+          generatedTexFiles.Add(targetPartPath);
+          fullOutputText += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + existingTex;
+          continue;
+        }
 
         if (i > 0) {
           Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
@@ -346,11 +364,14 @@ public class VertexAutoExtractionSession {
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputText);
         Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {uniqueTargetFilePath}");
       }
+
+      return fileProcessingSuccess;
     }
     catch (Exception ex) {
       Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
       Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
       Console.WriteLine($"  [Fehler] Abbruch bei {Path.GetFileName(file)}.");
+      return false;
     }
     finally {
       // ALWAYS clean up GCS after each file to minimize enterprise storage costs!
@@ -414,15 +435,13 @@ public class VertexAutoExtractionSession {
     else {
       Console.WriteLine($"  Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
       string? processedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _config.SpeedMultiplier, fps: 1, downmixToMono: true, scaleTo720p: true);
-
       if (processedVideo == null) {
         Console.WriteLine($"  [Fehler] Konvertierung fehlgeschlagen. Überspringe.");
         return videoParts;
       }
 
       Console.WriteLine("  Schritt 2: Schneide Video in Teile mit Overlap...");
-      var rawParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
-
+      var rawParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder);
       if (rawParts.Count == 0) {
         Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
         return videoParts;
@@ -434,6 +453,13 @@ public class VertexAutoExtractionSession {
         System.IO.File.Move(rawParts[i], safePartPath);
         videoParts.Add(safePartPath);
       }
+
+      /*      // [Human] Temporäres Basis-Video (das ungeteilte 1FPS Video) aufräumen, um Festplattenspeicher zu sparen!
+      try {
+        if (System.IO.File.Exists(processedVideo)) System.IO.File.Delete(processedVideo);
+      }
+      catch { }
+      */
     }
 
     return videoParts;
@@ -533,7 +559,8 @@ public class VertexAutoExtractionSession {
               }
               await Task.CompletedTask;
             },
-            cancellationToken: cts.Token
+              cancellationToken: cts.Token,
+              retryContext: $"Teil {partIndex + 1} von {Path.GetFileName(originalFile)}"
         );
       }
       catch (Exception ex) {

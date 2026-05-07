@@ -19,7 +19,7 @@ public class FfmpegToolkit {
   /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
   /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
   /// </summary>
-  public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false) {
+  public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false) {
     var generatedFiles = new List<string>();
 
     if (!File.Exists(inputFile)) {
@@ -44,7 +44,7 @@ public class FfmpegToolkit {
 
     if (duration <= overlapSeconds * 2 || parts <= 1) {
       Console.WriteLine("  Warning: Video is too short to meaningfully split (or parts=1). Processing as a single file.");
-      string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
+      string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
       string ffmpegArgs = streamCopy ? $"-i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset veryslow -crf 28 -tune stillimage -g 30 {audioArgs} -r 1 \"{outputFile}\"";
 
       if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add(outputFile);
@@ -58,7 +58,7 @@ public class FfmpegToolkit {
       double end = start + segmentLength;
       if (end > duration) end = duration;
 
-      string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_part{i + 1}-compressed", ".mp4");
+      string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}_part{i + 1}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}_part{i + 1}-compressed", ".mp4");
       string ffmpegArgs = streamCopy ? $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset veryslow -crf 28 -tune stillimage -g 120 {audioArgs} -r 1 \"{outputFile}\"";
 
       Console.WriteLine($"\n  [FFmpegToolkit] Part {i + 1}/{parts}: Start={start:F2}s, End={end:F2}s");
@@ -79,7 +79,7 @@ public class FfmpegToolkit {
   /// while preserving perfectly understandable speech and legible board states.
   /// [Human] Der Standard-Prozess: Macht das Video schneller, reduziert es auf 1 Bild pro Sekunde (reicht für Tafeln!) und macht Audio zu Mono.
   /// </summary>
-  public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000, bool scaleTo720p = false) {
+  public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000, bool scaleTo720p = false, bool overwrite = false) {
     if (!File.Exists(inputFile)) {
       Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
       return null;
@@ -87,7 +87,7 @@ public class FfmpegToolkit {
 
     string fileName = Path.GetFileNameWithoutExtension(inputFile);
     string speedStr = speedMultiplier.ToString(CultureInfo.InvariantCulture);
-    string outputFile = GetUniqueFilePath(destFolder, $"{fileName}-speed-{speedStr}-compressed", ".mp4");
+    string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}-speed-{speedStr}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}-speed-{speedStr}-compressed", ".mp4");
 
     // 1. Video Filter zusammenbauen
     // [AI Context] fps=1 is optimal for lectures; AI doesn't need 30fps to read a blackboard.

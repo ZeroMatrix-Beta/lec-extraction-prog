@@ -389,28 +389,29 @@ public class AiStudioAutoExtractionSession {
           // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
           // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
           int waitTime;
+          string contextMsg = " [Debug Chat]";
           // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
           if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
             waitTime = 180; // 3 Minuten
-            Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+            Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             backoff = waitTime;
           }
           else if (attempt == 1) {
             var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
             if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
               waitTime = serverSuggestedDelay + 20;
-              Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+              Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             else {
               waitTime = backoff;
-              Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+              Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             backoff = waitTime;
           }
           else {
             backoff += 30;
             waitTime = backoff;
-            Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+            Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
           }
           if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
         }
@@ -522,28 +523,29 @@ public class AiStudioAutoExtractionSession {
           // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
           // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
           int waitTime;
+          string contextMsg = " [History Bestätigung]";
           // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
           if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
             waitTime = 180; // 3 Minuten
-            Console.WriteLine($"\n[Hohe Auslastung] Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+            Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             backoff = waitTime;
           }
           else if (attempt == 1) {
             var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
             if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
               waitTime = serverSuggestedDelay + 20;
-              Console.WriteLine($"\n[Rate Limit] API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+              Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             else {
               waitTime = backoff;
-              Console.WriteLine($"\n[Rate Limit / Überlastung] Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+              Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             backoff = waitTime;
           }
           else {
             backoff += 30;
             waitTime = backoff;
-            Console.WriteLine($"\n[Rate Limit] Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+            Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
           }
           if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
         }
@@ -625,10 +627,10 @@ public class AiStudioAutoExtractionSession {
         }
 
         Console.WriteLine($"\n[FFmpeg Producer] Starte Konvertierung für {Path.GetFileName(file)}...");
-        string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _speed, fps: 1, downmixToMono: true);
+        string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _speed, fps: 1, downmixToMono: true, overwrite: true);
         if (speedVideo == null) continue;
 
-        var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true);
+        var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true, overwrite: true);
         if (parts.Count == 0) continue;
 
         List<string> safeParts = new List<string>();
@@ -647,6 +649,8 @@ public class AiStudioAutoExtractionSession {
 
     // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
     // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
+    bool hasErrors = false;
+
     await foreach (var job in channel.Reader.ReadAllAsync()) {
       string file = job.originalFile;
       var parts = job.parts;
@@ -664,8 +668,17 @@ public class AiStudioAutoExtractionSession {
       for (int i = 0; i < parts.Count; i++) {
         string safePartPath = parts[i];
         string texPath = Path.ChangeExtension(safePartPath, ".tex");
+        string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
+
+        if (System.IO.File.Exists(targetPartPath)) {
+          Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
+          string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
+          generatedTexFiles.Add(targetPartPath);
+          fullOutputText += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + existingTex;
+          continue;
+        }
 
         (string texOutput, int partInputTokens, int partOutputTokens) result;
 
@@ -683,8 +696,10 @@ public class AiStudioAutoExtractionSession {
 
           var (uploadSuccess, parsedPrompt, attachmentParts) = uploadTask.Result;
           if (!uploadSuccess) {
-            Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Überspringe.");
-            continue;
+            Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+            fileProcessingSuccess = false;
+            hasErrors = true;
+            break;
           }
 
           result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
@@ -693,8 +708,10 @@ public class AiStudioAutoExtractionSession {
           // For the first part, no delay is needed, just upload and process.
           var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, parts.Count, file);
           if (!uploadSuccess) {
-            Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Überspringe.");
-            continue;
+            Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+            fileProcessingSuccess = false;
+            hasErrors = true;
+            break;
           }
           result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
         }
@@ -710,12 +727,16 @@ public class AiStudioAutoExtractionSession {
           string uniqueTexPath = GetUniqueTexPath(texPath);
           await System.IO.File.WriteAllTextAsync(uniqueTexPath, cleanTex);
 
+          string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
+          await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, cleanTex);
+
           // Hier werden .tex dateien geschrieben:
-          generatedTexFiles.Add(uniqueTexPath);
+          generatedTexFiles.Add(uniqueTargetPartPath);
         }
         else {
           Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
           fileProcessingSuccess = false;
+          hasErrors = true;
           break;
         }
       }
@@ -731,7 +752,13 @@ public class AiStudioAutoExtractionSession {
 
     // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
     await producerTask;
-    Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig abgeschlossen!");
+
+    if (hasErrors) {
+      Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
+    }
+    else {
+      Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
+    }
   }
 
   private string GetUniqueTexPath(string originalPath) {
@@ -847,7 +874,8 @@ public class AiStudioAutoExtractionSession {
               }
               await Task.CompletedTask;
             },
-            cancellationToken: cts.Token
+              cancellationToken: cts.Token,
+              retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}"
         );
       }
       catch (Exception ex) {
