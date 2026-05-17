@@ -10,8 +10,10 @@ namespace Config;
 /// Generic configuration loader implementing the hierarchy:
 /// corresponding .json > appconfig.json > C# static variable > C# app static
 /// </summary>
-public static class ConfigLoader<T> where T : class, new() {
-  public static T Load(string? sectionName = null) {
+public static class ConfigLoader<T> where T : class, new()
+{
+  public static T Load(string? sectionName = null)
+  {
     sectionName ??= typeof(T).Name;
     var basePath = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -42,7 +44,8 @@ public static class ConfigLoader<T> where T : class, new() {
 
 // [AI Context] The DTO that directly maps to the structure of the appsettings.json file.
 // We provide default fallback values here just in case the JSON file is missing or malformed.
-public class AppConfigOptions {
+public class AppConfigOptions
+{
   public string BaseLectureFolder { get; set; } = @"D:\lecture-videos";
   public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
@@ -54,8 +57,8 @@ public class AppConfigOptions {
   public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
   public string VertexLocation { get; set; } = "global";
   public string VertexGcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
-  public string DefaultModel { get; set; } = "gemini-3-flash-preview";
-  public string RefinementModel { get; set; } = "gemini-2.5-pro";
+  public string DefaultModel { get; set; } = "gemini-3-flash-preview"; // This is for other sessions
+  public string RefinementModel { get; set; } = "gemini-3-flash-preview"; // This is for LatexRefinement
   public float DefaultTemperature { get; set; } = 0.1f;
   public float DefaultTopP { get; set; } = 0.9f;
   public int DefaultTopK { get; set; } = 10;
@@ -69,10 +72,12 @@ public class AppConfigOptions {
 /// [AI Context] Centralized 'Single Point of Truth' for all hardcoded paths and default parameters.
 /// Uses the Microsoft.Extensions.Configuration binder to dynamically load values from appsettings.json.
 /// </summary>
-public static class AppConfig {
+public static class AppConfig
+{
   private static readonly AppConfigOptions _options;
 
-  static AppConfig() {
+  static AppConfig()
+  {
     // [AI Context] Automatically looks for appsettings.json in the compiled output directory.
     var configuration = new ConfigurationBuilder()
         .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)

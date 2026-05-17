@@ -7,7 +7,8 @@ namespace AutoExtraction;
 /// Defines source/target directories and the critical extraction prompt.
 /// [Human] Konfiguration für den automatisierten Extraktions-Modus mit dem kostenlosen AI Studio.
 /// </summary>
-public class AiStudioAutoExtractionConfig {
+public class AiStudioAutoExtractionConfig
+{
   // [AI Context] Selects the environment variable API key profile to use (1-3).
   // If 0, uses the dedicated API_KEY-automated-content-extraction.
   // [Human] Stanardmäßig wird hier Profil 0 (der dedizierte Key für die automatisierte Extraktion) verwendet.
@@ -16,7 +17,7 @@ public class AiStudioAutoExtractionConfig {
   // [AI Context] Directory containing the raw, unprocessed lecture .mp4 files.
   public string SourceFolder { get; set; } = @"D:\lecture-videos\analysis2";
   // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
-  public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
+  public string TargetFolder { get; set; } = @"";
   // [AI Context] Absolute paths to the overarching Director's Cut persona and instruction markdown files.
   public string[] SystemInstructionPaths { get; set; } = new[] {
     @"C:\Users\miche\latex\prompt-engineering\transcription\transcription.md",

@@ -3,15 +3,29 @@ using System.Text.RegularExpressions;
 
 namespace DocumentUtilities;
 
-public static class LatexTimestampHelper {
+public static class LatexTimestampHelper
+{
+  /// <summary>
+  /// Removes the PART_START_SECONDS comment from the beginning of the LaTeX content, if present.
+  /// </summary>
+  /// <param name="latexContent">The LaTeX content.</param>
+  /// <returns>The LaTeX content without the PART_START_SECONDS comment.</returns>
+  public static string ExtractContentWithoutTimestampHeader(string latexContent)
+  {
+    // Regex to find and remove the comment line, handling different line endings
+    return Regex.Replace(latexContent, @"^% PART_START_SECONDS: \d+(\.\d+)?\r?\n?", "", RegexOptions.Multiline).TrimStart();
+  }
+
   /// <summary>
   /// Adjusts timestamps within \begin{spoken-clean}[HH:MM:SS - HH:MM:SS] blocks by adding a given offset.
   /// </summary>
   /// <param name="latexContent">The LaTeX content of a single part.</param>
   /// <param name="offsetSeconds">The time offset in seconds to add to each timestamp.</param>
   /// <returns>The LaTeX content with adjusted timestamps.</returns>
-  public static string AdjustTimestamps(string latexContent, double offsetSeconds) {
-    if (offsetSeconds == 0) {
+  public static string AdjustTimestamps(string latexContent, double offsetSeconds)
+  {
+    if (offsetSeconds == 0)
+    {
       return latexContent; // No adjustment needed
     }
 
@@ -20,7 +34,8 @@ public static class LatexTimestampHelper {
     // Group 4: End HH, Group 5: End MM, Group 6: End SS
     string pattern = @"\\begin{spoken-clean}\[(\d{2}):(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2}):(\d{2})\]";
 
-    return Regex.Replace(latexContent, pattern, match => {
+    return Regex.Replace(latexContent, pattern, match =>
+    {
       // Parse start time
       int startHour = int.Parse(match.Groups[1].Value);
       int startMinute = int.Parse(match.Groups[2].Value);
