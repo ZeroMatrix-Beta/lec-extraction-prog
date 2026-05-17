@@ -73,7 +73,18 @@ public class LatexRefinementSession {
     });
 
     foreach (var file in files) {
-      string content = await System.IO.File.ReadAllTextAsync(file);
+      string rawContent = await System.IO.File.ReadAllTextAsync(file);
+      double partStartTimeSeconds = 0;
+
+      // Try to extract PART_START_SECONDS from the first line
+      var firstLineMatch = System.Text.RegularExpressions.Regex.Match(rawContent, @"% PART_START_SECONDS: (\d+(\.\d+)?)");
+      if (firstLineMatch.Success && double.TryParse(firstLineMatch.Groups[1].Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedStartTime)) {
+        partStartTimeSeconds = parsedStartTime;
+        // Remove the comment line from the content before processing
+        // rawContent = new System.Text.RegularExpressions.Regex(@"% PART_START_SECONDS: (\d+(\.\d+)?)\r?\n?", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Replace(rawContent, "", 1);
+      }
+
+      string content = LatexTimestampHelper.AdjustTimestamps(rawContent, partStartTimeSeconds);
       parts.Add(new Part { Text = $"\n\n=== PART: {Path.GetFileName(file)} ===\n{content}\n=== END OF PART ===" });
     }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Infrastructure;
@@ -306,7 +307,7 @@ public class VertexAutoExtractionSession {
     try {
       Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
 
-      List<string> videoParts = await PrepareVideoPartsAsync(file, toolkit, tmpFolder);
+      List<(string FilePath, double StartTime)> videoParts = await PrepareVideoPartsAsync(file, toolkit, tmpFolder);
       if (videoParts == null || videoParts.Count == 0) return false;
 
       List<string> generatedTexFiles = new List<string>();
@@ -316,7 +317,8 @@ public class VertexAutoExtractionSession {
       string baseName = Path.GetFileNameWithoutExtension(file);
 
       for (int i = 0; i < videoParts.Count; i++) {
-        string partFile = videoParts[i];
+        string partFile = videoParts[i].FilePath;
+        double partStartTimeSeconds = videoParts[i].StartTime;
         string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
         Console.WriteLine($"\n  [Verarbeite] Teil {i + 1}/{videoParts.Count}...");
 
@@ -333,7 +335,7 @@ public class VertexAutoExtractionSession {
           await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
         }
 
-        var (cleanTex, partInputTokens, partOutputTokens) = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction);
+        var (cleanTex, partInputTokens, partOutputTokens) = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction, partStartTimeSeconds);
         if (string.IsNullOrEmpty(cleanTex)) {
           Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
           fileProcessingSuccess = false;
@@ -345,12 +347,10 @@ public class VertexAutoExtractionSession {
 
         fullOutputText += $"\n\n% --- TEIL {i + 1} (Tokens: Input {partInputTokens}, Output {partOutputTokens}) ---\n" + cleanTex;
 
-        string partTexFile = Path.ChangeExtension(partFile, ".tex");
-        string uniquePartTexFile = GetUniqueTexPath(partTexFile);
-        await System.IO.File.WriteAllTextAsync(uniquePartTexFile, cleanTex);
-
+        // Prepend the start time to the individual part .tex file
+        string partHeader = $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n";
         string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
-        await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, cleanTex);
+        await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
         generatedTexFiles.Add(uniqueTargetPartPath);
 
         // [AI Context] Cost Mitigation Strategy:
@@ -399,7 +399,7 @@ public class VertexAutoExtractionSession {
     return newPath;
   }
 
-  private async Task<List<string>> PrepareVideoPartsAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder) {
+  private async Task<List<(string FilePath, double StartTime)>> PrepareVideoPartsAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder) {
     string baseName = Path.GetFileNameWithoutExtension(file);
     string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
     var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-{dateStr}-part*.mp4").ToList();
@@ -422,15 +422,21 @@ public class VertexAutoExtractionSession {
       }
     }
 
-    List<string> videoParts = new List<string>();
+    List<(string FilePath, double StartTime)> videoParts = new List<(string, double)>();
+
+    // Need to get the duration of the processed video to calculate start times for cached parts
+    string processedVideoPath = Path.Combine(tmpFolder, $"{baseName}-speed-{_config.SpeedMultiplier.ToString(CultureInfo.InvariantCulture)}-compressed.mp4");
+    double processedVideoDuration = await toolkit.GetVideoDurationAsync(processedVideoPath);
+    double segmentLengthForCached = (processedVideoDuration > 0) ? (processedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
 
     if (useCache) {
       Console.WriteLine($"  [Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
       cachedParts.Sort();
-      foreach (var part in cachedParts) {
-        Console.WriteLine($"    - {part}");
+      for (int i = 0; i < cachedParts.Count; i++) {
+        double startTime = (segmentLengthForCached > 0) ? i * (segmentLengthForCached - 180) : 0;
+        Console.WriteLine($"    - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
+        videoParts.Add((cachedParts[i], startTime));
       }
-      videoParts = cachedParts;
     }
     else {
       Console.WriteLine($"  Schritt 1: Konvertiere Video für Vertex (1 FPS, 720p, Mono, {_config.SpeedMultiplier}x Speed)...");
@@ -441,22 +447,22 @@ public class VertexAutoExtractionSession {
       }
 
       Console.WriteLine("  Schritt 2: Schneide Video in Teile mit Overlap...");
-      var rawParts = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder);
-      if (rawParts.Count == 0) {
+      var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(processedVideo, tmpFolder);
+      if (rawPartsWithTimes.Count == 0) {
         Console.WriteLine($"  [Fehler] Splitten fehlgeschlagen. Überspringe.");
         return videoParts;
       }
 
-      for (int i = 0; i < rawParts.Count; i++) {
+      for (int i = 0; i < rawPartsWithTimes.Count; i++) {
         string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
         if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
-        System.IO.File.Move(rawParts[i], safePartPath);
-        videoParts.Add(safePartPath);
+        System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
+        videoParts.Add((safePartPath, rawPartsWithTimes[i].StartTime));
       }
 
       /*      // [Human] Temporäres Basis-Video (das ungeteilte 1FPS Video) aufräumen, um Festplattenspeicher zu sparen!
       try {
-        if (System.IO.File.Exists(processedVideo)) System.IO.File.Delete(processedVideo);
+        if (File.Exists(processedVideo)) File.Delete(processedVideo);
       }
       catch { }
       */
@@ -465,7 +471,7 @@ public class VertexAutoExtractionSession {
     return videoParts;
   }
 
-  private async Task<(string texOutput, int inputTokens, int outputTokens)> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction) {
+  private async Task<(string texOutput, int inputTokens, int outputTokens)> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction, double partStartTimeSeconds) {
     string prompt = _config.Prompt;
     var dateInfo = VideoDateParser.Parse(originalFile);
 

@@ -19,8 +19,8 @@ public class FfmpegToolkit {
   /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
   /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
   /// </summary>
-  public async Task<List<string>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false) {
-    var generatedFiles = new List<string>();
+  public async Task<List<(string FilePath, double StartTime)>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false) {
+    var generatedFiles = new List<(string FilePath, double StartTime)>();
 
     if (!File.Exists(inputFile)) {
       Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
@@ -47,7 +47,7 @@ public class FfmpegToolkit {
       string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
       string ffmpegArgs = streamCopy ? $"-i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset veryslow -crf 28 -tune stillimage -g 30 {audioArgs} -r 1 \"{outputFile}\"";
 
-      if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add(outputFile);
+      if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add((outputFile, 0));
       return generatedFiles;
     }
 
@@ -67,7 +67,7 @@ public class FfmpegToolkit {
       }
       else {
         Console.WriteLine($"  [SUCCESS] Part {i + 1} completed => {outputFile}");
-        generatedFiles.Add(outputFile);
+        generatedFiles.Add((outputFile, start));
       }
     }
     return generatedFiles;
@@ -230,7 +230,7 @@ public class FfmpegToolkit {
   /// <summary>
   /// Uses ffprobe to securely extract the precise duration of the media file in seconds.
   /// </summary>
-  private async Task<double> GetVideoDurationAsync(string filePath) {
+  public async Task<double> GetVideoDurationAsync(string filePath) {
     if (!File.Exists(filePath)) {
       Console.WriteLine($"\n  [ffprobe error] File not found: '{filePath}'");
       return -1;

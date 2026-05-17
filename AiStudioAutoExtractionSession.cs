@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
+using System.Globalization;
 using System.Threading.Tasks; // Removed DirectChatAiInteraction as SessionLogger is now in Infrastructure
 using Infrastructure;
 using Google.GenAI;
@@ -82,27 +83,26 @@ public class AiStudioAutoExtractionSession {
     if (string.IsNullOrEmpty(_systemInstructionText)) {
       if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any()) {
         Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
-        var validPaths = new List<string>();
-        foreach (var path in _config.SystemInstructionPaths) {
-          if (System.IO.File.Exists(path)) {
-            Console.WriteLine($"  - {path}");
-            validPaths.Add(path);
-          }
-          else {
-            Console.WriteLine($"  - [NICHT GEFUNDEN] {path}");
-          }
-        }
 
-        if (validPaths.Any()) {
+        // Resolve all files from configured paths, handling directories
+        var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
+
+        if (resolvedInstructionFiles.Any()) {
+          foreach (var file in resolvedInstructionFiles) {
+            Console.WriteLine($"  - {file}");
+          }
           Console.Write("System Instructions laden? (j/n): ");
           if (Console.ReadLine()?.Trim().ToLower() == "j") {
             var instructionBuilder = new System.Text.StringBuilder();
-            foreach (var path in validPaths) {
-              instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(path));
-              Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(path)}");
+            foreach (var filePath in resolvedInstructionFiles) {
+              instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
+              Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
             }
             _systemInstructionText = instructionBuilder.ToString();
           }
+        }
+        else {
+          Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
         }
       }
     }
@@ -590,7 +590,7 @@ public class AiStudioAutoExtractionSession {
     // Wir limitieren das Fließband auf genau 1 Video. Das verhindert, dass FFmpeg 100 Videos 
     // am Stück konvertiert und uns den Festplattenspeicher (tmp-Ordner) füllt, während Gemini noch bei Video 1 hängt.
     // [AI Context] Bounded channel with capacity 1 acts as a strict backpressure mechanism.
-    var channel = Channel.CreateBounded<(string originalFile, List<string> parts, bool isCached)>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
+    var channel = Channel.CreateBounded<(string originalFile, List<(string FilePath, double StartTime)> parts, bool isCached)>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
     // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
     var producerTask = Task.Run(async () => {
@@ -619,10 +619,19 @@ public class AiStudioAutoExtractionSession {
         if (useCache) {
           Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
           cachedParts.Sort();
-          foreach (var part in cachedParts) {
-            Console.WriteLine($"  - {part}");
+
+          string speedVideoPath = Path.Combine(tmpFolder, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
+          double speedVideoDuration = await toolkit.GetVideoDurationAsync(speedVideoPath);
+          double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
+
+          var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
+          for (int i = 0; i < cachedParts.Count; i++) {
+            double startTime = (segmentLengthForCached > 0) ? i * (segmentLengthForCached - 180) : 0;
+            Console.WriteLine($"  - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
+            cachedPartsWithTimes.Add((cachedParts[i], startTime));
           }
-          await channel.Writer.WriteAsync((file, cachedParts, true));
+
+          await channel.Writer.WriteAsync((file, cachedPartsWithTimes, true));
           continue;
         }
 
@@ -630,19 +639,19 @@ public class AiStudioAutoExtractionSession {
         string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolder, speedMultiplier: _speed, fps: 1, downmixToMono: true, overwrite: true);
         if (speedVideo == null) continue;
 
-        var parts = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true, overwrite: true);
-        if (parts.Count == 0) continue;
+        var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolder, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true, overwrite: true);
+        if (rawPartsWithTimes.Count == 0) continue;
 
-        List<string> safeParts = new List<string>();
-        for (int i = 0; i < parts.Count; i++) {
+        List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
+        for (int i = 0; i < rawPartsWithTimes.Count; i++) {
           string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
           if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
-          System.IO.File.Move(parts[i], safePartPath);
-          safeParts.Add(safePartPath);
+          System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
+          safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
         }
 
         Console.WriteLine($"[FFmpeg Producer] {Path.GetFileName(file)} erfolgreich konvertiert! Lege es aufs Fließband für Gemini...");
-        await channel.Writer.WriteAsync((file, safeParts, false));
+        await channel.Writer.WriteAsync((file, safePartsWithTimes, false));
       }
       channel.Writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
     });
@@ -653,7 +662,7 @@ public class AiStudioAutoExtractionSession {
 
     await foreach (var job in channel.Reader.ReadAllAsync()) {
       string file = job.originalFile;
-      var parts = job.parts;
+      var partsWithTimes = job.parts;
       bool isCached = job.isCached;
 
       Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
@@ -665,12 +674,13 @@ public class AiStudioAutoExtractionSession {
       int fileTotalOutputTokens = 0;
       bool fileProcessingSuccess = true;
 
-      for (int i = 0; i < parts.Count; i++) {
-        string safePartPath = parts[i];
+      for (int i = 0; i < partsWithTimes.Count; i++) {
+        string safePartPath = partsWithTimes[i].FilePath;
+        double partStartTimeSeconds = partsWithTimes[i].StartTime;
         string texPath = Path.ChangeExtension(safePartPath, ".tex");
         string targetPartPath = Path.Combine(_config.TargetFolder, $"{baseName}-part{i + 1}.tex");
 
-        Console.WriteLine($"\nVerarbeite Teil {i + 1}/{parts.Count}: {Path.GetFileName(safePartPath)}");
+        Console.WriteLine($"\nVerarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
 
         if (System.IO.File.Exists(targetPartPath)) {
           Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
@@ -689,7 +699,7 @@ public class AiStudioAutoExtractionSession {
             await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
           });
 
-          var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, parts.Count, file);
+          var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
 
           // Wait for both to complete. The upload will run concurrently with the delay.
           await Task.WhenAll(delayTask, uploadTask);
@@ -702,18 +712,18 @@ public class AiStudioAutoExtractionSession {
             break;
           }
 
-          result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+          result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
         }
         else {
           // For the first part, no delay is needed, just upload and process.
-          var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, parts.Count, file);
+          var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
           if (!uploadSuccess) {
             Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
             fileProcessingSuccess = false;
             hasErrors = true;
             break;
           }
-          result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+          result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
         }
 
         fileTotalInputTokens += result.partInputTokens;
@@ -724,11 +734,10 @@ public class AiStudioAutoExtractionSession {
 
           fullOutputText += $"\n\n% --- TEIL {i + 1} (Tokens: Input {result.partInputTokens}, Output {result.partOutputTokens}) ---\n" + cleanTex;
 
-          string uniqueTexPath = GetUniqueTexPath(texPath);
-          await System.IO.File.WriteAllTextAsync(uniqueTexPath, cleanTex);
-
+          // Prepend the start time to the individual part .tex file
+          string partHeader = $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n";
           string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
-          await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, cleanTex);
+          await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
           // Hier werden .tex dateien geschrieben:
           generatedTexFiles.Add(uniqueTargetPartPath);
@@ -784,6 +793,7 @@ public class AiStudioAutoExtractionSession {
   private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
     var dateInfo = VideoDateParser.Parse(originalFileName);
     string prompt = _config.Prompt;
+    prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
 
     prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture.";
 
@@ -800,7 +810,7 @@ public class AiStudioAutoExtractionSession {
     return (true, parsedPrompt, attachmentParts);
   }
 
-  private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+  private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, double partStartTimeSeconds) {
     var userPromptParts = new List<Part>();
 
     if (previousTexFiles.Any()) {

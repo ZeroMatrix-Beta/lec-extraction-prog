@@ -19,14 +19,16 @@ public class AiStudioAutoExtractionConfig {
   public string TargetFolder { get; set; } = @"D:\lecture-videos\analysis2\destination2";
   // [AI Context] Absolute paths to the overarching Director's Cut persona and instruction markdown files.
   public string[] SystemInstructionPaths { get; set; } = new[] {
-    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-no-segment-time-restriction.md",
-    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-big-examples.md"
+    @"C:\Users\miche\latex\prompt-engineering\transcription\transcription.md",
+    @"C:\Users\miche\latex\prompt-engineering\transcription\hard-specs.md",
+    @"C:\Users\miche\latex\prompt-engineering\transcription\environments.md",
+    @"C:\Users\miche\latex\prompt-engineering\transcription\big-examples.md",
+
   };
   // [AI Context] Centralized fallback paths for loading historical reference materials into the context window.
   public string[] HistoryPreloadPaths { get; set; } = new[] {
-    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-chat-history"
-  };
-  public string LogFolder { get; set; } = @"D:\gemini-logs";
+    @"C:\Users\miche\latex\prompt-engineering\transcription\training-history"
+  }; public string LogFolder { get; set; } = @"D:\gemini-logs";
   // [AI Context] Default model selection for developer-tier batch processing.
   public string Model { get; set; } = "gemini-3-flash-preview";
   public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
