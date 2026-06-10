@@ -114,7 +114,10 @@ public static class ApiResilience {
   private static bool IsTransientError(Exception ex) {
     string msg = ex.Message;
     string exStr = ex.ToString();
-    return msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
+    // Explicitly treat HttpRequestException as transient, as they often indicate network hiccups or issues during content streaming.
+    // These are typically recoverable with a retry.
+    return ex is System.Net.Http.HttpRequestException ||
+           msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
            exStr.Contains("ServerError") || msg.Contains("quota", StringComparison.OrdinalIgnoreCase) ||
            msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
   }

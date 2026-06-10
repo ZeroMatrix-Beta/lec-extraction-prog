@@ -1,6 +1,6 @@
 # AI Coding Instructions & Guidelines
 
-Dieses Dokument enthält verbindliche Regeln für alle KI-Programmierassistenten (wie Gemini, Copilot, Cursor), die an diesem C#-Projekt (`lec-extraction-prog`) arbeiten. Bitte lies diese Regeln vor jeder Code-Generierung sorgfältig durch.
+Dieses Dokument enthält verbindliche Regeln für alle KI-Programmierassistenten (wie Gemini, Copilot, Cursor), die an diesem C#-Projekt (`lec-extraction-prog`) arbeiten. 
 
 ## 1. Exception Handling & Konsolen-Ausgaben
 **Regel:** *Niemals* Exceptions stillschweigend abfangen. Jede gefangene Exception muss sichtbare Spuren in der Konsole hinterlassen!

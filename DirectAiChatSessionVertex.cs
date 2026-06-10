@@ -20,7 +20,8 @@ namespace DirectChatAiInteraction.Vertex;
 /// [AI Context] Core REPL manager specifically for Google Cloud Vertex AI interactions.
 /// This completely isolates the enterprise execution context from the developer AI Studio context.
 /// </summary>
-public class DirectAiChatSessionVertex {
+public class DirectAiChatSessionVertex
+{
   private readonly string UploadFolderPath;
   private readonly string[] HistoryPreloadPaths;
   private string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
@@ -36,7 +37,8 @@ public class DirectAiChatSessionVertex {
   private int _sessionTotalOutputTokens = 0;
 
   // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
-  public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentHandler attachmentHandler) {
+  public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentHandler attachmentHandler)
+  {
     _client = client;
     _sessionLogger = logger;
     _attachmentHandler = attachmentHandler;
@@ -46,7 +48,8 @@ public class DirectAiChatSessionVertex {
     GcsBucketName = config.GcsBucketName; // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
     SystemInstructionPath = config.SystemInstructionPath;
 
-    AIParams = new DirectAiChatSessionVertexAIConfig {
+    AIParams = new DirectAiChatSessionVertexAIConfig
+    {
       Temperature = config.AI.Temperature,
       TopP = config.AI.TopP,
       TopK = config.AI.TopK,
@@ -54,8 +57,10 @@ public class DirectAiChatSessionVertex {
     };
   }
 
-  public async Task StartAsync() {
-    while (true) {
+  public async Task StartAsync()
+  {
+    while (true)
+    {
       string selectedModel = await SelectModelAsync();
       if (selectedModel == "__EXIT__") return;
 
@@ -70,17 +75,21 @@ public class DirectAiChatSessionVertex {
       string sysPromptChoice = await PromptWithCommandsAsync($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
       if (sysPromptChoice == "__EXIT__") return;
 
-      if (sysPromptChoice.Trim().ToLower() == "j") {
-        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+      if (sysPromptChoice.Trim().ToLower() == "j")
+      {
+        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
+        {
           _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
           WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
           loadedSysPrompt = true;
         }
-        else {
+        else
+        {
           WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
         }
       }
-      else {
+      else
+      {
         WriteLine("  [INFO] System Instruction wird ignoriert.");
       }
 
@@ -103,7 +112,8 @@ public class DirectAiChatSessionVertex {
   /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
   /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
   /// </summary>
-  private async Task<string> SelectModelAsync() {
+  private async Task<string> SelectModelAsync()
+  {
     WriteLine("\n=== Model Selection (Vertex AI) ===");
     WriteLine("Wähle ein Modell:");
     WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
@@ -127,7 +137,8 @@ public class DirectAiChatSessionVertex {
     string choice = await PromptWithCommandsAsync("Auswahl (1-11) [Standard: 4]: ");
     if (choice == "__EXIT__") return choice;
 
-    return choice switch {
+    return choice switch
+    {
       "1" => "gemini-3.1-flash-lite-preview",
       "2" => "gemini-3-flash-preview",
       "3" => "gemini-3.1-pro-preview",
@@ -143,7 +154,8 @@ public class DirectAiChatSessionVertex {
     };
   }
 
-  private async Task RunChatSessionAsync(string selectedModel, string? initialInput) {
+  private async Task RunChatSessionAsync(string selectedModel, string? initialInput)
+  {
     var history = new List<Content>();
     var initialHistory = new List<Content>(history);
     string userName = "Vertex AI User";
@@ -151,14 +163,17 @@ public class DirectAiChatSessionVertex {
     WriteLine($"\n--- Vertex Chat gestartet ({selectedModel}) ---");
     ShowCommands();
 
-    while (true) {
+    while (true)
+    {
       string? input;
-      if (initialInput != null) {
+      if (initialInput != null)
+      {
         input = initialInput;
         WriteLine($"\n{userName}: {input}");
         initialInput = null;
       }
-      else {
+      else
+      {
         Write($"\n{userName}: ");
         input = ReadLine();
       }
@@ -171,7 +186,8 @@ public class DirectAiChatSessionVertex {
 
       bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt);
 
-      if (isCommandHandled) {
+      if (isCommandHandled)
+      {
         if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
         if (parts.Count == 0) continue;
       }
@@ -181,20 +197,25 @@ public class DirectAiChatSessionVertex {
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      try {
+      try
+      {
         await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
       }
-      catch (Exception ex) {
+      catch (Exception ex)
+      {
         WriteLine($"\n[Vertex Error]: {ex.Message}");
 
-        if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
+        if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase))
+        {
           WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut!");
         }
-        else {
+        else
+        {
           WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
         }
 
-        if (history.Any() && history.Last().Role == "user") {
+        if (history.Any() && history.Last().Role == "user")
+        {
           history.RemoveAt(history.Count - 1);
         }
       }
@@ -206,14 +227,17 @@ public class DirectAiChatSessionVertex {
     await ForcePurgeGcsBucketAsync();
   }
 
-  private async Task<string> PromptWithCommandsAsync(string promptMessage) {
-    while (true) {
+  private async Task<string> PromptWithCommandsAsync(string promptMessage)
+  {
+    while (true)
+    {
       Write(promptMessage);
       string? input = ReadLine()?.Trim();
       if (string.IsNullOrWhiteSpace(input)) continue;
 
       string normalizedInput = input.TrimStart('/');
-      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
+      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase))
+      {
         return "__EXIT__";
       }
 
@@ -224,7 +248,8 @@ public class DirectAiChatSessionVertex {
     }
   }
 
-  private void ShowCommands() {
+  private void ShowCommands()
+  {
     WriteLine("\nBefehle:");
     WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
     WriteLine("  exit / quit               -> Beendet den Chat");
@@ -236,65 +261,79 @@ public class DirectAiChatSessionVertex {
     WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
   }
 
-  private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText) {
+  private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText)
+  {
     string normalizedInput = input.TrimStart('/');
 
-    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+    {
       ShowCommands();
       return true;
     }
 
-    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase))
+    {
       history.Clear();
       history.AddRange(initialHistory);
       WriteLine("\n[INFO] Gedächtnis gelöscht! Vertex Modell startet frisch.");
       return true;
     }
 
-    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
+    {
       string tempValueStr = normalizedInput.Substring(9).Trim();
-      if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
+      if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
+      {
         AIParams.Temperature = newTemp;
         WriteLine($"[INFO] Temperatur auf {AIParams.Temperature:F1} gesetzt.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
+    {
       string tokenValueStr = normalizedInput.Substring(11).Trim();
-      if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
+      if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
+      {
         AIParams.MaxOutputTokens = newTokens;
         WriteLine($"[INFO] MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase))
+    {
       string budgetValueStr = normalizedInput.Substring(18).Trim();
-      if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
+      if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0)
+      {
         AIParams.ThinkingBudget = newBudget;
         WriteLine($"[INFO] ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase))
+    {
       string levelValueStr = normalizedInput.Substring(17).Trim().ToUpper();
       var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
-      if (validLevels.Contains(levelValueStr)) {
+      if (validLevels.Contains(levelValueStr))
+      {
         AIParams.ThinkingLevel = levelValueStr;
         WriteLine($"[INFO] ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
+    {
       var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput);
 
       if (!success) return true;
@@ -307,14 +346,16 @@ public class DirectAiChatSessionVertex {
     return false;
   }
 
-  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
+  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName)
+  {
     Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
 
     int inputTokens = 0;
     int outputTokens = 0;
 
-    var config = new GenerateContentConfig {
+    var config = new GenerateContentConfig
+    {
       Temperature = AIParams.Temperature,
       TopP = AIParams.TopP,
       TopK = AIParams.TopK,
@@ -322,36 +363,41 @@ public class DirectAiChatSessionVertex {
     };
 
     // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models
-    if (selectedModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-      if (!string.IsNullOrWhiteSpace(AIParams.ThinkingLevel)) {
-        config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
-      }
-    }
-    else if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      if (AIParams.ThinkingBudget.HasValue) {
+    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+    if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    {
+      if (AIParams.ThinkingBudget.HasValue)
+      {
         config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = AIParams.ThinkingBudget };
       }
     }
 
     var apiContents = history; // By default, use the original history
 
-    if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
+    if (!string.IsNullOrWhiteSpace(_systemInstructionText))
+    {
       config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
       // Gemma models (pre-v4) don't support the 'system' role.
       // We prepend the instruction to the first user message instead.
-      if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4")) {
+      if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4"))
+      {
         bool isFirstTurn = !history.Any(c => c.Role == "model");
-        if (isFirstTurn) {
+        if (isFirstTurn)
+        {
           var modifiedHistory = new List<Content>();
           bool prepended = false;
-          foreach (var content in history) {
-            if (!prepended && content.Role == "user") {
+          foreach (var content in history)
+          {
+            if (!prepended && content.Role == "user")
+            {
               var newParts = content.Parts?.ToList() ?? new List<Part>();
               newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
               modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
               prepended = true;
             }
-            else {
+            else
+            {
               modifiedHistory.Add(content);
             }
           }
@@ -359,23 +405,28 @@ public class DirectAiChatSessionVertex {
           config.SystemInstruction = null;
         }
       }
-      else {
+      else
+      {
         config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
       }
     }
 
     bool exceptionCaught = false;
     using var cts = new CancellationTokenSource();
-    ConsoleCancelEventHandler cancelHandler = (sender, e) => {
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
+    {
       e.Cancel = true; // Verhindert das harte Beenden
       try { cts.Cancel(); } catch { }
     };
     Console.CancelKeyPress += cancelHandler;
 
     bool isGenerating = true;
-    var inputInterceptorTask = Task.Run(async () => {
-      while (isGenerating) {
-        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+    var inputInterceptorTask = Task.Run(async () =>
+    {
+      while (isGenerating)
+      {
+        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable)
+        {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
           WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
         }
@@ -383,15 +434,18 @@ public class DirectAiChatSessionVertex {
       }
     });
 
-    try {
+    try
+    {
       bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
           streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
-          onChunkReceived: async (chunk) => {
+          onChunkReceived: async (chunk) =>
+          {
             string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-            Write(chunkText);
+            Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
             fullResponse += chunkText;
 
-            if (chunk.UsageMetadata != null) {
+            if (chunk.UsageMetadata != null)
+            {
               if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
               if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
             }
@@ -403,61 +457,76 @@ public class DirectAiChatSessionVertex {
       );
       if (!success) exceptionCaught = true;
     }
-    catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
+    catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+    {
       exceptionCaught = true;
     }
-    finally {
+    finally
+    {
       isGenerating = false;
       await inputInterceptorTask;
       Console.CancelKeyPress -= cancelHandler;
 
-      if (inputTokens > 0 || outputTokens > 0) {
+      if (inputTokens > 0 || outputTokens > 0)
+      {
         _sessionTotalInputTokens += inputTokens;
         _sessionTotalOutputTokens += outputTokens;
         WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
         WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
       }
 
-      if (exceptionCaught || cts.IsCancellationRequested) {
+      if (exceptionCaught || cts.IsCancellationRequested)
+      {
         WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
       }
-      else {
+      else
+      {
         WriteLine();
       }
     }
 
-    if (!string.IsNullOrWhiteSpace(fullResponse)) {
+    if (!string.IsNullOrWhiteSpace(fullResponse))
+    {
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
       await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
     }
-    else {
+    else
+    {
       history.RemoveAt(history.Count - 1);
     }
   }
 
-  private async Task<string?> GetInitialHistoryCommandAsync(string selectedModel) {
-    if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
+  private async Task<string?> GetInitialHistoryCommandAsync(string selectedModel)
+  {
+    if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0)
+    {
       return null;
     }
 
     var allHistoryFiles = new List<string>();
     var notFoundPaths = new List<string>();
 
-    foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p))) {
-      if (System.IO.File.Exists(path)) {
+    foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
+    {
+      if (System.IO.File.Exists(path))
+      {
         allHistoryFiles.Add(Path.GetFullPath(path));
       }
-      else if (Directory.Exists(path)) {
+      else if (Directory.Exists(path))
+      {
         allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
       }
-      else {
+      else
+      {
         notFoundPaths.Add(path);
       }
     }
 
-    if (notFoundPaths.Any()) {
+    if (notFoundPaths.Any())
+    {
       WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
-      foreach (var path in notFoundPaths) {
+      foreach (var path in notFoundPaths)
+      {
         WriteLine($"  - {path}");
       }
     }
@@ -465,14 +534,16 @@ public class DirectAiChatSessionVertex {
     var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
     // Verhindert, dass die System Instruction versehentlich als History geladen wird
-    if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
+    if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
+    {
       distinctFiles = distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     if (distinctFiles.Count == 0) return null;
 
     WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-    foreach (var file in distinctFiles) {
+    foreach (var file in distinctFiles)
+    {
       WriteLine($"  - {file}");
     }
 
@@ -490,10 +561,12 @@ public class DirectAiChatSessionVertex {
   /// <summary>
   /// Deep cleans the assigned Vertex AI Bucket. Crucial for managing storage costs and cleaning up crashed sessions.
   /// </summary>
-  private async Task ForcePurgeGcsBucketAsync() {
+  private async Task ForcePurgeGcsBucketAsync()
+  {
     if (string.IsNullOrWhiteSpace(GcsBucketName)) return;
 
-    try {
+    try
+    {
       // StorageClient utilizes Application Default Credentials
       var storageClient = await StorageClient.CreateAsync();
       WriteLine($"  [GCS] Verifying Bucket '{GcsBucketName}' and purging ALL files...");
@@ -501,19 +574,23 @@ public class DirectAiChatSessionVertex {
       var objects = storageClient.ListObjectsAsync(GcsBucketName);
       int count = 0;
 
-      await foreach (var obj in objects) {
+      await foreach (var obj in objects)
+      {
         await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
         count++;
       }
 
-      if (count > 0) {
+      if (count > 0)
+      {
         WriteLine($"  [GCS] Successfully deleted {count} file(s) to secure billing.");
       }
-      else {
+      else
+      {
         WriteLine($"  [GCS] Bucket is already empty.");
       }
     }
-    catch (Exception ex) {
+    catch (Exception ex)
+    {
       WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
       WriteLine($"Originaler Fehlertext: {ex.Message}");
 
@@ -523,13 +600,16 @@ public class DirectAiChatSessionVertex {
 
       if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
           ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
-          ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
+          ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase))
+      {
         WriteLine($"  [GCS ERROR] Netzwerkfehler beim Zugriff auf '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
       }
-      else if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase)) {
+      else if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase))
+      {
         WriteLine($"  [GCS ERROR] Zugriff auf Bucket '{GcsBucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}");
       }
-      else {
+      else
+      {
         WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
       }
     }

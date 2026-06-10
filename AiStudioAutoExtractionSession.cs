@@ -365,19 +365,9 @@ public class AiStudioAutoExtractionSession
       MaxOutputTokens = 65535
     };
 
-    if (!string.IsNullOrWhiteSpace(_systemInstructionText))
-    {
-      requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
-    }
-
-    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase))
-    {
-      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel))
-      {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-      }
-    }
-    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
     {
       if (_config.ThinkingBudget.HasValue)
       {
@@ -423,7 +413,7 @@ public class AiStudioAutoExtractionSession
         await foreach (var chunk in responseStream.WithCancellation(cts.Token))
         {
           if (cts.IsCancellationRequested) break;
-          string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+          string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           fullResponse += txt;
           if (chunk.UsageMetadata != null)
@@ -543,14 +533,9 @@ public class AiStudioAutoExtractionSession
     {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
-    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase))
-    {
-      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel))
-      {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-      }
-    }
-    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
     {
       if (_config.ThinkingBudget.HasValue)
       {
@@ -584,7 +569,7 @@ public class AiStudioAutoExtractionSession
         await foreach (var chunk in responseStream.WithCancellation(cts.Token))
         {
           if (cts.IsCancellationRequested) break;
-          string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+          string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           fullResponse += txt;
           if (chunk.UsageMetadata != null)
@@ -1023,11 +1008,9 @@ public class AiStudioAutoExtractionSession
     };
 
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
-    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase))
-    {
-      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel)) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-    }
-    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
     {
       if (_config.ThinkingBudget.HasValue) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
     }
@@ -1065,7 +1048,7 @@ public class AiStudioAutoExtractionSession
             onChunkReceived: async (chunk) =>
             {
               string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-              Console.Write(txt);
+              Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
               chunkResp += txt;
               if (chunk.UsageMetadata != null)
               {

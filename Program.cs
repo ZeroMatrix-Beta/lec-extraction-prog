@@ -15,16 +15,12 @@ using Infrastructure;
 /// either to the FFmpeg processing toolkit or the Gemini chat session based on user input.
 /// [Human] Die Hauptklasse, die beim Start des Programms als erstes aufgerufen wird.
 /// </summary>
-class Program
-{
-  static async Task Main(string[] args)
-  {
-    try
-    {
+partial class Program {
+  static async Task Main(string[] args) {
+    try {
       // [AI Context] Bootstrapper. Demonstrates manual Dependency Injection (DI) pattern.
       // Determines the runtime environment (Vertex vs AI Studio) and wires up the respective isolated dependencies.
-      while (true)
-      {
+      while (true) {
         // Lade die Konfiguration für die Auto-Extraktion, um den aktuellen Status anzuzeigen
         var autoExtConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
         string autoExtProfileDisplay = autoExtConfig.ActiveApiProfile == 0
@@ -47,13 +43,11 @@ class Program
         string? mainChoice = Console.ReadLine()?.Trim().ToLower();
 
         // [AI Context] Handle null (EOF) as an exit signal to prevent infinite loops in non-interactive terminals.
-        if (mainChoice == null || mainChoice == "exit" || mainChoice == "quit")
-        {
+        if (mainChoice == null || mainChoice == "exit" || mainChoice == "quit") {
           break;
         }
 
-        switch (mainChoice)
-        {
+        switch (mainChoice) {
           case "1":
             await RunDirectAiStudioChatAsync();
             break;
@@ -75,12 +69,10 @@ class Program
         }
       }
     }
-    catch (OperationCanceledException)
-    {
+    catch (OperationCanceledException) {
       Console.WriteLine("\n[System] Execution cancelled by user. Exiting cleanly.");
     }
-    catch (Exception ex)
-    {
+    catch (Exception ex) {
       Console.WriteLine($"\n[FATAL ERROR] The application encountered an unhandled exception and must close.");
       Console.WriteLine($"Type: {ex.GetType().Name}");
       Console.WriteLine($"Message: {ex.Message}");
@@ -90,14 +82,12 @@ class Program
       Console.WriteLine("\nPress any key to exit...");
       if (!Console.IsInputRedirected) Console.ReadKey(true);
     }
-    finally
-    {
+    finally {
       Console.WriteLine("\n[System] Session ended.");
     }
   }
 
-  private static async Task RunDirectAiStudioChatAsync()
-  {
+  private static async Task RunDirectAiStudioChatAsync() {
     var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
     string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
     Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
@@ -107,8 +97,7 @@ class Program
     await chatSession.StartAsync();
   }
 
-  private static async Task RunDirectVertexChatAsync()
-  {
+  private static async Task RunDirectVertexChatAsync() {
     var config = ConfigLoader<DirectAiChatSessionVertexConfig>.Load();
     Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
     var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, false, config.GcsBucketName);
@@ -117,15 +106,13 @@ class Program
     await chatSession.StartAsync();
   }
 
-  private static async Task RunFfmpegSessionAsync()
-  {
+  private static async Task RunFfmpegSessionAsync() {
     var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
     var ffmpegMenu = new FfmpegInteractiveSession(ffmpegConfig);
     await ffmpegMenu.StartAsync();
   }
 
-  private static async Task RunAutoExtractionAsync()
-  {
+  private static async Task RunAutoExtractionAsync() {
     Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
     Console.WriteLine(" 1) Google AI Studio");
     Console.WriteLine(" 2) Google Cloud Vertex AI");
@@ -134,8 +121,7 @@ class Program
 
     if (extChoice == "exit" || extChoice == "quit") return;
 
-    if (extChoice == "2")
-    {
+    if (extChoice == "2") {
       var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
       Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
       var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, false, config.GcsBucketName);
@@ -147,16 +133,13 @@ class Program
       var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger, aiStudioClientForRefinement, latexRefinementConfig);
       await session.StartAsync();
     }
-    else
-    {
+    else {
       var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
       string apiKey;
-      if (config.ActiveApiProfile == 0)
-      {
+      if (config.ActiveApiProfile == 0) {
         apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
       }
-      else
-      {
+      else {
         apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
       }
       Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
@@ -168,8 +151,7 @@ class Program
     }
   }
 
-  private static async Task RunLatexRefinementAsync()
-  {
+  private static async Task RunLatexRefinementAsync() {
     // Lade den exklusiven Key für das Refinement
     string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
     Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);

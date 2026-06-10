@@ -21,7 +21,8 @@ namespace DirectChatAiInteraction.AiStudio;
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary> 
-public class DirectAiChatSessionAiStudio {
+public class DirectAiChatSessionAiStudio
+{
   // [AI Context] Global state for file resolution. 
   // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
   // Konfigurierbarer Basis-Pfad für deine Uploads. 
@@ -53,7 +54,8 @@ public class DirectAiChatSessionAiStudio {
   private int _sessionTotalOutputTokens = 0;
 
   // [AI Context] Constructor injects config dependencies to isolate state.
-  public DirectAiChatSessionAiStudio(Client client, DirectAiChatSessionAiStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
+  public DirectAiChatSessionAiStudio(Client client, DirectAiChatSessionAiStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio)
+  {
     _client = client;
     _sessionLogger = logger;
     _attachmentHandler = attachmentHandler;
@@ -68,7 +70,8 @@ public class DirectAiChatSessionAiStudio {
     // [AI Context] Creates a localized deep copy of AI parameters.
     // [Human] Kopiert die Standard-Werte, damit wir sie später mit "/set temp" im Chat verändern können, ohne das Original zu überschreiben.
     // Wir legen eine lokale Kopie an, damit /set Befehle nur diese Sitzung modifizieren
-    AIParams = new DirectAiChatSessionAiStudioGenerationConfig {
+    AIParams = new DirectAiChatSessionAiStudioGenerationConfig
+    {
       Temperature = config.AI.Temperature,
       TopP = config.AI.TopP,
       TopK = config.AI.TopK,
@@ -80,8 +83,10 @@ public class DirectAiChatSessionAiStudio {
   /// [AI Context] Asynchronous entry point for the session. Initializes API clients and directory structures.
   /// [Human] Startet die Session, verbindet sich mit Google und erstellt die Log-Ordner für diesen Chat-Verlauf.
   /// </summary>
-  public async Task StartAsync() {
-    while (true) {
+  public async Task StartAsync()
+  {
+    while (true)
+    {
       string selectedModel = await SelectModelAsync();
       if (selectedModel == "__EXIT__") return;
       if (selectedModel == "__CHANGED_KEY__") continue;
@@ -100,17 +105,21 @@ public class DirectAiChatSessionAiStudio {
       if (sysPromptChoice == "__EXIT__") return;
       if (sysPromptChoice == "__CHANGED_KEY__") continue;
 
-      if (sysPromptChoice.Trim().ToLower() == "j") {
-        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+      if (sysPromptChoice.Trim().ToLower() == "j")
+      {
+        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath))
+        {
           _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
           WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
           loadedSysPrompt = true;
         }
-        else {
+        else
+        {
           WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
         }
       }
-      else {
+      else
+      {
         WriteLine("  [INFO] System Instruction wird ignoriert.");
       }
 
@@ -135,7 +144,8 @@ public class DirectAiChatSessionAiStudio {
   /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
   /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
   /// </summary>
-  private async Task<string> SelectModelAsync() {
+  private async Task<string> SelectModelAsync()
+  {
     WriteLine($"\n=== Model Selection (AI Studio) ===");
     WriteLine("Wähle ein Modell:");
     WriteLine(" 1) gemini-3.1-flash-lite-preview");
@@ -153,7 +163,8 @@ public class DirectAiChatSessionAiStudio {
     string choice = await PromptWithCommandsAsync("Auswahl (1-11) [Standard: 4]: ");
     if (choice == "__EXIT__" || choice == "__CHANGED_KEY__") return choice;
 
-    return choice switch {
+    return choice switch
+    {
       "1" => "gemini-3.1-flash-lite-preview",
       "2" => "gemini-3-flash-preview",
       "3" => "gemini-3.1-pro-preview",
@@ -177,7 +188,8 @@ public class DirectAiChatSessionAiStudio {
   /// Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle,
   /// sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
   /// </summary>
-  private async Task RunChatSessionAsync(string selectedModel, string? initialInput) {
+  private async Task RunChatSessionAsync(string selectedModel, string? initialInput)
+  {
     var history = new List<Content>();
 
     // [AI Context] Cache initial state to allow memory resets without restarting the runtime.
@@ -188,18 +200,22 @@ public class DirectAiChatSessionAiStudio {
     WriteLine($"\n--- Chat gestartet ({selectedModel} | API Profil: {_activeApiProfile}) ---");
     ShowCommands();
 
-    while (true) {
+    while (true)
+    {
       string? input;
-      if (initialInput != null) {
+      if (initialInput != null)
+      {
         // [AI Context] Automatically executes the history attachment command on the first loop iteration without requiring user interaction.
         input = initialInput;
         WriteLine($"\n{userName}: {input}");
         initialInput = null; // Nur beim allerersten Durchlauf verwenden
       }
-      else {
+      else
+      {
         // [AI Context] Flush the input buffer before asking for new input.
         // Prevents confusing "ghost inputs" if the user typed something while the AI was generating or waiting in a Task.Delay backoff loop.
-        if (!Console.IsInputRedirected) {
+        if (!Console.IsInputRedirected)
+        {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
         }
         Write($"\n{userName}: ");
@@ -217,9 +233,11 @@ public class DirectAiChatSessionAiStudio {
       bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt);
 
       // If the command handler took care of everything (or failed gracefully), we skip the API call for this turn.
-      if (isCommandHandled) {
+      if (isCommandHandled)
+      {
         // The only exception is the 'attach' command, which modifies our parts/prompt and STILL wants to talk to Gemini
-        if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
+        if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
+        {
           continue;
         }
 
@@ -233,18 +251,21 @@ public class DirectAiChatSessionAiStudio {
 
       history.Add(new Content { Role = "user", Parts = parts });
 
-      try {
+      try
+      {
         // [AI Context] Hands off to streaming handler. Mutates 'history' internally.
         // The resilience logic is now inside StreamGeminiResponseAsync.
         await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
       }
-      catch (Exception ex) {
+      catch (Exception ex)
+      {
         // This block now catches unrecoverable errors re-thrown by the resilience helper.
         WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
         WriteLine($"Originaler Fehlertext: {ex.Message}");
 
         // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
-        if (history.Any() && history.Last().Role == "user") {
+        if (history.Any() && history.Last().Role == "user")
+        {
           history.RemoveAt(history.Count - 1);
         }
       }
@@ -254,19 +275,23 @@ public class DirectAiChatSessionAiStudio {
     await CleanupGcsBucketAsync();
   }
 
-  private async Task<string> PromptWithCommandsAsync(string promptMessage) {
-    while (true) {
+  private async Task<string> PromptWithCommandsAsync(string promptMessage)
+  {
+    while (true)
+    {
       Write(promptMessage);
       string? input = ReadLine()?.Trim();
       if (string.IsNullOrWhiteSpace(input)) continue;
 
       string normalizedInput = input.TrimStart('/');
 
-      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
+      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase))
+      {
         return "__EXIT__";
       }
 
-      if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) {
+      if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+      {
         HandleChangeKey(normalizedInput);
         return "__CHANGED_KEY__";
       }
@@ -274,7 +299,8 @@ public class DirectAiChatSessionAiStudio {
     }
   }
 
-  private void ShowCommands() {
+  private void ShowCommands()
+  {
     WriteLine("\nBefehle:");
     WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
     WriteLine("  exit / quit               -> Beendet den Chat");
@@ -292,76 +318,93 @@ public class DirectAiChatSessionAiStudio {
   /// Verarbeitet alle eingebauten /- oder Kommando-Befehle, um die Hauptschleife sauber zu halten.
   /// Returns true, wenn der Input ein Befehl war und verarbeitet wurde.
   /// </summary>
-  private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText) {
+  private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText)
+  {
     string normalizedInput = input.TrimStart('/');
 
-    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase))
+    {
       ShowCommands();
       return true;
     }
 
-    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase))
+    {
       history.Clear();
       history.AddRange(initialHistory);
       WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
       return true;
     }
 
-    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase))
+    {
       string tempValueStr = normalizedInput.Substring(9).Trim();
-      if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
+      if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f)
+      {
         AIParams.Temperature = newTemp;
         WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase))
+    {
       string tokenValueStr = normalizedInput.Substring(11).Trim();
-      if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
+      if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1)
+      {
         AIParams.MaxOutputTokens = newTokens;
         WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase))
+    {
       string budgetValueStr = normalizedInput.Substring(18).Trim();
-      if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
+      if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0)
+      {
         AIParams.ThinkingBudget = newBudget;
         WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
       }
       return true;
     }
 
-    if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase))
+    {
       string levelValueStr = normalizedInput.Substring(17).Trim().ToUpper();
       var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
-      if (validLevels.Contains(levelValueStr)) {
+      if (validLevels.Contains(levelValueStr))
+      {
         AIParams.ThinkingLevel = levelValueStr;
         WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
       }
       return true;
     }
 
-    if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) {
+    if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+    {
       HandleChangeKey(normalizedInput);
       return true;
     }
 
-    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
+    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase))
+    {
       var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput);
 
       if (!success) return true; // Handled, but failed. Returning true with empty 'parts' forces the main loop to cleanly skip the turn.
@@ -379,7 +422,8 @@ public class DirectAiChatSessionAiStudio {
   /// Side-effects: Mutates 'history' list by appending the assistant's full response. Appends raw text to 'chat_log.md'.
   /// Streamt die Antwort von Gemini asynchron in die Konsole und speichert das Ergebnis in der Historie und einem Logfile.
   /// </summary>
-  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
+  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName)
+  {
     Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
 
@@ -388,7 +432,8 @@ public class DirectAiChatSessionAiStudio {
 
     // [AI Context] Maps current dynamic AI params to the Request payload.
     // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
-    var config = new GenerateContentConfig {
+    var config = new GenerateContentConfig
+    {
       Temperature = AIParams.Temperature,
       TopP = AIParams.TopP,
       TopK = AIParams.TopK,
@@ -397,13 +442,12 @@ public class DirectAiChatSessionAiStudio {
 
     // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models
     // Older models (1.5, robotics) or non-Gemini models (Gemma) will crash if this is included.
-    if (selectedModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-      if (!string.IsNullOrWhiteSpace(AIParams.ThinkingLevel)) {
-        config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
-      }
-    }
-    else if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      if (AIParams.ThinkingBudget.HasValue) {
+    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+    if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    {
+      if (AIParams.ThinkingBudget.HasValue)
+      {
         config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = AIParams.ThinkingBudget };
       }
     }
@@ -411,21 +455,27 @@ public class DirectAiChatSessionAiStudio {
     var apiContents = history; // By default, use the original history
 
     // Pass the Director's Cut Protocol as an absolute System Instruction
-    if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
+    if (!string.IsNullOrWhiteSpace(_systemInstructionText))
+    {
       // Gemma models (pre-v4) don't support the 'system' role.
       // We prepend the instruction to the first user message instead.
-      if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4")) {
-        if (!history.Any(c => c.Role == "model")) { // isFirstTurn
+      if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4"))
+      {
+        if (!history.Any(c => c.Role == "model"))
+        { // isFirstTurn
           var modifiedHistory = new List<Content>();
           bool prepended = false;
-          foreach (var content in history) {
-            if (!prepended && content.Role == "user") {
+          foreach (var content in history)
+          {
+            if (!prepended && content.Role == "user")
+            {
               var newParts = content.Parts?.ToList() ?? new List<Part>();
               newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
               modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
               prepended = true;
             }
-            else {
+            else
+            {
               modifiedHistory.Add(content);
             }
           }
@@ -433,7 +483,8 @@ public class DirectAiChatSessionAiStudio {
           config.SystemInstruction = null; // Ensure it's not sent in the dedicated field
         }
       }
-      else {
+      else
+      {
         // For all other models (Gemini, Gemma v4+), use the standard system instruction field.
         config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
       }
@@ -441,16 +492,20 @@ public class DirectAiChatSessionAiStudio {
 
     bool exceptionCaught = false;
     using var cts = new CancellationTokenSource();
-    ConsoleCancelEventHandler cancelHandler = (sender, e) => {
+    ConsoleCancelEventHandler cancelHandler = (sender, e) =>
+    {
       e.Cancel = true; // Verhindert das Beenden des Programms
       try { cts.Cancel(); } catch { }
     };
     Console.CancelKeyPress += cancelHandler;
 
     bool isGenerating = true;
-    var inputInterceptorTask = Task.Run(async () => {
-      while (isGenerating) {
-        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+    var inputInterceptorTask = Task.Run(async () =>
+    {
+      while (isGenerating)
+      {
+        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable)
+        {
           while (Console.KeyAvailable) Console.ReadKey(intercept: true);
           WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
         }
@@ -458,15 +513,18 @@ public class DirectAiChatSessionAiStudio {
       }
     });
 
-    try {
+    try
+    {
       bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
           streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
-          onChunkReceived: async (chunk) => {
+          onChunkReceived: async (chunk) =>
+          {
             string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-            Write(chunkText);
+            Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
             fullResponse += chunkText;
 
-            if (chunk.UsageMetadata != null) {
+            if (chunk.UsageMetadata != null)
+            {
               if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
               if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
             }
@@ -478,35 +536,42 @@ public class DirectAiChatSessionAiStudio {
       );
       if (!success) exceptionCaught = true;
     }
-    catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
+    catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
+    {
       exceptionCaught = true;
     }
-    finally {
+    finally
+    {
       isGenerating = false;
       await inputInterceptorTask; // Warte kurz, bis der Input-Blocker sauber beendet ist
       Console.CancelKeyPress -= cancelHandler;
 
-      if (inputTokens > 0 || outputTokens > 0) {
+      if (inputTokens > 0 || outputTokens > 0)
+      {
         _sessionTotalInputTokens += inputTokens;
         _sessionTotalOutputTokens += outputTokens;
         WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
         WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
       }
 
-      if (exceptionCaught || cts.IsCancellationRequested) {
+      if (exceptionCaught || cts.IsCancellationRequested)
+      {
         WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
       }
-      else {
+      else
+      {
         WriteLine();
       }
     }
 
     // 7. KI-Antwort in die Historie aufnehmen
-    if (!string.IsNullOrWhiteSpace(fullResponse)) {
+    if (!string.IsNullOrWhiteSpace(fullResponse))
+    {
       history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
       await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
     }
-    else {
+    else
+    {
       // [AI Context] Falls abgebrochen wurde, bevor die KI etwas gesagt hat, 
       // müssen wir die User-Nachricht entfernen, um "Consecutive User Message"-Errors zu vermeiden.
       history.RemoveAt(history.Count - 1);
@@ -517,29 +582,37 @@ public class DirectAiChatSessionAiStudio {
   /// Fragt den Nutzer, ob eine bestehende History geladen werden soll, 
   /// und baut den entsprechenden /attach Befehl zusammen.
   /// </summary>
-  private async Task<string?> GetInitialHistoryCommandAsync(string selectedModel) {
-    if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
+  private async Task<string?> GetInitialHistoryCommandAsync(string selectedModel)
+  {
+    if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0)
+    {
       return null;
     }
 
     var allHistoryFiles = new List<string>();
     var notFoundPaths = new List<string>();
 
-    foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p))) {
-      if (System.IO.File.Exists(path)) {
+    foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p)))
+    {
+      if (System.IO.File.Exists(path))
+      {
         allHistoryFiles.Add(Path.GetFullPath(path));
       }
-      else if (Directory.Exists(path)) {
+      else if (Directory.Exists(path))
+      {
         allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
       }
-      else {
+      else
+      {
         notFoundPaths.Add(path);
       }
     }
 
-    if (notFoundPaths.Any()) {
+    if (notFoundPaths.Any())
+    {
       WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
-      foreach (var path in notFoundPaths) {
+      foreach (var path in notFoundPaths)
+      {
         WriteLine($"  - {path}");
       }
     }
@@ -548,16 +621,19 @@ public class DirectAiChatSessionAiStudio {
 
     // Verhindert, dass die System Instruction versehentlich als History geladen wird, 
     // falls der Nutzer sie physisch im History-Ordner abgelegt hat.
-    if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
+    if (!string.IsNullOrWhiteSpace(SystemInstructionPath))
+    {
       distinctFiles = distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
-    if (distinctFiles.Count == 0) {
+    if (distinctFiles.Count == 0)
+    {
       return null;
     }
 
     WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-    foreach (var file in distinctFiles) {
+    foreach (var file in distinctFiles)
+    {
       WriteLine($"  - {file}");
     }
 
@@ -574,29 +650,36 @@ public class DirectAiChatSessionAiStudio {
     return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
   }
 
-  private void HandleChangeKey(string input) {
+  private void HandleChangeKey(string input)
+  {
     var match = System.Text.RegularExpressions.Regex.Match(input, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-    if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
+    if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3)
+    {
       string? newApiKey;
-      if (newProfile == 0) {
+      if (newProfile == 0)
+      {
         // [AI Context] Profile 0 is a convention for the dedicated, high-quota extraction key.
         newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
       }
-      else {
+      else
+      {
         newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
       }
 
-      if (!string.IsNullOrEmpty(newApiKey)) {
+      if (!string.IsNullOrEmpty(newApiKey))
+      {
         _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
         _attachmentHandler.UpdateClient(_client);
         _activeApiProfile = newProfile;
         WriteLine($"  [INFO] API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
       }
-      else {
+      else
+      {
         WriteLine($"[Fehler] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
       }
     }
-    else {
+    else
+    {
       WriteLine("[Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
     }
   }
@@ -605,34 +688,41 @@ public class DirectAiChatSessionAiStudio {
   /// [GCS] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket.
   /// Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
   /// </summary>
-  private async Task CleanupGcsBucketAsync() {
+  private async Task CleanupGcsBucketAsync()
+  {
     if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;
 
     if (IsAiStudio) return; // Prevent free-tier from pinging GCS
 
-    try {
+    try
+    {
       var storageClient = await StorageClient.CreateAsync();
       WriteLine($"  [GCS] Prüfe Bucket '{GcsBucketName}' auf alte/temporäre Dateien...");
       var objects = storageClient.ListObjectsAsync(GcsBucketName);
       int count = 0;
-      await foreach (var obj in objects) {
+      await foreach (var obj in objects)
+      {
         await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
         count++;
       }
-      if (count > 0) {
+      if (count > 0)
+      {
         WriteLine($"  [GCS] {count} Datei(en) erfolgreich gelöscht.");
       }
     }
-    catch (Exception ex) {
+    catch (Exception ex)
+    {
       WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
       WriteLine($"Originaler Fehlertext: {ex.Message}");
 
       if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
           ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
-          ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
+          ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase))
+      {
         WriteLine($"  [GCS Warnung] Netzwerkfehler beim Bereinigen des Buckets '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
       }
-      else {
+      else
+      {
         WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
       }
     }

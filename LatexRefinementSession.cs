@@ -153,14 +153,9 @@ public class LatexRefinementSession
       Temperature = 0.0f,
       MaxOutputTokens = 65535,
     };
-    if (_config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase))
-    {
-      if (!string.IsNullOrWhiteSpace(_config.ThinkingLevel))
-      {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-      }
-    }
-    else if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
+    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
     {
       if (_config.ThinkingBudget.HasValue)
       {
