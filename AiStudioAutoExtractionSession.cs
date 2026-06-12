@@ -19,8 +19,7 @@ namespace AutoExtraction;
 /// Combines local FFmpeg preprocessing (producer) with Gemini API sequential extraction (consumer).
 /// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos.
 /// </summary>
-public class AiStudioAutoExtractionSession
-{
+public class AiStudioAutoExtractionSession {
   private Client _client;
   private readonly AiStudioAutoExtractionConfig _config;
   private readonly LatexRefinementConfig _latexRefinementConfig; // Added
@@ -38,8 +37,7 @@ public class AiStudioAutoExtractionSession
   private int _sessionTotalInputTokens = 0;
   private int _sessionTotalOutputTokens = 0;
 
-  public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementConfig latexRefinementConfig)
-  {
+  public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementConfig latexRefinementConfig) {
     _client = client;
     _config = config;
     _attachmentHandler = attachmentHandler;
@@ -47,44 +45,36 @@ public class AiStudioAutoExtractionSession
     _latexRefinementConfig = latexRefinementConfig; // Initialized
   }
 
-  public async Task StartAsync()
-  {
+  public async Task StartAsync() {
     // [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     Console.WriteLine($"\n[AutoExtraction] Starte AI Studio Extraction Session...");
     Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
     Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
-    if (_config.ActiveApiProfile == 0)
-    {
+    if (_config.ActiveApiProfile == 0) {
       Console.WriteLine($"[AutoExtraction] API-Key: Dedizierter Key für automatisierte Extraktion (API_KEY-automated-content-extraction)");
     }
-    else
-    {
+    else {
       Console.WriteLine($"[AutoExtraction] API-Key: Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
     }
 
-    if (!Directory.Exists(_config.SourceFolder))
-    {
+    if (!Directory.Exists(_config.SourceFolder)) {
       Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
       return;
     }
 
     // If no specific target folder is provided in config, create one inside the source folder.
-    if (string.IsNullOrWhiteSpace(_config.TargetFolder))
-    {
+    if (string.IsNullOrWhiteSpace(_config.TargetFolder)) {
       _config.TargetFolder = Path.Combine(_config.SourceFolder, "extracted_output");
     }
 
-    if (!Directory.Exists(_config.TargetFolder))
-    {
+    if (!Directory.Exists(_config.TargetFolder)) {
       Directory.CreateDirectory(_config.TargetFolder);
     }
 
     string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-    foreach (var f in filesToProcess)
-    {
+    foreach (var f in filesToProcess) {
       string fileName = Path.GetFileName(f).ToLowerInvariant();
-      if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\.[a-z0-9]+$"))
-      {
+      if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\.[a-z0-9]+$")) {
         Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
         Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
       }
@@ -93,73 +83,58 @@ public class AiStudioAutoExtractionSession
     await ReplLoopAsync();
   }
 
-  private async Task SetupContextAndProcessAsync(string[] files)
-  {
-    if (files == null || files.Length == 0)
-    {
+  private async Task SetupContextAndProcessAsync(string[] files) {
+    if (files == null || files.Length == 0) {
       Console.WriteLine("Keine Dateien ausgewählt.");
       return;
     }
 
-    if (string.IsNullOrEmpty(_systemInstructionText))
-    {
-      if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any())
-      {
+    if (string.IsNullOrEmpty(_systemInstructionText)) {
+      if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any()) {
         Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
 
         // Resolve all files from configured paths, handling directories
         var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
-        if (resolvedInstructionFiles.Any())
-        {
-          foreach (var file in resolvedInstructionFiles)
-          {
+        if (resolvedInstructionFiles.Any()) {
+          foreach (var file in resolvedInstructionFiles) {
             Console.WriteLine($"  - {file}");
           }
           Console.Write("System Instructions laden? (j/n): ");
-          if (Console.ReadLine()?.Trim().ToLower() == "j")
-          {
+          if (Console.ReadLine()?.Trim().ToLower() == "j") {
             var instructionBuilder = new System.Text.StringBuilder();
-            foreach (var filePath in resolvedInstructionFiles)
-            {
+            foreach (var filePath in resolvedInstructionFiles) {
               instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
               Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
             }
             _systemInstructionText = instructionBuilder.ToString();
           }
         }
-        else
-        {
+        else {
           Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
         }
       }
     }
 
-    if (!_historyWasLoaded)
-    {
+    if (!_historyWasLoaded) {
       var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-      if (distinctFiles.Any())
-      {
+      if (distinctFiles.Any()) {
         Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        foreach (var file in distinctFiles)
-        {
+        foreach (var file in distinctFiles) {
           Console.WriteLine($"  - {file}");
         }
         Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
-        if (Console.ReadLine()?.Trim().ToLower() == "j")
-        {
+        if (Console.ReadLine()?.Trim().ToLower() == "j") {
           Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
           string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
           var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
-          if (success && attachmentParts.Any())
-          {
+          if (success && attachmentParts.Any()) {
             _historyParts.AddRange(attachmentParts);
             _historyWasLoaded = true;
             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
             if (!await AcknowledgeHistoryAsync(fileList)) return;
           }
-          else
-          {
+          else {
             Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
           }
         }
@@ -178,8 +153,7 @@ public class AiStudioAutoExtractionSession
   /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
   /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
   /// </summary>
-  private async Task ReplLoopAsync()
-  {
+  private async Task ReplLoopAsync() {
     Console.WriteLine("\nBefehle:");
     Console.WriteLine("  1) Befehle anzeigen");
     Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
@@ -191,10 +165,8 @@ public class AiStudioAutoExtractionSession
     Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
     Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
 
-    while (true)
-    {
-      if (!Console.IsInputRedirected)
-      {
+    while (true) {
+      if (!Console.IsInputRedirected) {
         while (Console.KeyAvailable) Console.ReadKey(intercept: true);
       }
       Console.Write("\nAutoExt> ");
@@ -204,8 +176,7 @@ public class AiStudioAutoExtractionSession
       string normalizedInput = input.TrimStart('/');
       if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
 
-      if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase))
-      {
+      if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
         Console.WriteLine("\nBefehle:");
         Console.WriteLine("  1) Befehle anzeigen");
         Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
@@ -217,106 +188,85 @@ public class AiStudioAutoExtractionSession
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
       }
-      else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase))
-      {
+      else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
         string val = "";
         if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput.Substring(9).Trim();
         else if (normalizedInput.StartsWith("2 ")) val = normalizedInput.Substring(2).Trim();
-        else if (normalizedInput == "2")
-        {
+        else if (normalizedInput == "2") {
           Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
           val = Console.ReadLine()?.Trim() ?? "";
         }
 
-        if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double s))
-        {
+        if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double s)) {
           _speed = s;
           Console.WriteLine($"Speed gesetzt auf {_speed}x");
         }
-        else
-        {
+        else {
           Console.WriteLine("Ungültiger Wert für speed.");
         }
       }
-      else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase))
-      {
+      else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) {
         var files = FfmpegUtilities.ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
-        if (files.Length > 0)
-        {
+        if (files.Length > 0) {
           await SetupContextAndProcessAsync(files);
         }
       }
-      else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase))
-      {
+      else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
         var files = Directory.GetFiles(_config.SourceFolder, "*.mp4");
         await SetupContextAndProcessAsync(files);
       }
-      else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase))
-      {
+      else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
         _debugChatHistory.Clear();
         Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
       }
-      else if (normalizedInput == "6" || normalizedInput.StartsWith("6 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase))
-      {
+      else if (normalizedInput == "6" || normalizedInput.StartsWith("6 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
         string val = "";
-        if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase))
-        {
+        if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
           val = normalizedInput.Substring("change-key".Length).Trim();
         }
-        else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase))
-        {
+        else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
           val = normalizedInput.Substring("change key".Length).Trim();
         }
-        else if (normalizedInput.StartsWith("6 "))
-        {
+        else if (normalizedInput.StartsWith("6 ")) {
           val = normalizedInput.Substring(2).Trim();
         }
 
-        if (string.IsNullOrEmpty(val))
-        {
+        if (string.IsNullOrEmpty(val)) {
           Console.Write("Neues API-Key Profil (0-3): ");
           val = Console.ReadLine()?.Trim() ?? "";
         }
 
-        if (int.TryParse(val, out int newProfile) && newProfile >= 0 && newProfile <= 3)
-        {
+        if (int.TryParse(val, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
           string? newApiKey;
-          if (newProfile == 0)
-          {
+          if (newProfile == 0) {
             newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
           }
-          else
-          {
+          else {
             newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
           }
 
-          if (!string.IsNullOrEmpty(newApiKey))
-          {
+          if (!string.IsNullOrEmpty(newApiKey)) {
             _client = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
             _attachmentHandler.UpdateClient(_client);
             _config.ActiveApiProfile = newProfile;
             Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt!");
           }
         }
-        else
-        {
+        else {
           Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
         }
       }
-      else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase))
-      {
+      else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
         _config.Model = await SelectModelAsync();
         Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt.");
       }
-      else
-      {
+      else {
         await DebugChatAsync(input); // Chat erhält den originalen Input
       }
     }
   }
 
-  private async Task<string> SelectModelAsync()
-  {
+  private async Task<string> SelectModelAsync() {
     Console.WriteLine($"\n=== Model Selection (AI Studio) ===");
     Console.WriteLine("Wähle ein Modell:");
     Console.WriteLine(" 1) gemini-3.1-flash-lite-preview");
@@ -329,13 +279,13 @@ public class AiStudioAutoExtractionSession
     Console.WriteLine(" 8) gemini-1.5-flash");
     Console.WriteLine(" 9) gemini-1.5-pro");
     Console.WriteLine("10) gemini-robotics-er-1.6-preview");
-    Console.Write($"Auswahl (1-10) [Aktuell: {_config.Model}]: ");
+    Console.WriteLine("11) gemini-3.5-flash"); // Added Gemini 3.5 Flash
+    Console.Write($"Auswahl (1-11) [Aktuell: {_config.Model}]: ");
 
     string choice = Console.ReadLine()?.Trim() ?? "";
     if (string.IsNullOrEmpty(choice)) return _config.Model;
 
-    return choice switch
-    {
+    return choice switch {
       "1" => "gemini-3.1-flash-lite-preview",
       "2" => "gemini-3-flash-preview",
       "3" => "gemini-3.1-pro-preview",
@@ -346,6 +296,7 @@ public class AiStudioAutoExtractionSession
       "8" => "gemini-1.5-flash",
       "9" => "gemini-1.5-pro",
       "10" => "gemini-robotics-er-1.6-preview",
+      "11" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
       _ => choice.Contains("-") ? choice : _config.Model
     };
   }
@@ -355,22 +306,18 @@ public class AiStudioAutoExtractionSession
   /// Contains identical retry/backoff logic to the main extraction loop to accurately simulate API conditions.
   /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
   /// </summary>
-  private async Task DebugChatAsync(string input)
-  {
+  private async Task DebugChatAsync(string input) {
     _debugChatHistory.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = input } } });
 
-    var requestConfig = new GenerateContentConfig
-    {
+    var requestConfig = new GenerateContentConfig {
       Temperature = 0.7f,
       MaxOutputTokens = 65535
     };
 
     // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
     // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
-    {
-      if (_config.ThinkingBudget.HasValue)
-      {
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
         requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
       }
     }
@@ -386,16 +333,12 @@ public class AiStudioAutoExtractionSession
     string fullResponse = "";
     bool exceptionCaught = false;
 
-    for (int attempt = 1; attempt <= maxRetries; attempt++)
-    {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
       fullResponse = "";
       bool isGenerating = true;
-      var inputInterceptorTask = Task.Run(async () =>
-      {
-        while (isGenerating)
-        {
-          if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable)
-          {
+      var inputInterceptorTask = Task.Run(async () => {
+        while (isGenerating) {
+          if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
             Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
           }
@@ -403,21 +346,18 @@ public class AiStudioAutoExtractionSession
         }
       });
 
-      try
-      {
+      try {
         if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
         int requestInputTokens = 0;
         int requestOutputTokens = 0;
 
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _debugChatHistory, requestConfig);
-        await foreach (var chunk in responseStream.WithCancellation(cts.Token))
-        {
+        await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
           if (cts.IsCancellationRequested) break;
           string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           fullResponse += txt;
-          if (chunk.UsageMetadata != null)
-          {
+          if (chunk.UsageMetadata != null) {
             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
           }
@@ -433,15 +373,13 @@ public class AiStudioAutoExtractionSession
         await inputInterceptorTask;
         break; // Erfolg
       }
-      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
-      {
+      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
         isGenerating = false;
         await inputInterceptorTask;
         exceptionCaught = true;
         break;
       }
-      catch (Exception ex)
-      {
+      catch (Exception ex) {
         isGenerating = false;
         await inputInterceptorTask;
 
@@ -449,8 +387,7 @@ public class AiStudioAutoExtractionSession
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-        if (isOverloaded && attempt < maxRetries)
-        {
+        if (isOverloaded && attempt < maxRetries) {
           // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
           // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
           // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
@@ -458,37 +395,31 @@ public class AiStudioAutoExtractionSession
           int waitTime;
           string contextMsg = " [Debug Chat]";
           // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-          if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase))
-          {
+          if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
             waitTime = 180; // 3 Minuten
             Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             backoff = waitTime;
           }
-          else if (attempt == 1)
-          {
+          else if (attempt == 1) {
             var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
-            {
+            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
               waitTime = serverSuggestedDelay + 20;
               Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
-            else
-            {
+            else {
               waitTime = backoff;
               Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             backoff = waitTime;
           }
-          else
-          {
+          else {
             backoff += 30;
             waitTime = backoff;
             Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
           }
           if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
         }
-        else
-        {
+        else {
           Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
           // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
           _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
@@ -499,17 +430,14 @@ public class AiStudioAutoExtractionSession
 
     Console.CancelKeyPress -= cancelHandler;
 
-    if (exceptionCaught || cts.IsCancellationRequested)
-    {
+    if (exceptionCaught || cts.IsCancellationRequested) {
       Console.WriteLine("\n\n[INFO] Debug-Chat durch Benutzer abgebrochen.");
     }
 
-    if (!string.IsNullOrWhiteSpace(fullResponse))
-    {
+    if (!string.IsNullOrWhiteSpace(fullResponse)) {
       _debugChatHistory.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
     }
-    else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user")
-    {
+    else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user") {
       // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
       _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
     }
@@ -520,8 +448,7 @@ public class AiStudioAutoExtractionSession
   /// This guarantees the model context is correctly primed before batch processing starts and provides immediate visual feedback.
   /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
   /// </summary>
-  private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "")
-  {
+  private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
     var historyPromptParts = new List<Part>(_historyParts);
     historyPromptParts.Add(new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." });
     var userContent = new Content { Role = "user", Parts = historyPromptParts };
@@ -529,16 +456,13 @@ public class AiStudioAutoExtractionSession
     _sessionPreamble.Add(userContent);
 
     var requestConfig = new GenerateContentConfig { Temperature = 0.0f, MaxOutputTokens = 1024 };
-    if (!string.IsNullOrWhiteSpace(_systemInstructionText))
-    {
+    if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
     // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
     // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
-    {
-      if (_config.ThinkingBudget.HasValue)
-      {
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue) {
         requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
       }
     }
@@ -551,29 +475,25 @@ public class AiStudioAutoExtractionSession
     int finalInputTokens = 0;
     int finalOutputTokens = 0;
 
-    for (int attempt = 1; attempt <= maxRetries; attempt++)
-    {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
       fullResponse = "";
       using var cts = new CancellationTokenSource();
       ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
       Console.CancelKeyPress += cancelHandler;
 
-      try
-      {
+      try {
         if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
 
         int requestInputTokens = 0;
         int requestOutputTokens = 0;
 
         var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _sessionPreamble, requestConfig);
-        await foreach (var chunk in responseStream.WithCancellation(cts.Token))
-        {
+        await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
           if (cts.IsCancellationRequested) break;
           string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
           Console.Write(txt);
           fullResponse += txt;
-          if (chunk.UsageMetadata != null)
-          {
+          if (chunk.UsageMetadata != null) {
             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
           }
@@ -590,18 +510,15 @@ public class AiStudioAutoExtractionSession
         success = true;
         break;
       }
-      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase))
-      {
+      catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
         Console.WriteLine("\n[INFO] Bestätigung durch Benutzer abgebrochen.");
         break;
       }
-      catch (Exception ex)
-      {
+      catch (Exception ex) {
         Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
         Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
         bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
-        if (isOverloaded && attempt < maxRetries)
-        {
+        if (isOverloaded && attempt < maxRetries) {
           // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
           // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
           // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
@@ -609,56 +526,47 @@ public class AiStudioAutoExtractionSession
           int waitTime;
           string contextMsg = " [History Bestätigung]";
           // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-          if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase))
-          {
+          if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
             waitTime = 180; // 3 Minuten
             Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             backoff = waitTime;
           }
-          else if (attempt == 1)
-          {
+          else if (attempt == 1) {
             var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
-            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay))
-            {
+            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
               waitTime = serverSuggestedDelay + 20;
               Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
-            else
-            {
+            else {
               waitTime = backoff;
               Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
             }
             backoff = waitTime;
           }
-          else
-          {
+          else {
             backoff += 30;
             waitTime = backoff;
             Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
           }
           if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
         }
-        else
-        {
+        else {
           Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
           break;
         }
       }
-      finally
-      {
+      finally {
         Console.CancelKeyPress -= cancelHandler;
       }
     }
 
-    if (success && !string.IsNullOrWhiteSpace(fullResponse))
-    {
+    if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
       _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
       string logMsg = $"[History Acknowledgment] Angehängte Dateien: {loadedFiles}\n\nPrompt:\n{historyPromptParts.Last().Text}";
       await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens);
       return true;
     }
-    else
-    {
+    else {
       Console.WriteLine("\n[FEHLER] Konnte Bestätigung für History nicht erhalten. Breche Extraktion ab.");
       _sessionPreamble.Clear();
       _historyWasLoaded = false;
@@ -671,8 +579,7 @@ public class AiStudioAutoExtractionSession
   /// Uses System.Threading.Channels to run FFmpeg processing in the background (Producer) while Gemini processes chunks sequentially (Consumer), maximizing hardware and API throughput.
   /// [Human] Das asynchrone Fließband: FFmpeg bereitet Videos im Hintergrund vor, während Gemini sie der Reihe nach abarbeitet.
   /// </summary>
-  private async Task ProcessFilesAsync(string[] files)
-  {
+  private async Task ProcessFilesAsync(string[] files) {
     // Chronologisch aufsteigend sortieren anhand des Dateinamens
     files = files.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
 
@@ -680,53 +587,44 @@ public class AiStudioAutoExtractionSession
     var channel = Channel.CreateBounded<(string originalFile, string fileSpecificOutputFolder, string tmpFolderForFile, List<(string FilePath, double StartTime)> parts, bool isCached, double fullOriginalVideoDuration)>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
     // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
-    var producerTask = Task.Run(async () =>
-    {
-      foreach (var file in files)
-      {
+    var producerTask = Task.Run(async () => {
+      foreach (var file in files) {
         string baseName = Path.GetFileNameWithoutExtension(file);
         // Create a file-specific output folder within the main target folder
         string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
-        if (!Directory.Exists(fileSpecificOutputFolder))
-        {
+        if (!Directory.Exists(fileSpecificOutputFolder)) {
           Directory.CreateDirectory(fileSpecificOutputFolder);
         }
         // Create a file-specific temporary folder inside the file-specific output folder
         string tmpFolderForFile = Path.Combine(fileSpecificOutputFolder, "tmp");
-        if (!Directory.Exists(tmpFolderForFile))
-        {
+        if (!Directory.Exists(tmpFolderForFile)) {
           Directory.CreateDirectory(tmpFolderForFile);
         }
 
-        string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
-        var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-{dateStr}-part*.mp4").ToList();
+        // Removed dateStr from filename pattern for caching to work across days for 2-hour window
+        var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
 
         double fullOriginalVideoDuration = await toolkit.GetVideoDurationAsync(file); // Get original video duration
 
         bool useCache = false;
 
-        if (cachedParts.Count > 0)
-        {
+        if (cachedParts.Count > 0) {
           var fileInfo = new FileInfo(cachedParts[0]);
-          if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2)
-          {
+          if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2) {
             // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs.
             // We expect exactly 3 parts. If fewer are found, the cache is corrupted or incomplete.
             // [Human] Wenn ein alter Lauf abgebrochen ist, liegen vielleicht nur 1-2 Teile im Cache. Das wird hier verhindert!
-            if (cachedParts.Count >= 3)
-            {
+            if (cachedParts.Count >= 3) {
               useCache = true;
             }
-            else
-            {
+            else {
               Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für '{Path.GetFileName(file)}' ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
               foreach (var f in cachedParts) { try { System.IO.File.Delete(f); } catch { } }
             }
           }
         }
 
-        if (useCache)
-        {
+        if (useCache) {
           Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
           cachedParts.Sort();
 
@@ -735,8 +633,7 @@ public class AiStudioAutoExtractionSession
           double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
 
           var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
-          for (int i = 0; i < cachedParts.Count; i++)
-          {
+          for (int i = 0; i < cachedParts.Count; i++) {
             double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - 180) : 0;
             Console.WriteLine($"  - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
             cachedPartsWithTimes.Add((cachedParts[i], startTime));
@@ -754,9 +651,8 @@ public class AiStudioAutoExtractionSession
         if (rawPartsWithTimes.Count == 0) continue;
 
         List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
-        for (int i = 0; i < rawPartsWithTimes.Count; i++)
-        {
-          string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-{dateStr}-part{i + 1}.mp4");
+        for (int i = 0; i < rawPartsWithTimes.Count; i++) {
+          string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
           if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
           System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
           safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
@@ -772,35 +668,31 @@ public class AiStudioAutoExtractionSession
     // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
     bool hasErrors = false;
 
-    await foreach (var (file, fileSpecificOutputFolder, tmpFolderForFile, partsWithTimes, isCached, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync())
-    {
+    await foreach (var (file, fileSpecificOutputFolder, tmpFolderForFile, partsWithTimes, isCached, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
       // Ensure the file-specific output folder exists before starting processing
-      if (!Directory.Exists(fileSpecificOutputFolder))
-      {
+      if (!Directory.Exists(fileSpecificOutputFolder)) {
         Directory.CreateDirectory(fileSpecificOutputFolder);
       }
 
 
       Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
       List<string> generatedTexFiles = new List<string>();
-      string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
       string baseName = Path.GetFileNameWithoutExtension(file);
       string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
       string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
       int fileTotalInputTokens = 0;
       int fileTotalOutputTokens = 0;
       bool fileProcessingSuccess = true;
+      TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
 
-      for (int i = 0; i < partsWithTimes.Count; i++)
-      {
+      for (int i = 0; i < partsWithTimes.Count; i++) {
         string safePartPath = partsWithTimes[i].FilePath;
         double partStartTimeSeconds = partsWithTimes[i].StartTime;
         string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}.tex");
 
         Console.WriteLine($"\nVerarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
-
-        if (System.IO.File.Exists(targetPartPath))
-        {
+        // Check if the .tex file already exists and is not older than 2 hours
+        if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= cacheDuration) {
           Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
           string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
           generatedTexFiles.Add(targetPartPath);
@@ -811,11 +703,9 @@ public class AiStudioAutoExtractionSession
 
         (string texOutput, int partInputTokens, int partOutputTokens) result;
 
-        if (i > 0)
-        {
+        if (i > 0) {
           // Start delay and upload in parallel for subsequent parts
-          var delayTask = Task.Run(async () =>
-          {
+          var delayTask = Task.Run(async () => {
             Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
             await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
           });
@@ -826,8 +716,7 @@ public class AiStudioAutoExtractionSession
           await Task.WhenAll(delayTask, uploadTask);
 
           var (uploadSuccess, parsedPrompt, attachmentParts) = uploadTask.Result;
-          if (!uploadSuccess)
-          {
+          if (!uploadSuccess) {
             Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
             fileProcessingSuccess = false;
             hasErrors = true;
@@ -836,12 +725,10 @@ public class AiStudioAutoExtractionSession
 
           result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
         }
-        else
-        {
+        else {
           // For the first part, no delay is needed, just upload and process.
           var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
-          if (!uploadSuccess)
-          {
+          if (!uploadSuccess) {
             Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
             fileProcessingSuccess = false;
             hasErrors = true;
@@ -853,8 +740,7 @@ public class AiStudioAutoExtractionSession
         fileTotalInputTokens += result.partInputTokens;
         fileTotalOutputTokens += result.partOutputTokens;
 
-        if (!string.IsNullOrWhiteSpace(result.texOutput))
-        {
+        if (!string.IsNullOrWhiteSpace(result.texOutput)) {
           string cleanTex = ExtractionHelpers.CleanLatexResponse(result.texOutput);
 
           // Store the raw output for the combined file without offset
@@ -866,29 +752,31 @@ public class AiStudioAutoExtractionSession
           string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
           await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
+          // NEW: Save the offsetted version of this individual part
+          string offsettedPartContent = LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+          string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
+          string uniqueTargetPartPathOffset = GetUniqueTexPath(targetPartPathOffset);
+          await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
+          Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
           generatedTexFiles.Add(uniqueTargetPartPath);
         }
-        else
-        {
+        else {
           Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
           fileProcessingSuccess = false;
           hasErrors = true;
           // Clean up individual part files if processing failed mid-way
-          foreach (var f in generatedTexFiles)
-          {
+          foreach (var f in generatedTexFiles) {
             try { System.IO.File.Delete(f); } catch { /* Ignore */ }
           }
           // Try to delete the file-specific output folder if it's empty or contains only temporary stuff
-          if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any())
-          {
+          if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
             Directory.Delete(fileSpecificOutputFolder);
           }
           break;
         }
       }
 
-      if (fileProcessingSuccess)
-      {
+      if (fileProcessingSuccess) {
         string targetFilePath = Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
         string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}-offset.tex");
 
@@ -918,20 +806,16 @@ public class AiStudioAutoExtractionSession
     // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
     await producerTask;
 
-    if (hasErrors)
-    {
+    if (hasErrors) {
       Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
     }
-    else
-    {
+    else {
       Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
     }
   }
 
-  private string GetUniqueTexPath(string originalPath)
-  {
-    if (!System.IO.File.Exists(originalPath))
-    {
+  private string GetUniqueTexPath(string originalPath) {
+    if (!System.IO.File.Exists(originalPath)) {
       return originalPath;
     }
 
@@ -941,8 +825,7 @@ public class AiStudioAutoExtractionSession
     string ext = Path.GetExtension(originalPath);
     int copyIndex = 1;
     string newPath;
-    do
-    {
+    do {
       newPath = Path.Combine(dir, $"{baseName}-copy-{copyIndex}{ext}");
       copyIndex++;
     } while (System.IO.File.Exists(newPath));
@@ -951,16 +834,14 @@ public class AiStudioAutoExtractionSession
     return newPath;
   }
 
-  private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName)
-  {
+  private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
     var dateInfo = VideoDateParser.Parse(originalFileName);
     string prompt = _config.Prompt;
     prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
 
     prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture.";
 
-    if (partNumber > 1)
-    {
+    if (partNumber > 1) {
       prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
     }
 
@@ -973,16 +854,13 @@ public class AiStudioAutoExtractionSession
     return (true, parsedPrompt, attachmentParts);
   }
 
-  private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, double partStartTimeSeconds)
-  {
+  private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, double partStartTimeSeconds) {
     var userPromptParts = new List<Part>();
 
-    if (previousTexFiles.Any())
-    {
+    if (previousTexFiles.Any()) {
       Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
       string contextText = "Here are the context files from the previous parts of the lecture:\n\n";
-      foreach (var texFile in previousTexFiles)
-      {
+      foreach (var texFile in previousTexFiles) {
         Console.WriteLine($"    - {Path.GetFileName(texFile)}");
         string content = await System.IO.File.ReadAllTextAsync(texFile);
         contextText += $"=== REFERENCE CONTEXT: {Path.GetFileName(texFile)} ===\n{content}\n=== END OF REFERENCE CONTEXT ===\n\n";
@@ -992,8 +870,7 @@ public class AiStudioAutoExtractionSession
 
     userPromptParts.AddRange(attachmentParts);
 
-    if (!string.IsNullOrWhiteSpace(parsedPrompt))
-    {
+    if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
       userPromptParts.Add(new Part { Text = parsedPrompt });
     }
 
@@ -1001,8 +878,7 @@ public class AiStudioAutoExtractionSession
     history.AddRange(_sessionPreamble);
     history.Add(new Content { Role = "user", Parts = userPromptParts });
 
-    var requestConfig = new GenerateContentConfig
-    {
+    var requestConfig = new GenerateContentConfig {
       Temperature = 0.0f,
       MaxOutputTokens = 65535
     };
@@ -1010,8 +886,7 @@ public class AiStudioAutoExtractionSession
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
     // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase))
-    {
+    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
       if (_config.ThinkingBudget.HasValue) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
     }
 
@@ -1022,8 +897,7 @@ public class AiStudioAutoExtractionSession
     int interactionOutputTokens = 0;
 
     string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
-    if (previousTexFiles.Any())
-    {
+    if (previousTexFiles.Any()) {
       logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
     }
     logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
@@ -1033,25 +907,21 @@ public class AiStudioAutoExtractionSession
     ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
     Console.CancelKeyPress += cancelHandler;
 
-    while (true)
-    {
+    while (true) {
       Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
       string chunkResp = "";
       int requestInputTokens = 0;
       int requestOutputTokens = 0;
       bool callSuccess = false;
 
-      try
-      {
+      try {
         callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
             streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig),
-            onChunkReceived: async (chunk) =>
-            {
+            onChunkReceived: async (chunk) => {
               string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
               Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
               chunkResp += txt;
-              if (chunk.UsageMetadata != null)
-              {
+              if (chunk.UsageMetadata != null) {
                 if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                 if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
               }
@@ -1061,15 +931,13 @@ public class AiStudioAutoExtractionSession
               retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}"
         );
       }
-      catch (Exception ex)
-      {
+      catch (Exception ex) {
         Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
         Console.WriteLine($"Finaler Fehler: {ex.Message}");
         break;
       }
 
-      if (!callSuccess)
-      {
+      if (!callSuccess) {
         Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
         break;
       }
@@ -1091,8 +959,7 @@ public class AiStudioAutoExtractionSession
 
       if (videoComplete) break;
 
-      if (currentRequest >= maxRequestsPerPart)
-      {
+      if (currentRequest >= maxRequestsPerPart) {
         Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht. Breche ab.\n  Teil: {partFile}");
         break;
       }
@@ -1112,8 +979,7 @@ public class AiStudioAutoExtractionSession
       currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
       Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-      if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)..."))
-      {
+      if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
         Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
         break;
       }

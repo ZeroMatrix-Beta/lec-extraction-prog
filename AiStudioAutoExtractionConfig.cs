@@ -23,7 +23,7 @@ public class AiStudioAutoExtractionConfig {
     @"C:\Users\miche\latex\prompt-engineering\transcription\hard-specs.md",
     @"C:\Users\miche\latex\prompt-engineering\transcription\environments.md",
     @"C:\Users\miche\latex\prompt-engineering\transcription\big-examples.md",
-
+    @"C:\Users\miche\latex\prompt-engineering\transcription\big-examples2.md",
   };
   // [AI Context] Centralized fallback paths for loading historical reference materials into the context window.
   public string[] HistoryPreloadPaths { get; set; } = new[] {

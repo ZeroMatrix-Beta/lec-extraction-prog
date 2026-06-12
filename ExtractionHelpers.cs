@@ -9,18 +9,21 @@ namespace AutoExtraction;
 /// <summary>
 /// [AI Context] Shared utility methods to reduce code duplication across different extraction session types.
 /// </summary>
-public static class ExtractionHelpers {
+public static class ExtractionHelpers
+{
   // [AI Context] Globale Flag, um Input-Intercepting-Tasks (z.B. im REPL) während eines Delays zu pausieren
   public static volatile bool IsInSmartDelay = false;
 
   /// <summary>
   /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
   /// </summary>
-  public static List<string> ResolveHistoryFiles(string[] paths) {
+  public static List<string> ResolveHistoryFiles(string[] paths)
+  {
     var allHistoryFiles = new List<string>();
     if (paths == null) return allHistoryFiles;
 
-    foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p))) {
+    foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p)))
+    {
       if (System.IO.File.Exists(path))
         allHistoryFiles.Add(Path.GetFullPath(path));
       else if (Directory.Exists(path))
@@ -33,7 +36,8 @@ public static class ExtractionHelpers {
   /// [AI Context] Regex-based cleanup ensures that even if the output is split across multiple continuation chunks,
   /// all markdown blocks and system messages are fully stripped, preventing compilation errors.
   /// </summary>
-  public static string CleanLatexResponse(string rawResponse) {
+  public static string CleanLatexResponse(string rawResponse)
+  {
     string cleanTex = rawResponse;
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
@@ -45,23 +49,29 @@ public static class ExtractionHelpers {
   /// <summary>
   /// Implements an interactive delay with user cancellation. Allows interrupting long backoff periods.
   /// </summary>
-  public static async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...") {
+  public static async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...")
+  {
     bool delayCanceled = false;
     ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; delayCanceled = true; };
     Console.CancelKeyPress += cancelHandler;
     IsInSmartDelay = true;
-    try {
+    try
+    {
       int delaySteps = seconds * 10;
-      for (int i = 0; i < delaySteps; i++) {
+      for (int i = 0; i < delaySteps; i++)
+      {
         if (delayCanceled) return false;
         await Task.Delay(100);
-        if (!Console.IsInputRedirected && Console.KeyAvailable) {
+        if (!Console.IsInputRedirected && Console.KeyAvailable)
+        {
           bool enterPressed = false;
-          while (Console.KeyAvailable) {
+          while (Console.KeyAvailable)
+          {
             var keyInfo = Console.ReadKey(intercept: true);
             if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
           }
-          if (enterPressed) {
+          if (enterPressed)
+          {
             Console.WriteLine("\n[Skip] Wartezeit durch Benutzer (Enter) übersprungen.");
             return true;
           }
@@ -70,7 +80,8 @@ public static class ExtractionHelpers {
       }
       return true;
     }
-    finally {
+    finally
+    {
       IsInSmartDelay = false;
       Console.CancelKeyPress -= cancelHandler;
     }
