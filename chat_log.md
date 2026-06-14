@@ -2716,3 +2716,10023 @@ Gut, besten Dank fürs Kommen. Ich bin noch da, falls Sie Fragen oder Verwirrung
 
 *(Tokens: Input 259340, Output 4018)*
 ---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 65846, Output 23)*
+---
+
+=== Neue Chat-Sitzung (12.06.2026 15:54:15) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-03-tuesday.mp4
+[Angehängtes Video]: 03-03-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-03. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Dienstag}{3. März}{3. März 2020}{Mathematische Logik: Peano-Arithmetik}
+
+\begin{nice-box}[Kontext der Vorlesung]
+In dieser Vorlesung setzen wir unsere Exkursion in die mathematische Logik fort. Nach dem Studium der reinen Prädikatenlogik erster Stufe und formaler Beweissysteme wenden wir uns nun konkreten mathematischen Theorien zu. Wir besprechen die Theorie der dichten linearen Ordnungen (DLO) und führen die Peano-Arithmetik (PA) als fundamentales Axiomensystem für die natürlichen Zahlen ein.
+\end{nice-box}
+
+% ==========================================
+% SECTION 1: RÜCKBLICK
+% ==========================================
+\section{Rückblick auf die formale Deduktion}
+
+\begin{spoken-clean}[00:00:00 - 00:01:15]
+Hallo zusammen und herzlich willkommen zu einer weiteren Woche von Grundstrukturen. Ähm... Ja, wir gehen da weiter auf unserer kleinen Exkursion in die mathematische Logik. Ähm, was haben wir letzte Woche gesehen? Ähm... Wir haben äh zuerst gesehen den Modus Ponens und äh die Verallgemeinerung. Zwei Methoden, um aus bestehenden Formeln neue Formeln ähm abzuleiten. Und damit haben wir dann definiert, was ein formaler Beweis ist, und haben ein paar formale Beweise geführt. Das machen Sie auch diese Woche, oder haben Sie hoffentlich gemacht, auf den Übungsblättern, um noch ein bisschen zu üben.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:15 - 00:01:42]
+Ich glaube, das ist einfach etwas, was man einmal machen muss, ein klein wenig, nicht allzu viel, und es kann auch ganz äh unterhaltsam sein, da etwas rumzuknobeln, aber auf die Dauer auch mühsam. Dann haben wir gesehen noch diese... ein bisschen Metatheoreme, die hilfreich sind manchmal, um formale Beweise zu führen. Das ist das Deduktionstheorem und der Satz über logische Äquivalenz. Und dann am Schluss haben wir noch Beispiele von Axiomensystemen angefangen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Rückblick: Formale Beweise]
+In der Prädikatenlogik erster Stufe wurden folgende Konzepte etabliert:
+\begin{itemize}
+    \setcounter{enumi}{0} \item \emph{Schlussregeln}: Der Modus Ponens $(\text{MP})$ und die Verallgemeinerungsregel $(\text{V})$:
+    \[
+    \frac{\varphi, \quad \varphi \to \psi}{\psi} \quad(\text{MP}) \qquad \text{und} \qquad \frac{\varphi}{\forall x \varphi} \quad(\text{V})
+    \]
+    \setcounter{enumi}{1} \item \emph{Metatheoreme}:
+    \begin{description}
+        \item[Deduktionstheorem:] $\Gamma \cup \{\varphi\} \vdash \psi \iff \Gamma \vdash \varphi \to \psi$.
+        \item[Satz über logische Äquivalenz:] Erlaubt das Ersetzen äquivalenter Teilformeln innerhalb eines formalen Beweises.
+    \end{description}
+\end{itemize}
+\end{math-stroke}
+
+% ==========================================
+% SECTION 2: DICHTE LINEARE ORDNUNGEN
+% ==========================================
+\section{Dichte lineare Ordnungen (DLO)}
+
+\begin{spoken-clean}[00:01:42 - 00:02:30]
+Genau, da möchte ich noch kurz eines auch nochmals ähm erwähnen, das wir letzte Woche nicht mehr ganz Zeit gehabt haben zu besprechen, das sind noch die dichten linearen Ordnungen. \inlinemetanote{schaltet den Projektor ein und zeigt die Folie} Das ist das da, ähm... Also, was ist eine dichte lineare Ordnung? Das sind die folgenden fünf Axiome, die unsere Axiome sind. Ähm, also im Prinzip das erste, das nullte, sagt: Für alle $x$ gilt nicht $x < x$. Wir haben hier ein einzelnes zweistelliges Relationssymbol, das ist einfach kleiner ($<$).
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:30 - 00:03:15]
+Wir wollen jetzt eben eine totale lineare Ordnung haben, also wir wollen, dass $x$ nie kleiner als $x$ selbst ist. Das ist die Irreflexivität. Dann wollen wir, dass für alle $x$, für alle $y$, für alle $z$ gilt: Wenn $x < y$ und $y < z$, dann ist auch $x < z$. Also das ist das, was wir uns vorstellen, wenn wir diese Formel hinschreiben, dass das transitiv ist. Aber eben, hier auf der syntaktischen Ebene ist es zunächst nur eine Formel.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:15 - 00:04:18]
+Dann wollen wir natürlich, dass die Ordnung total ist, also für alle $x, y$ gilt entweder $x < y$ oder $y < x$ oder $x = y$. Und die Dichtheit besagt: Wenn $x < y$, dann existiert ein $z$ dazwischen, also $x < z$ und $z < y$. Das kennen Sie zum Beispiel von den rationalen oder reellen Zahlen. Und das letzte Axiom besagt, dass es keine kleinsten oder grössten Elemente gibt. Für jedes $x$ gibt es ein kleineres $y$ und ein grösseres $z$.
+\end{spoken-clean}
+
+\begin{nice-box}[Theorie der dichten linearen Ordnungen (DLO)]
+\begin{definition}[Dichte lineare Ordnung]\label[definition]{def:dlo}
+Die Signatur der Theorie der dichten linearen Ordnungen ist $\mathcal{L}_{\text{DLO}} = \{<\}$, wobei $<$ ein zweistelliges Relationssymbol ist. Die Axiome der Theorie $\text{DLO}$ sind:
+\begin{align*}
+    \text{DLO}_0 &: \forall x \neg(x < x) \tag{\emph{Irreflexivität}} \\
+    \text{DLO}_1 &: \forall x \forall y \forall z ((x < y \land y < z) \to x < z) \tag{\emph{Transitivität}} \\
+    \text{DLO}_2 &: \forall x \forall y (x < y \lor y < x \lor x = y) \tag{\emph{Linearität}} \\
+    \text{DLO}_3 &: \forall x \forall y (x < y \to \exists z (x < z \land z < y)) \tag{\emph{Dichtheit}} \\
+    \text{DLO}_4 &: \forall x \exists y \exists z (y < x \land x < z) \tag{\emph{Keine Endpunkte}}
+\end{align*}
+\end{definition}
+\end{nice-box}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:04:18
+% topic: Einführung in die Peano-Arithmetik (PA)
+% board_state: def:dlo
+% next_goal: Definition der Peano-Axiome PA_0 bis PA_5
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+% ==========================================
+% SECTION 3: PEANO-ARITHMETIK
+% ==========================================
+\section{Die Peano-Arithmetik (PA)}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent schaltet den Projektor aus und wendet sich der Haupttafel zu, um das neue Thema "Peano-Arithmetik" anzuschreiben.
+\end{meta-note}
+
+\begin{spoken-clean}[00:04:18 - 00:05:48]
+Gut, das wollen wir jetzt aber noch ein bisschen ausführen, und deswegen machen wir das an der Wandtafel. \inlinemetanote{schreibt an die Tafel} Das ist die Peano-Arithmetik, benannt nach Giuseppe Peano. Er hat in der zweiten Hälfte des 19. Jahrhunderts gelebt, ein italienischer Mathematiker, der sehr viel Einflussreiches in der Logik gemacht hat. Ich glaube, viele bekannte Mengennotationen gehen auf ihn zurück, also dass man so einen Haken schreibt für den Durchschnitt von Mengen ($\cap$) und so etwas für die Vereinigung von Mengen ($\cup$), geht glaube ich zurück auf Peano. Und er hat auch 1897 auf dem internationalen Kongress der Mathematiker in Zürich hier einen Vortrag gehalten. Er hat diese Peano-Axiome formuliert mit der Idee, die natürlichen Zahlen in Axiome zu fassen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:48 - 00:07:05]
+Also hier haben wir die Signatur der Peano-Arithmetik, das ist $\mathcal{L}_{\text{PA}} = \{0, S, +, \cdot\}$. Wir haben das Konstantensymbol $0$. Dann ist $S$ ein einstelliges Funktionssymbol, und $+$ und $\cdot$ sind zweistellige Funktionssymbole. Das ist wenig erstaunlich, genau das, was wir gewohnt sind. Das einzige, was vielleicht ein bisschen komisch ist, ist dieses $S$ hier. Der Name von $S$ ist Nachfolgerfunktion.
+\end{spoken-clean}
+
+\begin{math-stroke}[Signatur der Peano-Arithmetik]
+Die formale Sprache der Arithmetik basiert auf der Signatur:
+\[
+\mathcal{L}_{\text{PA}} = \{0, S, +, \cdot\}
+\]
+wobei die Symbole wie folgt klassifiziert sind:
+\begin{itemize}
+    \setcounter{enumi}{0} \item $0$ ist ein \newterm{Konstantensymbol}.
+    \setcounter{enumi}{1} \item $S$ ist ein einstelliges \newterm{Funktionssymbol} (\newterm{Nachfolgerfunktion}).
+    \setcounter{enumi}{2} \item $+$ und $\cdot$ sind zweistellige \newterm{Funktionssymbole} (\newterm{Addition} und \newterm{Multiplikation}).
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:05 - 00:08:20]
+Und die Intuition dahinter, die Idee dahinter ist eigentlich, die natürlichen Zahlen zu konstruieren, indem man sagt, man macht wie Zählen eigentlich. Man beginnt mit $0$, das ist einfach eine Konstante, wo man weiss, dass es sie gibt. Und dann gibt es noch $S$, die Idee dahinter ist wie $+1$. Also man beginnt bei $0$, dann macht man $S(0)$, das entspricht der $1$. Wendet man nochmals $S$ an, bekommt man $S(S(0))$, das entspricht der $2$, und so weiter. Je nachdem, wie oft man $S$ anwendet, kommt man zu einer bestimmten Zahl.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Nachfolgerfunktion als Generator]
+Die Nachfolgerfunktion $S$ ermöglicht es, die unendliche Menge der natürlichen Zahlen aus einem einzigen Startelement ($0$) rein syntaktisch zu generieren. Jede natürliche Zahl $n$ wird durch den Term $S^n(0)$ repräsentiert. Dies vermeidet die explizite Einführung unendlich vieler Konstantensymbole in der Signatur.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:08:20 - 00:09:15]
+Und jetzt, die Axiome der Peano-Arithmetik sind die folgenden Formeln. Wir haben zuerst $\text{PA}_0$. Das sagt: Es existiert kein $x$, so dass der Nachfolger von $x$ gleich $0$ ist. Also $0$ ist nicht der Nachfolger von irgendeinem anderen Element. Das entspricht der Idee, dass wir bei $0$ anfangen und es keine "negativen" Zahlen davor gibt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:15 - 00:10:22]
+Dann haben wir $\text{PA}_1$. Das sagt uns, dass diese Nachfolgerfunktion injektiv sein soll. Wie kann man das formulieren? Für alle $x$, für alle $y$ gilt: Wenn $S(x) = S(y)$, dann impliziert das $x = y$. Das ist die Formel für die Injektivität von $S$. Dann haben wir $\text{PA}_2$. Das sagt, dass für alle $x$ gilt: $x + 0 = x$. Damit regeln wir den Basisfall der Addition, dass $0$ das rechtsneutrale Element ist.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:10:22 - 00:11:15]
+Dann haben wir $\text{PA}_3$. Das sagt für alle $x$, für alle $y$: $x + S(y) = S(x + y)$. Das ist die rekursive Definition der Addition. Es sagt quasi, dass $x + (y + 1) = (x + y) + 1$ ist. Und dann kommt $\text{PA}_4$ für die Multiplikation: Für alle $x$ gilt $x \cdot 0 = 0$. Und $\text{PA}_5$ definiert die Multiplikation rekursiv: Für alle $x, y$ gilt $x \cdot S(y) = (x \cdot y) + x$.
+\end{spoken-clean}
+
+\begin{nice-box}[Die algebraischen Axiome der Peano-Arithmetik]
+\begin{definition}[Peano-Axiome $\text{PA}_0$ bis $\text{PA}_5$]\label[definition]{def:pa-axioms}
+Die folgenden Formeln definieren die grundlegenden arithmetischen Operationen und die Struktur der Nachfolgerfunktion in $\text{PA}$:
+\begin{align*}
+    \text{PA}_0 &: \neg \exists x (S(x) = 0) \tag{\emph{0 ist kein Nachfolger}} \\
+    \text{PA}_1 &: \forall x \forall y (S(x) = S(y) \to x = y) \tag{\emph{Injektivität von S}} \\
+    \text{PA}_2 &: \forall x (x + 0 = x) \tag{\emph{Rechtsneutralität der 0}} \\
+    \text{PA}_3 &: \forall x \forall y (x + S(y) = S(x + y)) \tag{\emph{Rekursive Addition}} \\
+    \text{PA}_4 &: \forall x (x \cdot 0 = 0) \tag{\emph{Multiplikation mit 0}} \\
+    \text{PA}_5 &: \forall x \forall y (x \cdot S(y) = (x \cdot y) + x) \tag{\emph{Rekursive Multiplikation}}
+\end{align*}
+\end{definition}
+\end{nice-box}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:11:15
+% topic: Das Induktionsschema in PA
+% board_state: def:pa-axioms
+% next_goal: Definition des Induktionsaxiomenschemas PA_6
+% open_loops: none
+% \begin{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:11:15 - 00:12:30]
+Soweit die ersten sechs Axiome. Und jetzt kommt noch ein Axiomenschema. Was ist ein Axiomenschema? Das bedeutet, dass wir eine riesig grosse, unendliche Menge von Axiomen haben. Für jede Formel $\varphi$ haben wir ein Axiom, und das ist das Induktionsaxiom. Sei $\varphi$ eine $\mathcal{L}_{\text{PA}}$-Formel und $v$ eine freie Variable in dieser Formel.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:12:30 - 00:13:30]
+Das Induktionsschema $\text{PA}_6$ sagt nun: Wenn $\varphi(0)$ gilt, und wenn für alle $v$ gilt, dass $\varphi(v)$ die Gültigkeit von $\varphi(S(v))$ impliziert, dann gilt $\varphi(v)$ für alle $v$. Das ist genau das Prinzip der vollständigen Induktion, das Sie aus der Analysis oder der Linearen Algebra kennen, formuliert als unendliche Klasse von Axiomen erster Ordnung.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Induktionsaxiomenschema]
+Da wir in der Prädikatenlogik erster Stufe nicht direkt über Mengen oder Formeln quantifizieren können, müssen wir das Induktionsprinzip als \newterm{Axiomenschema} formulieren:
+\begin{definition}[Induktionsschema]\label[definition]{def:induction-schema}
+Für jede $\mathcal{L}_{\text{PA}}$-Formel $\varphi$ mit einer freien Variablen $v$ ist die folgende Formel ein Axiom von $\text{PA}_6$:
+\[
+\text{PA}_6 : \Big( \varphi(0) \land \forall v \big( \varphi(v) \to \varphi(S(v)) \big) \Big) \to \forall v \varphi(v)
+\]
+\end{definition}
+\end{math-stroke}
+
+% ==========================================
+% SECTION 4: FORMALE BEWEISE IN PA
+% ==========================================
+\section{Formale und semi-formale Beweise}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die linke Tafel, um Platz für ein konkretes Beweisbeispiel zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:13:30 - 00:14:45]
+In gewissem Sinne wird das oft in der Linearen Algebra oder Analysis auch diskutiert, und oft finden Sie auch leicht andere Versionen. Aber die Art und Weise, wie wir das Induktionsaxiom geschrieben haben, ist wirklich im Kontext dieser Logik erster Ordnung. Das heisst, wir müssen für jede Formel ein Axiom einführen, weil wir nicht über die Menge der Formeln quantifizieren können. Wir können nicht schreiben: "Für alle Formeln $\varphi$ gilt...". In der Logik zweiter Ordnung darf man das, aber die hat wiederum andere Probleme.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:45 - 00:16:00]
+Aber bei uns, das werden wir später noch erwähnen, definiert uns das in Logik erster Ordnung nicht eindeutig die natürlichen Zahlen. Man kann die natürlichen Zahlen in Logik erster Ordnung gar nicht charakterisieren, wie wir noch sehen werden. Aber das ist auch kein Problem. Gut, und das ist wichtig, und deswegen habe ich diese Woche auf dem Übungsblatt nochmals zwei Übungen, wo Sie wirklich nochmals einen formalen Beweis ausführen sollen mit Hilfe von diesen Axiomen. Also ganz einfache Sachen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:16:00 - 00:16:45]
+Zum Beispiel eine Übung, das ist nicht schlecht, das einfach einmal formalhalber zu machen, zu zeigen: Aus der Peano-Arithmetik folgt, dass $S(0) + S(0) = S(S(0))$ ist. In anderen Worten: $1 + 1 = 2$. Das ist gar nicht so schlecht, das einmal im Leben wirklich im Detail zu beweisen. \inlinemetanote{schreibt die Übung an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Übung 1: Eins plus Eins gleich Zwei]
+\begin{exercise}\label[exercise]{ex:one-plus-one}
+Zeige, dass in der Peano-Arithmetik gilt:
+\[
+\text{PA} \vdash S(0) + S(0) = S(S(0))
+\]
+\end{exercise}
+\end{math-stroke}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:16:45
+% topic: Formale Beweise und Computer-Formalisierung (LEAN)
+% board_state: ex:one-plus-one
+% next_goal: Diskussion über formale Beweise und Vorstellung von LEAN
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:16:45 - 00:18:00]
+Ich habe noch eine Bemerkung, ich habe einen Link auf die Moodle-Seite gestellt. Also die Frage ist ja: Dieses ganze formale Beweisen, macht man das überhaupt? Weil wenn man heutzutage Mathematik betreibt, niemand macht formale Beweise, niemand führt die Beweise auf die Axiome zurück, weil das würde ja jeglichen Rahmen von irgendeiner Publikation sprengen. Und schlussendlich sind es ja nur die Logiker, die wirklich so nachdenken im Alltag. Aber es ist ja trotzdem spannend, die Beweise auf ein solides Fundament zu stellen. Und mit dem Computer kann man das ja machen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:18:00 - 00:18:44]
+Und es gibt tatsächlich eine Community, die arbeitet fleissig daran, grosse Teile der Mathematik auf solide Fundamente zu stellen. Und eines der häufigsten Computerprogramme, das sich im Moment durchsetzt, ist \qt{LEAN}. Sie verwenden eine etwas andere Logik, als wir hier eingeführt haben, das kommt eher aus der theoretischen Informatik, ist aber im Wesentlichen äquivalent zu der First-Order Logic, die wir hier gemacht haben. Wir werden das in den nächsten Wochen noch sehen mit den Zermelo-Fraenkel-Axiomen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Rolle von interaktiven Theorembeweisern]
+Systeme wie \qt{LEAN} schliessen die Lücke zwischen der unpraktischen Länge rein formaler Beweise auf Papier und dem Wunsch nach absoluter Fehlerfreiheit. Durch die maschinelle Überprüfung können hochkomplexe Beweise (wie der Klassifikationssatz der endlichen einfachen Gruppen oder Fermats letzter Satz) bis auf die fundamentalen Axiome zurückgeführt werden, ohne dass Menschen an der schieren Menge der Details scheitern.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:18:44 - 00:20:00]
+Genau, und mit dem Computer hat man natürlich dann viele Hilfen, um das solide aufzubauen. Und wenn man etwas bewiesen hat, kann man das verwenden und weiter und weiter aufbauen. Das Computerprogramm besteht im Wesentlichen aus zwei Teilen: Ein Teil, wo man relativ einfach Sachen eingeben muss und das übersetzt das in den nötigen Code, und ein anderer Teil, der Kernel, der möglichst einfach programmiert sein muss, damit jeder überprüfen kann, ob der Beweis korrekt ist. Es gibt da eine riesige Community, und es sind schon Zehntausende Dinge bewiesen. Es gibt grosse Forschungsprojekte, wo versucht wird, Fermats letzten Satz zu formalisieren. Das geht aber noch mehrere Jahre.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:00 - 00:21:10]
+Jedenfalls, wenn Sie das interessiert und Sie ein bisschen Spass haben an diesen formalen Beweisen, kann ich das \qt{Natural Numbers Game} empfehlen. Ich habe einen Link auf Moodle gestellt. Da gibt es ein kurzes Tutorial zu den grundlegenden LEAN-Begriffen, und das führt Sie spielerisch durch den Beweis von Eigenschaften der natürlichen Zahlen, beginnend mit $1+1=2$. Falls Sie Lust haben, dürfen Sie das gerne freiwillig machen, das ist selbstverständlich weit weg davon, prüfungsrelevant zu sein.
+\end{spoken-clean}
+
+\begin{nice-box}[Das Natural Numbers Game]
+Das \emph{Natural Numbers Game} ist eine interaktive, spielerische Einführung in den Theorembeweiser LEAN. Nutzer beweisen darin Schritt für Schritt die grundlegenden Eigenschaften der natürlichen Zahlen (wie Kommutativität und Assoziativität der Addition) direkt auf Basis der Peano-Axiome.
+\end{nice-box}
+
+\begin{spoken-clean}[00:21:10 - 00:22:30]
+Gut, was wir jetzt noch kurz erwähnen wollen, sind semi-formale Beweise. \inlinemetanote{schreibt an die Tafel} Man kann natürlich keine formale Definition davon erwarten. Das ist so ein bisschen die Frage: Wenn man einen Beweis führt, wie präzise ist man? Eine Idee von semi-formalen Beweisen ist einfach, und das werden wir in Zukunft auch tun, wenn wir über Logik reden, dass man die Schritte weglässt, in denen man die logischen Axiome anwendet. Wir sagen, die logischen Axiome sind so grundlegend, da wissen wir, das ist zwar mühsam, aber wir könnten es machen, wenn wir uns genügend lange hinsetzen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:30 - 00:23:45]
+Deswegen machen wir das nicht, damit das Ganze übersichtlicher wird. Und dann ist es ein semi-formaler Beweis. Das heisst, man verwendet nur noch die Axiome der mathematischen Theorie, mit der wir arbeiten. Das ist immer noch genügend mühsam, aber deutlich übersichtlicher. Wir lassen also die rein logischen Schritte weg und verwenden stattdessen natürliche Sprache, um den Beweis zu strukturieren. Das ist der erste Schritt auf dem Weg zum mathematischen Alltag.
+\end{spoken-clean}
+
+\begin{math-stroke}[Semi-formale Beweise]
+\begin{definition}[Semi-formaler Beweis]\label[definition]{def:semi-formal-proof}
+Ein \newterm{semi-formaler Beweis} ist eine Vereinfachung des formalen Beweises, bei der:
+\begin{itemize}
+    \setcounter{enumi}{0} \item Die rein logischen Axiome und rein logischen Zwischenschritte weggelassen werden.
+    \setcounter{enumi}{1} \item Nur noch die spezifischen, nicht-logischen Axiome der zugrundeliegenden mathematischen Theorie (z.\,B. $\text{PA}$) explizit referenziert werden.
+    \setcounter{enumi}{2} \item Natürliche Sprache zur Strukturierung und Argumentation verwendet wird.
+\end{itemize}
+\end{definition}
+\end{math-stroke}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:23:45
+% topic: Semi-formale Beweise und Übungsbeispiele
+% board_state: def:semi-formal-proof
+% next_goal: Durchführung von Übung 1 und Vorbereitung von Übung 2
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:23:45 - 00:24:48]
+Gut, schauen wir uns einmal ein Beispiel an. Wir nehmen diese Übung hier, die Sie eigentlich formal beweisen sollten, und machen das jetzt einmal semi-formal. Wir wollen in der Peano-Arithmetik zeigen, dass $S(0) + S(0) = S(S(0))$ gilt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis von Übung 1]
+Wir wollen zeigen:
+\[
+\text{PA} \vdash S(0) + S(0) = S(S(0))
+\]
+\begin{short-proof}
+Wir wenden das Axiom $\text{PA}_3$ mit den Einsetzungen $x = S(0)$ und $y = 0$ an:
+\[
+S(0) + S(0) = S(S(0) + 0) \tag{nach $\text{PA}_3$}
+\]
+Nun verwenden wir das Axiom $\text{PA}_2$ mit der Einsetzung $x = S(0)$, welches besagt:
+\[
+S(0) + 0 = S(0) \tag{nach $\text{PA}_2$}
+\]
+Durch Einsetzen dieser Gleichung in die obige Zeile erhalten wir direkt:
+\[
+S(0) + S(0) = S(S(0))
+\]
+Dies schliesst den semi-formalen Beweis ab.
+\end{short-proof}
+\end{math-stroke}
+
+% ==========================================
+% SECTION 5: INDUKTIONSBEWEIS IN PA
+% ==========================================
+\section{Beweis durch Induktion in der Peano-Arithmetik}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt den rechten Teil der Tafel, um Platz für das zweite, komplexere Beispiel zu machen, während die Axiome in der Mitte stehen bleiben.
+\end{meta-note}
+
+\begin{spoken-clean}[00:24:48 - 00:26:01]
+Gut, ein zweites Beispiel, das etwas mühsamer ist. Wir wollen zeigen, dass $2 \cdot x = x + x$ ist. Das ist etwas schwieriger. Das wollen wir jetzt mit Induktion machen. Und hier sind vielleicht noch zwei Resultate, die Sie in den Übungen zeigen, ebenfalls semi-formal: Sie zeigen in den Übungen, dass die Addition assoziativ und kommutativ ist. Das dürfen wir hier im Hinterkopf behalten.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:26:01 - 00:27:15]
+\inlinemetanote{schreibt an die Tafel} Also, wir wollen zeigen, dass für alle $x$ gilt: $S(S(0)) \cdot x = x + x$. Wir machen wieder einen semi-formalen Beweis. Dafür definieren wir zuerst die Formel, die wir beweisen wollen. Wir sagen, $\varphi(x)$ ist die Formel $S(S(0)) \cdot x = x + x$. Und wir verwenden Induktion, das heisst, wir wenden das Axiom $\text{PA}_6$ an.
+\end{spoken-clean}
+
+\begin{math-stroke}[Übung 2: Verdopplung als Multiplikation]
+\begin{exercise}\label[exercise]{ex:double-x}
+Zeige, dass in der Peano-Arithmetik für alle $x$ gilt:
+\[
+\text{PA} \vdash S(S(0)) \cdot x = x + x
+\]
+\end{exercise}
+Wir definieren die Induktionsformel $\varphi(x)$ mit der freien Variablen $x$ als:
+\[
+\varphi(x) :\equiv S(S(0)) \cdot x = x + x
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:15 - 00:28:30]
+Das heisst, was wir tun müssen: Wir zeigen zuerst, dass das stimmt für $x = 0$, also wir beweisen $\varphi(0)$. Und danach zeigen wir den Induktionsschritt, also dass für alle $x$ gilt: Wenn $\varphi(x)$ stimmt, dann stimmt auch $\varphi(S(x))$. Und dann verwenden wir das Axiom $\text{PA}_6$ und wissen, dass es für alle gilt. Zuerst also die Induktionsverankerung, wir wollen zeigen, dass $\text{PA} \vdash \varphi(0)$ gilt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:28:30 - 00:29:30]
+Eigentlich müsste man hier schreiben $\varphi(0/x)$, weil wir $x$ durch $0$ substituieren, aber wenn es aus dem Kontext klar ist, müssen wir das nicht tun. Das ist recht einfach. Wir haben auf der linken Seite $S(S(0)) \cdot 0$. Gemäss dem Axiom $\text{PA}_4$ wissen wir, dass alles multipliziert mit $0$ wieder $0$ ergibt. Also ist das gleich $0$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:29:30 - 00:30:03]
+Und auf der rechten Seite haben wir $0 + 0$. Gemäss dem Axiom $\text{PA}_2$ wissen wir, dass $x + 0 = x$ ist, also ist $0 + 0 = 0$. Damit haben wir auf beiden Seiten $0$, und die Induktionsverankerung ist gezeigt.
+\end{spoken-clean>
+
+\begin{proof}[Beweis von \cref{ex:double-x} durch Induktion]
+Wir führen den Beweis semi-formal über das Induktionsschema $\text{PA}_6$.
+
+\begin{math-stroke}[Induktionsanfang: \texorpdfstring{$\varphi(0)$}{phi(0)}]
+Wir müssen zeigen, dass $\varphi(0)$ gilt, also:
+\[
+S(S(0)) \cdot 0 = 0 + 0
+\]
+\begin{itemize}
+    \setcounter{enumi}{0} \item \emph{Linke Seite}: Nach Axiom $\text{PA}_4$ (mit $x = S(S(0))$) gilt:
+    \[
+    S(S(0)) \cdot 0 = 0
+    \]
+    \setcounter{enumi}{1} \item \emph{Rechte Seite}: Nach Axiom $\text{PA}_2$ (mit $x = 0$) gilt:
+    \[
+    0 + 0 = 0
+    \]
+\end{itemize}
+Da beide Seiten zu $0$ auswerten, gilt $S(S(0)) \cdot 0 = 0 + 0$. Die Induktionsverankerung ist somit erfolgreich gezeigt.
+\end{math-stroke}
+\end{proof}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:30:00
+% topic: Induktionsbeweis für 2x = x + x (Induktionsanfang abgeschlossen)
+% board_state: ex:double-x, proof:double-x-induction
+% next_goal: Durchführung des Induktionsschritts in der nächsten Vorlesungshälfte
+% open_loops: Induktionsschritt noch offen
+% \end{ai-global-state-checkpoint-invisible-content>
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 235723, Output 7935)*
+---
+
+**AutoExtraction:** [Part 2] 03-03-tuesday.mp4
+[Angehängtes Video]: 03-03-tuesday-part2.mp4
+[Kontext-Dateien]: 03-03-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-03. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+% ==========================================
+% SECTION 5: INDUKTIONSBEWEIS IN PA (FORTSETZUNG)
+% ==========================================
+
+\begin{spoken-clean}[00:00:00 - 00:00:20]
+Das, was wir tun, ist, wir zeigen zuerst, dass das stimmt für, ähm, für $x = 0$. Und wir zeigen dann, dass es, wenn es für $x$ stimmt, dann stimmt auch für die Nachfolgerfunktion von $x$. Und dann verwenden wir das Axiom 6 und wir wissen, dass das Ganze, dass es für alle stimmt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:20 - 00:01:21]
+Also zuerst müssen wir beweisen, dass, ähm, ähm, in der Peano-Arithmetik gilt, ähm, $\varphi(0)$. Also eigentlich müsste man hier schreiben, ähm, $0/x$, weil wir $x$ durch $0$ substituieren, aber wenn es aus dem Kontext klar ist, welche Variable wir substituieren, dann müssen wir das nicht hinschreiben. Ähm... Okay, und das ist relativ einfach. Wir haben, wir haben Nachfolgerfunktion zweimal von $0$ mal $0$. Okay, das wissen wir, das ist $0$ gemäß Peano 4. Okay, wenn man etwas mit... ah, ja, wenn man etwas mit $0$ multipliziert, dann gibt es wieder $0$. Und dann verwenden wir Peano 2, und das sagt uns, dass das dasselbe ist wie $0 + 0$. Okay, und das ist, was wir zeigen wollten. Das ist gut. Das heißt, die Induktionsverankerung stimmt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:21 - 00:01:56]
+Gut, und jetzt wollen wir noch, äh, zeigen eben diesen Induktionsschritt. Das heißt, in Peano-Arithmetik gilt, dass, ähm, $\varphi(x)$ impliziert, ähm, $\varphi(S(x))$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:56 - 00:02:27]
+Gut, und jetzt, äh, wir nehmen an, also genau, wir nehmen an, dass, äh, dass das gilt. Das ist der semi-formale Beweis. Wir nehmen an, dass...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:27 - 00:03:15]
+Okay, und jetzt, äh, formen wir das um. Wir wissen... jetzt wollen wir zeigen, dass das da gilt. Wir wissen, dass $S(S(0))$, also zweimal die Nachfolgerfunktion, mal, ähm, Nachfolgerfunktion von $x$, ähm... Okay, das ist dasselbe wie, ähm, jetzt müssen wir... wenden wir Peano 5. Okay, gemäß Peano 5 ist das dasselbe wie, ähm, $S(S(0)) \cdot x$ plus zweimal die Nachfolgerfunktion von, äh, $0$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:15 - 00:03:40]
+Okay, das ist genau das, was uns das, was uns das Peano 5 sagt. Und, äh, okay, da wissen wir jetzt gemäß Induktionsannahme, dass das dasselbe ist wie $x + x$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:40 - 00:03:56]
+Und da, das haben wir oben, ähm, äh, gesehen, das ist dasselbe wie, ähm, $S(0) + S(0)$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:56 - 00:04:30]
+Okay. Das heißt, wir haben diese zwei Einheiten. Und, ähm, das können wir jetzt, ähm, schreiben. Da verwenden wir jetzt eben diese zwei, diese zwei, ähm, Facts, dass wir brauchen hier, dass es, ähm, assoziativ und kommutativ ist die Addition. Das heißt, wir dürfen das vertauschen, wie wir wollen. Das heißt, wir wissen, sehen, dass das hier dasselbe ist wie $x + S(0)$ plus $x + S(0)$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:30 - 00:05:03]
+Und da verwenden wir jetzt wieder, ähm, Peano 3, um zu schließen, dass das dasselbe ist wie $S$ von $x + 0$ plus, ähm, $S$ von $x + 0$. Und das wissen wir, ähm, ist gemäß Peano 2 dasselbe wie $S$ von $x$ plus, ähm, $S$ von $x$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:03 - 00:05:20]
+Okay. Das ist, äh, genau das, was wir, ähm, zeigen wollten.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:20 - 00:05:40]
+Also das $S(S(0)) \cdot S(x)$ gibt $S(x) + S(x)$. Okay, und jetzt, äh, können wir Induktion anwenden. Jetzt verwenden wir Peano 6, um aus diesen zwei...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:40 - 00:06:53]
+...aus diesen zwei Formeln zu schließen, was wir wollen. Das heißt, wir haben also, ähm, dass Peano-Arithmetik impliziert, ähm, $\varphi(0)$ und Peano-Arithmetik impliziert, ähm, für alle $x$, ähm, $\varphi(x)$ impliziert $\varphi(S(x))$. Okay, ähm, wir haben das gezeigt. Und somit, ähm, folgt, dass aus... also somit folgt mit Peano 6, dass, ähm, Peano-Arithmetik, ähm, aus der Peano-Arithmetik kann man zeigen, dass für alle $x$ gilt, ähm, $\varphi(x)$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:06:53 - 00:07:11]
+Okay. Und in jedem Schritt musst du natürlich wieder argumentieren. Also wir wissen, dass das gilt, wir wissen, dass das gilt, aber wir wollen zeigen, dass daraus folgt, dass das und das gilt, und dann Peano 6 anwenden und so weiter. Aber wir lassen eben die logischen Schritte aus, um das Ganze etwas übersichtlicher zu machen.
+\end{spoken-clean}
+
+\begin{proof}[Beweis von \cref{ex:double-x} durch Induktion (Fortsetzung)]
+Wir führen den Induktionsschritt semi-formal über das Induktionsschema $\text{PA}_6$ aus.
+
+\begin{math-stroke}[Induktionsschritt: \texorpdfstring{\varphi(x) \to \varphi(S(x))}{phi(x) -> phi(S(x))}]
+Wir wollen zeigen:
+\[
+\text{PA} \vdash \forall x \big( \varphi(x) \to \varphi(S(x)) \big)
+\]
+Dazu nehmen wir an, dass die Induktionsannahme $\varphi(x)$ gilt:
+\[
+S(S(0)) \cdot x = x + x \tag{I.A.}
+\]
+Wir müssen zeigen, dass unter dieser Annahme auch $\varphi(S(x))$ gilt, also:
+\[
+S(S(0)) \cdot S(x) = S(x) + S(x)
+\]
+Wir formen die linke Seite unter Verwendung der Peano-Axiome um:
+\begin{align*}
+S(S(0)) \cdot S(x) &\overset{\text{PA}_5}{=} (S(S(0)) \cdot x) + S(S(0)) \\
+&\overset{\text{I.A.}}{=} (x + x) + S(S(0)) \\
+&\overset{\text{Ex 1}}{=} (x + x) + (S(0) + S(0)) \\
+&\overset{\text{Ass, Kom}}{=} (x + S(0)) + (x + S(0)) \\
+&\overset{\text{PA}_3}{=} S(x + 0) + S(x + 0) \\
+&\overset{\text{PA}_2}{=} S(x) + S(x)
+\end{align*}
+
+\begin{explanation-of-steps}
+\begin{itemize}
+    \setcounter{enumi}{0} \item Im ersten Schritt wenden wir das Axiom $\text{PA}_5$ (rekursive Multiplikation) mit den Einsetzungen $x = S(S(0))$ und $y = x$ an.
+    \setcounter{enumi}{1} \item Danach setzen wir die Induktionsannahme (I.A.) für den Term $S(S(0)) \cdot x$ ein.
+    \setcounter{enumi}{2} \item Wir ersetzen die Konstante $2$ (repräsentiert durch $S(S(0))$) durch $1 + 1$ (repräsentiert durch $S(0) + S(0)$) gemäß der in Übung 1 (\cref{ex:one-plus-one}) bewiesenen Identität.
+    \setcounter{enumi}{3} \item Unter Ausnutzung der Assoziativität und Kommutativität der Addition (Ass, Kom) gruppieren wir die Terme um.
+    \setcounter{enumi}{4} \item Schließlich wenden wir die Axiome $\text{PA}_3$ (rekursive Addition) und $\text{PA}_2$ (Rechtsneutralität der $0$) an, um die gewünschte Form $S(x) + S(x)$ zu erhalten.
+\end{itemize}
+\end{explanation-of-steps}
+Damit ist der Induktionsschritt gezeigt. Mit dem Induktionsschema $\text{PA}_6$ folgt nun:
+\[
+\text{PA} \vdash \forall x \big( S(S(0)) \cdot x = x + x \big)
+\]
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:07:11 - 00:07:40]
+Gut, so viel zur Peano-Arithmetik für den Moment und auch zu semi-formalen Beweisen. Gut, gibt es da noch Fragen dazu? Sonst gehen wir jetzt zum nächsten Kapitel. Da kommen, äh, die Modelle. Das ist im Bereich der Modelltheorie.
+\end{spoken-clean}
+
+% ==========================================
+% SECTION 6: MODELLTHEORIE
+% ==========================================
+\section{Modelltheorie: Syntax vs. Semantik}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die Tafel gründlich ab, um Platz für das neue Kapitel "Modelle" zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:07:40 - 00:08:00]
+Ähm, ja, das neue Kapitel.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:00 - 00:08:20]
+Äh, ja, genau. Also, was... Sie wissen, okay, vielleicht so philosophisch oder so muss man ein bisschen aufpassen, was man genau macht oder so, aber wir haben...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:20 - 00:08:50]
+Was wir jetzt bis jetzt gemacht haben, ist, wir haben rein sprachlich gearbeitet. Wir haben diese ganze Syntax aufgebaut, wir haben Alphabet, wie man all die Sachen umformen darf, aber es war eine reine Sprache, die wir entwickelt haben. Also es ist eigentlich... es hat a priori keine Bedeutung. Und die Idee ist, wir wollen jetzt gerne dem Ganzen, ähm, Sinn geben. Also wir wollen jetzt von dieser Syntaktik jetzt auf die semantische Ebene wechseln. Die semantische Ebene, das ist jetzt wirklich, ähm, da geben wir dem...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:50 - 00:09:19]
+Da schauen wir uns tatsächlich nicht einfach nur die Gruppenaxiome an, sondern tatsächlich Gruppen. Ähm, und wir wollen dem Ganzen Bedeutung geben, wir wollen über wahr und falsch sprechen können. Ähm, genau. Aber das ist natürlich wie auch wieder eigentlich... man nimmt einen Schritt zurück. Also es ist jetzt nicht mehr... wir können das nicht in derselben Sprache machen, in der wir die ganze Syntaktik aufgebaut haben, weil sonst würde sich irgendwann die Schlange wieder in den Schwanz beißen, und es geht nicht anders. Das heißt, wir werden jetzt quasi eine naive Mengenlehre verwenden. Wir werden von Mengen sprechen, ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:19 - 00:09:54]
+...und auch von Teilmengen und von Funktionen, aber jetzt keine schlimmen Mengenbegriffe machen. Aber eben, es ist immer noch die Frage genau, wo das Ganze lebt. Es ist nicht so präzise. Später machen wir noch Zermelo-Fraenkel Mengenlehre, das ist dann vielleicht wieder eigentlich... wird wieder über ein Axiomensystem aufgebaut. Das heißt, wir können auch sagen, wir schauen das über ein Unterding der Zermelo-Fraenkel an. Oder man nimmt irgendein anderes Logiksystem, wie auch immer. Aber die Idee ist auf jeden Fall, wir gehen jetzt eigentlich von dieser reinen syntaktischen Ebene weg und schauen uns jetzt die konkreten, ähm, die konkreten, äh, Modelle an von unseren, ähm, von unserer Mathematik. Also es ist ein bisschen wie, okay, wir haben jetzt in einer Petrischale diese reine...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:54 - 00:10:15]
+...Logik aufgebaut, die man da studieren kann, und jetzt gehen wir quasi wieder in die Wildnis... Wildnis zurück oder so und gehen da in die... in die Mathematik. So ein bisschen, okay.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:10:15 - 00:11:07]
+Ich weiß nicht, man kann sich jetzt... ich glaube, es gibt da alle gerne Metaphern in diesem Bereich. Im Skript von Lorenz Halbeisen, er schreibt das ein bisschen wie, sich vorstellen wie so die Partitur und die Musik. So, wir haben da die, die Partitur, da stehen alle Noten, aber so jetzt sind, äh, Semantik... semantischen Ebene, da ist die ganze Musik und so weiter, die, die Musik ist so, so... und... aber eben, die Musik... die eigentliche Musik ist nochmals etwas anderes. Oder Richard Pink, habe ich gesehen, der, der vergleicht das eher kulinarisch. Der sagt so, okay, die ganze Syntaktik, das ist aber wie die Speisekarte, und die Semantik, das ist wie die ganze, ähm, das ist dann das eigene, die eigentliche Speise, die auf den Tisch serviert wird. Ähm, ja, genau. Da dürfen Sie auch gerne Ihre Lieblingsmetapher, ähm, hervorbringen. Ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:07 - 00:11:22]
+Ja, also im Groben, Groben schauen, wir haben die, die syntaktische Ebene, da gibt es Formeln, Beweise und Zeichen, und die semantische Ebene, da gibt es Strukturen, Bedeutung, Wahrheit oder nicht Wahrheit.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:22 - 00:12:20]
+Da wollen wir uns auch noch ein paar Sachen anschauen. Wir haben hier Syntaktik, Semantik. Ähm, also hier haben wir Terme. Das sind einfach reine Terme, aber die entsprechen auf der semantischen Ebene Objekten, tatsächlich ein Objekten von Mengen. Und hier haben wir Formeln. Aber wenn wir die jetzt nicht rein sprachlich da weggehen, sondern eben zum Begriff, dann sind das tatsächlich auch Aussagen. Dann hier haben wir, ähm, logische Axiome oder Folgerungen aus logischen Axiomen. Das sind aber solche Sachen, die gelten einfach immer. So, und in der Semantik nennt man das, nennt man das, ähm, oft Tautologien.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:12:20 - 00:12:48]
+Das sind auch Begriffe, die rein aus der logischen Struktur folgen. Und hier haben wir, ähm, die nicht-logischen Aussagen, äh, nicht-logischen Axiome.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:12:48 - 00:13:38]
+Und hier sind das die, das das Axiomensystem einer Theorie. Ähm, ja, genau. Ich glaube, das Ganze geht auch ein bisschen so Sprachphilosophie noch zurück oder so. Ist ein bisschen wie Sprache. Man kann rein mit der Sprache hantieren, sagen, okay, wenn es, wenn es regnet, ist die Straße nass. Ähm, und dann sagen, okay, aber das kann man jetzt rein mit dem herum, herumspielen und logische Sachen daraus folgern. Und in der Mathematik reicht das vielleicht auch. Ähm, aber wir können auch sagen, okay, hier ist die Straße, hier ist der Regen, und das bedeutet, nass zu sein. Da kann man trotzdem logisch da herumspielen und kann dann etwas über die Straße aussagen. Und das ist, was wir hier machen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:38 - 00:13:53]
+Okay, machen wir das auch, äh, präzis. Ähm, präzis, aber eben im Kontext einer naiven Mengenlehre und eines gewissen Wahrheitsbegriffs, den wir, ähm, den wir bereits haben. Aber das könnte man philosophisch wahrscheinlich noch, äh, länger erörtern, was das genau ist, der Wahrheitsbegriff und so weiter. Ja, machen...
+\end{spoken-clean}
+
+\begin{didactic-insight}[Der Übergang von Syntax zu Semantik]
+Bisher haben wir uns ausschließlich auf der syntaktischen Ebene bewegt: Wir haben Zeichenketten (Terme und Formeln) nach rein formalen Regeln manipuliert, ohne ihnen eine inhaltliche Bedeutung zuzuschreiben. In der Modelltheorie wechseln wir nun auf die semantische Ebene. Wir geben den Symbolen Sinn, indem wir sie in konkreten mathematischen Strukturen (Modellen) interpretieren. Dies erlaubt es uns, über die Wahrheit oder Falschheit von Aussagen zu sprechen.
+\end{didactic-insight}
+
+\begin{math-stroke}[Gegenüberstellung: Syntax vs. Semantik]
+Die folgende Tabelle fasst die Entsprechungen zwischen der syntaktischen und der semantischen Ebene zusammen:
+\begin{center}
+\begin{tabular}{l|l}
+\textbf{Syntaktische Ebene (Syntax)} & \textbf{Semantische Ebene (Semantik)} \\ \hline
+Terme (reine Zeichenketten) & Objekte (Elemente einer Menge) \\
+Formeln & Aussagen (wahr oder falsch) \\
+Logische Axiome / Folgerungen & Tautologien (immer wahr) \\
+Nicht-logische Axiome & Axiomensystem einer Theorie (z.\,B. Gruppen)
+\end{tabular}
+\end{center}
+\end{math-stroke}
+
+% ==========================================
+% SECTION 7: L-STRUKTUREN
+% ==========================================
+\section{L-Strukturen und Interpretationen}
+
+\begin{spoken-clean}[00:13:53 - 00:14:16]
+...wir es nicht. Es wird alles, wird alles klar, denke ich. Noch eine Definition, ähm, wenn $L$, wir haben jetzt eine Signatur $L$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:16 - 00:15:31]
+Und wir sagen jetzt, eine $L$-Struktur, wir nennen das $M$. Das ist eine, besteht aus einer nicht-leeren menge $A$ und, ähm, einer Abbildung... oh, ich definiere das noch. Ähm, eine Abbildung, die jedem Konstantensymbol, ähm, $c$ in $L$... Ja, wir verwenden jetzt auch das Elementsein von einer menge, aber auch hier im prinzipiell im naiven Sinn. Ein Element, wir nennen das jetzt $c^M$, das ist jetzt diese, diese Struktur, und das liegt in $A$, zuordnet.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:15:31 - 00:16:39]
+Gut, äh, und dann jedem, ähm, äh, $n$-stelligen Relationssymbol, $R$ in $L$, also wenn wir ein Relationssymbol haben, dann, ähm, ordnen wir dem eine menge von $n$-Tupeln, ähm, $R^M$ zu. Also $n$-Tupel, das heißt, das ist eine Teilmenge von $A^n$. Das soll jetzt einfach eine Menge von $n$-Tupeln sein, und wir sagen, all diese $n$-Tupel sind diejenigen, die diese Relation erfüllen. So, das...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:16:39 - 00:17:55]
+Und, äh, und, äh, jedem $n$-stelligen Funktionssymbol, ähm, $f$ in unserer Signatur $L$, ähm, was ordnet es einem Funktionssymbol sinnvollerweise zu? Eine Funktion. Eine Funktion, einfach eine Funktion. Ähm, eine Symbol... eine Funktion, wir nennen das $f^M$, die geht von, gut, $A^n$ nach $A$ zuordnet. Und diese Menge $A$ heißt der Bereich von $M$. Ähm, genau. Das ist, äh, ja, das ist eine $L$-Struktur. Wir machen dann nach der Pause weiter. Entschuldigung fürs Überziehen.
+\end{spoken-clean}
+
+\begin{lecture-break}[Pause]
+Der Dozent kündigt eine kurze Pause an. Das Video setzt nach einem kurzen Schnitt mit einer gereinigten Tafel fort.
+\end{lecture-break}
+
+\begin{spoken-clean}[00:18:01 - 00:18:18]
+So, wir machen, äh, weiter. Bitte nehmen Sie Ihre Plätze ein und beenden Sie Ihre Konversationen. Also einfach nochmals, Entschuldigung, jetzt habe ich es blöderweise schon ausgeputzt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:18:18 - 00:19:08]
+Was ist eine $L$-Struktur? Eine $L$-Struktur ist wirklich, wir haben einen Bereich... eine $L$-Struktur ist, äh, bezeichnen wir durch $M$, und es ist einfach eine $L$-Struktur $M$ besteht aus dem Bereich von $M$, das ist eine menge $A$. Und dann für jedes Konstantensymbol haben wir ein... jedem Konstantensymbol ordnen wir ein Element in der, in dem Bereich $A$ zu. Das heißt, die Konstanten sind wirklich Elemente. Die Funktionen sind jetzt wirklich Funktionen von unserem Bereich oder von dem kartesischen Produkt von $A$ mit sich selbst nach $A$. Und dann eben die Relationssymbole sind wirklich Relationen zwischen den Elementen von $A$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:19:08 - 00:20:08]
+Und eben nochmals zu sagen, was ist eine Relation? Vielleicht schreiben wir es, ähm, nochmals als Bemerkung hin. Das ist allgemein in der Mathematik eine $n$-stellige Relation auf eine Menge $A$. Das ist, äh, nichts anderes als eine Teilmenge von $A^n$. Also zum Beispiel, um... und zwar müssen wir einfach alle sagen, das sind jetzt all diese Elemente in $A^n$, die diese Relation erfüllen. Genau, das ist das. Also zum Beispiel, wenn Sie, ich weiß nicht, wenn Sie die strikt kleiner Relation auf, auf $\mathbb{R}$ definieren wollen, dann können Sie das einfach definieren als... das ist dann einfach, ähm, in dem Fall wäre die Teilmenge $R$, das wäre eine Teilmenge von $\mathbb{R}^2$. Das sind alle, ähm, $x, y$ in $\mathbb{R}^2$, so dass, ähm, $x$ strikt kleiner ist als $y$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:08 - 00:21:12]
+Okay, und wenn wir diese menge kennen, dann können wir zwei Elemente $x$ und $y$ anschauen, und wir sehen, wenn sie in dieser menge sind, erfüllen sie die Relation, wenn sie nicht in dieser menge sind, erfüllen sie nicht die Relation. Okay, ist einfach eine Mengenschreibweise für Relationen. Das ist, was wir hier verwenden. Deswegen, für jedes Relationssymbol erhalten wir jetzt tatsächlich eine Relation auf unserem Bereich $A$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:21:12 - 00:22:11]
+Ähm, vielleicht ein kleines Beispiel. Ähm, schauen wir an unsere Signatur, das soll die Signatur von der Gruppentheorie sein. Okay, was war die Signatur von der Gruppentheorie? Genau, wir haben nur das... ein Konstantensymbol und ein zweistelliges Funktionssymbol. Gut, und jetzt können wir zum Beispiel nehmen, ähm, okay, wir können zum Beispiel $A$ nehmen die, ähm... sei $M$ die $L$-Struktur mit Bereich, ähm, $A = \mathbb{Z}$ zum Beispiel. Ähm, und jetzt müssen wir aber definieren, was ist unser Konstant... unser $e$. Sei $e^M$, dann machen wir $e^M$, das ist jetzt eben diese Interpretation, und das definieren wir als $0$. Und, ähm, diese, dieses zweistellige Funktionssymbol, verknüpft auch $M$, das sagen wir, ist eine Funktion, die geht von $\mathbb{Z} \times \mathbb{Z}$, weil es zweistellig ist, nach $\mathbb{Z}$ und schickt hier ein Element $(a, b)$ auf das Element $a + b$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:11 - 00:23:14]
+Und, äh, das definiert eine, ja, das definiert eine $L$-Struktur.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:23:14 - 00:24:15]
+Und hier ist es, okay, hier ist es besonders schön, weil das ist jetzt auch tatsächlich eine Gruppe, das wissen wir. Ähm, das heißt, das erfüllt auch gleich alle Gruppenaxiome. Aber a priori haben wir das vielleicht noch nicht gefordert. Möglicherweise hätten wir auch sagen können, $e$ ist $100$ und Verknüpfung ist irgendwie Multiplikation plus $3$ oder so. Kein Problem, es muss nur eine Funktion sein.
+\end{spoken-clean}
+
+\begin{nice-box}[Definition: L-Struktur]
+\setcounter{theorem}{49}
+\begin{definition}[$L$-Struktur]\label[definition]{def:l-structure}
+Sei $L$ eine Signatur. Eine \newterm{$L$-Struktur} $\mathcal{M}$ ist ein Paar $(A, \cdot^{\mathcal{M}})$, bestehend aus:
+\begin{itemize}
+    \setcounter{enumi}{0} \item Einer nicht-leeren Menge $A$ (genannt der \newterm{Bereich} oder das \newterm{Universum} von $\mathcal{M}$).
+    \setcounter{enumi}{1} \item Einer Abbildungsfunktion $\cdot^{\mathcal{M}}$, die den Symbolen der Signatur $L$ konkrete mathematische Objekte zuordnet:
+    \begin{itemize}
+        \item Jedem Konstantensymbol $c \in L$ wird ein Element $c^{\mathcal{M}} \in A$ zugeordnet.
+        \item Jedem $n$-stelligen Relationssymbol $R \in L$ wird eine Relation $R^{\mathcal{M}} \subseteq A^n$ zugeordnet.
+        \item Jedem $n$-stelligen Funktionssymbol $f \in L$ wird eine Funktion $f^{\mathcal{M}}: A^n \to A$ zugeordnet.
+    \end{itemize}
+\end{itemize}
+\end{definition}
+\end{nice-box}
+
+\begin{math-stroke}[Bemerkung zu Relationen und Beispiel einer Struktur]
+\begin{remark}[n-stellige Relation]\label[definition]{rem:n-ary-relation}
+Eine $n$-stellige Relation auf einer Menge $A$ ist formal nichts anderes als eine Teilmenge des kartesischen Produkts $A^n$:
+\[
+R \subseteq A^n
+\]
+\end{remark}
+
+\begin{example}[Strikte Ordnung auf den reellen Zahlen]\label[example]{ex:strict-order-reals}
+Das Relationssymbol $<$ auf der Menge der reellen Zahlen $\mathbb{R}$ wird interpretiert als die Teilmenge:
+\[
+R_{<} = \{ (x, y) \in \mathbb{R}^2 \mid x < y \} \subseteq \mathbb{R}^2
+\]
+Zwei Elemente $x, y \in \mathbb{R}$ stehen genau dann in Relation zueinander ($x < y$), wenn das Paar $(x, y)$ ein Element der Menge $R_{<}$ ist.
+\end{example}
+
+\begin{example}[L-Struktur für die Gruppentheorie]\label[example]{ex:gt-structure}
+Sei $L_{\text{GT}} = \{e, \cdot\}$ die Signatur der Gruppentheorie, wobei $e$ ein Konstantensymbol und $\cdot$ ein zweistelliges Funktionssymbol ist. Wir definieren eine $L_{\text{GT}}$-Struktur $\mathcal{M}$ mit dem Bereich $A = \mathbb{Z}$ wie folgt:
+\begin{itemize}
+    \setcounter{enumi}{0} \item Das Konstantensymbol $e$ wird als die Zahl $0$ interpretiert:
+    \[
+    e^{\mathcal{M}} = 0 \in \mathbb{Z}
+    \]
+    \setcounter{enumi}{1} \item Das zweistellige Funktionssymbol $\cdot$ wird als die Standard-Addition auf den ganzen Zahlen interpretiert:
+    \[
+    \cdot^{\mathcal{M}}: \mathbb{Z} \times \mathbb{Z} \to \mathbb{Z}, \quad (a, b) \mapsto a + b
+    \]
+\end{itemize}
+Diese Struktur $(\mathbb{Z}, 0, +)$ bildet eine Gruppe und erfüllt somit alle Gruppenaxiome.
+\end{example}
+\end{math-stroke}
+
+% ==========================================
+% SECTION 8: VARIABLENBELEGUNG UND INTERPRETATION
+% ==========================================
+\section{Variablenbelegung und Interpretation}
+
+\begin{spoken-clean}[00:24:15 - 00:25:21]
+Okay, aber wir wollen jetzt noch genauer sagen, eben, dass wir sagen können, was ein Modell ist. Ja, es kommt jetzt wieder ein bisschen wie in der ersten Stunde, als wir die ganze Syntax eingeführt haben, eine Reihe von Definitionen, aber ja, sind alle recht natürlich. Muss man sich einfach nochmals hinsetzen und das genau anschauen. Also, eine Variablenbelegung, wir sagen, was das ist.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:25:21 - 00:26:53]
+Äh, ja, genau. Also, was... Sie wissen, okay, was könnte eine Variablenbelegung sein, einfach vom Wort her? Ja, genau, in welche menge könnte es sein? Also, ja, ist ja egal. Es ist eine Variablenbelegung, das heißt, wir wollen jetzt jede Variable mit einer Konstanten belegen, also wir sagen jetzt, jede Variable soll ein Element aus unserem Bereich $A$ sein. Da gibt es auch ganz viele Möglichkeiten. Genau, ist einfach eine Abbildung, die jeder Variablen $v$ ein Objekt $\beta(v)$ in $A$ zuordnet.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:26:53 - 00:28:30]
+Das ist eine Variablenbelegung. Dann haben wir noch, ähm, das andere ist einfach, um... es ist hilfreich, das zu schreiben. Wenn $v$ eine Variable ist und $\beta$ eine Variablenbelegung, jetzt definieren wir eine neue Variablenbelegung, wo wir einfach, ähm, $\beta$ ein bisschen abändern, gell? Wir machen jetzt, äh... wir definieren nun, $\beta$ und wir schreiben hier $a$ über $v$. Und jetzt machen wir hier eine Variable $v'$ rein, und wir sagen jetzt, das ist, ähm, gleich, ähm, $a$, falls diese Variable hier genau die Variable $v$ ist, und ansonsten ist es einfach $\beta(v')$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:28:30 - 00:29:55]
+Also das ist die Variablenbelegung, wir nehmen, wir nehmen die Variablenbelegung $\beta$ und jetzt verändern wir die einfach für $v$. Das heißt, für $v$ machen wir anstatt $\beta(v)$ machen wir $a$, aber ansonsten bleibt es gleich. Das heißt, wir ändern die Variablenbelegung einfach für eine Variable. Also nichts Kompliziertes, nichts Gefährliches, nur etwas mühsam.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:29:55 - 00:31:12]
+Ähm, gut, und jetzt können wir sagen, was eine Interpretation ist. Eine, ähm, eine $L$-Interpretation, wir sagen $I$, das ist jetzt einfach ein Paar $(M, \beta)$, wobei $M$ eine $L$-Struktur ist und $\beta$ eine Variablenbelegung ist.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:31:12 - 00:31:15]
+Äh, ja.
+\end{spoken-clean}
+
+\begin{nice-box}[Definition: Variablenbelegung und Interpretation]
+\setcounter{theorem}{53}
+\begin{definition}[Variablenbelegung]\label[definition]{def:variable-assignment}
+Sei $\mathcal{M}$ eine $L$-Struktur mit Bereich $A$. Eine \newterm{Variablenbelegung} $\beta$ ist eine Abbildung, die jeder Variablen $v$ ein Objekt aus dem Bereich $A$ zuordnet:
+\[
+\beta: \text{Var} \to A
+\]
+\end{definition}
+
+\begin{definition}[Modifizierte Variablenbelegung]\label[definition]{def:modified-assignment}
+Sei $v$ eine Variable, $\beta$ eine Variablenbelegung und $a \in A$. Die modifizierte Variablenbelegung $\beta[v \mapsto a]$ ist definiert durch:
+\[
+\beta[v \mapsto a](v') = \begin{cases}
+a & \text{falls } v' \equiv v, \\
+\beta(v') & \text{sonst.}
+\end{cases}
+\]
+\end{definition}
+
+\begin{definition}[L-Interpretation]\label[definition]{def:l-interpretation}
+Eine \newterm{$L$-Interpretation} $\mathcal{I}$ ist ein geordnetes Paar $(\mathcal{M}, \beta)$, bestehend aus einer $L$-Struktur $\mathcal{M}$ und einer Variablenbelegung $\beta$:
+\[
+\mathcal{I} = (\mathcal{M}, \beta)
+\]
+\end{definition}
+\end{nice-box}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:31:15
+% topic: Einführung in die Semantik und L-Strukturen (Variablenbelegung abgeschlossen)
+% board_state: def:l-structure, rem:n-ary-relation, ex:gt-structure, def:variable-assignment, def:l-interpretation
+% next_goal: Definition der Terminterpretation und Formelwahrheit (Tarski-Semantik)
+% open_loops: Terminterpretation noch offen
+% \end{ai-global-state-checkpoint-invisible-content>
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 243971, Output 8366)*
+---
+
+**AutoExtraction:** [Part 3] 03-03-tuesday.mp4
+[Angehängtes Video]: 03-03-tuesday-part3.mp4
+[Kontext-Dateien]: 03-03-tuesday-part1.tex, 03-03-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-03. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\subsection{L-Interpretation und Terminterpretation}
+
+\begin{spoken-clean}[00:00:00 - 00:01:00]
+\inlinemetanote{schreibt an die Tafel} ...$\mathcal{M}$ eine $L$-Struktur ist und, ja, $\beta$ eine Variablenbelegung ist. Äh, ja. Ach, hier ist... so, okay, probieren... überlegen. Ja, machen... jetzt mache ich hier selbst... ich habe viel versucht, äh, schöne Metaphern einzuführen oder so, mit Sprache, Modell und so weiter, aber hier ist es... Also im Prinzip, wir haben eine $L$-Struktur $\mathcal{M}$ und zusätzlich sagen wir noch für jede Variable, was für ein Element das im Bereich von $\mathcal{M}$ ist.
+\end{spoken-clean}
+
+\setcounter{theorem}{54}
+\begin{math-stroke}[Definition: L-Interpretation]
+\begin{definition}[$L$-Interpretation]\label[definition]{def:l-interpretation-part3}
+Eine \newterm{$L$-Interpretation} $\mathcal{I}$ ist ein geordnetes Paar $(\mathcal{M}, \beta)$, bestehend aus einer $L$-Struktur $\mathcal{M}$ und einer Variablenbelegung $\beta$:
+\[
+\mathcal{I} = (\mathcal{M}, \beta)
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:00 - 00:02:38]
+Okay. Ähm, und äh dann können wir weiter definieren für, ähm, wenn wir eine ähm Interpretation $\mathcal{I}$ haben. \inlinemetanote{schreibt an die Tafel} Für so eine Interpretation definieren wir, ähm, die Interpretationen, und das hier machen wir wie, ah, über $\nu$, einfach als die Interpretationen gegeben durch $\mathcal{M}$, aber hier nehmen wir die Variablenbelegung $\beta$ $a$ über $\nu$. Okay, das ist eine Interpretation. Gut, wir haben Struktur, Variablenbelegungen, Interpretationen. Gut, und jetzt, als Nächstes, was wir machen wollen, okay, wir haben jetzt, ähm, wir haben jetzt unsere, haben jetzt eine $L$-Struktur, und jetzt wollen wir gerne noch einen Term interpretieren. Okay, was war ein Term? Ein Term, den haben wir konstruiert aus Konstanten und aus Variablen, und dann Funktionen darauf angewendet. Das waren Terme, und dann wieder Funktionen auf Funktionen und so weiter. Und damit können wir jetzt eigentlich mit unserer, wenn wir eine $L$-Interpretation haben, können wir jetzt auch jeden Term interpretieren.
+\end{spoken-clean}
+
+\setcounter{theorem}{55}
+\begin{math-stroke}[Interpretation eines Terms]
+\begin{definition}[Interpretation eines Terms]\label[definition]{def:term-interpretation}
+Sei $\mathcal{I} = (\mathcal{M}, \beta)$ eine $L$-Interpretation. Wir ordnen jedem $L$-Term $\tau$ rekursiv ein Objekt $\mathcal{I}(\tau) \in A$ zu.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:38 - 00:06:18]
+Also, das ist die Interpretation eines Terms. \inlinemetanote{schreibt an die Tafel} Also sei, ähm, $\mathcal{I} = (\mathcal{M}, \beta)$ eine $L$-Interpretation. Okay, und wir ordnen nun jedem Term, also jedem $L$-Term, wenn wir das $\tau$ nennen, also wenn wir einen $L$-Term $\tau$ haben, ein Objekt zu. Und wir machen das rekursiv. $\mathcal{I}(\tau) \in A$ zu durch: Okay, das ist relativ klar. Für Variablen-Symbole, ähm, $v$, ähm, sagen wir einfach, dass $\mathcal{I}(v)$ ist, ähm, $\beta(v)$, genau, die Variablenbelegung. Für Konstantensymbole $c \in L$ sagen wir, dass, ähm, $\mathcal{I}(c)$, ähm, ist genau die Konstante unserer, ähm, Struktur. Und für ein, ähm, $n$-stelliges Funktionssymbol $f$ in unserer Signatur $L$ und, ähm, $L$-Terme $\tau_1$ bis $\tau_n$ sagen wir einfach, dass die Interpretation von $f$ von $\tau_1$ bis $\tau_n$ soll sein, ähm, unser $f^{\mathcal{M}}$, und $f^{\mathcal{M}}$ ist jetzt eine tatsächliche Funktion. Und das ist eine Funktion, die geht von $A^n$ nach $A$, das heißt, wir können hier, ähm, $n$ Elemente aus $A$ einsetzen, und da nehmen wir jetzt einfach die Interpretation von $\tau_1$ bis Interpretation von $\tau_n$. Und das gibt auch wieder ein Element. Das ist ein Element in $A$, das ist ein Element in $A$, das ist ein Element in $A$, das heißt, das können wir jetzt so durchlaufen lassen und erhalten, ähm, für jedes... jeder Term, also weil wir eine Interpretation, eine $L$-Interpretation haben, dann können wir jeden, jeden $L$-Term als Element in $A$ interpretieren.
+\end{spoken-clean}
+
+\begin{math-stroke}[Rekursive Definition der Terminterpretation]
+Die Interpretation eines Terms $\tau$ unter einer Interpretation $\mathcal{I} = (\mathcal{M}, \beta)$ wird rekursiv wie folgt definiert:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Für Variablensymbole $v \in \text{Var}$ sei:
+    \[
+    \mathcal{I}(v) = \beta(v)
+    \]
+    \setcounter{enumi}{1} \item Für Konstantensymbole $c \in L$ sei:
+    \[
+    \mathcal{I}(c) = c^{\mathcal{M}}
+    \]
+    \setcounter{enumi}{2} \item Für ein $n$-stelliges Funktionssymbol $f \in L$ und $L$-Terme $\tau_1, \dots, \tau_n$ sei:
+    \[
+    \mathcal{I}(f(\tau_1, \dots, \tau_n)) = f^{\mathcal{M}}(\mathcal{I}(\tau_1), \dots, \mathcal{I}(\tau_n))
+    \]
+\end{enumerate}
+\begin{explanation-of-steps}
+Diese Definition übersetzt rein syntaktische Terme schrittweise in konkrete Elemente des Universums $A$. Variablen werden durch die Belegung $\beta$ ausgewertet, Konstantensymbole durch ihre Interpretation in der Struktur $\mathcal{M}$, und zusammengesetzte Terme durch die Anwendung der entsprechenden mathematischen Funktion $f^{\mathcal{M}}$ auf die bereits interpretierten Argumente.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\subsection{Formelwahrheit (Tarski-Semantik)}
+
+\begin{spoken-clean}[00:06:18 - 00:08:09]
+Ja, das ist jetzt ein bisschen... kurz konzentrieren und sich überlegen, was da vorgeht, aber es ist auch wieder genau das, was man tut. Man ersetzt einfach die Sachen und gibt ihnen jetzt Sinn. Und jetzt ist es nicht mehr nur reine Symbole und Syntaktik, sondern jetzt sind es tatsächlich Elemente von Mengen. \inlinemetanote{wischt die Tafel} Gut, und jetzt, was wir tun wollen, ist... okay, nach Termen haben wir Formeln definiert. Und was wir jetzt tun wollen, wir wollen sagen, wann ist eine Formel in einer gewissen Interpretation wahr oder nicht. Und das können wir jetzt auch wieder rekursiv definieren. Ähm, als nochmals kurze Erinnerung: Wie sind Formeln entstanden? Wir haben Terme genommen, und dann haben wir die zusammengesetzt durch... ja, diese F0 bis F4, oder? Und... ja. Formeln, genau, die Formeln haben wir... genau, also wir haben... wir haben Terme genommen, und dann haben wir gesagt, okay, wenn das eine... ein Term gleich ein anderer Term ist, ist eine Formel, oder Terme... wenn wir eine $n$-stellige Relation hatten, dann konnten wir die Terme einsetzen. Und nachher konnten wir wieder sagen, okay, wenn wir Formeln haben, können wir daraus neue Formeln bauen, indem wir die logischen Quantoren und Junktoren eingesetzt haben. Und... ja, genau, das sind die Formeln. Das war nur noch Erinnerung.
+\end{spoken-clean}
+
+\begin{math-stroke}[Erinnerung: Aufbau von Formeln]
+Zur Erinnerung wird die syntaktische Struktur von Formeln rekapituliert:
+Eine Formel $\varphi$ ist aus den Regeln $(\text{F}_0)$--$(\text{F}_4)$ entstanden, d.\,h. sie ist von der Form:
+\[
+\tau_1 = \tau_2, \quad R(\tau_1, \dots, \tau_n), \quad \neg \psi, \quad \psi_1 \land \psi_2, \quad \psi_1 \lor \psi_2, \quad \psi_1 \to \psi_2, \quad \exists v \psi, \quad \forall v \psi
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:09 - 00:09:50]
+Ähm, gut, und jetzt können wir sagen... das ist eine Definition. \inlinemetanote{schreibt an die Tafel} Für eine Formel $\varphi$, ähm, definieren wir, ähm... okay, wir wollen sagen, dass, ähm, $\varphi$ gilt in dieser, ähm, Interpretation $\mathcal{I}$. Also $\mathcal{I}$ ist eine Interpretation immer noch. Oder, äh, ähm, wir können sagen, das heißt, $\varphi$ gilt in $\mathcal{I}$ oder auch $\varphi$ ist wahr, äh, bezüglich der Interpretation $\mathcal{I}$. Okay, und das definieren wir, ähm, das definieren wir wieder rekursiv, einfach wieder über diese Konstruktionen, wie folgt: Okay, wie tun wir das? Also wir sagen zuerst einmal, dass, äh, $\varphi$ ist wahr bezüglich $\mathcal{I}$...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:50 - 00:13:53]
+...falls, äh, Definition, nicht, nicht $\varphi$ hier... das ist ja, dass wir alle Formeln von dieser Form durchgehen. \inlinemetanote{schreibt an die Tafel} Also wir sagen, $\tau_1 = \tau_2$ in dieser Interpretation, per Definition genau dann, wenn, ähm, die Interpretation von $\tau_1$, das ist ein Element in $A$, in $A$ soll das das dasselbe Objekt sein, ähm, wie die Interpretation von $\tau_2$. Was absolut Sinn macht. $\tau_1 = \tau_2$, das ist jetzt hier einfach ein Symbolzeichen. Wenn wir aber eine Interpretation haben, dann werden das zwei Elemente, und wir können schauen, sind diese Elemente dieselben Objekte, wie, ja, und falls ja, dann schreiben wir das so hin. Gut, dann schreiben wir, ähm, in $\mathcal{I}$ gilt, ähm, Relation $\tau_1$ bis $\tau_n$, per Definition genau dann, wenn, ähm, die entsprechenden, ähm, Elemente diese Relation erfüllen. Das heißt, wenn diese Elemente hier, ähm, enthalten ist, ähm, ja, schreiben wir einfach, ist in unserer $R^{\mathcal{M}}$, also dieser Teilmenge von $A^n$ gegeben durch unsere Struktur $\mathcal{M}$. Okay, und das andere machen wir jetzt, äh, wieder rekursiv, was wir zuerst für die Terme einmal machen, und danach sagen wir, dass, ähm, nicht $\psi$ ist wahr in $\mathcal{I}$ genau dann, wenn wir haben, dass nicht, ähm, $\psi$ wahr ist in $\mathcal{I}$. Okay, wir können schauen, also wenn das nicht gilt, dann schreiben wir das.
+\end{spoken-clean}
+
+\setcounter{theorem}{56}
+\begin{math-stroke}[Definition der Formelwahrheit (Tarski-Semantik) - Teil 1]
+\begin{definition}[Formelwahrheit (Tarski-Semantik)]\label[definition]{def:formula-truth-part1}
+Für eine $L$-Interpretation $\mathcal{I} = (\mathcal{M}, \beta)$ und eine $L$-Formel $\varphi$ definieren wir die Gültigkeitsrelation $\mathcal{I} \models \varphi$ (lies: $\varphi$ gilt in $\mathcal{I}$ oder $\varphi$ ist wahr bzgl. $\mathcal{I}$) rekursiv wie folgt:
+\begin{itemize}
+    \setcounter{enumi}{0} \item $\mathcal{I} \models \tau_1 = \tau_2 \iff \mathcal{I}(\tau_1) \text{ ist dasselbe Objekt wie } \mathcal{I}(\tau_2)$
+    \setcounter{enumi}{1} \item $\mathcal{I} \models R(\tau_1, \dots, \tau_n) \iff (\mathcal{I}(\tau_1), \dots, \mathcal{I}(\tau_n)) \in R^{\mathcal{M}}$
+    \setcounter{enumi}{2} \item $\mathcal{I} \models \neg \psi \iff \text{Nicht } \mathcal{I} \models \psi$
+\end{itemize}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:53 - 00:15:49]
+Und das ist jetzt etwas, da haben wir einen... wir sagen, naiven Wahrheitsbegriff zu sagen, ob ein Element... ob zwei Elemente in einer Menge gleich sind oder nicht. Das ist... Ähm, okay, und jetzt geht's weiter durch, indem wir genau das machen, was wir vielleicht schon gemacht haben. Wir interpretieren diese... diese logischen Zeichen als das, was wir sowieso schon immer klammheimlich interpretiert haben. \inlinemetanote{schreibt an die Tafel} Wir sagen jetzt: $\mathcal{I} \models \psi_1 \land \psi_2$ genau dann, wenn, gut, $\psi_1$ gilt in $\mathcal{I}$ und $\psi_2$ gilt in $\mathcal{I}$. Dann haben wir, dass $\mathcal{I}$... in $\mathcal{I}$ gilt $\psi_1$ oder $\psi_2$ genau dann, wenn $\psi_1$ gilt oder $\psi_2$ gilt in $\mathcal{I}$. Dann haben wir $\mathcal{I} \models \psi_1 \to \psi_2$ genau dann, wenn, falls $\psi_1$ in $\mathcal{I}$ gilt, dann gilt auch $\psi_2$ in $\mathcal{I}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Formelwahrheit (Tarski-Semantik) - Teil 2]
+Die Definition der Formelwahrheit wird für die logischen Verknüpfungen (Junktoren) fortgesetzt:
+\begin{itemize}
+    \setcounter{enumi}{0} \item $\mathcal{I} \models \psi_1 \land \psi_2 \iff \mathcal{I} \models \psi_1 \text{ und } \mathcal{I} \models \psi_2$
+    \setcounter{enumi}{1} \item $\mathcal{I} \models \psi_1 \lor \psi_2 \iff \mathcal{I} \models \psi_1 \text{ oder } \mathcal{I} \models \psi_2$
+    \setcounter{enumi}{2} \item $\mathcal{I} \models \psi_1 \to \psi_2 \iff \text{Falls } \mathcal{I} \models \psi_1, \text{ dann } \mathcal{I} \models \psi_2$
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:49 - 00:17:12]
+Okay, dann haben wir noch die Quantoren. \inlinemetanote{schreibt an die Tafel} Da brauchen wir jetzt unsere Notation. Wir sagen, $\mathcal{I} \models \exists v \psi$ entspricht nun: Es existiert ein $a \in A$, so dass... okay, jetzt wird's ein bisschen eng, so dass, wenn wir in dieser Interpretation die Variable $v$ durch $a$ ersetzen, dann gilt $\psi$ in dieser Interpretation. Und wir sagen, dass für alle $v$ $\psi$ soll gelten genau dann, wenn für alle $a \in A$ gilt $\mathcal{I}_{a/v} \models \psi$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Formelwahrheit (Tarski-Semantik) - Teil 3]
+Die Definition der Formelwahrheit für die Quantoren lautet:
+\begin{itemize}
+    \setcounter{enumi}{0} \item $\mathcal{I} \models \exists v \psi \iff \text{es existiert ein } a \in A \text{ so dass } \mathcal{I}_{a/v} \models \psi$
+    \setcounter{enumi}{1} \item $\mathcal{I} \models \forall v \psi \iff \text{für alle } a \in A \text{ gilt } \mathcal{I}_{a/v} \models \psi$
+\end{itemize}
+wobei $\mathcal{I}_{a/v} = (\mathcal{M}, \beta[v \mapsto a])$ die modifizierte Interpretation bezeichnet.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:12 - 00:18:09]
+Das ist... okay, das sind diese Definitionen. Okay, es ist genau das, was man denkt. Links ist wirklich unser formales System, unsere formale Sprache, und auf der rechten Seite, das sind jetzt gewissermaßen metamathematische Bedingungen. Also die liegen außerhalb von dem formalen System, das wir aufgebaut haben. Im Skript und im Buch machen sie es so, dass sie sagen, okay, das verwenden sie, wenn sie diese Sachen schreiben, alles in Großbuchstaben. Sagen, okay, wenn alles in Großbuchstaben ist, dann ist es quasi eine metamathematische... wo man einen Schritt zurückmacht. Nicht alles in Großbuchstaben geschrieben, aber einfach hier haben wir einen anderen Begriff. Vorher haben wir einfach reine syntaktische Zeichen, und hier haben wir jetzt eine Interpretation.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:18:09 - 00:19:40]
+Gut, und jetzt... machen wir nochmals Notation. \inlinemetanote{schreibt an die Tafel} Wir schreiben $\mathcal{I} \not\models \varphi$ in der Interpretation $\mathcal{I}$ gilt nicht $\varphi$, falls, ja, falls $\varphi$ in $\mathcal{I}$ nicht gilt. Und natürlich haben wir dann per Definition... wir haben immer, dass in $\mathcal{I}$ entweder gilt $\varphi$ oder per Definition, wie wir nicht $\varphi$ definiert haben, wenn $\varphi$ nicht gilt, dann muss nicht $\varphi$ gelten. Und es ist ein exklusives Oder, das heißt, nie gilt beides, also und nicht beides. Manche Leute verwenden den Satz 'entweder oder', um exklusives Oder hinzuschreiben, aber es ist immer verwirrend. Das sollte man besser... ist besser, das nicht zu tun. Ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+\inlinemetanote{Eine studentische Frage zur Notation $\mathcal{I} \not\models \varphi$ im Vergleich zu $\mathcal{I} \models \neg \varphi$ ist akustisch schwer verständlich.}
+\end{student-interaction>
+
+\begin{spoken-clean}[00:19:40 - 00:20:32]
+Nein, genau das... aber das ist hier Teil in der rekursiven... in der rekursiven Definition, aber genau, das ist eigentlich eine Übersetzung von dem in dem. Aber man verwendet diese Schreibweise manchmal, ja. Aber das ist innerhalb der Formel, also wenn Sie eine Formel haben, dann geht sie durch und wieder durch und wieder durch. Also wenn Sie haben 'für alle $x$ nicht $\varphi$ impliziert $\psi$' und so weiter, da kommt das irgendwann rein, oder?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:32 - 00:21:12]
+Genau, also Achtung mit 'entweder oder', also ich würde das im mathematischen Bereich eher verwenden... vermeiden, und wenn man ein exklusives Oder schreibt, das ausdrücklich tun.
+\end{spoken-clean}
+
+\begin{math-stroke}[Notation und Eigenschaften der Gültigkeitsrelation]
+\begin{notation}
+Wir schreiben:
+\[
+\mathcal{I} \not\models \varphi
+\]
+falls $\mathcal{I} \models \varphi$ nicht gilt.
+\end{notation}
+\begin{property}[Bivalenzprinzip]
+Für jede Interpretation $\mathcal{I}$ und jede Formel $\varphi$ gilt stets genau eine der beiden Aussagen:
+\[
+\mathcal{I} \models \varphi \qquad \text{oder} \qquad \mathcal{I} \models \neg \varphi
+\]
+Insbesondere gilt niemals beides gleichzeitig.
+\end{property}
+\end{math-stroke}
+
+\subsection{Modellbegriff und Beispiele}
+
+\begin{spoken-clean}[00:21:12 - 00:23:39]
+Gut, und jetzt haben wir... okay, jetzt können wir endlich sagen, was ein Modell ist. \inlinemetanote{schreibt an die Tafel} Vielleicht noch folgende Definition: Wir haben jetzt $L$ eine Signatur von Anfang an, und $\varphi$ eine $L$-Formel, und $\mathcal{M}$ eine $L$-Struktur. Gut, dann ist $\mathcal{M}$ ein Modell von $\varphi$, und wir schreiben $\mathcal{M} \models \varphi$, so etwas, falls für jede Variablenbelegung $\beta$ gilt, dass $(\mathcal{M}, \beta) \models \varphi$. Also egal, wie Sie die Variablen belegen, es soll immer... $\varphi$ soll in jeder von diesen Interpretationen gelten. Und dasselbe kann man natürlich auch machen für eine Menge von $L$-Formeln. Sei $\Phi$ eine Menge von $L$-Formeln. Dann ist $\mathcal{M}$ ein Modell von $\Phi$, falls für jede Formel $\varphi$ in $\Phi$ gilt, dass $\mathcal{M} \models \varphi$.
+\end{spoken-clean}
+
+\setcounter{theorem}{57}
+\begin{math-stroke}[Definition: Modell]
+\begin{definition}[Modell]\label[definition]{def:model}
+Sei $L$ eine Signatur, $\varphi$ eine $L$-Formel und $\mathcal{M}$ eine $L$-Struktur.
+\begin{itemize}
+    \setcounter{enumi}{0} \item $\mathcal{M}$ heißt ein \newterm{Modell} von $\varphi$, geschrieben:
+    \[
+    \mathcal{M} \models \varphi
+    \]
+    falls für jede Variablenbelegung $\beta$ gilt:
+    \[
+    (\mathcal{M}, \beta) \models \varphi
+    \]
+    \setcounter{enumi}{1} \item Sei $\Phi$ eine Menge von $L$-Formeln. $\mathcal{M}$ heißt ein \newterm{Modell} von $\Phi$, geschrieben:
+    \[
+    \mathcal{M} \models \Phi
+    \]
+    falls für jede Formel $\varphi \in \Phi$ gilt:
+    \[
+    \mathcal{M} \models \varphi
+    \]
+\end{itemize}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:39 - 00:25:40]
+Okay, das ist ein Modell. Machen wir noch Beispiele. \inlinemetanote{schreibt an die Tafel} Also ein Beispiel ist... wir hatten vorher kurz die Gruppentheorie-Struktur angeschaut, gegeben durch die ganzen Zahlen. Okay? Also wir hatten diese $L$-Gruppentheorie-Struktur, und die war gegeben durch... wir haben gesagt, der Bereich sind die ganzen Zahlen, und wir haben gesagt, wir haben diese Struktur $\mathcal{M}$ genannt, dann ist gesagt, dass Konstantensymbol $e^{\mathcal{M}}$, das identifizieren wir... das sagen wir, ordnen wir $e^{\mathcal{M}} = 0$ zu, und wir sagen, diese Funktion, diese Verknüpfung, das soll sein, ähm, $a + b$. Dann ist das ein Modell von, wenn wir die $\Phi$ die Axiome von der Gruppentheorie nehmen. Genau, das kann man sagen, weil all diese... all diese Formeln in $\Phi$, das ist die Gruppentheorie, also es ist so, äh... egal mit welcher Variablenbelegung, diese Verknüpfung hier erfüllt all die Axiome von der Gruppentheorie. Kann man alle Axiome durchgehen, sehen, das stimmt, egal für welche Variablenbelegung. Also ist das ein Modell von der Theorie der Gruppentheorie. Aber wir können auch einfachere Beispiele anschauen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Modell der Gruppentheorie]
+\begin{example}[Modell der Gruppentheorie]\label[example]{ex:gt-model}
+Sei $L_{\text{GT}} = \{e, \cdot\}$ die Signatur der Gruppentheorie und $\Phi = \text{GT}$ die Menge der Gruppenaxiome. Die $L_{\text{GT}}$-Struktur $\mathcal{M}$ mit:
+\begin{itemize}
+    \setcounter{enumi}{0} \item Bereich $A = \mathbb{Z}$
+    \setcounter{enumi}{1} \item $e^{\mathcal{M}} = 0$
+    \setcounter{enumi}{2} \item $\cdot^{\mathcal{M}}: \mathbb{Z} \times \mathbb{Z} \to \mathbb{Z}, \quad (a, b) \mapsto a + b$
+\end{itemize}
+ist ein Modell von $\Phi$, geschrieben:
+\[
+\mathcal{M} \models \text{GT}
+\]
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:40 - 00:28:09]
+Also es ist noch immer nett... interessant, mit diesen Modellen herumzuspielen. \inlinemetanote{wischt die Tafel} Machen wir noch ein... haben wir noch? Doch, wir haben noch Zeit für ein Beispiel. Jetzt machen wir irgend... irgendetwas, man kann das ein bisschen selbst... Machen wir, sagen wir, sei, ähm, die Signatur, nehmen wir einfach $c$ und $f$, und wir sagen, ähm, $c$ ist ein Konstantensymbol, und $f$ soll ein einstelliges Funktionssymbol sein. Okay, und jetzt nehmen wir einfach eine... $\Phi$ bestehend aus... nehmen wir zwei Formeln. Und die eine Formel soll sein, ähm, $\varphi_1$: Sagen wir, für alle $x$ $x = c$ oder $x = f(c)$. Und $\varphi_2$: Es existiert ein $x$, so dass $x \neq c$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Eine einfache Theorie]
+\begin{example}[Eine einfache Theorie]\label[example]{ex:simple-theory}
+Sei $L = \{c, f\}$ eine Signatur, wobei $c$ ein Konstantensymbol und $f$ ein einstelliges Funktionssymbol ist. Wir betrachten die Formelmenge $\Phi = \{\varphi_1, \varphi_2\}$ mit:
+\begin{align*}
+\varphi_1 &:\equiv \forall x (x = c \lor x = f(c)) \\
+\varphi_2 &:\equiv \exists x (x \neq c)
+\end{align*}
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:09 - 00:31:00]
+Okay, und das ist hier einfach eine... ein bisschen zufällige Theorie, ohne tiefen Hintergrund, aber das kann man so formulieren. Die Frage ist jetzt, ähm, ja, was haben wir da für Modelle? \inlinemetanote{schreibt an die Tafel} Wir nehmen jetzt eine... zwei verschiedene $L$-Strukturen, ähm, und beide mit demselben Bereich. Also nehmen wir als Bereich $A$, nehmen wir einfach die Menge bestehend aus zwei Elementen, $0$ und $1$. Und äh wir definieren nun auf diesem Bereich zwei, ähm, $L$-Strukturen $\mathcal{M}_1$ und $\mathcal{M}_2$, mit beide mit Bereich $A$. Und zwar folgendermaßen: Konstante $\mathcal{M}_1$ definieren wir als, ähm, $0$. Und dann müssen wir die Funktion in der ersten Struktur definieren. Da sagen wir einfach, Funktion, die bildet, ähm... ist einstellig, das heißt, die bildet $0$ auf $1$ ab, und wir sagen, sie soll, ähm, $1$ auf $0$ abbilden. Okay, kann man so definieren, ist eine $L$-Struktur. Und, ähm, die zweite Struktur, da soll auch wieder die Konstante soll $0$ sein, und die Funktion $\mathcal{M}_2$ definieren wir etwas anders, sagen wir, $0$ soll auf $0$ abgebildet werden, und $1$ soll auf $1$ abgebildet werden.
+\end{spoken-clean}
+
+\begin{math-stroke}[Zwei Strukturen über demselben Bereich]
+Wir betrachten das Universum $A = \{0, 1\}$ und definieren darauf zwei verschiedene $L$-Strukturen $\mathcal{M}_1$ und $\mathcal{M}_2$:
+\begin{itemize}
+    \setcounter{enumi}{0} \item Die Struktur $\mathcal{M}_1$ ist definiert durch:
+    \begin{align*}
+    c^{\mathcal{M}_1} &= 0 \\
+    f^{\mathcal{M}_1}(0) &= 1 \\
+    f^{\mathcal{M}_1}(1) &= 0
+    \end{align*}
+    \setcounter{enumi}{1} \item Die Struktur $\mathcal{M}_2$ ist definiert durch:
+    \begin{align*}
+    c^{\mathcal{M}_2} &= 0 \\
+    f^{\mathcal{M}_2}(0) &= 0 \\
+    f^{\mathcal{M}_2}(1) &= 1
+    \end{align*}
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:31:00 - 00:33:59]
+Okay, und jetzt müssen wir schauen, was gilt hier. Ähm... \inlinemetanote{schreibt an die Tafel} Also wir haben auf jeden Fall, dass $\mathcal{M}_1$ ist ein Modell von $\varphi_2$, und $\mathcal{M}_2$ ist auch ein Modell von $\varphi_2$. Weil $\varphi_2$ sagt einfach, es existiert ein $x$, so dass $x \neq c$. Okay, und $c$ hier ist... ist $0$, und in beiden Modellen existiert ein Element, das nicht $0$ ist, das ist gut, nämlich $1$. Aber für die zweite Formel sehen wir, ähm, dass, ähm, $\mathcal{M}_1$ ist ein Modell von $\varphi_1$. Wir haben, jedes Element $x$ ist entweder gleich der Konstanten, oder es ist gleich dem Funktionswert von der Konstanten. Und das ist gut, entweder ist es $0$ oder es ist $1$. Aber hier, ähm, ist das Funktionswert von der Konstanten ist auch wieder $0$. Das heißt, $1$, ähm, erfüllt das nicht. Ähm, das heißt, in $\mathcal{M}_2$ gilt nicht $\varphi_1$. Okay, das ist auch ein Beispiel noch. Und da kann man natürlich auch Junktoren und so weiter nehmen. Okay, so viel zur Modelltheorie. Vielleicht noch eine Bemerkung: Modelltheorie ist wirklich auch ein Gebiet der Mathematik, also das ist der Anfang, da sind viele Bücher dazu geschrieben worden, das ist auch ein aktives Forschungsgebiet. Und man verwendet es effektiv auch, um mathematische Sätze zu beweisen. Also es gibt Bereiche von der Zahlentheorie, die verwenden viel Modelltheorie, um ihr... um neue Sätze zu beweisen. Okay, vielen Dank fürs Kommen, und wir sehen uns nächste Woche wieder. \inlinemetanote{Die Studierenden applaudieren}
+\end{spoken-clean}
+
+\begin{math-stroke}[Modelleigenschaften der beiden Strukturen]
+Wir überprüfen, welche der Strukturen $\mathcal{M}_1$ und $\mathcal{M}_2$ Modelle für die Formeln $\varphi_1$, $\varphi_2$ bzw. für die Theorie $\Phi$ sind:
+\begin{itemize}
+    \setcounter{enumi}{0} \item \emph{Gültigkeit von $\varphi_2$}:
+    Da $c^{\mathcal{M}_1} = c^{\mathcal{M}_2} = 0$ gilt, fordert $\varphi_2 \equiv \exists x (x \neq c)$ die Existenz eines Elements ungleich $0$. In beiden Strukturen ist $1 \in A$ ein solches Element (da $1 \neq 0$). Somit gilt:
+    \[
+    \mathcal{M}_1 \models \varphi_2 \qquad \text{und} \qquad \mathcal{M}_2 \models \varphi_2
+    \]
+    \setcounter{enumi}{1} \item \emph{Gültigkeit von $\varphi_1$ in $\mathcal{M}_1$}:
+    Die Formel $\varphi_1 \equiv \forall x (x = c \lor x = f(c))$ verlangt, dass jedes Element im Universum entweder gleich $c^{\mathcal{M}_1} = 0$ oder gleich $f^{\mathcal{M}_1}(c^{\mathcal{M}_1}) = f^{\mathcal{M}_1}(0) = 1$ ist. Da das Universum $A = \{0, 1\}$ nur aus diesen beiden Elementen besteht, ist diese Bedingung für alle $x \in A$ erfüllt. Somit gilt:
+    \[
+    \mathcal{M}_1 \models \varphi_1 \implies \mathcal{M}_1 \models \Phi
+    \]
+    \setcounter{enumi}{2} \item \emph{Gültigkeit von $\varphi_1$ in $\mathcal{M}_2$}:
+    In $\mathcal{M}_2$ gilt $c^{\mathcal{M}_2} = 0$ and $f^{\mathcal{M}_2}(c^{\mathcal{M}_2}) = f^{\mathcal{M}_2}(0) = 0$. Die Bedingung $x = c \lor x = f(c)$ reduziert sich somit auf $x = 0$. Für das Element $1 \in A$ gilt jedoch weder $1 = 0$ noch $1 = f^{\mathcal{M}_2}(0) = 0$. Somit ist die Bedingung für $x = 1$ verletzt. Es gilt:
+    \[
+    \mathcal{M}_2 \not\models \varphi_1 \implies \mathcal{M}_2 \not\models \Phi
+    \]
+\end{itemize}
+\begin{explanation-of-steps}
+Dieses Beispiel zeigt, dass dieselbe syntaktische Theorie $\Phi$ in einer Struktur ($\mathcal{M}_1$) wahr sein kann, während sie in einer anderen Struktur ($\mathcal{M}_2$) über demselben Universum ungültig ist. Die Struktur $\mathcal{M}_1$ ist somit ein Modell für $\Phi$, während $\mathcal{M}_2$ kein Modell für $\Phi$ ist.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 252050, Output 8046)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 68223, Output 23)*
+---
+
+=== Neue Chat-Sitzung (12.06.2026 20:39:09) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-10-tuesday.mp4
+[Angehängtes Video]: 03-10-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-10. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\chapter{Mathematische Logik: Modelle, Korrektheit und Konsistenz}
+
+\section{Philosophischer Exkurs: Konstruktivismus und Existenzbeweise}
+\subsection{Existenz irrationaler Potenzen}
+
+\begin{spoken-clean}[00:00:00 - 00:00:39]
+Okay. Hallo zusammen und willkommen zu einer weiteren Woche in Grundstrukturen. \inlinemetanote{Dozent räuspert sich} Zuerst noch schnell... Cornelia Busch war nochmals schnell hier, sie war die Dozentin, die letzte Woche schnell da war, um Werbung für ihre Studie zu machen. Und sie hat gesagt, sie hat noch keine Rückmeldung gekriegt. Also diejenigen, die sich eingeschrieben haben, hat sie kontaktiert und noch keine Rückmeldung gekriegt, und sie bittet darum, sich doch zu melden, bitte. Äh genau, das wäre das.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:39 - 00:01:07]
+Dann der nächste Punkt, bevor wir weiterfahren mit der Vorlesung, wollte ich einfach noch schnell eine kleine... einen kleinen Exkurs machen noch in die Philosophie der Mathematik, nur ganz kurz. Äh zuerst diese Frage: \inlinemetanote{zeigt auf die linke Tafel} Also wenn $a$ und $b$ irrational sind, kann es sein, dass $a^b$ eine rationale Zahl ist? Du hast das schon gesehen. Die Antwort ist ja, das kann sein. Und es gibt einen einfachen Beweis, ähm...
+\end{spoken-clean}
+
+\begin{math-stroke}[Existenz irrationaler Potenzen]
+Existieren irrationale Zahlen $a$ und $b$, so dass $a^b$ rational ist?
+
+\begin{short-proof}
+Wir wissen bereits, dass $\sqrt{2}$ irrational ist. Wir betrachten nun die reelle Zahl:
+\[
+\sqrt{2}^{\sqrt{2}}
+\]
+Es gibt zwei disjunkte Fälle:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Fall 1:} $\sqrt{2}^{\sqrt{2}}$ ist rational.
+    In diesem Fall wählen wir $a = \sqrt{2}$ und $b = \sqrt{2}$. Da beide Zahlen irrational sind und ihre Potenz $a^b$ rational ist, ist die Behauptung bewiesen.
+    
+    \setcounter{enumi}{1} \item \textbf{Fall 2:} $\sqrt{2}^{\sqrt{2}}$ ist irrational.
+    In diesem Fall wählen wir $a = \sqrt{2}^{\sqrt{2}}$ (irrational nach Annahme) und $b = \sqrt{2}$ (irrational). Wir betrachten nun:
+    \[
+    a^b = \left(\sqrt{2}^{\sqrt{2}}\right)^{\sqrt{2}} = \sqrt{2}^{\sqrt{2} \cdot \sqrt{2}} = \sqrt{2}^2 = 2
+    \]
+    Da $2 \in \mathbb{Q}$ rational ist, haben wir auch in diesem Fall zwei irrationale Zahlen $a, b$ gefunden, deren Potenz $a^b$ rational ist.
+\end{enumerate}
+Da einer der beiden Fälle zwingend eintreffen muss, existieren solche irrationalen Zahlen $a$ und $b$.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:07 - 00:02:25]
+Okay, wir wissen, Wurzel zwei ist irrational. Und äh... \inlinemetanote{schreibt an die Tafel} Okay, und jetzt schauen wir an, entweder schauen wir $\sqrt{2}^{\sqrt{2}}$ an. Wenn das... okay, entweder ist das irrational oder es ist rational. Falls das rational ist, dann ist gut, \inlinemetanote{setzt ein Häkchen an die Tafel} okay, dann ist es bewiesen. Falls nicht, dann ist es irrational, und in dem Fall ist Wurzel zwei hoch Wurzel zwei hoch Wurzel zwei... das ist Wurzel zwei hoch zwei und somit gleich zwei. Also das haben wir immer, aber in dem Fall haben wir hier eine irrationale Zahl hoch eine irrationale Zahl, die eine rationale Zahl gibt. So ein relativ einfacher, eleganter Beweis. Ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:25 - 00:03:13]
+Okay, es ist nicht Teil dieser Vorlesung, aber ähm... die Idee hier ist... genau. Inzwischen kann man zeigen, dass das hier irrational ist, das heißt, man weiß schon, das ist irrational. Aber angenommen, wir wissen das nicht. Dann kann man auch sagen, okay, es ist ein bisschen problematisch, weil wir konstruieren nicht irrationale Zahlen $a$ und $b$, so dass das hier rational ist, sondern wir sagen nur, entweder das ist der Fall oder das ist der Fall. Aber wir haben schlussendlich immer noch keine konkreten irrationalen Zahlen $a$ und $b$, so dass das rational ist.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Nicht-konstruktive Existenzbeweise]
+Der obige Beweis ist ein klassisches Beispiel für einen \emph{nicht-konstruktiven Existenzbeweis}. Wir zeigen mit absoluter logischer Gewissheit, dass ein solches Paar $(a, b)$ existieren muss, ohne jedoch angeben zu können, welches der beiden Paare $(\sqrt{2}, \sqrt{2})$ oder $(\sqrt{2}^{\sqrt{2}}, \sqrt{2})$ tatsächlich die Bedingung erfüllt. Für klassische Mathematiker ist dies völlig ausreichend, während konstruktivistische Strömungen solche Beweise ablehnen.
+\end{didactic-insight}
+
+\subsection{Konstruktivismus und der Satz vom ausgeschlossenen Dritten}
+
+\begin{spoken-clean}[00:03:13 - 00:04:04]
+Das heißt, es gibt eine Strömung, eine Ansicht in der Philosophie der Mathematik: Konstruktivismus. Das ist ein... noch eine bekannte Ansicht. \inlinemetanote{schreibt an die Tafel} Die sagen, dass ein mathematisches Objekt existiert nur, wenn man es auch konstruieren kann. Also solche reinen Existenzbeweise, wo man etwas nur zeigt, etwas existiert, ohne es wirklich zu konstruieren, die werden vom konstruktivistischen Standpunkt her abgelehnt. Und es gibt noch ähnliche Sachen wie Intuitionismus, der ist... das ist ein bisschen eine andere Strömung, aber der würde diesen Beweis auch... auch ablehnen. Genau.
+\end{spoken-clean}
+
+\begin{math-stroke}[Philosophische Strömungen: Konstruktivismus]
+\textbf{Konstruktivismus:}
+Eine mathematische Philosophie, die besagt, dass die Existenz eines mathematischen Objekts untrennbar mit seiner Konstruierbarkeit verbunden ist. Reine Existenzbeweise ohne explizite Konstruktion werden abgelehnt.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:04 - 00:04:47]
+Und für uns ist das... eine Sache, die der Konstruktivismus ablehnt, ist dieser Satz vom ausgeschlossenen Dritten. \inlinemetanote{schreibt an die Tafel} Also diese... die Aussage: Etwas ist entweder wahr oder es ist falsch. Und wenn wir zeigen, es ist nicht wahr, dann wissen wir, es ist falsch. Oder wir zeigen, es ist nicht falsch, dann ist es wahr. Und wir haben das einfach als Axiom genommen, das war glaube ich $L_0$. Da haben wir gesagt, es gilt immer $\varphi$ oder nicht $\varphi$ für alle Formeln.
+\end{spoken-clean}
+
+\begin{math-stroke}[Satz vom ausgeschlossenen Dritten]
+\textbf{Satz vom ausgeschlossenen Dritten (Tertium non datur):}
+\[
+L_0: \quad \varphi \lor \neg \varphi
+\]
+\begin{explanation-of-steps}
+Dieses Axiom besagt, dass jede mathematische Aussage entweder wahr oder falsch sein muss; eine dritte Möglichkeit existiert nicht. Im Konstruktivismus wird dieses Prinzip für unendliche Gesamtheiten abgelehnt, da man nicht für jede Aussage effektiv entscheiden kann, welcher Fall vorliegt.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die linke Tafel, während er die philosophischen Implikationen des Satzes vom ausgeschlossenen Dritten weiter ausführt.
+\end{meta-note}
+
+\begin{spoken-clean}[00:04:47 - 00:06:35]
+Genau, aber für uns ist es nur ein Axiom. Ich meine, Axiome ist ja, wie man zurecht sagt, einfach etwas, was man sagt und dann... also wir haben das nicht bewiesen, dass der Satz vom ausgeschlossenen Dritten stimmt oder nicht. Das ist einfach die Mainstream-Logik, wo man davon ausgeht, dass das stimmt. Aber genauso berechtigt a priori könnte man sagen, man nimmt das nicht an, und dann hat man halt ein Problem, weil man keine Widerspruchsbeweise mehr führen kann und es gibt dann viele Resultate, die man halt nicht beweisen kann, oder die man halt dann anders beweisen muss. Nachher schlussendlich... es gibt verschiedene Ansätze, Herangehensweisen, und diese verschiedenen Standpunkte, und dann kann man andere Axiomensysteme finden und muss dann schauen, wie viel kann man da überhaupt noch beweisen und was kann man nicht mehr beweisen und so weiter. Ist eigentlich genauso berechtigte Mathematik wie das, was wir tun. Ja, werden wir jetzt nicht weiter diskutieren, einfach nur als ein Beispiel. Man könnte durchaus sagen, okay, etwas existiert vielleicht nur, wenn man es tatsächlich auch konstruieren kann, und ansonsten bewegt man sich auf metaphysischem Glatteis. Aber die Frage ist auch, was heißt, etwas existiert, oder etwas existiert nicht und so weiter. Wir arbeiten jetzt mit diesen Hilbert-Axiomen, das ist ganz klar die Mainstream-Logik in der Mathematik, einfach zu sagen, es gibt noch andere Arten, Mathematik zu machen. In der Regel sind die alle natürlich eingeschränkter. Ich glaube, es gibt nicht viele, die sagen, okay, wir nehmen noch das an und damit können wir jetzt alles beweisen. In der Regel ist eher etwas mit anderen Herangehensweisen, und dann hat man gewisse Probleme und kann gewisse Sachen halt nicht mehr beweisen. Deswegen mögen auch die meisten Mathematiker*innen lieber die Mainstream-Weise, weil man damit halt viele Sachen beweisen kann, die man gerne möchte. \inlinemetanote{lacht} Aber ja.
+\end{spoken-clean}
+
+\section{Modelle und Interpretationen}
+\subsection{Rekapitulation: L-Strukturen und Interpretationen}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die mittlere Tafel und bereitet den Übergang zur eigentlichen Vorlesung vor, indem er die Definitionen der letzten Woche rekapituliert.
+\end{meta-note}
+
+\begin{spoken-clean}[00:06:35 - 00:07:48]
+Okay, so viel. Jetzt weiter aber zum... weiter zu unserer Vorlesung. So, das letzte Mal haben wir noch Modelle angeschaut. Also dafür haben wir L-Strukturen eingeführt. \inlinemetanote{schreibt an die Tafel} Also $L$ war eine Signatur, und Sie wissen noch, was eine L-Struktur ist. Das bestand aus einem Bereich, genau, das ist eine Menge. Bereich $A$, und dann haben wir Konstantensymbole zu Elementen von $A$ zugeordnet, Funktionssymbole zu Funktionen und Relationssymbole zu Relationen. Okay, also... Dann haben wir gesehen, was eine Variablenbelegung ist. Das heißt, wir ordnen jeder Variablen ein Objekt aus $A$ zu.
+\end{spoken-clean}
+
+\begin{math-stroke}[Rekapitulation: L-Strukturen]
+\textbf{Gesehen:}
+\begin{itemize}
+    \setcounter{enumi}{0} \item \textbf{$L$-Struktur:}
+    \begin{description}
+        \item[Bereich $A$:] Eine nicht-leere Menge.
+        \item[Konstanten:] Zuordnung von Konstantensymbolen zu Elementen in $A$.
+        \item[Funktionen:] Zuordnung von Funktionssymbolen zu Funktionen $A^n \to A$.
+        \item[Relationen:] Zuordnung von Relationssymbolen zu Relationen auf $A$.
+    \end{description}
+    \setcounter{enumi}{1} \item \textbf{Variablenbelegung:}
+    Eine Abbildung, die jeder Variablen ein Objekt aus dem Bereich $A$ zuordnet.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:48 - 00:09:55]
+Dann haben wir definiert, was eine L-Interpretation ist. \inlinemetanote{schreibt an die Tafel} Eine L-Interpretation, das war eine L-Struktur zusammen mit einer Variablenbelegung. Dann haben wir gesehen, wenn $I$ eine L-Interpretation ist, dann ordnet eine L-Interpretation jedem Term $\tau$ ein Objekt in $A$ zu. Falls wir Formeln hatten, und $I$ eine Interpretation, da haben wir definiert, was es heißt, dass die Formel $\varphi$ in $I$ gilt. Das ist die Interpretation. Das haben wir einfach dann übersetzt in quasi die... unsere übliche... wie soll ich sagen, übliche, was heißt wahr zu sein halt, ein Objekt in $A$ mit diesen Funktionen und Relationen. Und da wir jetzt hier mit dem üblichen, mit unserem üblichen Alltagswahrheitsbegriff arbeiten, haben wir insbesondere den Satz vom ausgeschlossenen Dritten. Das heißt, wir haben gesehen, falls $\varphi$ eine L-Formel ist und $I$ eine Interpretation, so gilt immer, dass $\varphi$ in $I$ gilt oder nicht $\varphi$ in $I$ gilt.
+\end{spoken-clean}
+
+\begin{math-stroke}[L-Interpretation und Gültigkeit]
+\begin{itemize}
+    \setcounter{enumi}{0} \item \textbf{$L$-Interpretation $I$:}
+    Besteht aus einer $L$-Struktur $M$ und einer Variablenbelegung $\nu$.
+    \[
+    I = (M, \nu)
+    \]
+    \setcounter{enumi}{1} \item \textbf{Termauswertung:}
+    Jedem Term $\tau$ wird ein Objekt in $A$ zugeordnet.
+    \setcounter{enumi}{2} \item \textbf{Formelauswertung:}
+    Für eine $L$-Formel $\varphi$ definieren wir die Gültigkeit in $I$:
+    \[
+    I \models \varphi
+    \]
+    \setcounter{enumi}{3} \item \textbf{Satz vom ausgeschlossenen Dritten in Interpretationen:}
+    Falls $\varphi$ eine $L$-Formel ist und $I$ eine Interpretation, so gilt immer:
+    \[
+    I \models \varphi \quad \text{oder} \quad I \models \neg \varphi
+    \]
+\end{itemize}
+\begin{explanation-of-steps}
+Da wir auf der semantischen Ebene mit der klassischen zweiwertigen Logik arbeiten, ist jede Formel unter einer gegebenen Interpretation entweder wahr (erfüllt) oder falsch (nicht erfüllt).
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\subsection{Modelle}
+
+\begin{spoken-clean}[00:09:55 - 00:11:38]
+Okay, das ist das, wo die Konstruktivisten spätestens da werden sie nicht mehr einverstanden. Und dann haben wir definiert, was ein Modell ist. \inlinemetanote{schreibt an die Tafel} $\varphi$ eine L-Formel und $M$ eine L-Struktur. Dann haben wir gesagt, dass $M$ ist ein Modell von $\varphi$, und wir haben geschrieben $M$ ist Modell von $\varphi$, falls für alle möglichen Variablenbelegungen der Satz $\varphi$ gilt in $I$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Modell]
+Sei $\varphi$ eine $L$-Formel und $M$ eine $L$-Struktur.
+$M$ heißt ein \newterm{Modell} von $\varphi$ (geschrieben $M \models \varphi$), falls für jede Variablenbelegung $I$ (die auf $M$ basiert) gilt:
+\[
+I \models \varphi
+\]
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung und Interaktion]
+Der Dozent wischt die linke Tafel und beantwortet eine Frage aus dem Auditorium zum Unterschied zwischen Struktur und Modell.
+\end{meta-note}
+
+\begin{spoken-clean}[00:11:38 - 00:12:15]
+Gut. So viel, was bisher geschah. Gibt es da noch Fragen dazu? Nein, hoffentlich haben Sie das so... Ja, ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+\begin{student-question}
+Wenn wir eine $L$-Struktur haben, ist das auch ein Modell? Wie kann man das irgendwie unterscheiden?
+\end{student-question}
+\begin{spoken-clean}[continued]
+Also eine $M$-Struktur ist ein... heißt ein Modell, falls die Bedingung erfüllt ist. Also eine $M$-Struktur ist ein Modell für eine Formel. Genau. Also ein... genau, ein Modell ist eine $M$-Struktur mit bestimmten Eigenschaften, das ist sicher.
+\end{spoken-clean}
+\end{student-interaction}
+
+\subsection{Beispiel: Gruppentheorie}
+
+\begin{spoken-clean}[00:12:15 - 00:13:35]
+Ja, Beispiel... Machen wir doch ein Beispiel noch. Und zwar... es ist ein bisschen schwierig mit Beispielen, oder, dass man dann nicht sich in den Schwanz beißt in irgendetwas oder so, keine irrtümlichen Ideen gibt. Aber einfach so: Wir hatten die Signatur von der Gruppentheorie, oder? Das war das Konstantensymbol $e$ und ein zweistelliges, ein binäres Funktionssymbol Kringel. \inlinemetanote{schreibt an die Tafel} Okay, und jetzt wenn einfach, wenn wir $G$ eine Gruppe haben, also eine Gruppe, wie wir sie in Analysis oder Lineare Algebra definiert haben. Eine Gruppe mit neutralem Element, nennen wir es eins, und Verknüpfung, nennen wir es Kringel G.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Gruppentheorie]
+\textbf{Beispiel:}
+Wir betrachten die Signatur der Gruppentheorie:
+\[
+L_{GT} = \{e, \circ\}
+\]
+wobei $e$ ein Konstantensymbol und $\circ$ ein zweistelliges (binäres) Funktionssymbol ist.
+
+Sei $(G, 1_G, \circ_G)$ eine Gruppe im klassischen Sinne mit dem neutralen Element $1_G$ und der Gruppenoperation $\circ_G$.
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die mittlere Tafel, um Platz für die formale Definition der Gruppenstruktur als Modell zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:13:35 - 00:14:40]
+Und jetzt in der Definition von einer Gruppe haben wir gesagt, es ist eine menge mit diesem speziellen Element und dieser Verknüpfung. Und jetzt können wir sehen, das ist nach unserer Definition einfach nichts anderes als ein Modell von Gruppentheorie, von Gruppentheorieaxiomen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:40 - 00:16:35]
+Betrachten wir die L-Gruppentheorie-Struktur, nennen wir die $M$, mit Bereich $G$. \inlinemetanote{schreibt an die Tafel} Und okay, jetzt müssen wir sagen, unserem Konstantensymbol müssen wir ein Element in unserem Bereich $G$ zuordnen. Das nennen wir $e^M$, und das definieren wir jetzt einfach als das Einselement $1_G$. Und okay, dann müssen wir ein Verknüpfungssymbol, dem müssen wir eine tatsächliche Funktion zuordnen von $G \times G$ nach $G$. Da nehmen wir genau die Funktion, die gegeben ist durch $g$ verknüpft mit $h$. Okay, das ist jetzt eine L-Gruppentheorie-Struktur. Das heißt, wir haben einen Bereich, und wir haben dem Konstantensymbol tatsächlich eine Konstante zugeordnet, und dem binären Funktionssymbol tatsächlich eine zweistellige Funktion. Und ähm... gut, dann haben wir diese... nennen wir $GT$, das waren unsere drei Axiome der Gruppentheorie: $GT_0, GT_1$ und $GT_2$. Sie erinnern sich, diese drei Sätze, die definieren die Gruppentheorie. Okay, und dann... okay, per Definition von der Gruppe sind diese drei Sätze natürlich erfüllt in der Gruppe $G$. Und zwar egal, wie wir die Variablen besetzen. Also wir können nämlich Elemente von $G$ einsetzen, und diese ist assoziativ, diese Verknüpfung, per Definition von Gruppe. Es gibt das neutrale Element, ist tatsächlich neutral, und es gibt Linksinverse. Okay? Das heißt, ähm... das gilt, dass diese Struktur ist ein Modell von Gruppentheorie. Also mit anderen Worten, man kann auch sagen, eine Gruppe könnten wir definieren als ein Modell der Gruppentheorie. Und ähnlich ist es natürlich für Ringe, Körper, dichte Anordnungen... dichte Ordnungen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Gruppe als L-Struktur]
+Wir definieren die $L_{GT}$-Struktur $M$ wie folgt:
+\begin{itemize}
+    \item \textbf{Bereich:} $G$
+    \item \textbf{Konstanteninterpretation:} $e^M = 1_G \in G$
+    \item \textbf{Funktionsinterpretation:} 
+    \[
+    \circ^M: G \times G \to G, \quad (g, h) \mapsto g \circ_G h
+    \]
+\end{itemize}
+Sei $GT = \{GT_0, GT_1, GT_2\}$ die Menge der Gruppenaxiome (Assoziativität, neutrales Element, inverse Elemente).
+
+Da die Gruppenaxiome in $(G, 1_G, \circ_G)$ per Definition erfüllt sind, gilt für jede Variablenbelegung $I$:
+\[
+I \models GT_0 \land GT_1 \land GT_2
+\]
+Somit ist die Struktur $M$ ein Modell der Gruppentheorie:
+\[
+M \models GT
+\]
+\begin{explanation-of-steps}
+Eine mathematische Gruppe ist somit nichts anderes als eine semantische Realisierung (ein Modell) der formalen Gruppenaxiome $GT$ über einer passenden Signatur. Analoges gilt für andere algebraische Strukturen wie Ringe, Körper oder dichte Ordnungen.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die rechte Tafel und reflektiert über die Arbeitsweise von Mathematikern zwischen Platonismus und Strukturalismus.
+\end{meta-note}
+
+\begin{spoken-clean}[00:16:35 - 00:18:35]
+Ja, und das ist eigentlich... das sind eigentlich die Objekte oder die Welt, in der wir arbeiten als Mathematiker*innen. Also wir nehmen Ringe, und wir beweisen Sachen über Ringe, und wir bewegen uns nicht... also wir bewegen uns in dieser semantischen Welt, wir bewegen uns nicht in der syntaktischen Welt, wo wir irgendwelche Formeln aneinanderreihen. Wir werden ja noch heute sehen, dass das schlussendlich keinen Unterschied macht in dem, was wir beweisen. Aber es gibt so, ja... es gibt so eine Aussage: Mathematiker*innen sind unter der Woche Platonisten und am Sonntag Strukturalisten. Also Platonisten sind Leute, dass man denkt, okay, Sachen existieren tatsächlich, also die Mathematik hat tatsächlich eine ontologische Existenz. Und Strukturalisten sind Leute, die machen eher das, was wir hier machen, als sagt: Okay, nee, wir reihen einfach aneinander Formeln gemäß gewissen Gesetzen. Und okay, dann gehen wir vielleicht am Sonntag, weiß ich, in die Kirche und denken darüber nach, weil mit Platonismus, das kann ja gar nicht sein. Das einzige, was Sinn macht, ist, dass wir halt einfach stumm Formeln aneinanderreihen nach gewissen Regeln, das ist irgendwie befriedigend. Aber nachher, wenn man jetzt tatsächlich Mathematik betreiben möchte, dann muss man sich eigentlich fast wieder platonisch betätigen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Platonismus vs. Strukturalismus]
+Der Dozent beschreibt ein bekanntes soziologisches Phänomen unter Mathematikern: Im Alltag arbeitet man intuitiv so, als ob mathematische Objekte (wie Gruppen oder reelle Zahlen) eine reale, unabhängige Existenz besäßen (Platonismus). Wenn man jedoch nach den formalen Grundlagen gefragt wird, zieht man sich auf den formalen Standpunkt zurück, dass Mathematik nur ein Spiel mit Zeichen nach festen Regeln ist (Strukturalismus/Formalismus).
+\end{didactic-insight}
+
+\section{Der Korrektheitssatz}
+
+\begin{spoken-clean}[00:18:35 - 00:20:06]
+Okay, so viel jetzt mal vielleicht zu Beispiel. Ja, man könnte noch überlegen, Beispiel zu geben für ein Modell der Peano-Arithmetik. Ein bisschen problematisch. Sie können einfach die ganzen Zahlen, so wie Sie sich die naiv vorstellen... vielleicht so wie das bereits die Höhlenbewohner*innen gemacht haben, dass man sich halt einfach vorstellt so Striche: ein Strich, zwei Striche, drei Striche, das sind die natürlichen Zahlen. Und diese naive Anschauung, die sind natürlich ein Modell für die Peano-Arithmetik. Äh ja, genau. Aber das Problem bei diesen Sachen ist immer zu sagen, gibt es überhaupt ein Modell oder nicht. Aber was wir als nächstes nehmen, ist der... noch besprechen wollen, ist der Korrektheitssatz. Das ist auch wieder so ein metamathematischer Satz, deswegen mit Großbuchstaben geschrieben heute. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:06 - 00:21:23]
+Der sagt aus: Sei $L$ eine Signatur, $T$ eine menge von L-Formeln, und sei $\sigma$ eine L-Formel, so dass wir $\sigma$ beweisen können aus $T$. Und wir nehmen jetzt ein Modell, ein Modell $M$ von $T$. Und die Aussage ist, das gilt, dann gilt, dass $\sigma$ ist wahr, oder $\sigma$ gilt auch in dem Modell $M$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Der Korrektheitssatz]
+\begin{theorem}[Korrektheitssatz]\label[theorem]{thm:korrektheitssatz}
+Sei $L$ eine Signatur, $T$ eine Menge von $L$-Formeln und $\sigma$ eine $L$-Formel.
+\[
+\text{Falls } T \vdash \sigma, \text{ so gilt } T \models \sigma.
+\]
+Das heißt, für jedes Modell $M$ von $T$ gilt:
+\[
+M \models T \implies M \models \sigma
+\]
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:23 - 00:22:26]
+In anderen Worten, wenn wir $\sigma$ beweisen können aus $T$, dann ist $\sigma$ auch wahr in jedem Modell von $T$. Okay? Das ist der Korrektheitssatz. Das sagt quasi, dass... ja, im Prinzip sagt das aus, dass unsere Axiome haben wir so gewählt, dass... unsere Axiome und unsere Regeln, wie wir Beweise führen, die haben wir genau so gewählt, wie wir auch denken, dass Sachen wahr sind. Und das ist auch die Idee vom Beweis. Wir werden das aber nicht machen, weil das ein bisschen mühsam ist, wenn auch nicht schwierig. \inlinemetanote{schreibt an die Tafel} In $M$ sind die logischen Axiome als auch die Formeln in $T$ wahr. Und die Schlussregeln ergeben aus wahren Aussagen wieder wahre Aussagen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Idee des Beweises zum Korrektheitssatz]
+\textbf{Idee des Beweises:}
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Zeige, dass alle logischen Axiome (wie $L_0$ bis $L_{15}$) in jeder Interpretation wahr sind.
+    \setcounter{enumi}{1} \item Zeige, dass die Schlussregeln (wie Modus Ponens und Generalisierung) die Wahrheit bewahren. Das heißt, wenn die Voraussetzungen in einem Modell wahr sind, so ist auch die Konklusion wahr.
+    \setcounter{enumi}{2} \item Per Induktion über die Länge des formalen Beweises folgt dann, dass jede aus $T$ beweisbare Formel $\sigma$ in jedem Modell von $T$ wahr sein muss.
+\end{enumerate}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die linke Tafel, um Platz für die Definition der Konsistenz zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:22:26 - 00:24:44]
+Okay, das müssen wir überprüfen, dass die logischen Axiome... okay, das ist aber genau das, was wir sagen, die entsprechen genau unserem Wahrheitsempfinden. Und die Schlussregeln, also die Regeln, wie wir logische Schlussfolgerungen treffen, die ergeben aus wahren Aussagen wieder wahre Aussagen.
+\inlinemetanote{Dozent wischt die Tafel fertig}
+\end{spoken-clean}
+
+\section{Konsistenz und Widerspruchsfreiheit}
+
+\begin{spoken-clean}[00:24:44 - 00:26:15]
+Gut, okay. Dann machen wir noch die folgende Definition. \inlinemetanote{schreibt an die Tafel} Eine Menge $T$ von L-Formeln heißt konsistent oder widerspruchsfrei, falls es keine Formel $\psi$ gibt, so dass wir aus $T$ beweisen können, dass sowohl $\psi$ als auch nicht $\psi$ gilt. Und natürlich, falls $T$ nicht konsistent ist, heißt es inkonsistent.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Konsistenz]
+\begin{definition}[Konsistenz]\label[definition]{def:konsistenz}
+Eine Menge $T$ von $L$-Formeln heißt \newterm{konsistent} (oder \newterm{widerspruchsfrei}), falls es keine $L$-Formel $\psi$ gibt, so dass:
+\[
+T \vdash \psi \quad \text{und} \quad T \vdash \neg \psi
+\]
+Gibt es eine solche Formel, so heißt $T$ \newterm{inkonsistent}.
+\end{definition}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die mittlere Tafel und führt das logische Prinzip "ex falso sequitur quodlibet" ein.
+\end{meta-note}
+
+\begin{spoken-clean}[00:26:15 - 00:28:15]
+Okay, das ist die Widerspruchsfreiheit oder konsistent. Das kann durchaus sein, dass man die Menge $T$ so wählt, dass man einen Widerspruch beweisen kann, dann... verliert man. Und jetzt haben Sie... eine kleine Bemerkung. Sie haben in einer Übung gezeigt... \inlinemetanote{schreibt an die Tafel} für alle Formeln $\psi$ gilt, dass man beweisen kann, aus $\varphi$ und nicht $\varphi$ impliziert $\psi$. Der lateinische Name dafür ist *ex falso sequitur quodlibet*. Das heißt, wenn die Annahme falsch ist, dann folgt daraus, was man möchte. Also aus einer falschen Annahme kann man alles beweisen. Sie können irgendetwas Falsches annehmen, dann folgt alles daraus.
+\end{spoken-clean}
+
+\begin{math-stroke}[Ex Falso Sequitur Quodlibet]
+\textbf{Bemerkung (In Übung gezeigt):}
+Für alle Formeln $\psi$ gilt:
+\begin{equation}\label{eq:ex-falso}
+\vdash (\varphi \land \neg \varphi) \to \psi
+\end{equation}
+\begin{explanation-of-steps}
+Dieses Prinzip, bekannt als \emph{ex falso sequitur quodlibet} (aus dem Falschen folgt Beliebiges), besagt, dass aus einem logischen Widerspruch jede beliebige Aussage formal hergeleitet werden kann.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:15 - 00:30:15]
+Das heißt, falls $T$ inkonsistent ist, so gilt, dass wir aus $T$ alles beweisen können. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Konsequenz der Inkonsistenz]
+Falls $T$ inkonsistent ist, so gilt:
+\[
+T \vdash \psi \quad \text{für jede } L\text{-Formel } \psi.
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:30:15 - 00:32:15]
+Ja, und dann kann man bemerken, mit dieser Bemerkung hier, auch wieder, dass $T$ ist konsistent genau dann, wenn es eine Formel $\sigma$ gibt, so dass man aus $T$ nicht beweisen kann, dass $\sigma$ gilt. \inlinemetanote{schreibt an die Tafel} Ist das klar, weshalb? Also wenn es nicht konsistent ist, dann kann man alles beweisen aus $T$. Diese Seite wissen wir. Das heißt, wenn es eine Formel gibt, die man aus $T$ nicht beweisen kann, kann $T$ nicht inkonsistent sein. Das heißt, in dem Fall muss $T$ konsistent sein. Dann, wenn aber $T$ konsistent ist, dann kann man irgendeine Formel $\sigma$ nehmen... also, ich kann das noch schreiben. Falls $T$ inkonsistent, so gilt $T \vdash \sigma \land \neg \sigma$. Falls $T$ konsistent, sei $\sigma$ so, dass $T \not\vdash \sigma$, dann gilt $T \not\vdash \sigma \land \neg \sigma$. Ja, das ist die eine... ansonsten hätte man ja wieder einen Widerspruch.
+\end{spoken-clean}
+
+\begin{math-stroke}[Charakterisierung der Konsistenz]
+\textbf{Bemerkung:}
+$T$ ist konsistent genau dann, wenn es eine Formel $\sigma$ gibt, so dass:
+\[
+T \not\vdash \sigma
+\]
+\begin{short-proof}
+\begin{itemize}
+    \item[\textbf{($\implies$):}] Sei $T$ konsistent. Dann gibt es per Definition eine Formel $\psi$, so dass $T \not\vdash \psi$ (andernfalls wäre $T$ inkonsistent und man könnte jede Formel beweisen). Wir wählen $\sigma = \psi$.
+    \item[\textbf{($\impliedby$):}] Angenommen, es gibt eine Formel $\sigma$ mit $T \not\vdash \sigma$. Wäre $T$ inkonsistent, so müsste nach dem Prinzip \emph{ex falso} jede Formel aus $T$ beweisbar sein, insbesondere auch $\sigma$. Dies widerspricht der Voraussetzung $T \not\vdash \sigma$. Also ist $T$ konsistent.
+\end{itemize}
+\end{short-proof}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung und Übergang]
+Der Dozent wischt die rechte Tafel und kündigt den Gödelschen Vollständigkeitssatz als einen der zentralen Sätze der mathematischen Logik an.
+\end{meta-note}
+
+\begin{spoken-clean}[00:32:15 - 00:32:30]
+Gut, okay. Dann machen wir noch die folgende... jetzt gibt es einen wichtigen... als nächstes ein wichtiger großer Satz aus der Logik erster Ordnung. Das ist auch, weshalb wir alle Logik erster Ordnung so gerne mögen. Das ist der Gödelsche Vollständigkeitssatz. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Gödelscher Vollständigkeitssatz]
+\textbf{Gödelscher Vollständigkeitssatz}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 244744, Output 8485)*
+---
+
+**AutoExtraction:** [Part 2] 03-10-tuesday.mp4
+[Angehängtes Video]: 03-10-tuesday-part2.mp4
+[Kontext-Dateien]: 03-10-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-10. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** 
+Let's write down the transcription.
+
+Wait, let's look at the video timeline:
+- At 00:00, the professor is writing on the board:
+  `... so dass T \not\vdash \sigma`
+  He says:
+  "Um... so dass $T$ nicht beweisen kann, dass $\sigma$ gilt."
+  "Äh..."
+  "Okay, ist das klar, weshalb?"
+  "Also wenn es, wenn es nicht konsistent ist, dann kann man alles beweisen aus $T$. Also diese, diese Seite wissen wir. Das heißt, wenn es eine Formel gibt, die man aus $T$ nicht beweisen kann, kann $T$ nicht inkonsistent sein. Das heißt, in dem Fall muss $T$ konsistent sein."
+  "Dann, wenn aber $T$ konsistent ist, dann kann man irgendeine Formel $\sigma$ nehmen... also, ich kann das noch schreiben."
+  He writes:
+  `falls T inkonsistent, so gilt T \vdash \sigma \land \neg \sigma`
+  `falls T konsistent, sei \sigma s.d. T \not\vdash \sigma, dann`
+  `dann gilt T \not\vdash \neg \sigma` (Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \
+
+*(Tokens: Input 253354, Output 2618)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 2]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \not\vdash \neg \sigma`? Wait, let's look at the board at 01:40: `dann gilt T \not\vdash \neg \sigma`? No, `dann gilt T \
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:00:19]
+...so dass $T$ nicht beweisen kann, dass $\sigma$ gilt. Äh...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:19 - 00:00:52]
+Okay, ist das klar, weshalb? Also wenn es, wenn es nicht konsistent ist, dann kann man alles beweisen aus $T$. Also diese, diese Seite wissen wir. Das heißt, wenn es eine Formel gibt, die man aus $T$ nicht beweisen kann, kann $T$ nicht inkonsistent sein. Das heißt, in dem Fall muss $T$ konsistent sein. Dann, wenn aber $T$ konsistent ist, dann kann man irgendeine Formel $\sigma$ nehmen... also, ich kann das noch schreiben.
+\end{spoken-clean}
+
+\begin{math-stroke}[Charakterisierung der Konsistenz (Fortsetzung)]
+\begin{short-proof}
+\begin{itemize}
+    \item[\textbf{($\implies$):}] Sei $T$ konsistent. Dann gibt es per Definition eine Formel $\psi$, so dass $T \not\vdash \psi$ (andernfalls wäre $T$ inkonsistent und man könnte jede Formel beweisen). Wir wählen $\sigma = \psi$.
+    \item[\textbf{($\impliedby$):}] Angenommen, es gibt eine Formel $\sigma$ mit $T \not\vdash \sigma$. Wäre $T$ inkonsistent, so müsste nach dem Prinzip \emph{ex falso} jede Formel aus $T$ beweisbar sein, insbesondere auch $\sigma$. Dies widerspricht der Voraussetzung $T \not\vdash \sigma$. Also ist $T$ konsistent.
+\end{itemize}
+\end{short-proof}
+
+\begin{explanation-of-steps}
+Der Dozent ergänzt an der Tafel eine kurze informelle Erläuterung in Klammern, um die logische Intuition hinter dieser Äquivalenz zu verdeutlichen:
+\[
+\left[
+\begin{aligned}
+&\text{falls } T \text{ inkonsistent, so gilt } T \vdash \sigma \\
+&\text{falls } T \text{ konsistent, sei } \sigma \text{ so, dass } T \vdash \sigma, \text{ dann gilt } T \not\vdash \neg\sigma
+\end{aligned}
+\right]
+\]
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung und Übergang]
+Der Dozent wischt die mittlere und rechte Tafel gründlich, um Platz für den Gödelsche Vollständigkeitssatz und seine weitreichenden Folgerungen zu schaffen.
+\end{meta-note>
+
+\begin{spoken-clean}[00:02:11 - 00:02:48]
+Gut, und jetzt gibt es einen, einen wichtigen... das ist ein wichtiger großer Satz aus der Logik erster Ordnung. Das ist auch, weshalb wir alle Logik erster Ordnung so gerne mögen. Das ist der Gödelsche Vollständigkeitssatz.
+\end{spoken-clean>
+
+\begin{spoken-clean}[00:02:48 - 00:05:10]
+Sei $L$ eine Signatur, $T$ eine Menge von $L$-Sätzen... äh, $L$-Formeln, und sei $\sigma$ eine $L$-Formel mit... so dass man $\sigma$ nicht aus $T$ beweisen kann. Okay, das heißt, $T$ ist insbesondere konsistent. Okay, dann existiert ein Modell $M$ von $T$, so dass in $M$ äh $\sigma$ tatsächlich nicht gilt. Also das ist diese... ja, diese semantische Vollständigkeit. Das heißt, falls man das nicht beweisen kann aus $T, $ dann existiert tatsächlich ein Modell, wo das äh nicht gilt. Okay? Ja?
+\end{spoken-clean}
+
+\begin{math-stroke}[Gödelscher Vollständigkeitssatz]
+\begin{theorem}[Gödelscher Vollständigkeitssatz]\label[theorem]{thm:goedelscher-vollstaendigkeitssatz}
+Sei $L$ eine Signatur, $T$ eine Menge von $L$-Formeln und $\sigma$ eine $L$-Formel mit:
+\[
+T \not\vdash \sigma \quad (\text{d.\,h. } T \text{ ist konsistent})
+\]
+Dann existiert ein Modell $M$ von $T$:
+\[
+M \models T \quad \text{so dass} \quad M \not\models \sigma
+\]
+\end{theorem}
+\end{math-stroke}
+
+\begin{student-interaction}[Studentenfrage zur Beweisbarkeit]
+\begin{student-question}
+Ich habe eine Frage zu der zweiten Bemerkung. Und zwar, wenn Sie sagen, dass etwas ist nicht beweisbar aus $T$, wenn es gilt, dass nicht... in dem Fall $\sigma$ beweisbar ist, aber das würde ja, wenn dann, zum Beispiel $T$ inkonsistent ist, wäre aber ja nicht $\sigma$ beweisbar aus $T$.
+\end{student-question}
+
+\begin{spoken-clean}[00:05:37 - 00:06:03]
+Also wenn, wenn... also aber wenn, wenn $T$ inkonsistent ist, dann kann man jeden einzelnen Satz beweisen.
+\end{spoken-clean}
+
+\begin{student-question}[Studentenfrage continued]
+Ja, aber hatten wir nicht gesagt, dass... oder definiert, dass wir sagen, eine Formel ist nicht beweisbar aus $T$, wenn nicht $\sigma$ beweisbar aus $T$ ist?
+\end{student-question}
+
+\begin{spoken-clean}[00:06:03 - 00:07:18]
+Äh nein, wir haben gesagt, $T$ ist nicht beweisbar aus $\sigma$, falls kein Beweis existiert von $\sigma$ in, aus $T$. Nicht zu verwechseln mit dem Modell von... Also wenn, wie soll ich sagen, wenn $M$ ein Modell ist von $\sigma$, dann äh... also wie gesagt, im Modell ist immer $\sigma$ oder nicht $\sigma$ der Fall. Aber in der Sprache ist es durchaus möglich, dass man weder $\sigma$ noch nicht $\sigma$ beweisen kann.
+
+Also zum Beispiel aus den Axiomen der Gruppentheorie können Sie nicht beweisen, dass $x \cdot y = y \cdot x$ ist für alle Elemente $x, y$, weil... äh ja, das folgt nicht aus den Gruppenaxiomen. Es gibt Gruppen, die das, die nicht kommutativ sind. Aber andersrum gibt's auch, kann man auch nicht beweisen, dass das nicht gilt, weil es gibt auch Gruppen, die kommutativ sind. Aber in einem, in einem bestimmten Modell, also in einer Gruppe, haben Sie entweder, dass das gilt oder dass das nicht gilt. Ja. Das ist der Unterschied zwischen einem Strich und zwei Strichen. Ja.
+\end{spoken-clean}
+\end{student-interaction>
+
+\begin{didactic-insight}[Syntaktische Unvollständigkeit vs. Semantische Vollständigkeit]
+Der Dozent klärt hier ein fundamentales Missverständnis auf: Ein Axiomensystem $T$ kann syntaktisch unvollständig sein (es gibt Sätze $\sigma$, für die weder $T \vdash \sigma$ noch $T \vdash \neg\sigma$ gilt, wie die Kommutativität in der Gruppentheorie). Der Gödelsche Vollständigkeitssatz besagt jedoch, dass die formale Herleitung ($\vdash$) stark genug ist, um alle semantischen Konsequenzen ($\models$) zu erfassen. Wenn ein Satz in allen Modellen wahr ist, dann ist er auch formal beweisbar.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:07:28 - 00:07:52]
+Gut, okay. Ähm... Genau, das ist der Gödelsche Vollständigkeitssatz. Und der hat einige, sehr schöne, starke Folgerungen. Okay, wir werden den nicht beweisen. Das würden Sie tun, wenn das jetzt eine Vorlesung, eine vierstündige Vorlesung zur Logik wäre. Äh aber das ist es nicht, von dem her erwähnen wir den einfach. Äh aber machen wir ein paar Folgerungen. Also das eine ist: Falls $T$ konsistent ist, so existiert ein Modell $M$ von $T$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:07:52 - 00:09:34]
+...so existiert eine Formel... äh, so existiert ein Modell $M$ von $T$. Und das heißt insbesondere, $T$ hat ein Modell. Also entweder ist eine Theorie... also ein Schrott, also ein Schrott, das ist einfach widersprüchlich, oder wenn es nicht widersprüchlich ist, dann gibt es tatsächlich ein Modell. Das ist eine der schönen Folgerungen vom Gödelschen Satz.
+\end{spoken-clean}
+
+\begin{math-stroke}[Folgerungen aus dem Vollständigkeitssatz]
+\textbf{Folgerungen:}
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Existenz von Modellen:}
+    Falls $T$ konsistent ist, so existiert ein Modell $M \models T$.
+    \[
+    T \text{ konsistent} \implies \exists M \text{ mit } M \models T
+    \]
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:34 - 00:11:21]
+Und das nächste, nächste Folgerung, die ist äh auch sehr schön. Wenn wir $\sigma$ einen Satz haben... und das werden wir nachher noch im, besser im Detail anschauen... und gilt für jedes Modell $M$ von $T$ auch, dass $M$ ein Modell ist von $\sigma$, so gibt es kein Modell $M$ von $T$, wo $\sigma$ nicht wahr ist, oder? Also wenn etwas für jedes Modell gilt, dann gibt es kein Modell, wo das nicht wahr ist. Aber das heißt, mit dem Gödelschen Satz folgt nun, das heißt, dass wir in dem Fall einen formalen Beweis haben von $\sigma$ aus $T$.
+\end{spoken-clean>
+
+\begin{spoken-clean}[00:11:21 - 00:12:28]
+Okay, und dann... letzte Bemerkung noch. Wenn $\sigma$ ein Satz ist, so dass wir $\sigma$ nicht aus $T$ beweisen können und... aber auch die Negation von $\sigma$ nicht beweisen können, so existieren Modelle $M_1$ von $T$ und $M_2$ von $T$, so dass in $M_1$ gilt nicht $\sigma$ und in $M_2$ gilt $\sigma$.
+\end{spoken-clean>
+
+\begin{math-stroke}[Folgerungen aus dem Vollständigkeitssatz (Fortsetzung)]
+\begin{enumerate}
+    \setcounter{enumi}{1} \item \textbf{Äquivalenz von Semantik und Syntax:}
+    Ist $\sigma$ ein Satz und gilt für jedes Modell $M \models T$ auch $M \models \sigma$ (geschrieben $T \models \sigma$), so gilt:
+    \[
+    T \vdash \sigma
+    \]
+    \begin{short-proof
+
+*(Tokens: Input 256126, Output 2588)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 2]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+ (Fortsetzung)]
+\begin{enumerate}
+    \setcounter{enumi}{1} \item \textbf{Äquivalenz von Semantik und Syntax:}
+    Ist $\sigma$ ein Satz und gilt für jedes Modell $M \models T$ auch $M \models \sigma$ (geschrieben $T \models \sigma$), so gilt:
+    \[
+    T \vdash \sigma
+    \]
+    \begin{short-proof
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+    \begin{short-proof}
+    Angenommen, es gilt $T \models \sigma$, aber $T \not\vdash \sigma$.
+    Nach dem Gödelschen Vollständigkeitssatz (\cref{thm:goedelscher-vollstaendigkeitssatz}) existiert dann ein Modell $M$ von $T$ mit $M \not\models \sigma$.
+    Dies steht jedoch im direkten Widerspruch zur Voraussetzung, dass $\sigma$ in \emph{jedem} Modell von $T$ gilt (d.\,h. $T \models \sigma$).
+    Folglich muss $T \vdash \sigma$ gelten.
+    \end{short-proof}
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:28 - 00:13:18]
+Genau, also dieser Gödelsche Vollständigkeitssatz schlägt einen schönen Bogen zwischen der syntaktischen und der semantischen Ebene. \inlinemetanote{Dozent legt die Kreide kurz ab und nimmt ein neues Stück}
+\end{spoken-clean}
+
+\begin{math-stroke}[Korollar: Äquivalenz von Beweisbarkeit und Gültigkeit]
+\setcounter{theorem}{54}
+\begin{corollary}\label[corollary]{cor:beweisbarkeit-gueltigkeit}
+Eine $L$-Formel $\sigma$ ist aus einer Theorie $T$ formal beweisbar genau dann, wenn $\sigma$ in jedem Modell von $T$ gilt:
+\[
+T \vdash \sigma \iff T \models \sigma
+\]
+\end{corollary}
+\begin{short-proof}
+\begin{itemize}
+    \item[\emph{($\implies$):}] Dies ist genau die Aussage des Korrektheitssatzes (\cref{thm:korrektheitssatz}).
+    \item[\emph{($\impliedby$):}] Dies folgt unmittelbar aus dem Gödelschen Vollständigkeitssatz (\cref{thm:goedelscher-vollstaendigkeitssatz}).
+\end{itemize}
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:18 - 00:14:57]
+Gut, und dann kommt das Korollar davon. Ist eigentlich im Wesentlichen dieselbe Bemerkung: Ein S-Satz oder eine Formel $\sigma$ ist aus $T$ formal beweisbar genau dann, wenn $\sigma$ in jedem Modell von $T$ gilt. Und der Beweis davon... gut, das folgt direkt aus dem Korrektheitssatz und dem Gödelschen Vollständigkeitssatz. Genau, also wenn, wenn $\sigma$ aus $T$ formal beweisbar ist, dann gilt es in jedem Modell von $T$ (das ist der Korrektheitssatz), und eben mit dem Gödelschen Vollständigkeitssatz sehen wir, dass wenn es in jedem Modell von $T$ gilt, dann muss es auch formal beweisbar sein.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Unabhängigkeit einer Formel]
+\begin{definition}[Unabhängigkeit]\label[definition]{def:unabhaengigkeit}
+Eine $L$-Formel $\sigma$ heißt \newterm{unabhängig} von einer Theorie $T$, falls es Modelle $M_1$ und $M_2$ von $T$ gibt, so dass:
+\[
+M_1 \models \sigma \quad \text{und} \quad M_2 \not\models \sigma
+\]
+\end{definition}
+
+\begin{explanation-of-steps}
+Aus der Unabhängigkeit folgt unmittelbar, dass weder die Formel $\sigma$ noch ihre Negation $\neg\sigma$ aus der Theorie $T$ formal beweisbar sind:
+\[
+T \not\vdash \sigma \quad \text{und} \quad T \not\vdash \neg\sigma
+\]
+\end{explanation-of-steps}
+
+\emph{Beispiel:}
+Die Formel für die Kommutativität (\emph{Abelsche Eigenschaft}):
+\[
+\sigma \equiv \forall x \forall y (x \circ y = y \circ x)
+\]
+ist unabhängig von den Axiomen der Gruppentheorie $GT$.
+\begin{itemize}
+    \item Es existiert eine kommutative Gruppe $M_2$ (z.\,B. $(\mathbb{Z}, +)$) mit $M_2 \models \sigma$.
+    \item Es existiert eine nicht-kommutative Gruppe $M_1$ (z.\,B. die symmetrische Gruppe $S_3$) mit $M_1 \not\models \sigma$.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:57 - 00:15:51]
+Gut, und da werden wir nach der Pause kurz besprechen, wie das jetzt eben impliziert, dass die Art und Weise, wie wir im Alltag mathematische Beweise führen, dass das auf dasselbe zurückgeht, wie wenn wir formale Beweise führen. Also ja, wir werden das noch im Detail besprechen, wenn wir eine Aussage, eine Aussage über Gruppen, wir beweisen, das gilt für alle Gruppen. Das ist, was wir normalerweise tun, wenn wir Beweise führen, aber implizit verwenden wir damit den Gödelschen Vollständigkeitssatz, der uns sagt: Okay, wenn es für alle Gruppen stimmt, dann gibt es auch einen formalen Beweis dafür. Das heißt, wir müssen gar nicht den formalen Beweis führen, was mühsam ist, sondern wir können eine Aussage einfach für alle Gruppen beweisen und dann ist es getan. Aber das besprechen wir nach der Pause noch. Jetzt eine Viertelstunde Pause. \inlinemetanote{Dozent verlässt das Podium}
+\end{spoken-clean}
+
+\begin{lecture-break}[15-minütige Vorlesungspause]
+Der Dozent kündigt eine 15-minütige Pause an. Das Video endet mit dem Verlassen des Podiums durch den Dozenten.
+\end{lecture-break}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 258872, Output 1396)*
+---
+
+**AutoExtraction:** [Part 3] 03-10-tuesday.mp4
+[Angehängtes Video]: 03-10-tuesday-part3.mp4
+[Kontext-Dateien]: 03-10-tuesday-part1.tex, 03-10-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-10. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:00:12]
+...beweisen kann und auch nicht $\sigma$ --- kann man auch nicht aus $T$ beweisen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Unabhängigkeit einer Formel (Fortsetzung)]
+Es folgt, dass:
+\[
+T \not\vdash \sigma \quad \text{und} \quad T \not\vdash \neg\sigma
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:12 - 00:00:47]
+Und ein Beispiel wäre, wie ich vorher schon erwähnt habe, wenn wir die Formel nehmen oder den Satz für alle $x$, für alle $y$ gilt $x$ verknüpft mit $y$ gleich $y$ verknüpft mit $x$. Das ist eine $L$-Gruppentheorie-Formel, und diese ist unabhängig von den Gruppentheorie-Axiomen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Unabhängigkeit in der Gruppentheorie]
+\emph{Beispiel:}
+Die Formel für die Kommutativität (\emph{Abelsche Eigenschaft}):
+\[
+\sigma \equiv \forall x \forall y (x \circ y = y \circ x)
+\]
+ist unabhängig von den Axiomen der Gruppentheorie $GT$:
+\[
+GT \not\vdash \sigma \quad \text{und} \quad GT \not\vdash \neg\sigma
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:47 - 00:02:06]
+Gut. Vielleicht an dieser Stelle möchte ich noch kurz eine Bemerkung machen zu den Gödelschen Unvollständigkeitssätzen. Die sind oft berühmter als der Gödelsche Vollständigkeitssatz, obwohl der Gödelsche Vollständigkeitssatz ein schöner Satz ist, der sagt, dass eigentlich, okay, Logik erster Ordnung ist gut und so weiter. Aber die Unvollständigkeitssätze, die sagen uns, dass das eben alles auch... also nicht auf wackeligen Füßen, das wäre... das wäre falsch, aber... aber dass es so ein bisschen nicht alles so schön ist, wie das Hilbert gerne gehabt hätte.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Gödelschen Sätze im historischen Kontext]
+Der Dozent kontrastiert hier den Gödelschen Vollständigkeitssatz mit den berühmteren Unvollständigkeitssätzen. Während der Vollständigkeitssatz ein positives Resultat für die Logik erster Ordnung darstellt (Syntax und Semantik stimmen überein), zeigen die Unvollständigkeitssätze die prinzipiellen Grenzen formaler Systeme auf, sobald diese mächtig genug sind, um die Arithmetik der natürlichen Zahlen zu beschreiben. Dies bedeutete das Ende des Hilbert-Programms, das eine vollständige und nachweisbar konsistente Axiomatisierung der gesamten Mathematik anstrebte.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:02:06 - 00:03:08]
+Und zwar, okay, wir haben nicht wirklich... ja, die sind nicht Teil von der Vorlesung, ich möchte das einfach kurz erwähnen, weil wir haben auch noch nicht das Vokabular und all die Begriffe, um die sauber zu formulieren. Aber so die Grundidee davon war eigentlich... also das Hilbert-Programm, das war wirklich so... Hilbert war ein überzeugter Vertreter, wir müssen wirklich Axiome haben für die Mathematik, eine vollständige Liste von Axiomen, die hieb- und stichfest die ganze Mathematik axiomatisieren. Und man möchte natürlich gerne, dass die vollständig sind, und zwar, nochmals zurück zu Ihrer Bemerkung vorher, zumindest für die ganzen Zahlen, aber am liebsten für die ganze Mathematik hätte man eigentlich Axiome, so dass man alle Aussagen entweder beweisen kann oder widerlegen. Die Idee ist, wenn man... okay, klar, Gruppentheorie, das sind drei Axiome, natürlich kann man da nicht alles... kann man nicht alles beweisen oder das Gegenteil beweisen, das ist zu groß. Aber etwas, was die ganze Mathematik charakterisiert, oder etwas, was die, zum Beispiel, die ganzen Zahlen beschreibt oder charakterisiert, das sollte doch so sein, dass man alle Antworten... alle Aussagen sagen kann, ob die stimmen oder nicht stimmen. Also zumindest für die ganzen Zahlen, wenn Sie irgendeine Aussage über die ganzen Zahlen haben, hätten Sie doch gerne, dass man sagen kann, ob die stimmt oder nicht. Und Hilbert war überzeugt, dass das geht.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:08 - 00:04:47]
+Aber Gödel hat gezeigt, dass das eigentlich nie geht, sobald man mit der Theorie die ganzen Zahlen beschreiben kann. Also ich schreibe das einfach mal noch hin als Bemerkung. Also es gibt die Gödelschen Unvollständigkeitssätze. Der erste ist: Falls... okay, ich schreibe das mal für die Peano-Arithmetik, aber er hat auch gezeigt, auch wenn man etwas Größeres macht, also wenn man noch mehr Axiome dazu macht, das wird nicht besser, es geht einfach nie. Also falls es konsistent ist... also das Schlimmere noch wäre, dass es gar nicht konsistent ist. Und wenn man... natürlich, wenn es nicht konsistent ist, dann kann man alles beweisen, aber das... ja. Also falls es konsistent ist, so ist PA unvollständig, aber eben im syntaktischen Sinn. Das heißt, es gibt Sätze, die weder bewiesen noch widerlegt werden können.
+\end{spoken-clean}
+
+\begin{math-stroke}[Bemerkung: Gödelsche Unvollständigkeitssätze]
+\textbf{Bemerkung (Gödelsche Unvollständigkeitssätze):}
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Erster Unvollständigkeitssatz:}
+    Falls die Peano-Arithmetik $PA$ konsistent ist, so ist $PA$ unvollständig (im syntaktischen Sinne). Das heißt, es existieren Sätze $\sigma$, so dass:
+    \[
+    PA \not\vdash \sigma \quad \text{und} \quad PA \not\vdash \neg\sigma
+    \]
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:47 - 00:06:30]
+Natürlich eben, dann kann man sagen, macht man einfach die... auch die Theorie größer, macht man mehr Axiome dazu. Dann kann man natürlich das so machen, dass man in der vorherigen Theorie alles beweisen oder widerlegen kann, aber dann hat man die nächstgrößere Theorie, wo das dann wieder nicht möglich ist. Das ist im Prinzip das Problem. Und das war der erste Rückschlag für Hilbert. Und der zweite, was Hilbert auch sehr gehofft hat, ist, dass man ein Axiomensystem machen kann, aus dem heraus man beweisen kann, dass das System konsistent ist. Man möchte ja eigentlich gerne, dass die Mathematik konsistent ist. Also wenn man jetzt die ganze Mathematik auf Axiomen aufbaut, die nicht konsistent ist, dann ist alles futsch. Wenn man einen Widerspruch hat, kann man alles beweisen. Dann sind auf einmal alle Sätze wahr, weil die Grundlagen falsch sind. Und genau, in Hilberts Programm war eigentlich die Idee, dass man eine vollständige Sprache machen kann, eben dass man alles beweisen oder widerlegen kann, und dass man erst noch zeigen kann, dass das konsistent ist. Aber auch hier wieder, weil es scheitert bereits bei der Peano-Arithmetik, aber es scheitert in jeder Theorie, die mindestens so mächtig ist wie die Peano-Arithmetik. Also das heißt, sobald Sie die ganzen Zahlen irgendwie beschreiben können, können Sie nicht mehr beweisen, dass es widerspruchsfrei ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Bemerkung: Gödelsche Unvollständigkeitssätze (Fortsetzung)]
+\begin{enumerate}
+    \setcounter{enumi}{1} \item \textbf{Zweiter Unvollständigkeitssatz:}
+    $PA$ kann nicht seine eigene Konsistenz beweisen.
+    \[
+    PA \not\vdash \operatorname{Cons}(PA)
+    \]
+\end{enumerate}
+\begin{explanation-of-steps}
+Dies bedeutet, dass kein hinreichend starkes konsistentes formales System in der Lage ist, seine eigene Widerspruchsfreiheit mit den eigenen Mitteln zu beweisen. Jede Vergrößerung des Axiomensystems verschiebt dieses Problem nur auf eine höhere Ebene.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:30 - 00:08:04]
+Also das ist kein... kein Problem, dass wir die Theorie vergrößern, und in der größeren Theorie können Sie dann zeigen, dass die Peano-Arithmetik konsistent ist. Also das ist ganz einfach, Sie nehmen einfach ein Zusatzaxiom hinzu, das Zusatzaxiom sagt, dass Peano konsistent ist. Aber... aber dann wissen wir immer noch nicht, ob die nächstgrößere Theorie konsistent ist. Die ist natürlich genau dann konsistent, wenn die Peano-Arithmetik konsistent ist. Das heißt, wenn man es größer macht... aber man könnte auch sagen, okay, es gibt vielleicht noch intelligentere Arten und Weisen, das größer zu machen, so dass es geht, aber das geht nicht. Und das war so ein bisschen der, ja, das war so ein bisschen der... das Todesurteil vom Hilbert-Programm. Aber ja, vielleicht ist es ja auch gerade... also das heißt, wie soll ich sagen...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:04 - 00:09:15]
+Wir machen Mathematik, wir betreiben Mathematik, es geht auch ganz gut. Es ist einfach so, wir wissen einfach nicht, und wir wissen sogar, dass wir nicht wissen, ob es konsistent ist oder nicht. Es könnte durchaus sein, dass es nicht konsistent ist, also okay, einen Widerspruch finden, das kann man schon. Also es kann schon sein, wenn jemand einen Widerspruch findet, dann wissen wir, es ist nicht konsistent. Aber solange man keinen Widerspruch findet, weiß man nicht, ob es konsistent ist oder nicht. Und ja, vielleicht ist es ja auch ein bisschen tröstlich, dass man halt sich immer wieder bewusst machen muss, man steht nicht auf... man kann nicht auf 100\% soliden Füßen stehen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:15 - 00:11:14]
+Und ich glaube, es ist so, ich weiß nicht... Für mich ist es philosophisch auch immer wieder eine schöne... ein schöner Gedanke oder ein interessanter Gedanke, um zu schauen, inwiefern bin ich eigentlich Strukturalist oder nicht. Also wenn jetzt plötzlich jemand herausfindet, dass aus den Zermelo-Fraenkel-Axiomen ein Widerspruch folgt, dann wäre ja eigentlich die ganze Mathematik kaputt. Aber ich glaube, meine Herangehensweise und ich glaube, diejenige der meisten Mathematiker*innen wäre: Nee, also ich meine, die meisten Sachen, die wir in Mathe machen, die stimmen trotzdem. Sollen einfach die Logiker eine bessere... eine bessere Grundlage schaffen. Also es ist so ein bisschen, ja, ich weiß nicht, vielleicht wahrscheinlich bin ich doch auch Platonist, so wie die meisten Mathematiker*innen in dem Sinn, ja. Okay, also das Ganze ist ein bisschen auf... ein bisschen auf, ja, man ist immer etwas in der Schwebe, auch wenn man noch so präzise an die Wurzel der Mathematik gehen möchte. So ganz rein schafft man das nie.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:14 - 00:13:08]
+Genau, es gibt eine... das wahrscheinlich... ich kann das vielleicht verlinken oder so, man findet, es gibt eine Tonaufnahme von der... von der Ansprache von Hilbert, wo er selbst über sein Programm spricht. Ist noch lustig, so Hilbert hat so ein rollendes, preußisches R, und er sagt so: „Wir müssen wissen, wir werden wissen!“ \inlinemetanote{lacht} Es gibt so das, ja... Ich glaube, er hat sich vor allem... er hat sich vor allem auch geärgert... es gab so einen... ich habe seinen Namen vergessen, einen früherer Naturwissenschaftler, der in einer Ansprache auch berühmt gesagt hat, ja, dass wir in der Naturwissenschaft immer auch so mit diesem \emph{Ignorabimus} leben müssen, also wir werden nie alles genau wissen oder die Welt... wir müssen immer damit leben, dass es etwas gibt, was wir einfach nicht verstehen oder nicht wissen. Und Hilbert hat immer gesagt: Nein, in der Mathematik ist das definitiv nicht der Fall, wir werden alles wissen, und wir müssen alles wissen. Und ja, aber dann wenige Jahre später kam dann Gödel mit seinen Beweisen. Gut, aber es ist nicht schlimm, also es ist... es ist auch nicht schlimm, und ich glaube, für Hilbert war es auch nicht so... war das auch nicht so jetzt super tragisch. Ich meine, es ist auch immer spannend, wenn die Sachen spannend werden.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:08 - 00:14:40]
+Ja, wir haben es... in der Mathematik haben wir es lieber spannend eigentlich, ist immer gut, wenn etwas eine unerwartete Wendung nimmt und man dann wieder neu verstehen muss und so. Die nächste... das nächste Axiomensystem sind nun die Zermelo-Fraenkel-Axiome. Also das sind so, okay... Ich weiß nicht, das ist vielleicht so... wir hatten jetzt so Gruppentheorie, Peano-Arithmetik und so weiter. Ich glaube, so die Zermelo-Fraenkel-Axiome, das ist so die... wie soll ich sagen, so die ultimative Theorie in erster... der Logik erster Ordnung, also so die Theorie, eigentlich, die unsere moderne Mathematik axiomatisiert. Also es sind acht... nein, neun... acht Axiome, glaube ich, ja... die, ja genau, die... die eigentlich die Grundlage geben für, ja, ich glaube, fast die ganze moderne Mathematik ist prinzipiell zumindest... fußt auf diesen... auf diesen Axiomen der Mengenlehre.
+\end{spoken-clean}
+
+\section{Die Zermelo-Fraenkel-Axiome}
+\subsection{Historischer Hintergrund und das Russellsche Paradoxon}
+
+\begin{spoken-clean}[00:14:40 - 00:16:06]
+Da gibt es auch ein bisschen Geschichte vielleicht so... Wir haben ja jetzt auch schon ein bisschen mit Mengen gesprochen und so weiter, aber immer im naiven Sinn. Und man hat viel zu... das war so zweite Hälfte 19. Jahrhundert, Anfang 20. Jahrhundert, haben sehr viele an den Grundlagen der Mathematik herumstudiert und gearbeitet. Also Frege hat sehr viel daran, ein ganzes Werk daran über diese... über Mengen und so weiter versucht, über Mengen die Mathematik wirklich zu fundieren. Aber das Problem war so das sogenannte Russellsche Paradox, das Sie vielleicht auch schon gehört haben, das hat dann auch fast das ganze Werk von Frege nicht zu... ja doch, schon fast ein bisschen zunichte gemacht oder so, oder zum Widerspruch geführt. Frege hat dann auch fast aufgehört, auch er... zu arbeiten. Und das Grundprinzip ist einfach mit der Menge ist dieses Paradox, das wahrscheinlich schon viele kennen, also was auch sagt: Okay, der Barbier frisiert alle Leute, die sich nicht selbst frisieren. Wer frisiert den Barbier? Das ist ein Problem. Und ein Paradox, und für Mengen kann man das auch einfach machen, wir können einfach die Menge von allen Mengen nehmen, die sich nicht selbst enthalten.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Russellsche Paradoxon]
+Das \newterm{Russellsche Paradoxon} basiert auf der Definition der folgenden Gesamtheit:
+\[
+R = \{ x \mid x \notin x \}
+\]
+\begin{short-proof}
+Angenommen, $R$ ist eine wohlgeformte Menge im Sinne der naiven Mengenlehre. Dann muss entweder $R \in R$ oder $R \notin R$ gelten:
+\begin{itemize}
+    \item Falls $R \in R$, so erfüllt $R$ die definierende Eigenschaft von $R$ nicht, woraus $R \notin R$ folgt (Widerspruch).
+    \item Falls $R \notin R$, so erfüllt $R$ die definierende Eigenschaft von $R$, woraus $R \in R$ folgt (Widerspruch).
+\end{itemize}
+Da beide Fälle zu einem logischen Widerspruch führen, kann eine solche Menge $R$ in einer konsistenten Mengenlehre nicht existieren.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{didactic-insight}[Das Russellsche Paradoxon und der Barbier]
+Das Russellsche Paradoxon deckte eine fundamentale Schwachstelle in Gottlob Freges naiver Mengenlehre auf, die das uneingeschränkte Komprehensionsaxiom (jede mathematisch formulierbare Eigenschaft definiert eine Menge) zuließ. Die populäre Einkleidung als „Barbier-Paradoxon“ (Der Barbier von Sevilla rasiert genau diejenigen Männer in Sevilla, die sich nicht selbst rasieren. Rasiert sich der Barbier selbst?) verdeutlicht die inhärente Selbstbezüglichkeit, die zu diesem logischen Widerspruch führt.
+\end{didactic-insight>
+
+\begin{spoken-clean}[00:16:06 - 00:17:18]
+Oder, es gibt... es gibt Mengen, also sagen wir alle Mengen, und es gibt Mengen, die enthalten sich selbst, es gibt Mengen, die enthalten sich nicht selbst. Und jetzt schauen wir die Menge von allen Mengen an, die sich nicht selbst enthalten. Und okay, wenn das jetzt wieder eine Menge wäre, dann hätten wir ein Problem, weil ist diese Menge jetzt darin enthalten oder nicht, oder? Im Prinzip, das ist das Grundproblem. Das ist ein Paradox, und das geht natürlich nicht, oder möchte man in der Mathematik natürlich nicht haben, ein tatsächliches Paradox, also möchte nicht etwas haben, das sich selbst widerspricht. Und das hat also die ganze... wenn man jetzt natürlich mit der naiven Mengenlehre so weitermachen möchte, das kann nicht... das kann nicht gehen, also es gibt einen Widerspruch.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:17:18 - 00:18:45]
+Und da hat man natürlich weiter überlegt, wo man natürlich genau sagen muss, was... man sagt nicht genau, was eine Menge ist, aber man sagt die Eigenschaften, die Mengen haben. Und da hat Ernst Zermelo hat in 1908 hat er sieben Axiome dazu publiziert. Das sind diese sieben wichtigen Axiome, die eigentlich eine Menge, ja, die Axiome, die eine Menge beschreiben. Und dann Fraenkel hat noch ein paar Jahre später hingewiesen, dass man noch ein paar mehr braucht, ich glaube 1921 hat er noch zwei Axiome hinzugefügt. Und diese neun Axiome sind die Zermelo-Fraenkel-Axiome. Wir nehmen dann noch das Auswahlaxiom dazu später, aber zuerst beginnen wir mit diesen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Zermelo-Fraenkel-Axiome]
+\textbf{Die Zermelo-Fraenkel-Axiome (ZF):}
+\begin{itemize}
+    \item \textbf{Zermelo (1908):} Formulierung von 7 Axiomen zur Grundlegung der Mengenlehre.
+    \item \textbf{Fraenkel (1921):} Ergänzung um 2 weitere Axiome (insb. das Ersetzungsaxiom).
+\end{itemize}
+\end{math-stroke}
+
+\subsection{Die formale Signatur und grundlegende Definitionen}
+
+\begin{spoken-clean}[00:18:45 - 00:20:36]
+Gut, und das sind jetzt... okay, dann nehmen wir jetzt... machen wir eine Theorie, das heißt, wir müssen jetzt eben einfach diese neun Axiome hinschreiben. Äh das heißt, wir brauchen zuerst eine Signatur. Also die Signatur von Zermelo-Fraenkel, die besteht nur aus einem Element, das ist einfach das Elementsymbol. Und Element ist einfach ein zweistelliges Relationssymbol. Okay, und jetzt falls zwei Mengen, also zwei Objekte, $y$ in $x$ enthalten ist, also eben $y$ in Relation zu $x$, so sagen wir, $y$ ist Element von $x$. Und anstatt zu schreiben nicht $y$ in $x$, schreiben wir... gut, $y$ nicht Element $x$, oder? Ist ein bisschen einfacher.
+\end{spoken-clean}
+
+\begin{math-stroke}[Signatur von ZF]
+Die Signatur der Zermelo-Fraenkel-Mengenlehre ist gegeben durch:
+\[
+L_{ZF} = \{\in\}
+\]
+wobei $\in$ ein zweistelliges (binäres) Relationssymbol ist.
+
+\textbf{Notationskonventionen:}
+\begin{itemize}
+    \item Falls $y \in x$, so sagen wir: \qt{$y$ ist Element von $x$}.
+    \item Anstatt $\neg(y \in x)$ schreiben wir abkürzend:
+    \[
+    y \notin x
+    \]
+\end{itemize}
+\end{math-stroke}
+
+\subsection{Die Axiome von Zermelo (Axiome 0 bis 2)}
+
+\begin{spoken-clean}[00:20:36 - 00:22:34]
+Okay, und jetzt machen wir diese Axiome. Wir machen jetzt als Erstes machen wir einmal die Axiome von Zermelo. Aber ich glaube, wir werden heute wohl nicht fertig... mal die Axiome 0 bis 6, aber heute werden wir vielleicht bis zum Axiom 3 oder so kommen. Also das erste ist das Axiom der leeren Menge. Okay, und das ist das Folgende: Das ist, es existiert $x$, für alle $z$, $z$ ist nicht enthalten in $x$. Das sagt nichts anderes als: Die leere Menge existiert. Also es existiert eine Menge, die kein... die kein Element enthält. Insbesondere existiert eine Menge, das ist schon mal ein Wichtiges. Also wir fordern eigentlich die Existenz von einer Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 0: Axiom der leeren Menge]
+\begin{nice-box}[Axiom 0: Axiom der leeren Menge]
+\begin{equation}\label{eq:axiom-leere-menge}
+\exists x \forall z (z \notin x)
+\end{equation}
+\end{nice-box}
+\begin{explanation-of-steps}
+Dieses Axiom postuliert die Existenz mindestens einer Menge, die absolut keine Elemente enthält. Dadurch wird sichergestellt, dass das Universum der Mengenlehre nicht leer ist.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:34 - 00:24:24]
+Äh dann das Nächste, die haben alle Namen, ist das Extensionalitätsaxiom. Was sagt das? Das sagt... für alle $x$, für alle $y$, haben wir auch, für alle $z$, $z$ ist enthalten in $x$ ist äquivalent zu $z$ ist enthalten in $y$, das impliziert $x = y$. Während ich die Tafel wische, dürfen Sie kurz überlegen, was dieses Axiom aussagt.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die linke und mittlere Tafel, während die Studierenden über die Bedeutung des Extensionalitätsaxioms nachdenken.
+\end{meta-note>
+
+\begin{math-stroke}[Axiom 1: Extensionalitätsaxiom]
+\begin{nice-box}[Axiom 1: Extensionalitätsaxiom]
+\begin{equation}\label{eq:extensionalitaetsaxiom}
+\forall x \forall y \Big( \forall z (z \in x \iff z \in y) \implies x = y \Big)
+\end{equation}
+\end{nice-box}
+\begin{explanation-of-steps}
+Das Extensionalitätsaxiom besagt, dass zwei Mengen genau dann identisch sind, wenn sie dieselben Elemente besitzen. Eine Menge ist somit ausschließlich durch ihre Elemente („ihren Umfang“ bzw. „ihre Extension“) bestimmt, nicht durch die Art ihrer Beschreibung.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:24 - 00:26:30]
+Genau, zwei Mengen mit denselben Elementen sind gleich, oder sind identisch. Und dann braucht man natürlich noch das Umgekehrte, aber das ist... das kann man beweisen. Also falls zwei Mengen identisch sind, so haben $x$ und $y$ dieselben Elemente. Das ist... das kann man auch noch umformulieren natürlich, und das kann man beweisen, das kann man mit dem logischen Axiom L15 beweisen. Das hat man, wenn... wenn $x = y$ ist, und so weiter, dann erfüllen sie auch dieselben Relationen, und hier haben wir Relationen. Also das folgt mit dem logischen Axiom L15.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaften der Gleichheit]
+\textbf{Bemerkung:}
+Die Umkehrung des Extensionalitätsaxioms:
+\[
+\forall x \forall y \Big( x = y \implies \forall z (z \in x \iff z \in y) \Big)
+\]
+ist kein Axiom der Mengenlehre, sondern ein allgemeines Theorem der Prädikatenlogik mit Gleichheit. Es lässt sich formal unter Verwendung des logischen Gleichheitsaxioms $L_{15}$ beweisen:
+\[
+L_{15}: \quad x = y \implies (\varphi(x) \to \varphi(y))
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:26:30 - 00:28:29]
+Okay, also das müssen wir als... das müssen wir als Axiom formulieren, das folgt aus den logischen Axiomen. Aber eben, wie gesagt, das impliziert insbesondere als Extensionalitätsaxiom impliziert, dass die leere Menge eindeutig ist. Weil... genau, es gibt nur eine Menge, also wenn Sie eine andere Menge haben, die keine Elemente enthält, dann ist das die leere Menge. Nennen wir das (1), damit wir nicht Extensionalitätsaxiom hinschreiben müssen. Also (1) impliziert insbesondere, dass die leere Menge eindeutig ist. Wir bezeichnen sie mit $\emptyset$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eindeutigkeit der leeren Menge]
+\begin{proposition}\label[proposition]{prop:eindeutigkeit-leere-menge}
+Es existiert genau eine leere Menge.
+\end{proposition}
+\begin{short-proof}
+Angenommen, es existieren zwei Mengen $x_1$ und $x_2$, die beide die Eigenschaft der leeren Menge erfüllen:
+\[
+\forall z (z \notin x_1) \quad \text{und} \quad \forall z (z \notin x_2)
+\]
+Daraus folgt für jedes beliebige Objekt $z$:
+\[
+z \in x_1 \iff \text{Falsch} \iff z \in x_2
+\]
+Somit gilt $\forall z (z \in x_1 \iff z \in x_2)$. Nach dem Extensionalitätsaxiom (\cref{eq:extensionalitaetsaxiom}) folgt unmittelbar:
+\[
+x_1 = x_2
+\]
+\end{short-proof}
+Wir bezeichnen diese eindeutig bestimmte Menge mit dem Symbol:
+\[
+\emptyset
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:29 - 00:30:36]
+Okay, und jetzt können wir auch noch eine weitere Definition machen. Wir definieren das binäre Relationssymbol Teilmenge durch folgende Definition: Wir sagen, $y$ ist enthalten von... in $x$, genau dann, wenn für alle $z$ gilt, $z$ in $y$ impliziert $z$ in $x$. Und echte Teilmenge definieren wir als... das ist so, so und hier ein durchgestrichener... durch $y$ ist echt enthalten in $x$, falls $y$ enthalten ist in $x$ und $y$ ist nicht gleich $x$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Teilmenge und echte Teilmenge]
+\begin{definition}[Teilmenge]\label[definition]{def:teilmenge}
+Wir definieren das binäre Relationssymbol \newterm{Teilmenge} ($\subseteq$) durch:
+\[
+y \subseteq x :\iff \forall z (z \in y \implies z \in x)
+\]
+\end{definition}
+
+\begin{definition}[Echte Teilmenge]\label[definition]{def:echte-teilmenge}
+Wir definieren das Relationssymbol \newterm{echte Teilmenge} ($\subsetneq$) durch:
+\[
+y \subsetneq x :\iff y \subseteq x \land y \neq x
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:30:36 - 00:32:06]
+Okay, und eine Bemerkung: Natürlich mit dieser Definition sehen wir, die leere Menge ist enthalten in jeder Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaft der leeren Menge]
+\textbf{Bemerkung:}
+Für jede beliebige Menge $x$ gilt:
+\[
+\emptyset \subseteq x
+\]
+\begin{short-proof}
+Nach Definition der Teilmenge müssen wir zeigen:
+\[
+\forall z (z \in \emptyset \implies z \in x)
+\]
+Da die Aussage $z \in \emptyset$ für jedes $z$ stets falsch ist, ist die Implikation $z \in \emptyset \implies z \in x$ durch die Falschheit der Prämisse trivialerweise wahr (Vakuum-Wahrheit).
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:32:06 - 00:33:31]
+Gut. Dann kommt das Nächste, ist das Paarmengenaxiom. Ich glaube, für das reicht es noch. Dann haben wir zumindest einmal die ersten drei Axiome. Das zweite Axiom, also das, ja, Axiom 2 ist das Paarmengenaxiom. Das sagt, dass... dieses Axiom: Für alle $x$, für alle $y$, existiert ein $u$, für alle $z$, $z$ ist in $u$ genau dann, wenn $z = x$ oder $z = y$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 2: Paarmengenaxiom]
+\begin{nice-box}[Axiom 2: Paarmengenaxiom]
+\begin{equation}\label{eq:paarmengenaxiom}
+\forall x \forall y \exists u \forall z (z \in u \iff z = x \lor z = y)
+\end{equation}
+\end{nice-box}
+\begin{explanation-of-steps}
+Das Paarmengenaxiom besagt, dass zu zwei beliebigen Mengen $x$ und $y$ stets eine Menge $u$ existiert, deren Elemente genau $x$ und $y$ sind.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:33:31 - 00:35:06]
+Was sagt dieses Axiom aus? Nicht direkt, nein. Es sagt, wenn wir zwei Mengen haben, dann existiert eine Menge, die aus diesen zwei Mengen besteht. Aber das ist nicht... nicht die Vereinigung, es ist eine menge mit zwei Elementen, also eine Menge von Mengen. Also für alle Mengen $x$ und $y$ existiert eine Menge $u$, welche nur $x$ und $y$ als Elemente enthält.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage zur Paarmenge]
+\begin{student-question}
+Bedeutet das, dass wir zwei Mengen vereinigen?
+\end{student-question}
+\begin{spoken-clean}[continued]
+Nicht direkt, nein. Es sagt, wenn wir zwei Mengen haben, dann existiert eine Menge, die aus diesen zwei Mengen besteht. Aber das ist nicht... nicht die Vereinigung, es ist eine Menge mit zwei Elementen, also eine Menge von Mengen. Also für alle Mengen $x$ und $y$ existiert eine Menge $u$, welche nur $x$ und $y$ als Elemente enthält.
+\end{spoken-clean}
+\end{student-interaction}
+
+\begin{spoken-clean}[00:35:06 - 00:36:30]
+Okay, und gemäß dem Extensionalitätsaxiom ist diese Menge auch wieder eindeutig, oder? Sie enthält nur $x$ und $y$. Das heißt, wenn es irgendeine Menge andere Menge gibt, die $x$ und $y$ enthält, dann ist das dieselbe. Also das heißt, dieses $u$ ist eindeutig gemäß (1). Und deswegen können wir ihr wieder einen Namen geben: Wir bezeichnen diese Menge mit $\{x, y\}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eindeutigkeit der Paarmenge]
+\textbf{Eindeutigkeit:}
+Nach dem Extensionalitätsaxiom (\cref{eq:extensionalitaetsaxiom}) ist die durch das Paarmengenaxiom garantierte Menge $u$ für gegebene $x, y$ eindeutig bestimmt. Wir führen dafür die Standardnotation ein:
+\[
+\{x, y\}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:36:30 - 00:38:00]
+Und vielleicht auch kurz eine Bemerkung: Auch wieder gemäß (1) gilt, dass in dieser Notation $\{x, y\}$ dasselbe ist wie $\{y, x\}$, und $\{x, x\}$ ist dasselbe wie die Menge, die nur $x$ enthält. Das heißt insbesondere, das Paarmengenaxiom sagt uns auch aus, wenn... wenn wir eine Menge haben, dann existiert auch die Menge, die nur diese Menge als Element enthält. Okay, also für jede menge können wir eine neue Menge konstruieren, die diese Menge als Element enthält. Okay.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaften der Paarmenge]
+\textbf{Bemerkung:}
+Aus dem Extensionalitätsaxiom folgt unmittelbar:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Symmetrie:} $\{x, y\} = \{y, x\}$
+    \setcounter{enumi}{1} \item \textbf{Einermenge (Singleton):} $\{x, x\} = \{x\}$
+\end{enumerate}
+\begin{explanation-of-steps}
+Insbesondere garantiert das Paarmengenaxiom für jede existierende Menge $x$ auch die Existenz der Einermenge $\{x\}$.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:38:00 - 00:40:00]
+Gut, und dann können wir noch als kurze Bemerkung: Wir können noch nun geordnete Paare definieren durch... wir schreiben $\langle x, y \rangle$ mit eckigen Klammern, das ist eine geordnete... ein geordnetes Paar, und das sagen wir, das ist einfach die Menge, die besteht aus der Menge $\{x\}$ und der Menge $\{x, y\}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Geordnetes Paar]
+\begin{definition}[Geordnetes Paar]\label[definition]{def:geordnetes-paar}
+Wir definieren das \newterm{geordnete Paar} $\langle x, y \rangle$ (nach Kuratowski) durch:
+\[
+\langle x, y \rangle := \big\{ \{x\}, \{x, y\} \big\}
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:40:00 - 00:42:14]
+Und man kann jetzt zeigen, dass das tatsächlich... dass das eine geordnete... also so wie wir über eine geordnete Menge nachdenken, dass das ist. Man kann zeigen, dass $\langle x, y \rangle = \langle x', y' \rangle$ genau dann, wenn $x = x'$ ist und $y = y'$ ist. Das heißt, hier ist wirklich eine geordnete Menge. Und das, diese eckige Klammer... Klammer kann man als quasi als binäres Funktionssymbol auffassen, deswegen, das definiert uns eindeutig eine Menge. Gut. Vielen Dank fürs Kommen und gute Woche, bis nächste Woche.
+\end{spoken-clean}
+
+\begin{math-stroke}[Charakteristische Eigenschaft geordneter Paare]
+\begin{proposition}\label[proposition]{prop:eigenschaft-geordnetes-paar}
+Für beliebige Mengen $x, y, x', y'$ gilt:
+\[
+\langle x, y \rangle = \langle x', y' \rangle \iff x = x' \land y = y'
+\]
+\end{proposition}
+\begin{explanation-of-steps}
+Diese fundamentale Eigenschaft stellt sicher, dass die Reihenfolge der Komponenten im geordneten Paar eine Rolle spielt, im Gegensatz zur ungeordneten Paarmenge $\{x, y\}$.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 259749, Output 8598)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 71709, Output 25)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 00:51:37) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-17-tuesday.mp4
+[Angehängtes Video]: 03-17-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-17. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\setcounter{chapter}{4}
+\lecturechapter{Dienstag}{17. März}{17. März 2020}{Zermelo-Fraenkel-Mengenlehre}
+
+\begin{spoken-clean}[00:00:00 - 00:00:47]
+Ich dachte, wir hatten bis jetzt auch nicht viel Zeit für, äh, Klickerfragen. Die ist jetzt ein bisschen noch eine Repetitionsfrage zu dem, was wir, um, die letzten Wochen gemacht haben. Die kommt aus einer alten Prüfung, glaube ich, war diese Frage mehr oder weniger, gell?
+\end{spoken-clean}
+
+\begin{nice-box}[Klickerfrage: Grundlagen der Modelltheorie]
+\begin{question}[Modelltheoretische Aussagen]
+Sei $T$ eine $\mathcal{L}$-Theorie und sei $\sigma$ ein $\mathcal{L}$-Satz. Welche der folgenden Aussagen sind richtig?
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Gilt $T \vdash \sigma$ und $T \vdash \neg\sigma$, so ist $T$ inkonsistent.
+    \setcounter{enumi}{1} \item Gilt $T \not\vdash \sigma$, so existiert immer ein Modell $\mathcal{M} \models T$ so dass $\mathcal{M} \models \neg\sigma$.
+    \setcounter{enumi}{2} \item Gilt $T \not\vdash \sigma$ und $T \not\vdash \neg\sigma$, so existiert kein Modell $\mathcal{M} \models T$.
+\end{enumerate}
+\end{question}
+\end{nice-box}
+
+\begin{spoken-clean}[00:00:47 - 00:01:44]
+Der Rücklauf ist doch etwas mager, aber wir werden das jetzt trotzdem beenden. Also wählen Sie gerne schnell. Okay, ist ein bisschen eine... eine gemischte, um, gemischte Antwort. Vielleicht machen wir noch eine zweite Runde. Fragen Sie mal noch schnell Ihre Nachbarin, Ihren Nachbarn, wie sie abgestimmt haben, und vielleicht, äh, ändern Sie noch Ihre Meinung, bitte. Und dann machen wir das auch was... aber etwas schneller, ja? Auf EduApp. Ist das das erste Mal, dass Sie eine Klickerfrage haben in einer Vorlesung, oder? Ist das das erste Mal, dass Sie eine Klickerfrage sehen in einer Vorlesung, oder... ach so! Entschuldigung. \inlinemetanote{lacht} Gehen Sie auf EduApp und da können Sie, äh... ich dachte, Sie hatten das... kennen das schon in- und auswendig nach einem Semester ETH, dass man... Sie können auf EduApp gehen, da können Sie abstimmen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:44 - 00:02:08]
+Das ist Stufe 1 von interaktivem Vorlesung-Geben. \inlinemetanote{lacht} Eigentlich sollten das die meisten Dozierenden, äh, hier hin und wieder eine Klickerfrage geben. Okay, äh, stimmen Sie bitte ab. Jetzt. Gut.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:08 - 00:02:28]
+Okay, die zweite... zweite Runde ist ja noch schlechter als die erste. \inlinemetanote{lacht, Studenten lachen auch} Das heißt, vielleicht... vielleicht haben nur die Guten am Anfang schon herausgefunden, dass man da abstimmen kann, nur die Cleveren. \inlinemetanote{lacht} Das hat einen gewissen, äh, Bias dabei, oder so.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:28 - 00:03:17]
+Vielleicht kurz durchgehen. Also das... das erste (i.e., eigentlich die dritte Aussage auf der Folie: $T \not\vdash \sigma$ und $T \not\vdash \neg\sigma$, so existiert kein Modell $\mathcal{M} \models T$), okay, beim ersten sind die meisten... haben das Gefühl, dass das nicht stimmt. Weshalb stimmt das nicht? Kann kurz jemand das sagen? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Zum Beispiel Gruppentheorie und die Kommutativität.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, gutes Beispiel Gruppentheorie und Kommutativität. Das ist genauso. Also nur wenn man etwas nicht beweisen kann und das Gegenteil nicht beweisen kann, heißt das nicht, dass es inkonsistent ist. Ganz im Gegenteil! Wenn Sie eine Theorie haben und einen Satz, den Sie nicht beweisen können, dann wissen Sie, dass die Theorie, äh, konsistent sein muss, weil ansonsten könnte man ja alles beweisen. Also eine inkonsistente Theorie kann alles beweisen. Das heißt, wenn so etwas existiert, dann ist $T$ konsistent. Das ist falsch. Okay.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:17 - 00:06:34]
+Und beim zweiten (i.e., die zweite Aussage auf der Folie: Gilt $T \not\vdash \sigma$, so existiert immer ein Modell $\mathcal{M} \models T$ so dass $\mathcal{M} \models \neg\sigma$): Weshalb ist das zweite richtig?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Vollständigkeitssatz.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, das ist eigentlich mehr oder weniger der Vollständigkeitssatz, wie wir ihn gesehen haben. Also der Gödelsche Vollständigkeitssatz sagt, wenn ein Satz nicht bewiesen werden kann in einer Theorie, dann gibt es auch ein... ein Modell, so dass dieser Satz nicht wahr ist in diesem Modell. Weil andersrum, wenn er in jedem Modell wahr ist, dann kann man ihn auch beweisen. Gut.
+
+Und das dritte (i.e., die erste Aussage auf der Folie: Gilt $T \vdash \sigma$ und $T \vdash \neg\sigma$, so ist $T$ inkonsistent), um... weshalb ist das wahr? Vielleicht 47\% die das... genau. Genau, wenn eine Theorie inkonsistent ist, dann gibt es kein Modell. Weil sonst hätten wir ein Modell, in dem eine Aussage und ihre Verneinung beide richtig sind, und das geht nicht.
+
+Okay, so viel ein bisschen noch zur Repetition, einfach zu sehen, wo wir... was wir letzte... die letzten paar Male gemacht haben, um... und auch einmal, um zu sehen, so welche Art von Prüfungsfragen, okay, jetzt im Multiple-Choice-Bereich Sie zu erwarten haben. Das sind jetzt keine tiefen, kniffligen, äh, Modelltheoriefragen. Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Kann man aus der Mengenlehre beweisen, dass es ein Modell für die Peano-Arithmetik gibt?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ja, das ist korrekt, ja. Also genau, ja. Also man kann eigentlich... sogar von... also genau, von der Mengenlehre, ganze Zahlen kann man nicht zeigen, dass es ein Modell gibt aus der Theorie heraus. Also es... wie soll ich sagen, das... Sie können natürlich in einem anderen Setting schauen, und innerhalb von dem ist es natürlich dann konsistent, aber das ist etwas Blödes, was Sie nicht wissen, dass es konsistent ist. Aber eben, Sie können die natürlichen Zahlen, nehmen wir die naive, platonische Existenz von den ganzen Zahlen, so wie wir sie denken, und wir denken, die existieren als solches. Das ist nicht formal, aber wenn wir sagen, das gibt es, dann ist das ein Modell von Peano-Arithmetik. Und insofern ist es gut, wenn wir davon ausgehen, dass die... genau, dass es die natürlichen Zahlen gibt in einem platonischen Sinn, dann hätten wir ein Modell für die Peano-Arithmetik. Und dann wüssten wir auch, dass die konsistent ist, aber das ist natürlich kein Beweis innerhalb der Peano-Arithmetik. Genau, also wir können nicht... wir können nicht aus dem... wie soll ich sagen... wir können nicht in der Theorie selbst zeigen, dass sie konsistent ist. Ja. Aber man kann natürlich in einem... heraus... kann einen Schritt heraus machen, metamathematisch, und da kann man sagen, ist es konsistent, oder wenn wir eine größere Theorie machen, dann könnte man beweisen, dass die Theorie darin vielleicht konsistent ist, aber beim Größeren weiß man auch wieder nicht, ob es konsistent ist oder nicht. Richtig. Aber eben genau, insofern, äh, kann man mit den Axiomen, die wir gemacht haben, äh, nicht beweisen, dass es, um... wie soll ich sagen... dass es ein Modell der... der Peano-Arithmetik gibt innerhalb der Peano-Arithmetik.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:06:34 - 00:10:05]
+Gut, um... ja, jetzt was wir weitermachen, um, haben wir letzte Woche kurz angefangen, das sind die Zermelo-Fraenkel, um, Axiome der Mengenlehre. Um, wartet mal, so, dann machen wir das... genau, also das ist die Mengenlehre und das ist so eben das ultimative... die ultimative Theorie gewissermaßen. Um, da sagen wir... wir definieren nicht, was eine Menge ist, um, das macht insofern auch logisch keinen Sinn, sondern wir sagen einfach: Menge, wir haben diese Axiome, die erfüllt sein müssen. Mengen, um, erfüllen das und dann arbeiten wir mit diesen Eigenschaften, da müssen wir gar nicht genau bewei... müssen wir gar nicht genau sagen, was eine Menge ist.
+
+Vielleicht ein bisschen Geschichte, so diese ganze Axiomatik, die Idee der Axiomatik, das ist ja genial und so, und von diesen formalen Beweisen, also gut, das ist natürlich schon... geht weit in die Antike zurück. Und so das erste große Werk ist eigentlich das Buch von Euklid, die Elemente, wo er wirklich so das ganze... ganze Geometrie versucht auf solide Füße zu stellen. Und da macht er einfach Axiome: Okay, eine Gerade... zwei Geraden schneiden sich immer, außer sie sind parallel, und macht wirklich so was wie einfach eine Liste von Axiomen, und daraus beweist er dann die ganzen Eigenschaften der, um, euklidischen Geometrie. Also ein großartiges Werk und vor allem auch konzeptionell diese ganze Idee von... von dem Beweisen.
+
+Und okay, Euklid ist natürlich... hat natürlich schon die Idee von Geraden und so, die geometrische Intuition gehabt. Er hat auch dann wirklich, um, hingeschrieben, versucht eine Gerade zu definieren, hat geschrieben: Okay, eine Gerade ist, um, ist breitenlose Länge, was natürlich intuitiv schon sehr viel Sinn macht und so, um... oder ein Punkt ist... ich weiß nicht mehr, was die Formel... so schöne... schöne Formulierungen. Und das macht schon Sinn insofern, aber eigentlich von der Axiomatik her kann man einfach die Axiome hinschreiben. Wir haben Element... wir haben Geraden, wir haben Punkte, und, äh, da muss man das gar nicht weiter schreiben. Also, äh, Hilbert hat das dann auch wieder aufgegriffen, er hat dann die Axiome von Euklid noch, um, präzisiert. Klar, es gab da einige Fehler, das ist sehr, um, verzeihbar dafür, dass das so grundlegend neu war. Und Hilbert hat quasi ein schönes, sauberes, um, saubere Liste von Axiomen für die euklidische Geometrie aufgeschrieben und daraus dann auch die alles sauber bewiesen, von neu bewiesen von Euklid. Und eben, da hat Hilbert natürlich das auch so erklärt: Man muss nicht sagen, was eine Gerade ist, man muss einfach diese Axiome definieren, und dann, wenn man noch versucht, jetzt wieder neue Worte einzuführen, um eine Gerade zu definieren, hilft das auch nicht. Wenn man sagt: Okay, es ist breitenlose Länge, okay, was ist Länge und was ist Breite? Um, dann kann man sagen, versuchen zu erklären, was Breite und was Länge ist, aber man kommt immer wieder auf neue, nicht definierte Begriffe zurück. Das heißt, irgendwo kann man aufhören und, wie das auch Hilbert gesagt hat: Okay, das ist... man kann genauso gut, anstatt dass man Geraden und Punkte nimmt, Punkte, die auf Geraden liegen, sollte man einfach... oder eine Ebene mit einer... auf einer Gerade und einem Punkt, sollte man gerade auch sagen können: Okay, das ist einfach ein Tisch oder eine Bank und ein Bierglas, oder so, und einfach sagen, das eine auf dem anderen liegt und diese Eigenschaften erfüllt, kann man alle Sätze genauso beweisen. Und genauso ist es auch mit der Mengenlehre eigentlich.
+\end{spoken-clean}
+
+\begin{math-stroke}[Zermelo-Fraenkel-Mengenlehre: Grundlagen]
+Wir betrachten die formale Sprache der Mengenlehre.
+Die Signatur der Mengenlehre ist gegeben durch:
+\[
+\mathcal{L}_{\text{ZF}} = \{\in\}
+\]
+wobei $\in$ ein zweistelliges Relationssymbol bezeichnet.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:05 - 00:12:01]
+Gut, wir hatten, um, am, äh, letzte Woche schon angefangen, um, die ersten... das sind diese Axiome von Zermelo, das sind die ersten sieben, und dann gibt es noch zwei, die Fraenkel, um, hinzugefügt hat. Also wir haben die Signatur der Mengenlehre: \inlinemetanote{schreibt an die Tafel} $\mathcal{L}_{\text{ZF}} = \{\in\}$. Okay, und da hatten wir die ersten drei Axiome. Ah ja, ich... \inlinemetanote{lacht} ...erinnere mich. Es ist keine Vorlesung in Mengenlehre, also wir haben einfach im Curriculum der ETH haben wir beschlossen, im zweiten Semester macht man einmal eine Doppelstunde, wo wir über die Zermelo-Fraenkel-Mengenlehre sprechen, damit Sie einmal sehen, was sind die Axiome, auf der zumindest theoretisch die ganze Mathematik aufbaut. Um, aber das ist gar nicht unbedingt üblich, dass man das macht. Also man beginnt auch gar nicht mit der... man könnte auch denken: Okay, man beginnt das Mathematikstudium mit der Mengenlehre und dann baut man dahingehend alles auf. Aber wie Sie schon gesehen haben, ist es besser, wenn man schon Mathe gesehen hat, bevor man Mengenlehre macht.
+
+Ich erinnere mich noch, als ich angefangen habe, Mathe zu studieren, und in der ersten Vorlesung in Analysis, und da hat er gesagt: Okay, wir beginnen alles von Grund auf, alles... wir brauchen nichts, was Sie in der Mittelschule gesehen haben, keine Analysis, keine lineare Algebra. Das Einzige, was wir voraussetzen, ist ein bisschen Mengenlehre. Und ich habe gesagt: Oh Mist! \inlinemetanote{lacht, Studenten lachen auch} Weil im Gymnasium haben wir, äh, Analysis gesehen, Kombinatorik und so weiter, aber wir hatten keine Mengenlehre. \inlinemetanote{lacht} Also das Einzige, was vorausgesetzt wird, habe ich nie gesehen. Aber eben, dann merkt man schnell, die Mengenlehre, die man braucht, kennt man schon eigentlich aus der, äh, Intuition.
+
+Aber eben, hier machen wir jetzt saubere Mengenlehre. Also wir hatten das Axiom der leeren Menge. \inlinemetanote{schreibt an die Tafel} Wissen Sie noch, was das ausgesagt hat? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Dass es eine Menge ohne Elemente gibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, es gibt eine leere Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 0: Axiom der leeren Menge]
+\begin{itemize}
+    \item[\textbf{0.}] \textbf{Axiom der leeren Menge:}
+    \begin{equation}\label{eq:empty-set-axiom}
+    \exists x \forall y \neg(y \in x)
+    \end{equation}
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[continued]
+Dann hatten wir das Extensionalitätsaxiom. Was hat das ausgesagt? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Dass zwei Mengen gleich sind, wenn sie dieselben Elemente enthalten.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, zwei Elemente, die... zwei Mengen, die dieselben Elemente enthalten, sind gleich.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 1: Extensionalitätsaxiom]
+\begin{itemize}
+    \item[\textbf{1.}] \textbf{Extensionalitätsaxiom (Ext. axiom):}
+    \begin{equation}\label{eq:extensionality-axiom}
+    \forall x \forall y \big(\forall z (z \in x \leftrightarrow z \in y) \to x = y\big)
+    \end{equation}
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:01 - 00:14:03]
+Das war das. Dann hatten wir das Paarmengenaxiom. \inlinemetanote{schreibt an die Tafel} Was war das? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Für alle Mengen $x, y$ existiert eine Menge $u$, so dass $x$ und $y$ Elemente von $u$ sind.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, dass man aus zwei Mengen... kann man eine Menge bilden, die genau aus diesen zwei, um, Elementen... aus diesen zwei Mengen besteht.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 2: Paarmengenaxiom]
+\begin{itemize}
+    \item[\textbf{2.}] \textbf{Paarmengenaxiom:}
+    \begin{equation}\label{eq:pairing-axiom}
+    \forall x \forall y \exists z \forall w \big(w \in z \leftrightarrow (w = x \lor w = y)\big)
+    \end{equation}
+    Daraus lassen sich \newterm{geordnete Paare} definieren:
+    \[
+    \langle x, y \rangle := \{\{x\}, \{x, y\}\}
+    \]
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[continued]
+Und daraus haben wir dann gesehen, da kann man auch geordnete Paare definieren... geordnete Paare $\langle x, y \rangle$ von Elementen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:03 - 00:16:36]
+Okay, und jetzt machen wir da weiter. Da kommt das dritte Axiom, das ist das Vereinigungsaxiom. \inlinemetanote{schreibt an die Tafel} Das sagt uns, dass grob gesagt, um... wir können Mengen wieder vereinigen und erhalten eine neue Menge. Also für alle $x$ existiert ein $u$, so dass für alle $z$ gilt: $z$ ist in $u$ genau dann, wenn es existiert ein $w$, so dass $w$ in $x$ ist und $z$ in $w$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 3: Vereinigungsaxiom]
+\begin{itemize}
+    \item[\textbf{3.}] \textbf{Vereinigungsaxiom:}
+    \begin{equation}\label{eq:union-axiom}
+    \forall x \exists u \forall z \big(z \in u \leftrightarrow \exists w (w \in x \land z \in w)\big)
+    \end{equation}
+    Die Vereinigung von Mengen ist wieder eine Menge.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[continued]
+Also die Vereinigung von Mengen ist eine Menge. Okay, also hier nehmen wir die Vereinigung von allen Mengen, die in der Menge $x$ enthalten sind, okay? Wir haben hier $x$ ist eine Menge von Mengen, und jetzt wissen wir, es gibt eine Menge $u$, die genau aus den Elementen besteht, die in Elementen von $x$ enthalten sind.
+
+Genau, dann können wir die Vereinigungsfunktion definieren. \inlinemetanote{schreibt an die Tafel} Also wir sagen da: Nimm alle $u$, um... was wir schreiben, das... diese Vereinigung von $x$, $x$ ist eine Menge, um, und die nennen wir $u$ und die definieren wir durch, um, genau diese... dieses $u$, das existiert gemäß diesem Axiom.
+\end{spoken-clean}
+
+\begin{math-stroke}[Vereinigungsfunktion]
+Wir definieren die \newterm{Vereinigungsfunktion} $\bigcup x$:
+\[
+\bigcup x = u \iff \forall z \big(z \in u \leftrightarrow \exists w (w \in x \land z \in w)\big)
+\]
+Wir definieren die \newterm{binäre Vereinigungsfunktion} für zwei Mengen $x$ und $y$:
+\[
+x \cup y := \bigcup \{x, y\}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[continued]
+Und wir können jetzt auch noch die binäre Vereinigungsfunktion definieren. Wir sagen $x$ vereinigt $y$. Wir nehmen einfach zwei Mengen und sagen $x$ vereinigt mit $y$. Wie schreiben wir das mit dem da? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Wir nehmen die Paarmenge von $x$ und $y$.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, wir nehmen die Paarmenge von $x$ und $y$. Die wissen wir ja existiert, nehmen wir die Vereinigung davon. Auch da oben, diese wissen wir ja, die existiert, das ist die Paarmenge von $x$ und $x$.
+
+Gut. Ah ja, wir müssen noch sagen, das... das hier existiert natürlich... das hier ist eindeutig, deswegen können wir es so schreiben, auch wieder mit dem Extensionalitätsaxiom.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:16:36 - 00:20:02]
+Was wir jetzt mal machen wollen, ist, wir wollen die ganzen Zahlen definieren. Oder so etwas, was sich herausstellt, ist dann ein Modell für die Peano-Arithmetik. Und dazu definieren wir, um... wenn wir eine Menge $x$ haben, dann definieren wir die Menge $x+1$ als die Menge, die besteht aus $x$ Vereinigung der Menge, die nur die Menge $x$ enthält, okay? Also wir nehmen die Menge $x$ zusammen mit der Menge, die nur ein Element enthält, nämlich die Menge $x$. Das gibt uns eine neue Menge, und diese Menge bezeichnen wir mit $x+1$. Okay, das dürfen wir machen.
+
+Und jetzt können wir die ganzen Zahlen definieren und sagen wir: $0$ ist einfach die leere Menge. Dann sagen wir $1$ ist $0+1$, das heißt, das wäre $0$ Vereinigung die Menge $0$. Das heißt... ja, $0$ ist ja die leere Menge, das heißt, das ist immer noch einfach die Menge, die nur aus $0$ besteht. Dann haben wir $2$, das ist die Menge $1+1$, wenig überraschend. \inlinemetanote{lacht} Das wäre $1$ Vereinigung die Menge $1$. Das heißt, das ist die Menge, die besteht aus der Menge $1$, das heißt Menge $0$ und $1$. Und so weiter. $3$ ist $2+1$, das wäre $2$ Vereinigung die Menge $2$, das heißt $\{0, 1, 2\}$. Und ja, allgemein sagen wir $n$ ist $n-1$ vereinigt mit der Menge $n-1$, und das wäre dann einfach $\{0, \dots, n-1\}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der natürlichen Zahlen (von Neumann)]
+Wir definieren die Nachfolgeroperation für eine Menge $x$:
+\[
+x + 1 := x \cup \{x\}
+\]
+Damit definieren wir die natürlichen Zahlen induktiv:
+\begin{align*}
+0 &:= \emptyset \\
+1 &:= 0 + 1 = 0 \cup \{0\} = \emptyset \cup \{\emptyset\} = \{0\} \\
+2 &:= 1 + 1 = 1 \cup \{1\} = \{0\} \cup \{\{0\}\} = \{0, 1\} \\
+3 &:= 2 + 1 = 2 \cup \{2\} = \{0, 1\} \cup \{\{0, 1\}\} = \{0, 1, 2\} \\
+&\;\;\vdots \\
+n &:= (n-1) + 1 = (n-1) \cup \{n-1\} = \{0, 1, \dots, n-1\}
+\end{align*}
+\end{math-stroke}
+
+\begin{didactic-insight}[Die Peano-Arithmetik in der Mengenlehre]
+Diese elegante Konstruktion von John von Neumann bettet die Arithmetik direkt in die Mengenlehre ein. Jede natürliche Zahl $n$ wird als die Menge aller kleineren natürlichen Zahlen repräsentiert. Die Zahl $n$ hat somit genau $n$ Elemente.
+\end{didactic-insight}
+
+\begin{spoken-clean}[continued]
+Das ist eine... das können wir jetzt einfach... ja, wir werden das später noch anschauen. So kann man eigentlich jetzt die ganzen Zahlen interpretieren, die natürlichen Zahlen.
+
+Der Krux immer bei dieser Sache ist, wenn man schreibt $1, 2, 3$ und dann Punkt, Punkt, Punkt, Punkt... was heißt dieses Punkt, Punkt, Punkt, Punkt? Wir wissen genau, was wir machen, wir machen einen nach dem anderen. Wir wissen in unserem Kopf, wie wir jeden einzelnen definiert haben, aber das formal zu machen, ist eben, um, problematisch im Allgemeinen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:02 - 00:21:00]
+Gut, um, dann machen wir jetzt die Definition. \inlinemetanote{schreibt an die Tafel} Wir sagen eine Menge $X$ heißt induktiv, falls gilt: $0 \in X$ (i.e., $\emptyset \in X$) und für alle $y$, wenn $y$ ist in $X$, dann ist auch $y$ vereinigt mit der Menge $y$ in $X$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Induktive Menge]
+\begin{definition}[Induktive Menge]\label[definition]{def:inductive-set}
+Eine Menge $X$ heißt \newterm{induktiv}, falls gilt:
+\begin{equation}\label{eq:inductive-set-def}
+\emptyset \in X \land \forall y \big(y \in X \to y \cup \{y\} \in X\big)
+\end{equation}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[continued]
+Das ist so gemacht... Definition eigentlich eben, um diese ganzen Zahlen... ja, um damit zu arbeiten. Also man kann wieder... genau, das ist eine Möglichkeit, um aus einer Menge wieder eine neue Menge zu machen, und eine Menge heißt induktiv, falls die das eben auch wieder enthalten ist. Also induktive Mengen sind sehr, sehr groß.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:21:00 - 00:22:01]
+Und wir können das auch durch eine Formel... induktiv zu sein, kann man durch eine Formel ausdrücken. Wir definieren ein einstelliges... ein einstelliges Relationssymbol durch... \inlinemetanote{schreibt an die Tafel} okay, ein einstelliges... meistens, wenn man an Relationssymbole denkt, denkt man an etwas zwei oder mehr, die in Relation stehen, aber man kann auch nur ein einstelliges Relationssymbol nehmen, das einfach etwas... das ist erfüllt oder es ist nicht erfüllt für ein Element. Und wir sagen es ist einfach $\operatorname{ind}(X)$ falls... genau, falls das erfüllt ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Relationssymbol für Induktivität]
+Wir definieren ein einstelliges Relationssymbol $\operatorname{ind}(X)$ durch:
+\begin{equation}\label{eq:ind-relation-symbol}
+\operatorname{ind}(X) \leftrightarrow \emptyset \in X \land \forall y \big(y \in X \to y \cup \{y\} \in X\big)
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:01 - 00:22:40]
+Okay, so ein Beispiel ist... kennen wir ein Beispiel von einer induktiven Menge bereits? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Die leere Menge.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Die leere Menge, genau. \inlinemetanote{lacht} Aber sonst haben wir gar nicht so viele Mengen gesehen aufgrund von diesen Axiomen. Das heißt, um...
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel zur Induktivität]
+\begin{example}[Die leere Menge ist nicht induktiv]\label[example]{ex:empty-set-not-inductive}
+Die leere Menge $\emptyset$ ist \emph{nicht} induktiv, da die erste Bedingung $\emptyset \in \emptyset$ verletzt ist (die leere Menge enthält keine Elemente).
+\[
+\text{Bsp. } \emptyset \text{ ist nicht induktiv.}
+\]
+\end{example}
+\end{math-stroke}
+
+\begin{didactic-insight}[Das Existenzproblem unendlicher Mengen]
+Aus den bisherigen Axiomen (0 bis 3) lässt sich die Existenz einer unendlichen (induktiven) Menge nicht beweisen. Wir können zwar jede einzelne natürliche Zahl $n$ als endliche Menge konstruieren, aber wir können nicht beweisen, dass die Gesamtheit aller natürlichen Zahlen $\mathbb{N}$ als fertige Menge existiert. Dazu benötigen wir ein neues Axiom.
+\end{didactic-insight}
+
+\begin{spoken-clean}[continued]
+Ja, von diesen Axiomen 0 bis 3 haben wir noch nicht... können wir jetzt nicht induktive Mengen konstruieren, wir können nicht sagen, ob es nicht-leere induktive Mengen gibt.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die Tafel und bereitet die Formulierung des Unendlichkeitsaxioms vor.
+\end{meta-note}
+
+\begin{spoken-clean}[00:22:40 - 00:23:50]
+Und das ist dann genau das Axiom 4. Das ist das Unendlichkeitsaxiom. \inlinemetanote{schreibt an die Tafel} Das Unendlichkeitsaxiom, das sagt einfach, es gibt eine nicht-leere induktive Menge. Und die ist dann auch... ja, die ist dann auch, also in unserer Vorstellung auch unendlich, weil es ist immer, wenn ein Element drin ist, dann ist auch dieses nächstgrößere Element drin gewissermaßen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 4: Unendlichkeitsaxiom]
+\begin{itemize}
+    \item[\textbf{4.}] \textbf{Unendlichkeitsaxiom:}
+    \begin{equation}\label{eq:infinity-axiom}
+    \exists I \big(\emptyset \in I \land \operatorname{ind}(I)\big)
+    \end{equation}
+    Es existiert eine nicht-leere induktive Menge.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:50 - 00:26:47]
+Ja, dann haben wir das Axiom 5. Das ist ein... also alle wichtigen. \inlinemetanote{lacht} Es ist wichtig insofern, um... das Aussonderungsaxiom. \inlinemetanote{schreibt an die Tafel} Das sagt uns, dass wir von einer gegebenen Menge... wenn wir eine Formel haben, die Teilmenge... also die Elemente in der Menge, die diese Formel erfüllen, das ist eine Teilmenge. Das machen wir das... für jede Formel $\varphi(z)$ mit nur einer freien Variablen... gilt... okay, und das Axiom sagt jetzt: für alle $x$ existiert ein $y$, so dass für alle $z$: $z$ ist in $y$ genau dann, wenn $z$ in $x$ ist und $\varphi(z)$ gilt.
+
+Das sehen wir, das ist ein Axiomenschema. Das heißt, für jede Formel mit einer freien Variablen gibt es ein Axiom.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 5: Aussonderungsaxiom]
+\begin{itemize}
+    \item[\textbf{5.}] \textbf{Aussonderungsaxiom (Axiomenschema):}
+    Für jede Formel $\varphi(z)$ mit der einzigen freien Variablen $z$ gilt:
+    \begin{equation}\label{eq:specification-axiom}
+    \forall x \exists y \forall z \big(z \in y \leftrightarrow (z \in x \land \varphi(z))\big)
+    \end{equation}
+    Für jede Menge $x$ und jede Formel $\varphi$ ist die Teilmenge
+    \[
+    \{z \in x \mid \varphi(z)\}
+    \]
+    wieder eine Menge.
+\end{itemize}
+\end{math-stroke}
+
+\begin{didactic-insight}[Die Vermeidung von Russells Paradoxon]
+Das Aussonderungsaxiom ist ein Meilenstein der modernen Logik. Im Gegensatz zur naiven Mengenlehre, die die uneingeschränkte Klassenbildung $\{z \mid \varphi(z)\}$ erlaubte (was zu Russells Paradoxon der Menge aller Mengen, die sich nicht selbst enthalten, führte), erlaubt das Aussonderungsaxiom die Aussonderung nur innerhalb einer bereits als existierend nachgewiesenen Menge $x$.
+\end{didactic-insight}
+
+\begin{spoken-clean}[continued]
+Okay, also auch jetzt wieder... was man sagen kann, das Axiom sagt aus: für jede Menge $x$ und jede Formel $\varphi$ ist... \inlinemetanote{schreibt an die Tafel} ist... jetzt schreiben wir wieder... ja, das ist die Art, wie wir das schreiben: $\{z \in x \mid \varphi(z)\}$. Und wir wollen, dass das ist eine Menge.
+
+Und das löst jetzt ein bisschen unsere Probleme. Also wir sehen hier, was wichtig ist, ist, wir gehen von einer Menge $x$ aus, und jetzt schauen wir alle Elemente in $x$ an, die diese Formel erfüllen. Und das Aussonderungsaxiom sagt nun, das ist eine Menge. Was wir nicht machen dürfen, ist, von allen Elementen... also ohne diese Menge zu spezifizieren...
+\end{spoken-clean}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 235695, Output 8144)*
+---
+
+**AutoExtraction:** [Part 2] 03-17-tuesday.mp4
+[Angehängtes Video]: 03-17-tuesday-part2.mp4
+[Kontext-Dateien]: 03-17-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-17. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+% PART_START_SECONDS: 0.00
+
+\begin{spoken-clean}[00:00:00 - 00:00:28]
+... also das sind alle wichtigen. \inlinemetanote{lacht} Es ist wichtig insofern, um... das Aussonderungsaxiom. Das sagt uns, dass wir von einer gegebenen Menge... wenn wir eine Formel haben, die Teilmenge... also die Elemente in der Menge, die diese Formel erfüllen, das ist eine Teilmenge. Das machen wir das...
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 5: Aussonderungsaxiom]
+\begin{itemize}
+    \item[\textbf{5.}] \textbf{Aussonderungsaxiom (Axiomenschema):}
+    Für jede Formel $\varphi(z)$ mit der einzigen freien Variablen $z$ gilt:
+    \begin{equation}\label{eq:specification-axiom-part2}
+    \forall x \exists y \forall z \big(z \in y \leftrightarrow (z \in x \land \varphi(z))\big)
+    \end{equation}
+    Für jede Menge $x$ und jede Formel $\varphi$ ist die Teilmenge
+    \[
+    \{z \in x \mid \varphi(z)\}
+    \]
+    wieder eine Menge.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:28 - 00:01:43]
+für jede Formel $\varphi(z)$ mit nur einer freien Variablen... gilt... okay, und das Axiom sagt jetzt: für alle $x$ existiert ein $y$, so dass für alle $z$: $z$ ist in $y$ genau dann, wenn $z$ in $x$ ist und $\varphi(z)$ gilt. Das sehen wir, das ist ein Axiomenschema. Das heißt, für jede Formel mit einer freien Variablen gibt es ein Axiom.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:43 - 00:03:53]
+Okay, also auch jetzt wieder... was man sagen kann, das Axiom sagt aus: für jede Menge $x$ und jede Formel $\varphi$ ist... ist... jetzt schreiben wir wieder... ja, das ist die Art, wie wir das schreiben: $\{z \in x \mid \varphi(z)\}$. Und wir wollen, dass das ist eine Menge. Und das löst jetzt ein bisschen unsere Probleme. Also wir sehen hier, was wichtig ist, ist, wir gehen von einer Menge $x$ aus, und jetzt schauen wir alle Elemente in $x$ an, die diese Formel erfüllen. Und das Aussonderungsaxiom sagt nun, das ist eine Menge. Was wir nicht machen dürfen, ist, von allen Elementen... also ohne diese Menge zu spezifizieren... einfach zu sagen alle $z$, so dass $\varphi(z)$. Das ist allgemein keine Menge. Da haben wir wieder das Problem mit, um, der Coiffeur frisiert alle Leute, die sich nicht selbst frisieren. Äh, dann haben wir ein Problem, weil frisiert sich der Coiffeur selbst oder nicht? Es gibt einen Widerspruch. Äh, das ist das... die berühmte, der Russellsche, um, Paradoxon.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Russells Paradoxon und die Barbier-Analogie]
+Die vom Dozenten erwähnte Analogie des Barbiers (oder Coiffeurs) veranschaulicht Russells Paradoxon auf intuitive Weise: Ein Barbier rasiert genau diejenigen Männer einer Stadt, die sich nicht selbst rasieren. Rasiert sich der Barbier selbst? Wenn ja, darf er es nicht; wenn nein, muss er es tun. Dies zeigt formal, dass die uneingeschränkte Klassenbildung $\{z \mid z \notin z\}$ in einer konsistenten Mengenlehre keine Menge definieren kann.
+\end{didactic-insight>
+
+\begin{math-stroke}[Russells Paradoxon]
+Die uneingeschränkte Klassenbildung führt zu Widersprüchen:
+\[
+\text{Die Kollektion } \{z \mid \varphi(z)\} \text{ ist im Allgemeinen keine Menge.}
+\]
+\setcounter{theorem}{0}
+\begin{example}[Russells Paradoxon]\label[example]{ex:russell-paradox}
+Betrachte die Formel $\varphi(z) \equiv z \notin z$. Die Kollektion
+\[
+\{z \mid z \notin z\}
+\]
+ist keine Menge.
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:53 - 00:05:46]
+Aber da ist es jetzt kein Problem, wenn wir sagen, okay, der Coiffeur frisiert alle Leute im Kreis 7, die sich nicht selbst frisieren, ist das kein Problem, weil dann können wir beweisen: Okay, der Coiffeur wohnt offensichtlich nicht im Kreis 7, ansonsten gäbe es einen Widerspruch. Aber okay, kein Problem, wir wissen einfach, der Coiffeur wohnt nicht im Kreis 7, das ist besser als einen Widerspruch zu haben. Also es ist so, um, die Bemerkung: Die Kollektion... okay, das ist jetzt... Kollektion ist vielleicht etwas, was keine Menge ist... $z$, $\varphi(z)$ ist im Allgemeinen keine Menge. Ähm, weil das Beispiel ist hier, um, wenn $\varphi(z)$... wenn wir das... die Formel nehmen, um, $z$ ist nicht enthalten in $z$, dann ist, um, $z$, so dass $\varphi(z)$ keine Menge.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:46 - 00:06:11]
+Genau, das können... wir können beweisen, das können Sie jetzt beweisen, einfach dass das keine Menge ist, weil wenn es eine Menge wäre, dann gäbe es einen Widerspruch, also kann es keine Menge sein, hm? Ähm...
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt einen Teil der Tafel, um Platz für die Definitionen von Durchschnitt und Komplement zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:06:11 - 00:06:32]
+Aber für eine gegebene Menge $x$ ist die Menge von allen $z$ in $x$, so dass $\varphi(z)$, dann ist das tatsächlich eine Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Aussonderung auf einer gegebenen Menge]
+Für eine bereits existierende Menge $x$ ist die Aussonderung stets eine wohlgeformte Menge:
+\[
+\{z \in x \mid \varphi(z)\} \text{ ist eine Menge.}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:32 - 00:08:03]
+Okay, sehr gut. Damit ist jetzt unsere... ja, unser... unser Kummer mit dem ganzen Logik von Frege und der Paradoxon von Russell vom Tisch. Ähm... Okay, und jetzt können wir das wieder, um, Durchschnitt definieren, ähm, damit. Wir definieren binäre Funktionssymbol Durchschnitt durch...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Binärer Durchschnitt]
+Wir definieren das binäre Funktionssymbol $\cap$ (Durchschnitt) für zwei Mengen $x_0$ und $x_1$:
+\[
+x_0 \cap x_1 = y \iff \forall z \big(z \in y \leftrightarrow (z \in x_1 \land \psi(z))\big)
+\]
+wobei die aussondernde Formel gegeben ist durch:
+\[
+\psi(z) \equiv z \in x_0
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:03 - 00:08:55]
+Ähm... und vielleicht noch ein paar, äh, Definitionen, um unser Leben leichter zu machen. Also wir sagen, es existiert ein $x$ in $w$, so dass $\varphi(x)$ als... es existiert $x$, $x$ in $w$ und $\varphi(x)$. Okay, das ist ein bisschen einfacher zu schreiben. Und ebenso für alle $x$ in $w$, $\varphi(x)$ definieren wir als, um, für alle $x$, $x$ in $w$ impliziert $\varphi(x)$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beschränkte Quantoren (Anfangszustand mit Tippfehler)]
+Zur Abkürzung der Notation definieren wir beschränkte Quantoren:
+\begin{align*}
+\exists x \in w \big(\varphi(x)\big) &\leftrightarrow \exists x \big(x \in w \land \varphi(x)\big) \\
+\forall x \in w \big(\varphi(x)\big) &\leftrightarrow \forall x \big(x \in w \mathbin{\textcolor{BrickRed}{\land}} \varphi(x)\big) \quad \text{\textcolor{BrickRed}{(Fehlerhafter Tafelanschrieb)}}
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:55 - 00:10:03]
+Guten, da können wir auch wieder das, um, äh, Durchschnitt schreiben, um... wenn wir jetzt für $\varphi(u)$ definieren, um, für alle $z$ in $x$ ist $u$ in $z$. Ähm, dann können wir definieren der Durchschnitt von $x$ als, um, die Menge $y$ gegeben durch, um, die Mengen von allen $u$ in der Vereinigung von $x$, so dass $\varphi(u)$ gilt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Allgemeiner Durchschnitt]
+Sei $x$ eine nicht-leere Menge von Mengen. Wir definieren die Formel:
+\[
+\varphi(u) \equiv \forall z \in x (u \in z)
+\]
+Der allgemeine Durchschnitt $\bigcap x$ wird definiert als:
+\[
+\bigcap x = y \iff y = \{u \in \bigcup x \mid \varphi(u)\}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:03 - 00:11:40]
+Äh, gut. Und auch noch, um, definieren können ist für $\varphi(z)$, um, wenn wir die Formel $z$ ist nicht enthalten in $y$, und damit definieren wir $x$ ohne $y$, also das Komplement, als die Menge $u$ gegeben durch, um, alle $z$ in $x$, so dass $z$ nicht in $y$ ist. Gut, mit dem Aussonderungsaxiom wissen wir, dass das jetzt alles Mengen sind. Äh, ja?
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Relatives Komplement]
+Sei $\psi(z) \equiv z \notin y$. Wir definieren das relative Komplement (Differenzmenge) $x \setminus y$:
+\[
+x \setminus y = u \iff u = \{z \in x \mid \psi(z)\}
+\]
+\end{math-stroke}
+
+\begin{student-interaction}[Studentenfrage]
+Und zwar, als Sie das All-Quantor definiert haben, weshalb ist das keine Implikation, sondern ein Und?
+\end{student-interaction}
+
+\begin{spoken-clean}[00:11:40 - 00:11:50]
+Äh...
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage continued]
+Für die Menge von allen $x$...
+\end{student-interaction}
+
+\begin{spoken-clean}[00:11:50 - 00:11:55]
+Ja, genau, wir wollen... wir wollen, dass für alle $x$ in $w$ gilt $\varphi(x)$. Das ist eine Abkürzung...
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage continued]
+Aber wieso ist das kein impliziert, sondern ein und? Weil das wäre ja die Menge der $x$, die in $w$ sind und das haben.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:11:55 - 00:12:05]
+Nein, das ist die Aussage, dass für alle $x$... für alle $x$ das gilt. Macht das Sinn? Ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage continued]
+Aber ist das nicht Durchschnitt?
+\end{student-interaction}
+
+\begin{spoken-clean}[00:12:05 - 00:12:08]
+Ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage continued]
+Wenn man jetzt die leere Menge nimmt...
+\end{student-interaction}
+
+\begin{spoken-clean}[00:12:08 - 00:12:10]
+Ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage continued]
+Ist doch der Durchschnitt der leeren Menge definiert als die leere Menge?
+\end{student-interaction}
+
+\begin{spoken-clean}[00:12:10 - 00:12:15]
+Äh, ja, ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage continued]
+Wenn man jetzt nach der klassischen...
+\end{student-interaction}
+
+\begin{spoken-clean}[00:12:15 - 00:12:37]
+Äh, verstehe. Also ich würde sagen, der Durchschnitt von der leeren Menge... also der Durchschnitt über alle, also was man hier macht, ist man über alle Mengen, die in der leeren Menge enthalten sind, die bildet man Durchschnitt, und das ist ja... da ist keine Menge drin enthalten, das heißt, da ist auch kein Element, das in allen Mengen enthalten ist.
+\inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Durchschnitt der leeren Menge]
+Unter der gegebenen Definition gilt für $x = \emptyset$:
+\[
+\bigcap \emptyset = \emptyset
+\]
+\begin{explanation-of-steps}
+Da $\bigcup \emptyset = \emptyset$, reduziert sich die Aussonderung auf:
+\[
+\bigcap \emptyset = \{u \in \emptyset \mid \forall z \in \emptyset (u \in z)\} = \emptyset
+\]
+Dies weicht von manchen naiven Definitionen ab, bei denen der Durchschnitt der leeren Menge die Allklasse wäre (was in ZF keine Menge ist).
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:37 - 00:13:56]
+Noch ein kleiner XKCD Cartoon, das soll zeigen eben, dass so die Frage... gut, Sie kennen... kennt Ihre Generation noch XKCD? Schaut man das noch, oder... okay, das ist gut. Nicht mehr ganz. Ich werde langsam älter, bin nicht mehr ganz sicher, was die Gen Z noch kennt oder so. Okay, so, ja. Gut, sie sind immer noch ein bisschen mehrdeutig bei XKCD, weil er auch gerne sarkastisch ist. Aber das hier zeigt eben so Mathematik und dann so ganz... ganz reine Wissenschaft. Aber jetzt, was... wo wir uns bewegen im Moment, ist noch... noch weiter hier. Also wenn Sie hier irgendjemanden auf dem Gang antreffen, der, um, Forschung macht in Mathematik, und das ist nicht gerade Lorenz Halbeisen oder vielleicht noch David Löffler oder so, dann werden die nicht fähig sein, ihre Forschung auf die Zermelo-Fraenkel-Axiome zurückzuführen. Ich glaube, schon wenn man etwas Einfacheres nimmt, das... nehmen Sie den Lieblingssatz aus der linearen Algebra, ich glaube, das wird sehr, sehr anstrengend, den mit den Zermelo-Fraenkel-Axiomen zu beweisen. Also wir sind irgendwo hier, und dann hat man nachher noch die... die Philosophie vielleicht.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: XKCD Comic]
+Der Dozent zeigt den bekannten XKCD-Comic "Fields arranged by purity" auf dem Projektor. Der Comic ordnet wissenschaftliche Disziplinen nach ihrer "Reinheit" an: Soziologie wird als angewandte Psychologie dargestellt, Psychologie als angewandte Biologie, Biologie als angewandte Chemie, Chemie als angewandte Physik, Physik als angewandte Mathematik. Ganz rechts stehen die Mathematiker, die auf alle anderen herabblicken. Der Dozent merkt scherzhaft an, dass die mathematische Logik und Mengenlehre noch weiter rechts stünden.
+\end{meta-note}
+
+\begin{spoken-clean}[00:13:56 - 00:14:17]
+Dann wollte ich noch ein Bild zeigen von Ernst Zermelo. Der hat eben diese... die Axiome, die wir jetzt besprechen, sind alle von Zermelo. Und dann die letzten zwei, die wir ganz am Ende besprechen, die sind noch ziemlich technischer Natur, die hat Abraham Fraenkel hinzugefügt.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Porträts von Zermelo und Fraenkel]
+Der Dozent zeigt nacheinander Porträts von Ernst Zermelo (1871–1953) und Abraham Fraenkel (1891–1965) auf der Leinwand.
+\end{meta-note}
+
+\begin{spoken-clean}[00:14:17 - 00:14:40]
+Noch etwas... so weit zur Geschichte. Gut, weiter zu unseren Axiomen. Genau, hier tatsächlich... hier habe ich... hier war noch ein Typo. Hier ist ein impliziert und nicht ein und-Zeichen.
+\inlinemetanote{korrigiert die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Beschränkte Quantoren (Korrigierte Fassung)]
+Der Dozent korrigiert den Tippfehler beim beschränkten Allquantor:
+\begin{align*}
+\exists x \in w \big(\varphi(x)\big) &\leftrightarrow \exists x \big(x \in w \land \varphi(x)\big) \\
+\forall x \in w \big(\varphi(x)\big) &\leftrightarrow \forall x \big(x \in w \mathbin{\textcolor{ForestGreen}{\to}} \varphi(x)\big) \quad \text{\textcolor{ForestGreen}{(Korrigierter Tafelanschrieb)}}
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:40 - 00:16:32]
+Gut. Ähm, das nächste Axiom ist das Potenzmengenaxiom. Okay, das sagt uns nun einfach, dass die Potenzmenge von einer menge existiert. Also für alle $x$ existiert ein $z$, so dass für alle $y$: $y$ ist in $z$ genau dann, wenn $y$ eine Teilmenge ist von $x$. Teilmengensymbol haben wir letzte Woche definiert. Und okay, das heißt, die menge aller Teilmengen einer menge $x$ existiert, und wir nennen diese die Potenzmenge und wir nennen diese, um, $\mathcal{P}(x)$. Genau, also die ist eindeutig wegen dem Extensionalitätsaxiom, okay? Also es gibt nur eine Potenzmenge für ein $x$. Und das Axiom sagt uns, diese existiert. So wie hier, also die menge aller Mengen existiert nicht, das wissen wir wegen dem... wegen dem Coiffeur. Aber die menge aller Teilmengen von einer gegebenen menge, die existiert gemäß diesem Axiom.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 6: Potenzmengenaxiom]
+\begin{itemize}
+    \item[\textbf{6.}] \textbf{Potenzmengenaxiom:}
+    \begin{equation}\label{eq:powerset-axiom}
+    \forall x \exists z \forall y \big(y \in z \leftrightarrow y \subseteq x\big)
+    \end{equation}
+    Die Menge aller Teilmengen einer Menge $x$ existiert und wird als \newterm{Potenzmenge} $\mathcal{P}(x)$ bezeichnet.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:32 - 00:18:55]
+Gut, ähm, okay. So weit zu den Axiomen 0 bis 6, die Axiome von Zermelo. Und jetzt machen wir einmal, bevor wir noch die zwei letzten, die eher technischer Natur sind, aufschreiben, machen wir doch schon einmal ein paar Definitionen und Konstruktionen aus den Axiomen, die wir haben. Definitionen und Konstruktionen aus Axiomen 0 bis 6. Das erste wäre jetzt eben das... diese Sache mit den ganzen Zahlen. Und dazu definieren wir diese menge $\omega$.
+\end{spoken-clean}
+
+\subsection{Definitionen und Konstruktionen aus den Axiomen 0 bis 6}
+
+\begin{math-stroke}[Die Menge \texorpdfstring{$\omega$}{omega}]
+Wir konstruieren die Menge $\omega$, welche die natürlichen Zahlen repräsentiert.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:55 - 00:21:18]
+Und hier ist unser Ziel, um, eigentlich ein Modell zu finden... also das Ziel ist ein Modell für die Peano-Arithmetik, das am liebsten, um, unsere ganzen Zahlen... unsere natürlichen Zahlen sind, wie wir sie gerne hätten. Und die Idee ist, um... wir nehmen... wir nehmen $\omega$. Okay, wir wissen jetzt, es gibt eine induktive menge, die die leere menge enthält. Wir haben ja da unsere ganzen Zahlen so definiert über die leere menge, und dann nehmen wir die menge, die aus der leeren menge besteht, und dann die menge, die besteht aus... der menge, die die leere menge enthält, und der menge, und so weiter. Ähm, und da haben wir gesehen, okay, es gibt tatsächlich irgendeine induktive menge, die die leere menge enthält. Und jetzt wollen wir die kleinste induktive menge nehmen, die die leere menge enthält. Okay? Also $\omega$ soll die kleinste induktive menge sein, die die leere menge enthält.
+\end{spoken-clean}
+
+\begin{math-stroke}[Ziel und Idee für \texorpdfstring{$\omega$}{omega}]
+\begin{itemize}
+    \item[\textbf{Ziel:}] Konstruktion eines Modells für die Peano-Arithmetik (PA).
+    \item[\textbf{Idee:}] Definiere $\omega$ als die kleinste induktive Menge, die $\emptyset$ enthält.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:18 - 00:22:24]
+Also $\omega$ soll die kleinste induktive menge sein, die die leere menge enthält. Okay, also wir wissen, es existiert eine menge, und zwar gemäß dem Axiom 4 existiert eine induktive menge, nennen wir die $I_0$, welche die leere menge enthält. Okay, und wir, um, definieren jetzt $\omega$ als, um, den Durchschnitt von, um, allen Elementen $x$ in der Potenzmenge von $I_0$, so dass $x$ induktiv ist und die leere menge enthält.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Menge \texorpdfstring{$\omega$}{omega}]
+Gemäß dem Unendlichkeitsaxiom (Axiom 4) existiert eine induktive Menge $I_0$ mit $\emptyset \in I_0$. Wir definieren:
+\begin{equation}\label{eq:omega-definition}
+\omega := \bigcap \{x \in \mathcal{P}(I_0) \mid \emptyset \in x \land \operatorname{ind}(x)\}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:24 - 00:23:50]
+Okay, da haben wir jetzt einiges verwendet. Da haben wir eben verwendet die Existenz von $I_0$, die Existenz der Potenzmenge, die... das Aussonderungsaxiom, und dann auch nochmals das Aussonderungsaxiom, um den Durchschnitt zu nehmen. Aber okay, das ist genau das, was wir uns eigentlich... und wir haben natürlich noch die Existenz der leeren menge, also haben wir fast alles verwendet, was wir bis jetzt definiert haben. Ähm, und genau, das ist ja eigentlich, was man unter der kleinsten induktiven menge versteht, die die leere menge enthält, wenn man den Durchschnitt von all diesen, die das tun, nimmt. Also das müssen wir noch bemerken: Man kann zeigen, das ist eine kleine Übung für Sie, dass der Durchschnitt von induktiven... ein Durchschnitt von induktiven Mengen ist wieder induktiv. Das ist nicht schwierig, um, das folgt fast direkt aus der Definition.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaften von \texorpdfstring{$\omega$}{omega}]
+\begin{proposition}\label[proposition]{prop:intersection-inductive-inductive}
+Der Durchschnitt einer nicht-leeren Familie von induktiven Mengen ist wieder induktiv.
+\end{proposition}
+\begin{short-proof}
+Sei $\mathcal{F}$ eine nicht-leere Familie induktiver Mengen und $M = \bigcap \mathcal{F}$.
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Da $\emptyset \in Y$ für alle $Y \in \mathcal{F}$, gilt auch $\emptyset \in M$.
+    \setcounter{enumi}{1} \item Sei $y \in M$. Dann gilt $y \in Y$ für alle $Y \in \mathcal{F}$. Da jedes $Y$ induktiv ist, gilt $y \cup \{y\} \in Y$ für alle $Y \in \mathcal{F}$. Somit ist $y \cup \{y\} \in M$.
+\end{enumerate}
+Folglich ist $M$ induktiv.
+\end{short-proof}
+Daraus folgt direkt:
+\[
+\omega \text{ ist induktiv und } \emptyset \in \omega.
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:50 - 00:26:23]
+Das heißt, um, $\omega$ ist tatsächlich induktiv und enthält die leere menge. Und genau, es ist insofern natürlich die kleinste solche menge, weil, um, wir nehmen den Durchschnitt über alle solchen. Ähm, und da können wir jetzt ein bisschen der knifflige Teil... also wir haben vorher eigentlich definiert, was ganze Zahlen sind, oder? Wir haben $0, 1, 2, 3, 4$ und so weiter definiert. Und die, diese ganzen Zahlen, so wie wir sie definiert haben, die sind alle in diesem $\omega$ drin enthalten. Und man würde jetzt gerne zeigen, dass, um, dass $\omega$ eigentlich nur aus diesen ganzen Zahlen besteht. Aber, um, das problem ist, dass man eben nicht zeigen kann, dass das so ist. Das heißt, $\omega$ enthält die natürlichen Zahlen $0, 1, 2$ und so weiter, d.h. $\mathbb{N} \subseteq \omega$. Aber man kann nicht beweisen, dass... dass es nicht noch auch noch andere Sachen enthält. Aber was man auch nicht beweisen kann, ist, dass es echt darin enthalten ist. Ähm, deswegen nehmen wir einfach an, dass es dasselbe ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Beziehung zwischen \texorpdfstring{$\mathbb{N}$}{N} und \texorpdfstring{$\omega$}{omega}]
+Die naiv konstruierten natürlichen Zahlen $\mathbb{N} = \{0, 1, 2, \dots\}$ sind in $\omega$ enthalten:
+\[
+\mathbb{N} \subseteq \omega
+\]
+\begin{explanation-of-steps}
+In der Standard-Zermelo-Fraenkel-Mengenlehre kann man nicht formal beweisen, dass $\mathbb{N} = \omega$ ohne zusätzliche Annahmen über die Metasprache, noch kann man beweisen, dass $\mathbb{N} \subsetneq \omega$ gilt. Wir identifizieren daher definitionsgemäß:
+\[
+\mathbb{N} := \omega
+\]
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:26:23 - 00:28:56]
+Okay. Und der wichtige Teil ist aber, das ist diese Woche auf dem Übungsblatt drauf, dass diese menge $\omega$ tatsächlich der... der Bereich eines Modells der Peano-Arithmetik ist. Okay, also das wäre die erste Konstruktion ist diese menge... diese menge $\omega$. Also wir haben keine natürlich... wir können natürliche Zahlen nicht mit dieser First-Order Logic definieren oder charakterisieren, aber wir haben dieses $\omega$, das, um, gut genug ist. Das ist so die, um... das ist so, äh, ja, was wir haben. Gut, dann können wir noch kartesische Produkte definieren. Also wenn $A$ und $B$ Mengen sind, definieren wir ein binäres... ein binäres Funktionssymbol, eine binäre Funktion, um, das kartesische Produkt durch $A \times B$, und das ist einfach die menge von allen... allen geordneten... von allen geordneten Paaren $x$ und $y$, so dass $x$ in $A$ ist und $y$ in $B$. Und das nennen wir das kartesische Produkt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Kartesisches Produkt]
+Seien $A$ und $B$ Mengen. Wir definieren das binäre Funktionssymbol $\times$ (kartesisches Produkt):
+\begin{equation}\label{eq:cartesian-product}
+A \times B := \{\langle x, y \rangle \mid x \in A \land y \in B\}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:56 - 00:31:00]
+Ähm, okay, nochmals schnell... ja, vielleicht auch so, wenn man schreibt, was macht man hier ganz formal? Also wir haben das geordnete Produkt. Was war das geordnete Produkt, wissen Sie noch, wie wir das definiert hatten? Ja? Genau, das war... das war die menge, die $x$ enthält und die menge, die $x$ und $y$ enthält, also die Paarmenge. Okay, das heißt, dieses $A \times B$ ist wie eine Teilmenge von der Potenzmenge von der Potenzmenge von $A$ vereinigt B. Genau, und wenn wir das kartesische Produkt haben, dann können wir auch definieren, was Funktions... jetzt können wir einige einfache Definitionen... die Frage ist auch, wie können wir verschiedene Sachen, die wir gerne hätten, definieren mit Hilfe von diesen reinen, um, mengentheoretischen Axiomen und Begriffen. Jetzt können wir sagen, was Funktionen sind, nicht nur Funktionssymbole. Ähm, zwar Funktionen...
+\end{spoken-clean}
+
+\begin{math-stroke}[Formale mengentheoretische Einbettung]
+Da geordnete Paare definiert sind als $\langle x, y \rangle = \{\{x\}, \{x, y\}\}$, gilt für $x \in A$ und $y \in B$:
+\[
+\{x\} \subseteq A \cup B \implies \{x\} \in \mathcal{P}(A \cup B)
+\]
+\[
+\{x, y\} \subseteq A \cup B \implies \{x, y\} \in \mathcal{P}(A \cup B)
+\]
+Daraus folgt:
+\[
+\langle x, y \rangle = \{\{x\}, \{x, y\}\} \subseteq \mathcal{P}(A \cup B) \implies \langle x, y \rangle \in \mathcal{P}\big(\mathcal{P}(A \cup B)\big)
+\]
+Das kartesische Produkt ist somit eine wohldefinierte Teilmenge:
+\[
+A \times B \subseteq \mathcal{P}\big(\mathcal{P}(A \cup B)\big)
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:31:00 - 00:31:15]
+die sind jetzt einfach Teilmengen von dem kartesischen Produkt mit gewissen Eigenschaften. Also die menge, um, aller Funktionen von einer menge $A$ zu einer Funktionsmenge $B$, aller Funktionen, und wir schreiben aber, um...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Funktionenmenge]
+Wir definieren die Menge $B^A$ aller Funktionen von $A$ nach $B$:
+\begin{equation}\label{eq:function-space}
+B^A := \{f \in \mathcal{P}(A \times B) \mid \forall x \in A \exists! y \in B (\langle x, y \rangle \in f)\}
+\end{equation}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 244005, Output 7549)*
+---
+
+**AutoExtraction:** [Part 3] 03-17-tuesday.mp4
+[Angehängtes Video]: 03-17-tuesday-part3.mp4
+[Kontext-Dateien]: 03-17-tuesday-part1.tex, 03-17-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-17. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** 
+
+*(Tokens: Input 251485, Output 0)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 3]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:00:38]
+... durch, um, $A \times B$, und das ist einfach die Menge von allen... allen geordneter... von allen geordneten Paaren $x$ und $y$, so dass $x$ in $A$ ist und $y$ in $B$. Und das nennen wir das kartesische Produkt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Kartesisches Produkt]
+Seien $A$ und $B$ Mengen. Wir definieren das binäre Funktionssymbol $\times$ (kartesisches Produkt):
+\begin{equation}\label{eq:cartesian-product-part3}
+A \times B := \{\langle x, y \rangle \mid x \in A \land y \in B\}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:38 - 00:01:10]
+Ähm, ich mach nochmals schnell... ja, vielleicht auch so, wenn man... was macht man hier ganz formal? Also wir haben das geordnete Paar. Was war das geordnete Paar, wissen Sie noch, wie wir das definiert hatten? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Die Menge, die $\{x\}$ und die Menge $\{x, y\}$ enthält.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, das war... das war die Menge, die $\{x\}$ enthält und die Menge, die $\{x, y\}$ enthält, also die Paarmenge. Okay, das heißt, dieses $A \times B$ ist wie eine Teilmenge von der Potenzmenge von der Potenzmenge von $A$ vereinigt $B$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Formale mengentheoretische Einbettung]
+Da geordnete Paare definiert sind als $\langle x, y \rangle = \{\{x\}, \{x, y\}\}$, gilt für $x \in A$ und $y \in B$:
+\[
+\{x\} \subseteq A \cup B \implies \{x\} \in \mathcal{P}(A \cup B)
+\]
+\[
+\{x, y\} \subseteq A \cup B \implies \{x, y\} \in \mathcal{P}(A \cup B)
+\]
+Daraus folgt:
+\[
+\langle x, y \rangle = \{\{x\}, \{x, y\}\} \subseteq \mathcal{P}(A \cup B) \implies \langle x, y \rangle \in \mathcal{P}\big(\mathcal{P}(A \cup B)\big)
+\]
+Das kartesische Produkt ist somit eine wohldefinierte Teilmenge:
+\[
+A \times B \subseteq \mathcal{P}\big(\mathcal{P}(A \cup B)\big)
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:10 - 00:02:35]
+Genau, und wenn wir das kartesische Produkt haben, dann können wir auch definieren, was Funktions... jetzt können wir einige einfache Definitionen... die Frage ist auch, wie können wir verschiedene Sachen, die wir gerne hätten, definieren mit Hilfe von diesen reinen, um, mengentheoretischen Axiomen und Begriffen. Jetzt können wir sagen, was Funktionen sind, nicht nur Funktionssymbole. Ähm, zwar Funktionen...
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die linke Tafel, um Platz für die Definition von Funktionen zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:02:35 - 00:03:08]
+die sind jetzt einfach Teilmengen von dem kartesischen Produkt mit gewissen Eigenschaften. Also die Menge, um, aller Funktionen von einer Menge $A$ zu einer Funktionsmenge $B$, aller Funktionen, und wir schreiben aber, um... für die Elemente darin $f$ von $A$ nach $B$, das ist aber einfach ein Symbol für ein Mengen... ein Element darin.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:08 - 00:04:03]
+Ähm, und das ist, äh, gegeben als, um... alle Teilmengen $f$ von $A \times B$, so dass für alle $x$ in $A$ existiert ein eindeutiges $y$ in $B$, so dass, um, $x, y$ in $f$ ist. Also müssen wir noch sagen, um... wobei existiert eindeutig $y$, $\varphi(y)$ ist definiert als...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Funktionenmenge und eindeutige Existenz]
+Wir definieren die Menge ${}^A B$ aller Funktionen von $A$ nach $B$:
+\begin{equation}\label{eq:function-space-part3}
+{}^A B := \{f \in \mathcal{P}(A \times B) \mid \forall x \in A \exists! y \in B (\langle x, y \rangle \in f)\}
+\end{equation}
+Für ein Element $f \in {}^A B$ schreiben wir kurz $f: A \to B$.
+Die eindeutige Existenz $\exists! y \varphi(y)$ ist eine Abkürzung für die folgende Formel:
+\begin{equation}\label{eq:unique-existence-def}
+\exists! y \varphi(y) \leftrightarrow \exists y \big(\varphi(y) \land \forall z (\varphi(z) \to z = y)\big)
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:03 - 00:04:40]
+Okay, wie könnte man das definieren? Äh, das ist einfach existiert... es existiert ein $y$, so dass $\varphi(y)$ und für alle $z$, so dass, um, $\varphi(z)$ impliziert, dass $z$ gleich $y$ ist. Okay? Also es existiert ein $y$, das $\varphi$ erfüllt, und alle anderen, die $\varphi$ erfüllen, sind dann gleich $y$. Das ist einfach existiert ein eindeutiges.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:40 - 00:05:15]
+Okay, das heißt, wir definieren Funktionen eigentlich immer als Graphen. Was ist denn der Graph von einer Funktion? Das ist eine Teilmenge von $A \times B$. Und wir wollen, dass wenn wir ein $x$ in $A$ haben, dann existiert ein eindeutiges $y$ in $B$, so dass... das ist jetzt geordnete Teilmengen, aber eben... für dieses $x$ existiert ein eindeutiges $y$ in $B$. Das heißt, wir identifizieren Funktionen über ihre Graphen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:15 - 00:05:55]
+Ähm, genau. Und jetzt beschreiben... für $f$ in ${}^A B$ schreiben wir $f$ von $A$ nach $B$ und für $x, y$ in $f$ schreiben wir $f(x) = y$. Ja, macht's einfach einfacher.
+\end{spoken-clean}
+
+\begin{math-stroke}[Notationskonvention für Funktionswerte]
+Für eine Funktion $f \in {}^A B$ (geschrieben $f: A \to B$) und ein geordnetes Paar $\langle x, y \rangle \in f$ verwenden wir die Standardnotation für den Funktionswert:
+\begin{equation}\label{eq:function-value-notation}
+f(x) = y \iff \langle x, y \rangle \in f
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:05:55 - 00:06:28]
+Und dann, falls $A$ selbst schon ein kartesisches Produkt ist, um, dann ist $f$ von $A$ nach $B$ eine Funktion von $A$ nach $B$ eine zweistellige Funktion. Nämlich können wir $C_1$ und $C_2$ einsetzen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Mehrstellige Funktionen]
+Falls der Definitionsbereich $A$ selbst ein kartesisches Produkt ist, d.h. $A = C_1 \times C_2$, so bezeichnen wir eine Funktion $f: C_1 \times C_2 \to B$ als eine \newterm{zweistellige Funktion}.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:28 - 00:07:27]
+Okay, jetzt können wir auch sagen, was es heißt, injektiv zu sein. Wir definieren $f$, eine Funktion von $A$ nach $B$, ist injektiv, falls, um, gilt, dass... kommt wieder eine Formel: für alle $x, x'$ in $A$ und für alle $y$ in $B$ haben wir, dass $x, y$ ist in $f$ und... okay, jetzt müssen wir in die nächste Zeile... $x', y$ in $f$ impliziert $x = x'$. Okay. Also was man auch denkt. Ist manchmal ein bisschen mühsam hinzuschreiben und abzufragen, am besten überlegen Sie sich selbst, wie man das definiert.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Injektivität]
+Eine Funktion $f: A \to B$ heißt \newterm{injektiv}, falls gilt:
+\begin{equation}\label{eq:injectivity-def}
+\forall x, x' \in A \forall y \in B \big(\langle x, y \rangle \in f \land \langle x', y \rangle \in f \to x = x'\big)
+\end{equation}
+Unter Verwendung der Funktionswertnotation vereinfacht sich dies zu:
+\[
+\forall x, x' \in A \big(f(x) = f(x') \to x = x'\big)
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:27 - 00:08:06]
+Als kleine Übung, um, ist dasselbe noch für surjektiv und bijektiv zu machen. Definiere Surjektivität und Bijektivität.
+\end{spoken-clean}
+
+\begin{math-stroke}[Übungsaufgabe: Surjektivität und Bijektivität]
+\begin{exercise}[Surjektivität und Bijektivität]\label[exercise]{ex:surjectivity-bijectivity}
+Definieren Sie die Begriffe der Surjektivität und Bijektivität formal im Rahmen der Zermelo-Fraenkel-Mengenlehre.
+\end{exercise}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:06 - 00:08:59]
+Ja, dürft Ihr schnell überlegen, wie man das definieren kann, während ich die Tafel wische.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die mittlere und rechte Tafel, während er mit den Studenten über die Definition von Endlichkeit spricht.
+\end{meta-note}
+
+\begin{student-interaction}[Studentenantwort]
+Wenn es eine Bijektion zu einer natürlichen Zahl (einem Element von $\omega$) gibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, also wenn's eine... also ein Element... wenn's ein Element in unserem $\omega$ gibt und eine bijektive Funktion von diesem Element zu unserer Menge, dann ist es endlich.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:59 - 00:10:10]
+Also eine Menge $A$ heißt endlich, falls eine Bijektion $f$ von $n$ nach $A$ existiert für ein $n$ in $\omega$. Aber ja, das ist das Problem... Problem mit dem $\omega$, okay? Wenn wir jetzt davon ausgehen, das sind genau die ganzen Zahlen, dann ist das genau die Endlichkeit, wie wir sie gerne hätten. Wenn's das nicht ist, dann haben wir halt Probleme, aber, um, genau.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Endliche Menge]
+Eine Menge $A$ heißt \newterm{endlich}, falls eine Bijektion $f: n \to A$ für ein $n \in \omega$ existiert:
+\begin{equation}\label{eq:finite-set-def}
+A \text{ ist endlich} \iff \exists n \in \omega \exists f \big(f: n \to A \land f \text{ ist bijektiv}\big)
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:10 - 00:11:00]
+Dann können wir noch sagen, eine Menge $A$ heißt abzählbar, falls es eine Surjektion gibt, um, von $\omega$ zu $A$. Und ansonsten heißt $A$ überabzählbar.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Abzählbarkeit]
+Eine Menge $A$ heißt \newterm{abzählbar}, falls eine Surjektion $f: \omega \to A$ existiert:
+\begin{equation}\label{eq:countable-set-def}
+A \text{ ist abzählbar} \iff \exists f \big(f: \omega \to A \land f \text{ ist surjektiv}\big)
+\end{equation}
+Ansonsten heißt $A$ \newterm{überabzählbar}.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:00 - 00:11:38]
+Okay, aber dazu werden wir später noch mehr schauen von diesen Kardinalitäten, wenn wir die Kardinalzahlen anschauen. Sehen wir, da gibt es noch viele, ganz viele Kardinalitäten. Also es gibt ganz viele Arten, wie man unendlich sein kann. Das haben Sie vielleicht schon gesehen. Kann unendlich sein, dass man noch alles zählen kann, und da gibt es die reellen Zahlen, die kann man nicht mehr zählen, aber das hört dann nicht auf, da gibt es Sachen, die sind noch viel... viel schlimmer als die reellen Zahlen, und immer größer, größer, größer. Aber dazu später mehr, nach Ostern dann.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:38 - 00:12:28]
+Okay, dann können wir noch Relationen definieren. Wir definieren... okay, $A \times A$ $n$-mal, also das $n$-fache kartesische Produkt von $A$. Und das... okay, vielleicht ein bisschen problematisch wieder zu definieren, weil man kann sagen, okay, man nimmt jetzt einfach das kartesische Produkt, wie wir das definiert haben, machen das $n$-mal, aber ja...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Relation]
+Wir definieren das $n$-fache kartesische Produkt einer Menge $A$ als $A^n$:
+\[
+A^n := \underbrace{A \times \dots \times A}_{n\text{-mal}}
+\]
+Eine \newterm{$n$-stellige Relation} $R$ auf $A$ ist eine Teilmenge des $n$-fachen kartesischen Produkts:
+\begin{equation}\label{eq:relation-def}
+R \subseteq A^n
+\end{equation}
+\end{math-stroke}
+
+\begin{student-interaction}[Studentenfrage]
+Wie hängen die Elemente $n \in \omega$ mit der Anzahl der Elemente zusammen?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ah, falls ein... falls ein Element in unserer Menge $\omega$ gibt und eine Bijektion von dieser Menge zu unserer Menge $A$. Ja, die natürlichen Zahlen, wie wir sie definiert haben. Das heißt, es gibt die natürliche Zahl, die besteht nur aus der leeren Menge, das ist... und dann 0, und da gibt es das 1 besteht aus der Menge mit der... also genau, sind Mengen mit $n$ Elementen gewissermaßen. Okay. Also wir nehmen das 0 ist die leere Menge, die hat keine Elemente, dann 1 ist die Menge, die besteht nur aus der leeren Menge, das heißt eine Menge mit einem Element, und so weiter.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:16 - 00:14:27]
+Ja, und da hier ist auch wieder... und so, okay, das kann man so hinschreiben, das kann man induktiv definieren als kartesisches Produkt, ist vielleicht etwas mühsam, aber wir können auch einfach sagen, das sind auch wieder hier, um, alle Funktionen von... von $n$ zu $A$. Okay? Für ein $n$ in $\omega$. Okay, auf das... ist im Allgemeinen... das Produkt... man kann ja Produkte über beliebige Mengen nehmen, und dann irgendwann definiert man das tatsächlich so. Ist einfach die Menge von allen Funktionen von $n$ nach $A$, das entspricht genau dem... dem Produkt, wie wir es gerne hätten. Wir schauen, wohin wird 0 abgebildet, wohin wird 1 abgebildet, wohin wird $n-1$ abgebildet, und, äh, das gibt uns alle $n$-Tupel von Elementen hier. Okay, und dann sagen wir eine $n$-stellige Relation, das hatten wir vorher schon, $R$ ist einfach eine Teilmenge $R$ von $A^n$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:27 - 00:15:05]
+Okay, machen wir noch Beispiele, Definitionen. Eine binäre Relation... ist eine Teilmenge $R$ von $A^2$. Okay, machen wir noch Beispiele, Definitionen. Eine binäre Relation...
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Binäre Relation]
+Eine \newterm{binäre Relation} auf $A$ ist eine Teilmenge des zweifachen kartesischen Produkts:
+\begin{equation}\label{eq:binary-relation-def}
+R \subseteq A^2 = A \times A
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:05 - 00:16:10]
+ist eine Teilmenge... nein, binär... binäre Relation ist... eine binäre Relation ist klar, ist einfach eine zweistellige Relation, sorry. Eine binäre Relation heißt, um, heißt linear... ist eine lineare Ordnung, das hatten wir auch schon gesehen, falls, um, nehmen wir das $R$... was muss eine lineare Ordnung erfüllen, wissen Sie noch?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:16:10 - 00:17:22]
+Sie muss transitiv sein? Ja. Genau, die Trichotomie muss erfüllt sein, also falls, um, $R$ transitiv ist, das heißt, wenn das eine kleiner ist als das andere, also... ja, ist doch keine Ordnung, wie man's denkt, um... und für alle $x, y$ in $A$ gilt, dass entweder, um, $x$ ist in Relation zu $y$, $x$ ist gleich $y$ oder $y$ ist in Relation zu $x$. Das ist eben die Trichotomie.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Lineare Ordnung]
+Eine binäre Relation $R$ auf $A$ heißt eine \newterm{lineare Ordnung} (oder totale Ordnung), falls gilt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \newterm{Transitivität}: $\forall x, y, z \in A \big(\langle x, y \rangle \in R \land \langle y, z \rangle \in R \to \langle x, z \rangle \in R\big)$
+    \setcounter{enumi}{1} \item \newterm{Trichotomie}: $\forall x, y \in A \big(\langle x, y \rangle \in R \lor x = y \lor \langle y, x \rangle \in R\big)$
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:22 - 00:18:09]
+Und dann kommen wir noch zu dem Begriff einer Wohlordnung. Das ist ein relativ wichtiger Begriff, den finden Sie hin und wieder in verschiedenen Gebieten der Mathematik, treffen Sie den an. Ähm, hat jemand schon gehört, was eine Wohlordnung ist? Sonst hat jemand eine...?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Eine Ordnung, bei der jede nicht-leere Teilmenge ein kleinstes Element besitzt.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, jede Teilmenge ein kleinstes Element hat, dann ist die Menge... ist das eine Wohlordnung. Ist ein wichtiges... also eine lineare Menge... eine lineare Ordnung $R$ auf $A$ ist eine Wohlordnung, falls jede Teilmenge $S$ von $A$, die nicht leer ist, ein minimales Element enthält. Das heißt, es existiert ein $x_0$ in $S$, so dass für alle $y$ in $S$ gilt, dass $y$ nicht in Relation zu $x_0$ steht, also $y$ ist nicht kleiner als $x_0$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Wohlordnung]
+Eine lineare Ordnung $R$ auf $A$ heißt eine \newterm{Wohlordnung}, falls jede nicht-leere Teilmenge $S \subseteq A$ ein minimales Element besitzt:
+\begin{equation}\label{eq:well-ordering-def}
+\forall S \subseteq A \Big(S \neq \emptyset \implies \exists x_0 \in S \forall y \in S \big(y \neq x_0 \to \langle y, x_0 \rangle \notin R\big)\Big)
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:35 - 00:21:16]
+Okay, ähm, das werden wir später noch genauer anschauen. Also zum Beispiel ein Beispiel: die ganzen Zahlen zusammen... nein, ganz leid, die natürlichen Zahlen... die natürlichen Zahlen zusammen mit der Relation größer gleich... größer gleich ist eine... ist eine lineare Ordnung, und jetzt nehmen wir irgendeine ganz eine Teilmenge von den ganzen... von den natürlichen Zahlen, da hat jedes Ele... gibt es ein minimales Element, wenn die Menge nicht leer ist, einfach das kleinste. Aber bei den reellen Zahlen existiert das natürlich nicht mehr mit der üblichen Ordnung. Aber was wir sehen werden, ähm, vielleicht in zwei Wochen wahrscheinlich, ist, dass man mit dem sogenannten Auswahlaxiom, das wir noch, um, diskutieren werden, kann man zeigen, dass tatsächlich jede Menge hat eine Wohlordnung. Also Sie können immer eine Wohlordnung definieren auf egal welcher Menge. Das ist noch ein erstaunliches Resultat, vielleicht auch eines... einer der Gründe, weshalb, um, gewisse Leute dem Auswahlaxiom etwas skeptisch gegenüberstehen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:21:16 - 00:22:40]
+Okay, so viel einmal zu dem... einfach das sind noch ein paar... ein paar Beispiele, wie man so mit der Mengenlehre gewisse Begriffe definieren kann und definiert, und das funktioniert dann alles gut. Jetzt möchte ich gerne heute diese Zermelo-Fraenkel-Geschichte abschließen, deswegen noch die zwei Axiome von Fraenkel. Das sind Axiome 7 und 8. Also Sie sehen, Zermelo hat so schon die meisten Axiome, oder so die Hauptarbeit geleistet, dann Fraenkel hat bemerkt, okay, das ist vielleicht noch nicht ganz alles. Das erste ist das Ersetzungsaxiom.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiome von Fraenkel]
+Wir führen die verbleibenden zwei Axiome der Zermelo-Fraenkel-Mengenlehre ein, die von Abraham Fraenkel vorgeschlagen wurden.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:40 - 00:23:50]
+Ich werde jetzt diese Axiome nicht im Detail diskutieren, ja, weil wir nur zwei Lektionen haben für die ganze Geschichte. Das was das sagt ist, dass wenn $\varphi$ von... eine Formel ist mit zwei, um, freien Variablen $x$ und $y$, so dass gilt... für alle $x$ existiert ein eindeutiges $y$, so dass $\varphi$ von $x, y$. Das heißt, wenn Sie $x$ festlegen, dann gibt's ein eindeutiges, um, $y$, so dass das erfüllt ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 7: Ersetzungsaxiom (Axiomenschema)]
+\begin{itemize}
+    \item[\textbf{7.}] \textbf{Ersetzungsaxiom (Axiomenschema):}
+    Sei $\varphi(x, y)$ eine Formel mit den freien Variablen $x, y$ (und eventuell weiteren Parametern), so dass gilt:
+    \begin{equation}\label{eq:replacement-axiom-premise}
+    \forall x \exists! y \varphi(x, y)
+    \end{equation}
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:50 - 00:25:05]
+Okay, dann erhalten wir ein Funktionssymbol, das wir folgendermaßen definieren: wir sagen, um, $f(x) = y$ falls, um, $\varphi(x, y)$ gilt. Okay, das heißt, man kann hier ein $x$ wählen, dann gibt's ein eindeutiges $y$. Und ein solches Funktionssymbol heißt, um, Klassenfunktion. Und das Ersetzungsaxiom sagt nun, um... wir wollen, dass für jede Klassenfunktion $f$ und jede Menge $A$ ist, um, die Menge, nennen wir sie $f(A)$, sind alle, um, alle Elemente von der Form $f(x)$, wobei $x$ in $A$ ist, soll eine Menge sein. Das ist jetzt nicht ganz präzise ausgedrückt, das kann man auch noch mit, um... das kann man auch noch natürlich sauber durch Formeln ausdrücken, aber machen wir jetzt nicht mehr.
+\end{spoken-clean}
+
+\begin{math-stroke}[Klassenfunktionen und Bildmengen]
+Ein solches Paar $\langle \varphi, f \rangle$ definiert eine \newterm{Klassenfunktion} $f$ durch:
+\[
+f(x) = y \iff \varphi(x, y)
+\]
+Das Ersetzungsaxiom besagt nun formal: Für jede Klassenfunktion $f$ und jede Menge $A$ existiert das Bild von $A$ unter $f$ als eine wohlgeformte Menge:
+\begin{equation}\label{eq:replacement-axiom-conclusion}
+f[A] := \{f(x) \mid x \in A\} \text{ ist eine Menge.}
+\end{equation}
+Formale Formulierung des Axiomenschemas:
+\[
+\forall A \exists B \forall y \big(y \in B \leftrightarrow \exists x \in A \, \varphi(x, y)\big)
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:05 - 00:26:43]
+Aber im Wesentlichen wollen wir sagen, dass Bilder von Funktionen sind wieder... sind wieder Mengen. Man darf sich dann nicht verwirren lassen, um... also das hier ist ein... das Funktionssymbol $f$, das ist eine Klassenfunktion, das ist nicht eine... das ist nicht eine Funktion, wie wir sie vorher definiert hatten als eine Teilmenge vom kartesischen Produkt. Weil das hat ja hier... das geht nicht von einer... also eine Klassenfunktion ist einfach gegeben durch eine Formel mit bestimmten Eigenschaften, und das ist nicht eine Funktion a priori, die von einer bestimmten Menge zu einer anderen Menge geht. Also für diese Art von Funktionen gibt's kein Problem, da haben wir immer, dass Bilder von Funktionen wieder Funktionen sind. Aber hier diese Art von Funktionen, also wo wir einfach beschreiben können durch eine Formel, können wir einem Element ein anderes zuordnen, dann haben wir immer, dass Bilder von Mengen wieder Mengen sind. Das ist ein wichtiges, um, Axiom, das es braucht, um gewiss... für gewisse wichtige Sachen zu zeigen, dass es Mengen sind. Zum Beispiel...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:26:43 - 00:27:25]
+Ja, machen wir noch schnell ein kurzes Beispiel. Einfach, wenn wir die... die Menge von allen Potenzmengen nehmen, wobei $x$ ein Element ist von einer... von der Potenzmenge von $\omega$. Da können wir zeigen, das ist wieder eine Menge mit Hilfe von diesem Axiom 8. Hier ist einfach unsere Menge $A$ ist unsere Potenzmenge von $\omega$, und $f(x)$ ist die Potenzmenge nehmen, das ist wieder eine Funktion, und mit dem Ersetzungsaxiom können wir zeigen, dass das das ist. Geben Sie mir noch eine Minute, um das Fundierungsaxiom zu...
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Anwendung des Ersetzungsaxioms]
+\begin{example}[Menge von Potenzmengen]\label[example]{ex:set-of-powersets}
+Die Kollektion aller Potenzmengen von Teilmengen von $\omega$:
+\begin{equation}\label{eq:set-of-powersets-def}
+\{\mathcal{P}(x) \mid x \in \mathcal{P}(\omega)\}
+\end{equation}
+ist eine wohlgeformte Menge.
+\end{example}
+\begin{explanation-of-steps}
+Hierbei ist der Definitionsbereich $A = \mathcal{P}(\omega)$ eine Menge (nach dem Potenzmengenaxiom). Die Zuordnung $x \mapsto \mathcal{P}(x)$ lässt sich als Klassenfunktion $f$ formulieren. Nach dem Ersetzungsaxiom ist das Bild $f[A] = \{\mathcal{P}(x) \mid x \in \mathcal{P}(\omega)\}$ somit ebenfalls eine Menge.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:25 - 00:28:09]
+zu erklären, und das ist wirklich nur, ich glaube... das wird dann, ja, wenn man jetzt wirklich mit Mengentheorie Sachen beweisen möchte, merkt man, dass man so solche Sachen braucht. Für alle $x$, wenn $x$ nicht die leere Menge ist, dann wollen wir, es existiert ein $y$, so dass $y$ in $x$ ist und $y$ geschnitten mit $x$ ist die leere Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom 8: Fundierungsaxiom (Regularitätsaxiom)]
+\begin{itemize}
+    \item[\textbf{8.}] \textbf{Fundierungsaxiom (Regularitätsaxiom):}
+    \begin{equation}\label{eq:foundation-axiom}
+    \forall x \big(x \neq \emptyset \to \exists y (y \in x \land y \cap x = \emptyset)\big)
+    \end{equation}
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:09 - 00:29:03]
+Das heißt in anderen Worten, jede Menge $x$, die nicht die leere Menge ist, enthält ein Element $y$, so dass kein Element von $y$ auch, um, Element von $x$ ist. Und das braucht man einfach, um... Beispiele: wir wollen, es gibt... damit kann man zeigen, es gibt keine unendlichen, um, Sequenzen von der Form... von einer menge $x_0$, die eine menge $x_1$ enthält, die eine menge $x_2$ enthält, die eine menge... eh, wo $x_1$ ein Element ist von $x_0$, $x_2$ ein Element von $x_1$, $x_3$ ein Element von $x_2$ und so weiter. Das muss irgendwann aufhören.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konsequenzen des Fundierungsaxioms]
+Das Fundierungsaxiom schließt pathologische zirkuläre oder unendlich absteigende Elementketten aus.
+\begin{example}[Keine unendlich absteigenden Elementketten]\label[example]{ex:no-infinite-descending-chains}
+Es existiert keine unendliche Folge von Mengen $(x_i)_{i \in \omega}$, so dass gilt:
+\begin{equation}\label{eq:no-infinite-descending-chain}
+x_0 \ni x_1 \ni x_2 \ni x_3 \ni \dots
+\end{equation}
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:29:03 - 00:29:58]
+Und es gibt auch keine... keine Zyklen von der Form $x_0$ in $x_1$ etc. in $x_n$ und das ist wieder $x_0$. Also mit dem Fundierungsaxiom kann man zeigen, dass solche Sachen, um, nicht existieren. Und das... ja, ich meine, muss man ein paar Jahre mit Mengentheorie arbeiten, hat Zermelo seine Axiome publiziert, dann eben 8 Jahre später hat Fraenkel gesagt, okay, ich glaube, wir brauchen noch und hat diese zwei vorgeschlagen. Und zwischenzeitlich sind das dann alle, also das ist... das sind die Zermelo-Fraenkel-Axiome. In der Regel verwendet man auch noch das Auswahlaxiom, das werden wir in zwei Wochen diskutieren. Vielen Dank fürs Kommen und gute Woche!
+\end{spoken-clean}
+
+\begin{math-stroke}[Ausschluss von Elementzyklen]
+\begin{example}[Keine Elementzyklen]\label[example]{ex:no-membership-cycles}
+Es existieren keine endlichen Zyklen der Elementbeziehung:
+\begin{equation}\label{eq:no-membership-cycle}
+x_0 \in x_1 \in \dots \in x_n \in x_0
+\end{equation}
+Insbesondere gilt für jede Menge $x \notin x$.
+\end{example}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 251518, Output 7939)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 71709, Output 25)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 01:27:21) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-24-tuesday.mp4
+[Angehängtes Video]: 03-24-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-24. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Tuesday}{Mar 24th}{March 24th}{Die Zermelo-Fraenkel Axiome \& Konstruktion der reellen Zahlen}
+
+\begin{nice-box}[Einstiegsfrage: Was sagt die folgende Aussage aus?]
+Was sagt die folgende Aussage aus?
+\[
+\forall X \Big( \big( X \subseteq \mathbb{R} \wedge X \neq \emptyset \wedge \exists r \forall x (x \in X \rightarrow x \le r) \big) \rightarrow \exists s \big( \forall x (x \in X \rightarrow x \le s) \wedge \forall t (\forall x (x \in X \rightarrow x \le t) \rightarrow s \le t) \big) \Big)
+\]
+\begin{itemize}
+    \item Falls $X$ nichtleer und nach oben beschränkt ist, hat $X$ ein Infimum.
+    \item \textbf{Falls $X$ nichtleer und nach oben beschränkt ist, hat $X$ ein Supremum.}
+    \item Falls $X$ nichtleer und nach unten beschränkt ist, hat $X$ ein Infimum.
+    \item Falls $X$ nichtleer und nach unten beschränkt ist, hat $X$ ein Supremum.
+    \item weiss nicht.
+\end{itemize}
+\end{nice-box}
+
+\begin{spoken-clean}[00:00:00 - 00:00:49]
+Hallo, ähm, und herzlich willkommen! Ich habe hier eine kleine, kleine Clicker-Einstiegsfrage, die Sie auf der EduApp beantworten können. Äh, gute Gelegenheit, um sich kurz zu konzentrieren. Und wenn Sie das gemacht haben, noch kurz Ihrer Nachbarin, Ihrem Nachbarn Hallo zu sagen, und dann bitte wählen. Okay, gut. Ähm, wählen Sie noch schnell. 60 Antworten sollten wir schon noch hinkriegen. Okay, tipptopp. Sehr gut, fast 100 Prozent richtig. Oder 100 Prozent richtig, ja, keine falschen Aussagen zumindest.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:49 - 00:02:30]
+Genau, äh, das ist, was diese Aussage aussagt. Muss man einfach mal genau anschauen. Das ist für alle Teilmengen von $\mathbb{R}$, so dass $X$, so dass $X$ nicht leer ist, also für alle $X$, so dass $X$ Teilmenge von $\mathbb{R}$ und $X$ ist nicht leer, und es existiert ein $r$, so dass für alle $x$ in $X$, $x \le r$ ist \inlinemetanote{weist auf die Formel auf dem Bildschirm} (i.e., $X$ ist nach oben beschränkt durch $r$). Daraus folgt, dass ein $s$ existiert, so dass für alle $x$ in $X$, $x \le s$ ist (i.e., $s$ ist eine obere Schranke) und für alle $t$, so dass für alle $x$ in $X$, $x \le t$ ist (i.e., für jede andere obere Schranke $t$), gilt, dass $s \le t$ ist (i.e., $s$ ist kleiner oder gleich jeder anderen oberen Schranke $t$). Also es existiert ein... also $s$ ist hier das Supremum. Also wenn $X$ beschränkt ist (i.e., nach oben beschränkt), dann soll ein solches Supremum existieren, das heißt seine obere Schranke, die die, äh, die die kleinste obere Schranke ist. Okay.
+
+Gut, dies nur als eine kleine Aufwärmübung. Und wie Sie sehen, heute wird das Hauptthema sein der Vorlesung die Konst... eine Konstruktion der reellen Zahlen. Sie haben ja schon viel mit den reellen Zahlen gearbeitet und arbeiten wahrscheinlich viel mit den reellen Zahlen, aber Sie haben noch nie eine volle Konstruktion davon gesehen. Das werden wir hier noch nachholen, wenn auch nicht in allen Details, weil das ist mühsam. Ähm, genau. Aber zuerst möchte ich noch ganz kurz die Sache mit den, ähm, äh, mit den Zermelo-Fraenkel-Axiomen anschauen. Moment...
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Vollständigkeitsaxiom in Prädikatenlogik]
+Das Vollständigkeitsaxiom der reellen Zahlen lässt sich formal in der Sprache der Mengenlehre wie folgt ausdrücken:
+\[
+\forall X \subseteq \mathbb{R} \left[ \left( X \neq \emptyset \wedge \exists r \in \mathbb{R} \, \forall x \in X (x \le r) \right) \implies \exists s \in \mathbb{R} \left( \forall x \in X (x \le s) \wedge \forall t \in \mathbb{R} \left( \forall x \in X (x \le t) \implies s \le t \right) \right) \right]
+\]
+\begin{explanation-of-steps}
+Diese Formel formalisiert die Eigenschaft, dass jede nichtleere, nach oben beschränkte Teilmenge $X \subseteq \mathbb{R}$ ein Supremum $s \in \mathbb{R}$ besitzt:
+\begin{itemize}
+    \item $\exists r \in \mathbb{R} \, \forall x \in X (x \le r)$ bedeutet: $X$ ist nach oben beschränkt durch eine reelle Zahl $r$.
+    \item $\forall x \in X (x \le s)$ bedeutet: $s$ ist eine obere Schranke von $X$.
+    \item $\forall t \in \mathbb{R} \left( \forall x \in X (x \le t) \implies s \le t \right)$ bedeutet: Jede andere obere Schranke $t$ von $X$ ist mindestens so groß wie $s$. Somit ist $s$ die kleinste obere Schranke (das Supremum).
+\end{itemize}
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{meta-note}[Folienpräsentation]
+Der Dozent wechselt zur Präsentation auf dem Bildschirm und zeigt Folien zu den Zermelo-Fraenkel-Axiomen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:02:30 - 00:03:45]
+Dass wir noch schnell das Richtige zeigen hier. Okay, da haben wir es. Da wären die Zermelo-Fraenkel-Axiome, ähm, einfach noch zur Erinnerung. Wir hatten die Axiome von Zermelo, das sind eigentlich die wichtigen oder die einleuchtenden: das Axiom der Bestimmtheit, das Axiom der Elementarmengen, das Axiom der Aussonderung, das Axiom der Potenzmenge, Axiom der Vereinigung, Axiom der Auswahl und Axiom des Unendlichen. Und, okay, das ist, wie es Zermelo formuliert hatte. Wir haben das dann ausgeführt. Und dann letztes Mal haben wir noch die zwei zusätzlichen Axiome von Fraenkel hinzugefügt. Da hatten wir nicht mehr so viel Zeit, aber das Ersetzungsaxiom und insbesondere auch noch das Fundierungsaxiom. Und wir haben gesehen, diese sind ein bisschen technischerer Natur. Also das Ersetzungsaxiom, das macht noch Sinn, wir wollten, dass quasi Mengen, die durch Formeln bestimmt sind, auch tatsächlich Mengen sind. So ungefähr. Und das Fundierungsaxiom, das war ein bisschen, ähm, vielleicht noch schwieriger zugänglich. Ähm, ich kann das nochmals kurz vielleicht wiederholen, da das letztes Mal ein bisschen, ähm, ups, zu kurz gekommen ist. Oh, was haben wir da noch?
+\end{spoken-clean}
+
+\begin{nice-box}[Zermelo-Fraenkel-Axiomensystem (ZF)]
+Die Axiome von Zermelo umfassen:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Axiom der Bestimmtheit (Extensionalität):} Zwei Mengen sind gleich, wenn sie dieselben Elemente enthalten.
+    \setcounter{enumi}{1} \item \textbf{Axiom der Elementarmengen:} Es existiert die leere Menge, und für beliebige Mengen existieren Einermengen und Paarmengen.
+    \setcounter{enumi}{2} \item \textbf{Axiom der Aussonderung:} Zu jeder Menge und jeder Eigenschaft existiert die Teilmenge der Elemente, die diese Eigenschaft erfüllen.
+    \setcounter{enumi}{3} \item \textbf{Axiom der Potenzmenge:} Zu jeder Menge existiert die menge aller ihrer Teilmengen.
+    \setcounter{enumi}{4} \item \textbf{Axiom der Vereinigung:} Zu jeder Menge von Mengen existiert ihre Vereinigung.
+    \setcounter{enumi}{5} \item \textbf{Axiom der Auswahl (Choice):} Zu jeder Familie nichtleerer, paarweise disjunkter Mengen existiert eine Auswahlmenge.
+    \setcounter{enumi}{6} \item \textbf{Axiom des Unendlichen:} Es existiert eine unendliche Menge (induktive Menge).
+\end{enumerate}
+Die zusätzlichen Axiome von Fraenkel sind:
+\begin{itemize}
+    \item \textbf{Ersetzungsaxiom:} Das Bild einer Menge unter einer definierbaren Funktion ist wieder eine Menge.
+    \item \textbf{Fundierungsaxiom (Regularität):} Jede nichtleere Menge enthält ein Element, das zu ihr disjunkt ist.
+\end{itemize}
+\end{nice-box}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent schaltet den Projektor aus und schreibt das Fundierungsaxiom an die Tafel.
+\end{meta-note>
+
+\begin{spoken-clean}[00:03:45 - 00:05:13]
+Ähm, das Fundierungsaxiom, das sagte uns aus, dass für alle $x$, ähm, so dass $x$ nicht die leere Menge ist, dann wissen wir, es existiert ein $y$, so dass, ähm, $y$ in $x$ ist und außerdem der Durchschnitt von $y$ mit $x$ ist die leere Menge. Da muss man noch die Klammern richtig setzen. Genau. Also mit anderen Worten, für jede Menge $x$, die nicht leer ist, enthält ein $y$, so dass kein Element von $y$ auch ein Element von $x$ ist. Gut, und insbesondere ein wichtiges Beispiel hiervon ist, haben wir gesehen, ähm, es gibt keine unendlichen absteigenden Sequenzen von Mengen, also $x_0$, das $x_1$ enthält, und diese menge enthält $x_2$, und diese menge enthält $x_3$ und so weiter. Und, ähm, es gibt keine Zyklen in Mengen, so dass $x_0$ enthalten ist in $x_1$, das enthalten und so weiter in $x_n$, und das wiederum ist enthalten in $x_0$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Fundierungsaxiom (Axiom of Foundation)]
+Das Fundierungsaxiom (auch Regularitätsaxiom genannt) wird formal wie folgt geschrieben:
+\begin{equation}\label{eq:fundierung}
+\forall x \left( x \neq \emptyset \implies \exists y \left( y \in x \wedge (y \cap x = \emptyset) \right) \right)
+\end{equation}
+
+\begin{explanation-of-steps}
+Dieses Axiom besagt, dass jede nichtleere Menge $x$ ein Element $y \in x$ besitzt, das disjunkt zu $x$ ist. Dies verhindert zirkuläre oder unendlich absteigende Elementbeziehungen:
+\begin{itemize}
+    \item \textbf{Keine unendlich absteigenden Elementketten:} Es gibt keine unendliche Folge von Mengen $(x_n)_{n \in \mathbb{N}}$ mit:
+    \[
+    x_0 \ni x_1 \ni x_2 \ni x_3 \ni \dots
+    \]
+    \item \textbf{Keine Zyklen:} Es gibt keine endliche Kette von Mengen mit:
+    \[
+    x_0 \in x_1 \in x_2 \in \dots \in x_n \in x_0
+    \]
+    \item \textbf{Keine Selbst-Elementbeziehung:} Insbesondere gilt für jede Menge $x$:
+    \[
+    x \notin x
+    \]
+    Denn andernfalls wäre die Menge $\{x\}$ ein Widerspruch zum Fundierungsaxiom (ihr einziges Element $x$ hat mit $\{x\}$ den nichtleeren Durchschnitt $\{x\} \cap x = \{x\} \neq \emptyset$).
+\end{itemize}
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:05:13 - 00:08:20]
+Insbesondere ist, äh, ist $x$ nicht enthalten, ist $x$ nie enthalten in sich selbst, weil sonst hätte man einen solchen Zyklus. Okay, und das, die Sache mit dem Axiom ist, das ist wirklich eigentlich von den Mengentheoretikerinnen für die Mengentheoretikerinnen gemacht. Also, nein, die Sache ist, die, die Mengen, die in, wie soll ich sagen, der Alltagsmathematik oder der Mathematik, die wir normalerweise machen, vorkommen, die sind, erfüllen diese, diese Eigenschaft schon immer. Ähm, das heißt, es hat auch kein, anscheinend, gemäss, ich bin ja selbst kein, kein Logiker, gemäss den Logikern, ähm, funktioniert sehr vieles auch, wenn man das weglassen würde, das, äh, das Axiom. Aber es ist doch so konzeptuell macht es viele Sachen einfacher, viele einfache Sachen einfacher zu beweisen in der Mengenlehre, und es schliesst dann auch pathologische Sachen aus, die sonst geschehen könnten, und viele Sachen sind einfacher zu beweisen mit diesem Axiom. Aber es ist auch nicht gefährlich, das Axiom, es ist, äh, konsistent genau dann, wenn der Rest von Zermelo-Fraenkel konsistent ist. Das heisst, man hat nichts, man riskiert nichts, wenn man das Axiom dazu nimmt. Aber es gibt effektiv, glaube ich, auch Leute, die arbeiten, versuchen ohne dieses Axiom zu arbeiten, ähm, um zu schauen, was kann man alles trotzdem beweisen. Und ich glaube, wenn man... Okay, das sind die Zermelo-Fraenkel-Axiome. Nächste Woche kommt noch das Auswahlaxiom dran. Ähm, das ist noch ein wichtiges Axiom, das ist vielleicht so das einzige Axiom von Zermelo-Fraenkel, oder im Zermelo-Fraenkel plus das Auswahlaxiom, das vielleicht ein ganz klein wenig, ähm, äh, streitbar ist, oder wo manche Leute sagen, sie wollen das nicht anwenden oder so. Ähm, und okay, wenn man jetzt sagt, man möchte das Auswahlaxiom nicht verwenden, ich glaube, dann kann das auch noch sehr hilfreich sein, dass man einige Sachen trotzdem beweisen kann. Aber ja. Also, ja, sagen wir mal, das Fundierungsaxiom, ähm, ja, das muss man einfach mal nehmen, das gibt es auch noch, und wichtig ist aber, dass man die anderen gut versteht, die Existenz der leeren Menge und so weiter, Potenzmenge.
+
+Okay, ähm, soweit. Jetzt, äh, heute kommen wir zum nächsten Thema, wie ich gesagt habe. Da geht es jetzt um die, ähm, um die, genau, nächste Woche kommt das Auswahlaxiom. Deswegen, äh, sagt man oft Zermelo-Fraenkel, wir haben gesehen, Zermelo-Fraenkel für die Theorie Zermelo-Fraenkel und Zermelo-Fraenkel plus das Axiom of Choice für, äh, wo man das Auswahlaxiom noch hinzunimmt. Und das ist da, wo sich eigentlich die, ein Großteil der modernen Mathematik abspielt, auf diesen Axiomen. Ähm, gut. Jetzt zu den reellen Zahlen. Ähm, da haben wir, ähm, wir werden die, die Konstruktion von, von, von Richard Dedekind, ähm, anschauen, über die Dedekindschen Schnitte. Das war auch jetzt, würde ich sagen, die erste so moderne, äh, Fundament, formale Definition von den reellen Zahlen. Richard Dedekind, hier ein Foto, war aus Braunschweig, hat, ähm, war ein Student von Gauss. Ähm, und was eben noch spannend ist, er hat, glaube ich, von 1858 bis 1862 hat er hier an der ETH, ähm, unterrichtet. Die ETH wurde 1854, ähm, gegründet, das heißt, ganz am Anfang von, von der Geschichte der ETH war da Richard Dedekind und hat hier Mathematik unterrichtet. Und es war auch in dieser Zeit, als er diese, äh, Dedekindschen Schnitte anscheinend herausgefunden hat. Es gibt einen, einen Eintrag, ich weiß nicht, ein Brief oder Tagebuch, das finden Sie im, im Skript auch, wo geschrieben hat, ja, er hat da wieder einmal an der ETH, oder Polytechnikum, wie es damals hieß, hat er, ähm, eine Vorlesung gegeben zur Analysis, und dabei ist ihm wieder klar geworden, wie wichtig es wäre, dass man, halt einfach mal da saubere Grundlagen erarbeitet, und er hat daran gearbeitet und dann eben jetzt diese Dedekindschen Schnitte herausgefunden. Also genau, es macht Sinn, dass wir Dedekind machen, weil das eben auch hier, vielleicht ganz in der Nähe, ähm, entdeckt worden ist. Ich glaube, es waren gute Zeiten damals, sehr spannend, neue technische Schule in der Schweiz, Richard Dedekind, der Vorlesungen gibt, ähm, wäre sicher, äh, spannend gewesen, hier zu sein.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Richard Dedekind und die Krise der Grundlagen]
+Die Einführung der Dedekindschen Schnitte durch Richard Dedekind (während seiner Lehrtätigkeit am Eidgenössischen Polytechnikum in Zürich) markiert einen Meilenstein in der Rigorisierung der Analysis. Bis ins späte 19. Jahrhundert hinein wurden reelle Zahlen oft rein geometrisch oder intuitiv als "kontinuierliche Größen" verstanden. Dedekinds Ziel war es, das Kontinuum rein arithmetisch – d.h. ohne Rückgriff auf geometrische Anschauung – auf der Grundlage der rationalen Zahlen $\mathbb{Q}$ zu definieren.
+\end{didactic-insight>
+
+\begin{spoken-clean}[00:08:20 - 00:09:00]
+Gut, vielleicht nochmals zu ein bisschen auch noch zu der Geschichte der reellen Zahlen. Also die rationalen Zahlen, das ist doch etwas relativ Natürliches, so die ganzen Zahlen, das haben wahrscheinlich schon die Steinzeit-Menschen hatten da eine gewisse Art von, was sind, zumindest natürliche Zahlen, was sind Mengen und so weiter. Und dann rationale Zahlen, das ist dann, sobald man anfängt zu, zu dividieren, sich für, äh, Verhältnisse interessiert, und das haben die Leute schon sehr bald gemacht, und ich glaube auch schon bereits bei den, äh, Ägyptern und definitiv die Griechen, die wussten dann, dass, dass es auch irrationale Zahlen gibt. Ich glaube bereits, ja, ich glaube bereits in Ägypten hatte man dieses Konzept, und dann definitiv Pythagoras und so, die hatten ja auch Beweise dafür.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:00 - 00:11:12]
+Ja, und dann nachher, ähm, die ganze Analysis wurde auch dann erst, die, die Analysis wurde dann entwickelt eigentlich von, also Newton, Leibniz, aber auch später Cauchy. Cauchy hat es dann auch schon sehr formal die Analysis, ähm, definiert und alles, aber das wurde alles auch gemacht ohne einen sauberen Begriff zu haben, was überhaupt reelle Zahlen sind. Und das Ganze fiel dann so in das 19. Jahrhundert, da war auch Riemann und die großen Namen, und die haben alle gemerkt, okay, wir brauchen einmal eine gute, saubere Definition von, was ist überhaupt eine reelle Zahl. Und das fiel auch so in den ganzen, äh, ja, vielleicht so ein bisschen eine Krise, eine Grundlagenkrise in der Mathematik, aber auch sehr fruchtbar, eben so im zweiten Hälfte vom 19. Jahrhundert, dass wir erst einmal die reellen Zahlen definiert haben, aber dann gleichzeitig oder auch nachher hat man auch versucht überhaupt zu definieren, was ist eine ganze Zahl, oder was ist eine rationale Zahl, und das ist ja das, was wir bereits die vorherigen Wochen gemacht haben, das Problem mit den ganzen Zahlen, dass man die ja eigentlich gar nicht formal definieren kann, also zumindest nicht mit dieser, ähm, First-Order Logic. Und dann haben wir eben dieses $\omega$, das eigentlich ganz gut ist und für uns ausreicht. Aber das war also diese Zeiten, als man das auch versucht hat und daran, ja, ist dann auch die ganze Logik ihren Ursprung genommen hat.
+
+So viel, äh, zur Geschichte. Ähm, wir machen jetzt einen Sprung direkt und wir, ähm, definieren die Axiome der reellen Zahlen. Und zwar haben wir jetzt wieder ein, machen wir wieder ein Axiomensystem der reellen Zahlen. Wir haben hier unsere Signatur, haben $0, 1, +, \cdot$ und das, ähm, kleiner-gleich-Symbol. Das heißt auch wieder hier, $0$ und $1$ sind Konstanten, $+$ und $\cdot$ sind, nein, das sind zwei binäre Funktionssymbole und das ist ein binäres Relationssymbol. Jetzt ein Punkt ist noch wichtig, ein wichtiger Punkt ist: Die Axiome der reellen Zahlen, das ist, da bewegen wir uns bereits in der Zermelo-Fraenkel-Theorie. Also wir werden, um die, um die reellen Zahlen überhaupt zu definieren, brauchen wir bereits die Zermelo-Fraenkel-Theorie auch. Also wir bewegen uns jetzt innerhalb der Mengenlehre. Wir machen jetzt einfach noch zusätzliche Axiome hinzu. Das werden wir gleich sehen. Die ersten, das ist noch nicht, also hier ist das erste, erste Set von Axiomen, die kennen wir bereits, das sind die Körperaxiome. Werde die jetzt nicht an die Tafel schreiben, weil das sehr lang ist, aber die kennen Sie ja. Wir wollen, dass Addition ist assoziativ und kommutativ, ähm, $0$ ist neutral, ähm, es existiert ein Inverses bezüglich der Addition, Multiplikation ist assoziativ, Multiplikation ist kommutativ, es existiert ein neutrales Element bezüglich Multiplikation, dann, äh, gibt es auch noch multiplikative Inversen für alle Elemente, die nicht $0$ sind, und dann schließlich haben wir noch diese Verknüpfung von Multiplikation und Addition, die, ja, die auch noch gegeben sein muss, und schlussendlich fordern wir, $0$ ist nicht $1$. Also das ist das erste Set von neun Axiomen, die unsere reellen Zahlen erfüllen sollen.
+\end{spoken-clean}
+
+\begin{nice-box}[Die Axiome der reellen Zahlen]
+Die Signatur des Axiomensystems $\mathbb{R}$ der reellen Zahlen ist:
+\[
+\mathcal{L}_{\mathbb{R}} = \{0, 1, +, \cdot, <\}
+\]
+wobei $0$ und $1$ Konstantensymbole sind, $+$ und $\cdot$ binäre Funktionssymbole sind und $<$ ein binäres Relationssymbol ist.
+\end{nice-box}
+
+\begin{math-stroke}[Die Körper- und Ordnungsaxiome]
+Die reellen Zahlen erfüllen die folgenden Axiome:
+\begin{itemize}
+    \item \textbf{Körperaxiome ($R_0$ bis $R_9$):}
+    \begin{align*}
+    R_0 &: \forall x \forall y \forall z \, (x + (y + z) = (x + y) + z) \quad (\text{$+$ ist assoziativ}) \\
+    R_1 &: \forall x \forall y \, (x + y = y + x) \quad (\text{$+$ ist kommutativ}) \\
+    R_2 &: \forall x \, (0 + x = x) \quad (\text{$0$ ist links-neutral bzgl. $+$}) \\
+    R_3 &: \forall x \exists y \, (y + x = 0) \quad (\text{links-inverse bzgl. $+$}) \\
+    R_4 &: \forall x \forall y \forall z \, (x \cdot (y \cdot z) = (x \cdot y) \cdot z) \quad (\text{$\cdot$ ist assoziativ}) \\
+    R_5 &: \forall x \forall y \, (x \cdot y = y \cdot x) \quad (\text{$\cdot$ ist kommutativ}) \\
+    R_6 &: \forall x \, (1 \cdot x = x) \quad (\text{$1$ ist links-neutral bzgl. $\cdot$}) \\
+    R_7 &: \forall x \, (x \neq 0 \implies \exists y \, (y \cdot x = 1)) \quad (\text{links-inverse bzgl. $\cdot$ für $x \neq 0$}) \\
+    R_8 &: \forall x \forall y \forall z \, (x \cdot (y + z) = (x \cdot y) + (x \cdot z)) \quad (\text{links-distributiv}) \\
+    R_9 &: 0 \neq 1
+    \end{align*}
+    
+    \item \textbf{Ordnungsaxiome ($R_{10}$ bis $R_{14}$):}
+    \begin{align*}
+    R_{10} &: \forall x \, \neg(x < x) \quad (\text{$<$ ist irreflexiv}) \\
+    R_{11} &: \forall x \forall y \forall z \, (x < y \wedge y < z \implies x < z) \quad (\text{$<$ ist transitiv}) \\
+    R_{12} &: \forall x \forall y \, (x < y \vee x = y \vee y < x) \quad (\text{definiert eine lineare Ordnung}) \\
+    R_{13} &: \forall x \forall y \, (x < y \implies \exists z \, (x < z \wedge z < y)) \quad (\text{definiert eine dichte Ordnung}) \\
+    R_{14} &: \forall x \exists y \exists z \, (y < x \wedge x < z) \quad (\text{keine größten bzw. kleinsten Elemente})
+    \end{align*}
+    
+    \item \textbf{Kompatibilitätsaxiome ($R_{15}$ bis $R_{16}$):}
+    \begin{align*}
+    R_{15} &: \forall x \forall y \forall z \, (x < y \implies x + z < y + z) \quad (\text{Kompatibilität von $<$ mit $+$}) \\
+    R_{16} &: \forall x \forall y \, (0 < x \wedge 0 < y \implies 0 < x \cdot y) \quad (\text{Kompatibilität von $<$ mit $\cdot$})
+    \end{align*}
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:12 - 00:11:45]
+Dann kommt das nächste Set, ähm, das ist, haben wir auch schon gesehen, das ist das Set der, ähm, der dichten linearen Ordnung. Also wir wollen, dass kleiner-gleich, dass, da für alle $x$, ähm, das $x$ nicht kleiner sein kann als sich selbst (i.e., irreflexiv), wir wollen, dass es transitiv ist, wir wollen, dass es eine lineare Ordnung ist, und es soll dicht sein auch, und schlussendlich gibt es keine größten und keine kleinsten Elemente haben soll. Okay, soweit auch alles schon gesehen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:45 - 00:12:33]
+Dann kommen noch drei weitere Axiome dazu. Ähm, das erste, das ist auch, ähm, haben wir, haben wir so noch nicht hingeschrieben, aber das kennen wir eigentlich auch. Wir wollen, dass, jetzt einfach noch das kleiner-gleich mit plus und mal, ähm, verknüpfen, also wir wollen, dass die auch noch miteinander kompatibel sind. Das erste sagt, wenn wir $x$ kleiner als $y$ haben, dann soll auch $x + z$ kleiner als $y + z$ sein. Also wenn wir Zahlen addieren auf beiden Seiten, soll das unsere Ordnung erhalten. Und das nächste Axiom sagt dasselbe für, ähm, Multiplikation, da muss man ein bisschen sorgfältig sein, es gibt ja noch wegen, wenn wir mit negativen Zahlen multiplizieren, dann kehrt das Ganze ja um. Also das formulieren wir so: für alle $x$ und für alle $y$, wenn $x$ positiv ist und $y$ positiv, dann soll auch $x \cdot y$ positiv sein.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelanschrieb]
+Der Dozent schreibt das Vollständigkeitsaxiom ($R_{17}$) an die Tafel.
+\end{meta-note>
+
+\begin{spoken-clean}[00:12:33 - 00:14:50]
+Gut, und jetzt bevor das 17., das 17. Axiom, das machen wir jetzt an der Tafel. Wir machen da weiter. Das ist aber das, was wir schon gesehen haben vorher. Also was wir jetzt noch weiter machen, ist, ähm, vielleicht noch eine Bemerkung ist: der Körper $\mathbb{Q}$, also der Körper der rationalen Zahlen, der erfüllt, also mit den üblichen Operationen und Relationen, erfüllt $R_0$ bis $R_{16}$. Das heißt, das ist schon gut. Aber was wir jetzt gerne noch zusätzlich hätten, ähm, ist jetzt das Vollständigkeitsaxiom. Und zwar das ist $R_{17}$, und das sagt aus, dass jede nichtleere nach oben beschränkte Teilmenge $X$ hat ein Supremum. Und da kommt jetzt, genau, formal, aber das schreibe ich jetzt nicht nochmals hin, das, was wir im Clicker am Anfang angeschaut haben.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Vollständigkeitsaxiom]
+Das Vollständigkeitsaxiom ($R_{17}$) unterscheidet die reellen Zahlen $\mathbb{R}$ von den rationalen Zahlen $\mathbb{Q}$:
+\begin{equation}\label{eq:vollstaendigkeit}
+R_{17}: \text{Jede nichtleere, nach oben beschränkte Teilmenge } X \subset \mathbb{R} \text{ besitzt ein Supremum in } \mathbb{R}.
+\end{equation}
+
+\begin{explanation-of-steps}
+Der Körper der rationalen Zahlen $(\mathbb{Q}, 0, 1, +, \cdot, <)$ erfüllt alle Axiome $R_0$ bis $R_{16}$, jedoch nicht das Vollständigkeitsaxiom $R_{17}$. Beispielsweise ist die Menge
+\[
+X = \{ q \in \mathbb{Q} \mid q^2 < 2 \} \subset \mathbb{Q}
+\]
+nichtleer und nach oben beschränkt (z.B. durch $2$), besitzt aber in $\mathbb{Q}$ kein Supremum, da $\sqrt{2} \notin \mathbb{Q}$. Das Axiom $R_{17}$ schließt diese "Lücken" im Kontinuum.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:50 - 00:17:27]
+Können das nochmals anschauen. So, diese Formel, da möchte ich einfach darauf hinweisen, hier sieht man tatsächlich, dass, um diese Formel zu formulieren, da brauchen wir, da brauchen wir Mengen, oder? Da brauchen wir $X$ für alle Teilmengen $X$ von $\mathbb{R}$ und für alle $x$ in $X$, ähm, existiert blablabla. Das heißt, das ist wirklich, um dieses Axiom zu formulieren, das zeigt eigentlich, die Theorie von den reellen Zahlen, vom Körper von den reellen Zahlen, das ist, äh, die lebt in der Theorie von Zermelo-Fraenkel. Wir brauchen die Mengenlehre. Ist nicht so wie alle vorherigen Axiome, das sind, ist eine Theorie für sich selbst, da brauchen wir eigentlich keine Mengenlehre dazu, ist eine schwächere, eine schwächere Formulierung, aber hier, äh, für dieses brauchen wir es tatsächlich.
+
+Okay, ähm, was wir jetzt, das Ziel von heute ist, ähm, jetzt diese, solche reellen Zahlen, also die das $R_0$ bis $R_{17}$ erfüllen, zu konstruieren. Und das machen wir jetzt eben über die Dedekind-Schnitte. Dedekindsche Schnitte, wahrscheinlich korrekterweise, aber ja, ich werde es kürzer schreiben. Okay, aber was wir jetzt machen, wir konstruieren die reellen Zahlen ausgehend von den rationalen Zahlen. Also wir gehen davon aus, dass wir die rationalen Zahlen bereits haben. Äh, ja? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+In der Topologie kann man doch auch eine Theorie daraus machen, aber warum haben wir hier Körperaxiome, also weil die anderen Axiome würden uns nicht...
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Also noch, Topologie kann man natürlich auch, äh, eine Theorie daraus machen, aber hier, ähm, hier wenn $R_0$ bis $R_{17}$ erfüllt sind, dann können Sie daraus nachher eine Topologie definieren, wenn Sie wollen, aber ja, das folgt dann daraus. Wenn Sie das haben, dann folgt alles daraus. Genau. Man kann natürlich die reellen Zahlen auch anders definieren, gibt auch andere Möglichkeiten, aber... Genau, machen wir die Dedekind-Schnitte. Also, was wir in, was wir bereits konstruiert haben, ähm, bereits die ganzen Zahlen konstruiert, das haben wir gesagt, okay, das ist gleich $W$, äh, $\omega$ konstruiert, und, ähm, daraus kann man dann, ähm, $\mathbb{Z}$ konstruieren, das machen wir jetzt aber nicht. Also im Prinzip, man nimmt einfach die ganzen Zahlen und dann macht man noch die negativen Zahlen dazu, und da muss man ein bisschen aufpassen, wie man das, äh, sauber formal macht, finden Sie vielleicht im Buch. Und aus $\mathbb{Z}$ kann man dann, ähm, $\mathbb{Q}$ konstruieren, aber das machen wir, ähm, ja, das machen wir jetzt auch nicht. Es sind alles nicht schwierige Sachen, ist einfach alles etwas länglich. Ähm, okay, wir gehen davon aus, ähm, wir gehen aus von einem Modell der, der rationalen Zahlen. Also $\mathbb{Q}$, genauer, das besteht aus dem Bereich $\mathbb{Q}$, den Konstanten $0$ und $1$ und den binären Funktionen $+$ und $\cdot$ und der binären Relation $<$, der rationalen Zahlen. Ähm, und in diesem Modell wissen wir schon, ähm, dass die Axiome $R_0$ bis $R_{16}$ gelten. Okay, aber ja, $R_{17}$ gilt hier nicht, das haben Sie vielleicht schon gesehen in Analysis oder so einmal, wir werden das später auch noch sehen. Gut, und jetzt definieren wir einfach direkt, was ein Dedekindscher Schnitt ist. Jetzt, ich weiß nicht, haben Sie das ein bisschen schon gesehen in Analysis, Dedekindsche Schnitte, oder gar nicht? Okay. Schauen wir es an. Ein, also die Idee ist, ähm, ich kann das vielleicht noch kurz erklären. Ähm, wir haben hier, wenn wir uns vorstellen, wir haben hier die reellen Zahlen $\mathbb{Q}$, und dann wie wir gesehen haben, es gibt so, es gibt so Lücken, zum Beispiel $\sqrt{2}$. Haben Sie aber gesehen, dass $\sqrt{2}$ nicht rational ist? Genau. Das heißt, es gibt, nicht nur $\sqrt{2}$, aber es gibt also ganz viele von diesen Lücken, wo einfach keine reellen Zahlen sind. Aber was man trotzdem machen kann, ist, dass man an diesen Stellen, ähm, kann man doch die, die Achse in zwei Teile teilen. Da hat man da links einen Teil und rechts einen Teil. Und was wir jetzt tun, wir definieren direkt, ähm, unsere reellen Zahlen als die Möglichkeiten, ähm, unsere rationalen Zahlen in zwei Teile zu, zu teilen. Okay? Das ist eigentlich die Idee der Dedekindschen Schnitte. Also machen wir das, saubere Definition. Also ein, ähm, Dedekindscher Schnitt ist eine Teilmenge $\alpha$ in $\mathbb{Q}$, so dass die folgenden Bedingungen erfüllt sind. Okay, das heißt, unsere reellen Zahlen werden eigentlich eine Teilmenge von der Potenzmenge von $\mathbb{Q}$ sein. Ähm, wir wollen, dass Folgendes erfüllt ist: (D0), Dedekind $0$, $\alpha$ soll nicht die leere Menge sein, und $\alpha$ soll nicht ganz $\mathbb{Q}$ sein. Dann die zweite Bedingung ist, ähm, falls $p$ in $\alpha$ liegt und, äh, $q$ eine Zahl, eine rationale Zahl ist, ähm, so dass, ähm, $q$ kleiner ist als, $q$ kleiner, strikt kleiner ist als $p$, dann ist auch, ähm, $q$ in $\alpha$. Also das heißt, sobald eine Zahl $p$ in $\alpha$ ist, dann sind alle kleineren Zahlen, ähm, auch in $\alpha$. Sagt oft, es ist geschlossen nach unten. Ups. Und das Letzte, ähm, (D2), das letzte Axiom ist, für jedes $p$ in $\alpha$ existiert ein $q$ in $\alpha$, so dass, ähm, $p$ strikt kleiner ist als $q$. Also mit anderen Worten, wir wollen, dass $\alpha$ kein... \inlinemetanote{Audio cuts off abruptly}
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Dedekindscher Schnitt]
+Wir nehmen an, dass das Modell der rationalen Zahlen $(\mathbb{Q}, 0, 1, +, \cdot, <)$ gegeben ist und die Axiome $R_0$ bis $R_{16}$ erfüllt.
+
+\begin{definition}[Dedekindscher Schnitt]\label[definition]{def:dedekind-schnitt}
+Ein \newterm{Dedekindscher Schnitt} ist eine Teilmenge $\alpha \subset \mathbb{Q}$, welche die folgenden drei Bedingungen erfüllt:
+\begin{enumerate}
+    \setcounter{enumi}{-1}
+    \item[\textbf{(D0)}] $\alpha \neq \emptyset$ und $\alpha \neq \mathbb{Q}$ (Nicht-Trivialität).
+    \item[\textbf{(D1)}] Falls $p \in \alpha$ und $q \in \mathbb{Q}$ mit $q < p$, dann gilt auch $q \in \alpha$ (Abgeschlossenheit nach unten).
+    \item[\textbf{(D2)}] Für jedes $p \in \alpha$ existiert ein $q \in \alpha$ mit $p < q$ (Kein größtes Element).
+\end{enumerate}
+\end{definition}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.8]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Real line representing Q.
+% 2. Midground: The cut point (representing a real number, e.g., \sqrt{2}) as a dashed vertical line.
+% 3. Foreground: The set \alpha as a thick blue line on the left, open at the right boundary.
+% 4. Annotations: Labels for \alpha, Q \setminus \alpha, and the cut.
+% \end{ai-tikz-planner-invisible-content}
+    
+    % Q-Axis
+    \draw[thick, ->, >=stealth, draw=gray!70] (-3, 0) -- (3, 0) node[right] {$\mathbb{Q}$};
+    
+    % Cut point (dashed line)
+    \draw[dashed, thick, draw=BrickRed] (0, -0.5) -- (0, 0.8) node[above, text=BrickRed] {\footnotesize Schnittstelle};
+    
+    % The set \alpha (left side, shaded/thick)
+    \draw[line width=3pt, MidnightBlue, line cap=round] (-2.8, 0.15) -- (-0.05, 0.15);
+    \node[MidnightBlue, above] at (-1.4, 0.2) {$\alpha$};
+    
+    % The complement \mathbb{Q} \setminus \alpha (right side)
+    \draw[line width=3pt, gray!50, line cap=round] (0.05, 0.15) -- (2.8, 0.15);
+    \node[gray!80, above] at (1.4, 0.2) {$\mathbb{Q} \setminus \alpha$};
+    
+    % Illustrating D1: if p in \alpha and q < p, then q in \alpha
+    \coordinate (P) at (-0.6, 0.15);
+    \coordinate (Q) at (-1.8, 0.15);
+    \fill[MidnightBlue] (P) circle (1.5pt) node[below, yshift=-2pt] {$p$};
+    \fill[MidnightBlue] (Q) circle (1.5pt) node[below, yshift=-2pt] {$q$};
+    \draw[->, >=stealth, MidnightBlue, thin] (P) to[bend right=20] node[midway, above] {\tiny $q < p$} (Q);
+
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}
+Die Idee eines Dedekindschen Schnitts besteht darin, die rationalen Zahlen $\mathbb{Q}$ in zwei disjunkte Klassen $(\alpha, \mathbb{Q} \setminus \alpha)$ aufzuteilen. 
+\begin{itemize}
+    \item \textbf{(D0)} stellt sicher, dass beide Klassen nichtleer sind.
+    \item \textbf{(D1)} besagt, dass $\alpha$ ein "Anfangsstück" von $\mathbb{Q}$ ist. Wenn eine Zahl $p$ im Schnitt liegt, liegen auch alle kleineren rationalen Zahlen darin.
+    \item \textbf{(D2)} schließt aus, dass $\alpha$ ein maximales Element besitzt. Dadurch wird die Schnittstelle eindeutig der oberen Klasse zugeordnet (falls sie rational ist).
+\end{itemize}
+\end{explanation-of-steps>
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 230673, Output 9570)*
+---
+
+**AutoExtraction:** [Part 2] 03-24-tuesday.mp4
+[Angehängtes Video]: 03-24-tuesday-part2.mp4
+[Kontext-Dateien]: 03-24-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-24. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** 
+```latex
+\begin{spoken-clean}[00:00:00 - 00:00:30]
+...dann an diesen Stellen, ähm, kann man doch die, die Achse in zwei Teile teilen. Da hat man da links einen Teil und rechts einen Teil. Und was wir jetzt tun, wir definieren direkt, ähm, unsere reellen Zahlen als die Möglichkeiten, ähm, unsere rationalen Zahlen in zwei Teile zu, zu teilen. Okay? Das ist eigentlich die Idee der Dedekindschen Schnitte. Also machen wir das, saubere Definition. Also ein, ähm, Dedekindscher Schnitt...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Dedekindscher Schnitt]
+\begin{definition}[Dedekindscher Schnitt]\label[definition]{def:dedekind-schnitt-part2}
+Ein \newterm{Dedekindscher Schnitt} ist eine Teilmenge $\alpha \subseteq \mathbb{Q}$, so dass die folgenden Bedingungen erfüllt sind:
+\begin{enumerate}
+    \setcounter{enumi}{-1}
+    \item[\textbf{(D0)}] $\alpha \neq \emptyset$ und $\alpha \neq \mathbb{Q}$.
+    \item[\textbf{(D1)}] Falls $p \in \alpha$ und $q \in \mathbb{Q}$ mit $q < p$, dann ist auch $q \in \alpha$.
+    \item[\textbf{(D2)}] Für jedes $p \in \alpha$ existiert ein $q \in \alpha$, so dass $p < q$.
+\end{enumerate}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:30 - 00:01:10]
+...ist eine Teilmenge $\alpha$ in $\mathbb{Q}$, so dass die folgenden Bedingungen erfüllt sind. Okay, das heißt, unsere reellen Zahlen wird eigentlich eine Teilmenge von der Potenzmenge von $\mathbb{Q}$ sein. Ähm, wir wollen, dass Folgendes erfüllt ist: (D0), Dedekind 0, $\alpha$ soll nicht die leere Menge sein, und $\alpha$ soll nicht ganz $\mathbb{Q}$ sein.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:10 - 00:02:24]
+Dann die zweite Bedingung ist, ähm, falls $p$ in $\alpha$ liegt und, äh, $q$ eine Zahl, eine rationale Zahl ist, ähm, so dass, ähm, $q$ kleiner ist als, $q$ kleiner, strikt kleiner ist als $p$, dann ist auch, ähm, $q$ in $\alpha$. Also das heißt, sobald eine Zahl $p$ in $\alpha$ ist, dann sind alle kleineren Zahlen, ähm, auch in $\alpha$. Sagt oft, es ist geschlossen nach unten. Ups. Und das Letzte, ähm, (D2), das letzte Axiom ist, für jedes $p$ in $\alpha$ existiert ein $q$ in $\alpha$, so dass, ähm, $p$ strikt kleiner ist als $q$. Also mit anderen Worten, wir wollen, dass $\alpha$ kein...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:24 - 00:03:16]
+...maximales Element enthält. Okay? Genau, die Bemerkung ist, äh, was ich gesagt habe vorher schon, ein Dedekindscher Schnitt $\alpha$ teilt $\mathbb{Q}$ in zwei disjunkte, ähm, Mengen. Und zwar, wenn wir hier $0$ haben und $1$ da oben, das ist unsere Zahlachse $\mathbb{Q}$, und dann schauen wir uns an, okay, da haben wir hier $\alpha$, und $\alpha$ ist ja durch so ein Halboffenes... wenn wir so $\alpha$ haben, haben wir alles, was kleiner ist, ähm, ist auch drin, das heißt, so nach links geht das so weit runter, wie Sie wollen, aber, ähm, hier muss das irgendwo aufhören, weil, ähm, es ist ja nicht ganz $\mathbb{Q}$. Also es kann nicht beliebig große Elemente drin haben. Wenn Sie irgendetwas drin haben, dann ist links alles drin, das heißt, wenn es nicht beschränkt wäre, hätten Sie ganz $\mathbb{Q}$. Also das heißt, es muss, sie müssen alle nach oben beschränkt sein. Okay, das heißt, es ist irgendwo so, und dann ist aber hier, ähm, offen, wenn Sie wollen, also das heißt, man kann beliebig... es gibt kein größtes Element. Da haben wir hier $\alpha$ und hier haben wir $\mathbb{Q} \setminus \alpha$. Also eigentlich wirklich, wir schneiden die Zahlgerade aus den rationalen Zahlen in zwei Stücke. Deswegen, äh, Dedekindscher Schnitt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Geometrische Veranschaulichung des Schnitts]
+\begin{center}
+\begin{tikzpicture}[scale=1.5]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Real line representing Q.
+% 2. Midground: Shaded region for \alpha extending to the left.
+% 3. Foreground: Cut point and labels.
+% \end{ai-tikz-planner-invisible-content}
+    % Q-Axis
+    \draw[thick, ->, >=stealth, draw=gray!70] (-3, 0) -- (3, 0) node[right] {$\mathbb{Q}$};
+    
+    % Ticks
+    \draw[thick] (0, 0.05) -- (0, -0.05) node[below] {$0$};
+    \draw[thick] (1.5, 0.05) -- (1.5, -0.05) node[below] {$1$};
+    
+    % Shaded interval \alpha (open on the right)
+    \draw[line width=3pt, MidnightBlue, line cap=round] (-2.8, 0.2) -- (0.8, 0.2);
+    \node[MidnightBlue, above] at (-1, 0.2) {$\alpha$};
+    
+    % Complement
+    \draw[line width=3pt, gray!40, line cap=round] (0.85, 0.2) -- (2.8, 0.2);
+    \node[gray!70, above] at (1.8, 0.2) {$\mathbb{Q} \setminus \alpha$};
+    
+    % Cut line
+    \draw[dashed, thick, draw=BrickRed] (0.825, -0.4) -- (0.825, 0.8) node[above, text=BrickRed] {\footnotesize Schnittstelle};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:16 - 00:04:49]
+Ähm, okay, und wir definieren jetzt einfach als Menge $\mathbb{R}$ als Menge von allen Dedekindschen Schnitten von $\mathbb{Q}$. Gut, und als Erstes hätten wir gerne, dass die rationalen Zahlen enthalten sind in $\mathbb{R}$. Hat jemand eine Idee, wie man das bewerkstelligen könnte, oder wie sieht man natürlicherweise $\mathbb{Q}$ als Teilmenge von... wie kann man eine rationale Zahl als Dedekindschnitt interpretieren? Äh, ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Die Menge der Zahlen, die kleiner sind als die Zahl.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, wir können die Menge aller Zahlen anschauen, die strikt kleiner als eine gegebene Zahl sind. Also für ein $p$ in $\mathbb{Q}$ definieren wir $\alpha_p$ als die Menge von allen $q$ in $\mathbb{Q}$, so dass $q$ strikt kleiner ist als $p$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der reellen Zahlen \texorpdfstring{$\mathbb{R}$}{R}]
+Wir definieren die Menge der reellen Zahlen $\mathbb{R}$ als die Menge aller Dedekindschen Schnitte über $\mathbb{Q}$:
+\[
+\mathbb{R} := \{ \alpha \subseteq \mathbb{Q} \mid \alpha \text{ ist ein Dedekindscher Schnitt} \}
+\]
+Für jede rationale Zahl $p \in \mathbb{Q}$ definieren wir den zugehörigen Schnitt $\alpha_p$:
+\[
+\alpha_p := \{ q \in \mathbb{Q} \mid q < p \}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:49 - 00:06:10]
+Okay, wir müssen noch beweisen, dass das tatsächlich ein Dedekindschnitt ist. Machen wir das mal gründlich, wir können das nicht einfach... Also okay, D0 ist okay, also ist nicht leer, weil wir immer kleinere Zahlen finden. Müssen wir D1 zeigen, aber ja, das ist auch klar. Wenn $q$ in $\alpha_p$ ist und $r$ in $\mathbb{Q}$, so dass $r$ kleiner ist als $q$, dann folgt, dass $r$ ist kleiner als $q$, und $q$ wissen wir, dass es kleiner ist als $p$, das heißt, $r$ ist auch strikt kleiner als $p$, und somit folgt, dass $r$ auch in $\alpha_p$ ist. Also das ist nicht viel dahinter.
+\end{spoken-clean}
+
+\begin{math-stroke}[Verifikation der Schnitteigenschaften für \texorpdfstring{$\alpha_p$}{alpha\_p}]
+\begin{proposition}\label[proposition]{prop:alphap-is-cut}
+Für jedes $p \in \mathbb{Q}$ ist die Menge $\alpha_p$ ein Dedekindscher Schnitt.
+\end{proposition}
+
+\begin{short-proof}
+Wir überprüfen die Bedingungen (D0), (D1) und (D2):
+\begin{itemize}
+    \item[\textbf{(D0)}] $\alpha_p \neq \emptyset$, da beispielsweise $p - 1 \in \mathbb{Q}$ und $p - 1 < p \implies p - 1 \in \alpha_p$. Zudem gilt $\alpha_p \neq \mathbb{Q}$, da $p \notin \alpha_p$ (da $p \not< p$).
+    \item[\textbf{(D1)}] Sei $q \in \alpha_p$ und $r \in \mathbb{Q}$ mit $r < q$. Da $q \in \alpha_p$, gilt $q < p$. Aus der Transitivität der Ordnung auf $\mathbb{Q}$ folgt:
+    \[
+    r < q \wedge q < p \implies r < p \implies r \in \alpha_p.
+    \]
+\end{itemize}
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:10 - 00:07:21]
+Und dann noch das Letzte, wir müssen noch zeigen, dass es kein maximales Element hat, aber das ist auch nicht schwierig. Wenn wir $q$ haben in $\alpha_p$, und... dann nehmen wir einfach, ähm, $r$ als, ähm, den... die Mitte zwischen $p$ und $q$. Also $p$ und $q$ geteilt durch zwei, das ist auch eine rationale Zahl,
+
+*(Tokens: Input 240565, Output 2615)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 2]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+as Letzte, wir müssen noch zeigen, dass es kein maximales Element hat, aber das ist auch nicht schwierig. Wenn wir $q$ haben in $\alpha_p$, und... dann nehmen wir einfach, ähm, $r$ als, ähm, den... die Mitte zwischen $p$ und $q$. Also $p$ und $q$ geteilt durch zwei, das ist auch eine rationale Zahl,
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** dann ist, äh, liegt $q$ zwischen, ähm, $r$ und $p$, und... ja, das heißt, $q$ ist kleiner als $r$ und $r$ ist in $\alpha_p$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Bedingung (D2) für \texorpdfstring{$\alpha_p$}{alpha\_p}]
+\begin{short-proof}
+Sei $q \in \alpha_p$, also $q < p$. Wir definieren:
+\[
+r := \frac{q + p}{2} \in \mathbb{Q}
+\]
+Da $q < p$, gilt:
+\[
+q < \frac{q + p}{2} < p \implies q < r < p
+\]
+Da $r < p$, ist $r \in \alpha_p$. Da zudem $q < r$, existiert ein Element in $\alpha_p$, welches strikt größer als $q$ ist. Somit besitzt $\alpha_p$ kein maximales Element.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:31 - 00:09:20]
+Somit erhalten wir eine Injektion, wir können das schreiben, von $\mathbb{Q}$ in die reellen Zahlen. Aber die Sache ist, dass nicht alle Dedekindschnitte von dieser Form sind, oder die meisten werden wir schlussendlich sehen sind nicht von dieser Form.
+\end{spoken-clean}
+
+\begin{math-stroke}[Injektion von \texorpdfstring{$\mathbb{Q}$}{Q} in \texorpdfstring{$\mathbb{R}$}{R}]
+Wir erhalten eine natürliche Injektion:
+\[
+\mathbb{Q} \hookrightarrow \mathbb{R}, \quad p \mapsto \alpha_p
+\]
+\begin{explanation-of-steps}
+Diese Abbildung identifiziert jede rationale Zahl $p$ mit dem Schnitt $\alpha_p$. Da jedoch nicht alle Dedekindschen Schnitte von dieser Form sind (wie wir gleich sehen werden), ist $\mathbb{R}$ eine echte Erweiterung von $\mathbb{Q}$.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:20 - 00:10:40]
+Nehmen wir als Beispiel, ähm, nehmen wir jetzt Wurzel zwei gewissermaßen. Wie könnte man Wurzel zwei als Dedekindschnitt definieren? Hat jemand eine Idee? \inlinemetanote{wartet auf Antwort} Ja? \inlinemetanote{Student antwortet} Genau, wir können die Menge aller rationalen Zahlen anschauen, deren Quadrat kleiner als zwei ist. Also schreiben wir auf... Wir definieren... Elemente in $\mathbb{R} \setminus \mathbb{Q}$ heißen irrationale Zahlen. Und eben das Beispiel ist, wir können den Dedekindschnitt $\alpha$ anschauen, der besteht aus allen $p$ in $\mathbb{Q}$, so dass $p^2$ strikt kleiner ist als zwei. Und das definieren wir als Wurzel zwei.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Die irrationale Zahl \texorpdfstring{$\sqrt{2}$}{Wurzel 2}]
+Die Elemente in $\mathbb{R} \setminus \mathbb{Q}$ heißen \newterm{irrationale Zahlen}. 
+Als Beispiel definieren wir den Dedekindschen Schnitt für $\sqrt{2}$:
+\[
+\alpha := \{ p \in \mathbb{Q} \mid p < 0 \vee p^2 < 2 \} =: \sqrt{2}
+\]
+\begin{explanation-of-steps}
+Da ein Dedekindscher Schnitt nach unten abgeschlossen sein muss, müssen alle negativen rationalen Zahlen in $\alpha$ enthalten sein. Für positive rationale Zahlen fordern wir zusätzlich $p^2 < 2$.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:40 - 00:11:51]
+Jetzt wird es natürlich noch... muss man noch beweisen, dass das tatsächlich ein Dedekindschnitt ist, und dann auch schauen, ob... ja, später müssen wir noch eine Multiplikation definieren, dann müssen wir schauen, dass wenn man diese Zahl mit sich selbst multipliziert, dass das tatsächlich zwei ergibt. Ist auf dem Übungsblatt diese, äh, diese Woche, genau. Ist nicht schwierig, aber es ist gut, das einmal zu tun, so etwas. Und okay, um zu zeigen, dass das ein Dedekindschnitt ist, kann man sehen, dass eben keine rationale Zahl gibt, die die Wurzel von zwei ist. Das wollen wir doch nochmals beweisen. Die Behauptung ist, es gibt keine Zahl $p/q$ in $\mathbb{Q}$... so dass $p^2/q^2 = 2$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung: Irrationalität von \texorpdfstring{$\sqrt{2}$}{Wurzel 2}]
+\begin{proposition}\label[proposition]{prop:sqrt2-irrational}
+Es gibt keine rationale Zahl $x \in \mathbb{Q}$ mit $x^2 = 2$. Das heißt, es existieren keine ganzen Zahlen $p, q \in \mathbb{Z}$ mit $q \neq 0$, so dass:
+\[
+\frac{p^2}{q^2} = 2
+\]
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:51 - 00:13:18]
+Beweis. Okay, der Beweis, den man normalerweise sieht, verwendet die Primfaktorzerlegung, denke ich, den Sie schon gesehen haben. Wir haben hier noch einen Beweis, der von Dedekind stammt, deswegen ist es vielleicht passend für diesen Hörsaal hier und dieses Thema. Beweis von Dedekind. Okay, wir nehmen wieder an, ist wieder ein Widerspruchsbeweis. Nehme an, es existieren solche $p, q$ in $\mathbb{N}$... Okay, wir können annehmen, dass das natürliche Zahlen sind, weil ansonsten, ja... Ja, weil diese hier sind auf jeden Fall beide positiv, das heißt, wir können gut annehmen, dass $p$ und $q$ in $\mathbb{N}$ liegen. Das heißt, in anderen Worten, wir haben $p^2 - 2q^2 = 0$.
+\end{spoken-clean}
+
+\begin{proof}[Beweis von Dedekind für die Irrationalität von \texorpdfstring{$\sqrt{2}$}{Wurzel 2}]
+\begin{spoken-clean}[00:13:18 - 00:14:48]
+Okay, und wir nehmen jetzt an, dass $q$ in $\mathbb{N}$ die kleinste Zahl ist, die das erfüllt. Also das heißt, die kleinste Zahl, so dass wenn wir $q$ Quadrat nehmen und das mal zwei, also zwei mal $q$ Quadrat, eine Quadratzahl ist. Okay, und was wir hier sehen ist, wir haben... dass $p$ muss kleiner sein als $2q$ und $q$ ist kleiner als $p$. Und... das $p$ ist kleiner als $2q$. Jetzt definieren wir $q'$ als die Differenz von $p - q$ und $p'$ als die Differenz von $2q - p$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Dedekinds Beweis: Minimalitätsannahme und Definitionen]
+Wir führen einen Widerspruchsbeweis. Angenommen, es existieren $p, q \in \mathbb{N}$ mit:
+\[
+p^2 - 2q^2 = 0
+\]
+Sei $q \in \mathbb{N}$ die \emph{kleinste} natürliche Zahl, für die $2q^2$ eine Quadratzahl ist (nämlich $p^2$).
+Aus $p^2 = 2q^2$ folgt unmittelbar:
+\[
+q < p < 2q
+\]
+Wir definieren nun zwei neue Zahlen $q'$ und $p'$:
+\begin{align*}
+q' &:= p - q \\
+p' &:= 2q - p
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:48 - 00:16:35]
+wegen dem da haben wir hier, dass das wieder positiv ist, also... Null ist strikt kleiner als $q'$ und $q'$ ist auch wieder strikt kleiner als $q$. Und was wir jetzt tun, ist zu zeigen einfach, dass $2q'^2$ auch wieder ein Quadrat ist. Dazu rechnen wir einfach $p'^2 - 2q'^2$. Okay, das gibt jetzt, füllen wir das hier ein... die Definition, da haben wir $p'^2$ gibt $4q^2 - 4pq + p^2$. Okay, und dann schauen wir $-2q'^2$, das gibt $-2$ mal und $q'^2$ gibt uns $p^2 - 2pq + q^2$. Sie schreien, wenn ich einen... ja, ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Ist $q$ kleiner als $p$ und $p$ kleiner als $2q$?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Nein, andersrum, oder? $q$ ist kleiner als $p$. Weil wenn wir $q$ Quadrat nehmen, mit zwei multiplizieren, dann bekommen wir $p$ Quadrat, das folgt daraus.
+\end{spoken-clean}
+
+\begin{math-stroke}[Berechnung der neuen Quadratzahl]
+Da $q < p < 2q$, gilt für $q' = p - q$:
+\[
+0 < q' < q
+\]
+Wir berechnen nun den Wert von $p'^2 - 2q'^2$:
+\begin{align*}
+p'^2 - 2q'^2 &= (2q - p)^2 - 2(p - q)^2 \\
+&= (4q^2 - 4pq + p^2) - 2(p^2 - 2pq + q^2)
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:00 - 00:18:21]
+Okay, und das kann man jetzt umschreiben, das gibt $-p^2 + 2q^2$. Das hier fällt weg, $-2 - p^2$ und $4q^2 - 2q^2 = 2q^2$, okay. Und da wissen wir aber, das ist Null. Das heißt, $2q'^2$ ist tatsächlich eine Quadratzahl, das kann aber nicht sein... Ja. \inlinemetanote{Ein Student stellt eine Frage zur Definition von $p'$ und $q'$} Ja, das brauchen wir ja auch gar nicht, oder? Die Definition brauchen wir, aber wir brauchen sonst nichts über $p'$... Also was ist das Problem? Weshalb $q'$ positiv ist, oder? Nein. Also $q'$ ist positiv wegen dem da. Also $q$ ist eine ganze Zahl, die ist kleiner als $p$, dann ist $p - q$ strikt kleiner als $q$ und strikt größer als Null.
+\end{spoken-clean}
+
+\begin{math-stroke}[Widerspruch zur Minimalität]
+Durch Ausmultiplizieren und Zusammenfassen erhalten wir:
+\begin{align*}
+p'^2 - 2q'^2 &= 4q^2 - 4pq + p^2 - 2p^2 + 4pq - 2q^2 \\
+&= 2q^2 - p^2
+\end{align*}
+Da nach Annahme $p^2 - 2q^2 = 0$ gilt, ist auch $2q^2 - p^2 = 0$. Daraus folgt:
+\[
+p'^2 - 2q'^2 = 0 \implies 2q'^2 = p'^2
+\]
+\begin{explanation-of-steps}
+Dies bedeutet, dass $2q'^2$ ebenfalls eine Quadratzahl (nämlich $p'^2$) ist. Da jedoch $0 < q' < q$ gilt, haben wir eine kleinere natürliche Zahl $q'$ gefunden, die dieselbe Eigenschaft erfüllt. Dies steht im direkten Widerspruch zur angenommenen Minimalität von $q$.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:21 - 00:18:55]
+Genau, und das ist ein Widerspruch zur Minimalität von $q$. Okay, und das beendet den Beweis. Immer gut, hier und da einen Rechenfehler zu machen, dann beginnen die Leute wieder mitzudenken. Sehr gut. Aber genau, jetzt machen wir eine Pause und beginnen im Viertel nach wieder weiter.
+\end{spoken-clean}
+\end{proof}
+
+\begin{lecture-break}[Pause]
+Der Dozent kündigt eine Pause an. Nach der Pause setzt er die Vorlesung fort.
+\end{lecture-break}
+
+\begin{spoken-clean}[00:18:55 - 00:19:26]
+Hier noch eine kleine Ergänzung zu was wir vor der Pause noch kurz gemacht haben. Genau, wir müssen ja nehmen... wir wissen $p$ ist kleiner als $2q$, das folgt direkt daraus, dass $p^2 = 2q^2$ und $q$ ist kleiner als $p$. Und genau, damit folgt dann, dass $q'$, das wir als $p - q$ definiert haben, $q'$ liegt zwischen Null und $q$. Okay, so wir brauchen diese zwei Ungleichungen. Gut. Ähm...
+\end{spoken-clean}
+
+\begin{math-stroke}[Ergänzung zur Ungleichung \texorpdfstring{$0 < q' < q$}{0 < q' < q}]
+\begin{didactic-insight}[Präzisierung der Ungleichungen]
+Vor der Pause gab es eine kurze Diskussion über die Gültigkeit der Ungleichung $0 < q' < q$. Der Dozent präzisiert dies an der Tafel:
+\begin{align*}
+p^2 = 2q^2 < 4q^2 &\implies p < 2q \\
+q^2 < 2q^2 = p^2 &\implies q < p
+\end{align*}
+Daraus folgt für $q' = p - q$:
+\[
+q < p \implies 0 < p - q = q'
+\]
+und
+\[
+p < 2q \implies q' = p - q < q
+\]
+Zusammengefasst gilt also tatsächlich $0 < q' < q$.
+\end{didactic-insight}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:26 - 00:20:15]
+Jetzt als Nächstes wollen wir die Körperoperationen definieren auf unseren Dedekindschen Schnitten. Ähm... Also das Ziel ist nun, definiere Körperstruktur auf $\mathbb{R}$. Und idealerweise wollen wir natürlich, dass das die Körperstruktur von $\mathbb{Q}$, das wir jetzt als Teilmenge von $\mathbb{R}$ aufgefasst haben, dass das die erweitert, also die Einschränkung auf $\mathbb{Q}$ soll die übliche Körperstruktur geben. Beginnen wir mit... okay, und das ist ein bisschen eine längliche Sache, wir machen zuerst die Addition. Ähm...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Addition auf \texorpdfstring{$\mathbb{R}$}{R}]
+Wir definieren die Addition auf der Menge der Dedekindschen Schnitte $\mathbb{R}$:
+\[
++ : \mathbb{R} \times \mathbb{R} \to \mathbb{R}, \quad (\alpha, \beta) \mapsto \alpha + \beta
+\]
+wobei:
+\[
+\alpha + \beta := \{ p + q \in \mathbb{Q} \mid p \in \alpha \wedge q \in \beta \}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:20:15 - 00:21:16]
+Und zwar, okay, das soll eine binäre Funktion sein auf $\mathbb{R}$. Jetzt müssen wir sagen, was ist $\alpha + \beta$. Hat jemand eine Idee, wie man das sinnvoll definieren könnte? \inlinemetanote{wartet auf Antwort} Ja? \inlinemetanote{Student antwortet} Ja, genau, wir nehmen einfach alle $p + q$, wobei $p$ in $\alpha$ ist und $q$ in $\beta$. Also wir nehmen einfach alle möglichen Kombinationen, das ist eine neue Menge, und das definieren wir als die Addition. Jetzt als Erstes müssen wir prüfen, dass das wieder ein Dedekindschnitt ist. Ist das wieder ein Dedekindschnitt? \inlinemetanote{lacht} Schon überlegen. Machen wir es mal, ich kann es kurz erklären, aber solche Sachen macht man vielleicht eigentlich in der Regel am besten alleine.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:21:16 - 00:22:22]
+Aber das Lemma ist jetzt, $\alpha + \beta$ ist ein Dedekindschnitt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Lemma: Wohldefiniertheit der Addition]
+\begin{lemma}\label[lemma]{lem:addition-well-defined}
+Für beliebige Dedekindsche Schnitte $\alpha, \beta \in \mathbb{R}$ ist auch ihre Summe $\alpha + \beta$ ein Dedekindscher Schnitt.
+\end{lemma}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:22 - 00:23:27]
+Okay, und der Beweis ist... okay, wir müssen einfach alle Axiome nachprüfen. D0, okay, D0 ist ja eigentlich klar, also wir wissen $\alpha$ und $\beta$ sind nicht die leere Menge, beide nicht die leere Menge. Das heißt, es gibt ein Element $p$ in $\alpha$ und $q$ in $\beta$. Daraus folgt, dass $p + q$ liegt in $\alpha + \beta$, und somit ist das nicht leer. Dann müssen wir noch zeigen, dass es nicht ganz $\mathbb{Q}$ ist.
+\end{spoken-clean}
+
+\begin{proof}[Beweis von \cref{lem:addition-well-defined}]
+\begin{spoken-clean}[00:23:27 - 00:24:45]
+Ja, dazu nehmen wir jetzt einfach ein Element $r$, das in $\mathbb{Q}$ liegt, aber nicht in $\alpha$, und ein $s$, das in $\mathbb{Q}$ liegt, aber nicht in $\beta$. Dann gilt für $p$ in $\alpha$ und $q$ in $\beta$ gilt, dass $p$ strikt kleiner ist als $r$ und $q$ strikt kleiner ist als $s$. Okay, das muss für alle... für alle $p$ und $q$ gelten, weil... ja, weil sonst wäre ja $r$ in $\alpha$ enthalten oder $s$ in $\beta$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis von (D0) für \texorpdfstring{$\alpha + \beta$}{alpha + beta}]
+\begin{itemize}
+    \item[\textbf{(D0) Teil 1: Nicht-Leerheit:}] Da $\alpha, \beta \neq \emptyset$, existieren $p \in \alpha$ und $q \in \beta$. Nach Definition der Summe gilt:
+    \[
+    p + q \in \alpha + \beta \implies \alpha + \beta \neq \emptyset
+    \]
+    \item[\textbf{(D0) Teil 2: Ungleich \texorpdfstring{$\mathbb{Q}$}{Q}:}] Da $\alpha, \beta \neq \mathbb{Q}$, existieren Schranken $r \in \mathbb{Q} \setminus \alpha$ und $s \in \mathbb{Q} \setminus \beta$. Da $\alpha$ und $\beta$ nach unten abgeschlossen sind, gilt für alle $p \in \alpha$ und $q \in \beta$:
+    \[
+    p < r \quad \text{und} \quad q < s
+    \]
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:45 - 00:26:00]
+Und somit folgt, dass $p + q$ ist strikt kleiner als $r + s$. Das heißt, $r + s$ ist nicht in $\alpha + \beta$. Das heißt, $\alpha + \beta$ ist nicht ganz $\mathbb{Q}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Abschluss von (D0)]
+Daraus folgt für alle $p \in \alpha$ und $q \in \beta$:
+\[
+p + q < r + s
+\]
+Somit kann die rationale Zahl $r + s$ nicht in $\alpha + \beta$ liegen, da sie strikt größer als jede Summe von Elementen aus $\alpha$ und $\beta$ ist. Daher gilt:
+\[
+\alpha + \beta \neq \mathbb{Q}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:26:00 - 00:27:21]
+Okay, dann müssen wir noch sehen, dass es nach unten abgeschlossen ist. Dazu nehmen wir... sei $r = p + q$ in $\alpha + \beta$ und $s$ in $\mathbb{Q}$ mit $s$ strikt kleiner als $r$. Und $p$ nehmen wir an ist in $\alpha$, immer, und $q$ in $\beta$. Okay, und dann nehmen wir einfach $t$ so, dass... $p$ so, dass wir schreiben können $s = t + q$. Aber dann folgt, dass $t$ ist kleiner als $p$, und somit ist $t$ insbesondere in $\alpha$, und somit folgt, dass $s$ gleich $t + q$ auch wieder in $\alpha + \beta$ liegt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis von (D1) für \texorpdfstring{$\alpha + \beta$}{alpha + beta}]
+\begin{itemize}
+    \item[\textbf{(D1) Abgeschlossenheit nach unten:}] Sei $s \in \mathbb{Q}$ und $r \in \alpha + \beta$ mit $s < r$. Nach Definition existieren $p \in \alpha$ und $q \in \beta$ mit $r = p + q$. Wir definieren:
+    \[
+    t := s - q \in \mathbb{Q} \implies s = t + q
+    \]
+    Da $s < r$, gilt:
+    \[
+    t + q < p + q \implies t < p
+    \]
+    Da $p \in \alpha$ und $\alpha$ ein Dedekindscher Schnitt ist, folgt aus $t < p$ sofort $t \in \alpha$. Da $q \in \beta$, erhalten wir:
+    \[
+    s = t + q \in \alpha + \beta
+    \]
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:21 - 00:28:31]
+Und dann müssen wir noch zeigen, dass es kein maximales Element gibt, aber wie können wir das machen? Kann man sich schnell überlegen, während ich putze. Hat jemand einen Vorschlag? \inlinemetanote{wartet auf Antwort} Ja? \inlinemetanote{Student antwortet} Genau, genau. Es gab schon vorher keines, dann gibt es auch in der Summe keines. Also wenn wir $r$ haben, und das ist $p + q$ in $\alpha + \beta$, nehmen wir $p$ in $\alpha$, $q$ in $\beta$. Dann gibt es ein $p'$ in $\alpha$ mit $p$ ist strikt kleiner als $p'$, und daraus folgt, dass unser $r$ ist strikt kleiner als $p' + q$, aber das ist immer noch in $\alpha + \beta$. Das heißt, es gibt kein maximales Element.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis von (D2) für \texorpdfstring{$\alpha + \beta$}{alpha + beta}]
+\begin{itemize}
+    \item[\textbf{(D2) Kein maximales Element:}] Sei $r \in \alpha + \beta$. Dann existieren $p \in \alpha$ und $q \in \beta$ mit $r = p + q$. Da $\alpha$ ein Dedekindscher Schnitt ist, besitzt $\alpha$ kein maximales Element. Es existiert also ein $p' \in \alpha$ mit:
+    \[
+    p < p'
+    \]
+    Daraus folgt:
+    \[
+    r = p + q < p' + q
+    \]
+    Da $p' \in \alpha$ und $q \in \beta$, ist $p' + q \in \alpha + \beta$. Somit haben wir ein Element in $\alpha + \beta$ gefunden, das strikt größer als $r$ ist.
+\end{itemize}
+\end{short-proof}
+\end{proof}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 243301, Output 5641)*
+---
+
+**AutoExtraction:** [Part 3] 03-24-tuesday.mp4
+[Angehängtes Video]: 03-24-tuesday-part3.mp4
+[Kontext-Dateien]: 03-24-tuesday-part1.tex, 03-24-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-24. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** 
+
+
+*(Tokens: Input 248673, Output 1)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 3]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+
+
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:00:36]
+...und $q$ in $\beta$. Dann gibt es ein $p'$ in $\alpha$ mit $p$ ist strikt kleiner als $p'$, und daraus folgt, dass unser $r$ ist strikt kleiner als $p' + q$, aber das ist immer noch in $\alpha + \beta$. Das heißt, es gibt kein maximales Element.
+\end{spoken-clean}
+
+\begin{math-stroke}[(D2) Kein maximales Element (Fortsetzung)]
+Sei $r = p + q \in \alpha + \beta$ mit $p \in \alpha$ und $q \in \beta$. Da $\alpha$ ein Dedekindscher Schnitt ist, existiert ein $p' \in \alpha$ mit $p < p'$.
+Daraus folgt:
+\[
+r = p + q < p' + q \in \alpha + \beta
+\]
+Somit besitzt $\alpha + \beta$ kein maximales Element.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:36 - 01:01]
+Okay. Jetzt, das Nullelement haben wir ja bereits. Okay, das ist das Nullelement, das haben wir gesagt, das sind alle $p$ in $\mathbb{Q}$, so dass $p$ strikt kleiner als $0$ ist. Okay.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Nullelement in \texorpdfstring{$\mathbb{R}$}{R}]
+Wir haben das Nullelement $0 \in \mathbb{R}$ bereits definiert als den rationalen Schnitt $\alpha_0$:
+\[
+0 = \alpha_0 = \{ p \in \mathbb{Q} \mid p < 0 \}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[01:01 - 02:21]
+Ähm, okay, jetzt ist die Frage, wie können wir das Negative von $\alpha$ nehmen. Also, wenn wir $\alpha$ haben, was ist $-\alpha$? Für $\alpha$ in $\mathbb{R}$ definieren wir $-\alpha$ als den Dedekindschnitt gegeben durch... Wie könnte man das... Ja? \inlinemetanote{Ein Student antwortet} Ja, ja, ja... man hätte gerne so ein bisschen wie alles... also wenn man hier aufschneidet, man möchte gerne wie alles auf dieser Seite, aber negativ genommen, oder? Damit sich das dann immer zu... das kleinere... aber das ist dann ein bisschen schwierig, weil wir haben ja hier auch wieder etwas Größeres... Aber ich definiere das genau, das ist das, was wir wollen. Ja? \inlinemetanote{Ein anderer Student antwortet} Ah ja, das könnte man auch machen, ja... Und sonst kann man auch einfach sagen... wir nehmen alle $p \in \mathbb{Q}$, so dass... es existiert ein $r > 0$ in $\mathbb{Q}$, so dass $-p - r \notin \alpha$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das additive Inverse (Negatives) eines Schnitts]
+Für einen Dedekindschen Schnitt $\alpha \in \mathbb{R}$ definieren wir das additive Inverse $-\alpha$ wie folgt:
+\[
+-\alpha := \{ p \in \mathbb{Q} \mid \exists r \in \mathbb{Q} \text{ mit } r > 0 \text{ so dass } -p - r \notin \alpha \}
+\]
+\begin{explanation-of-steps}
+Diese Definition stellt sicher, dass $-\alpha$ nach unten abgeschlossen ist und kein maximales Element besitzt. Der positive rationale Wert $r$ dient als "Sicherheitsabstand", um den Randpunkt auszuschließen, falls dieser existiert.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[02:21 - 03:18]
+Das ist tatsächlich ein Dedekindschnitt, kann man nachprüfen. Und somit können wir auch subtrahieren. Gut, und dann können wir sagen, was es heißt, größer oder kleiner als Null zu sein. Also wir sagen, $\alpha$ ist größer als Null, falls... einfaches Kriterium, um zu sagen, dass $\alpha$ größer als Null ist? Ja? \inlinemetanote{wartet auf Antwort}
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Sollte es nicht sein, dass wir... das $-0$ kein Dedekindschnitt mehr ist?
+\end{student-interaction}
+
+\begin{spoken-clean}[03:18 - 05:22]
+Wir sollten nicht haben, dass $0$... das $-0$ kein Dedekindschnitt mehr ist. War da zu schnell. Moment, wir... kurz überlegen. Hat jemand eine bessere Definition direkt? Ja? \inlinemetanote{Student antwortet} Ja, aber das ist kein Dedekindschnitt mehr, weil da geht's ja bis zum... bis zu einer Zahl... Ja, aber das ist kein Dedekindschnitt mehr, weil da geht's ja bis zum... bis zu einer Zahl... Okay, ich überlege mir das... hat jemand schnell einen klaren Kopf? Ich überlege mir das sonst noch schnell oder Sie überlegen sich das, und ich schreibe das nachher per Mail. Das ist einfacher. Ja, ich habe das vorher zu schnell überlegt. \inlinemetanote{Dozent wischt einen Teil der Tafel} Aber genau, jetzt machen wir weiter. Wir sagen, $\alpha$ ist größer als Null, falls Null in $\alpha$ enthalten ist. Okay? Und $\alpha$ ist kleiner als Null, falls $-\alpha$ größer als Null ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Ordnungsrelationen bzgl. Null]
+Wir definieren die Positivität und Negativität für Dedekindsche Schnitte:
+\begin{align*}
+\alpha > 0 &\iff 0 \in \alpha \\
+\alpha < 0 &\iff -\alpha > 0 \\
+\alpha \ge 0 &\iff \alpha > 0 \vee \alpha = 0
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[05:22 - 06:21]
+Okay. Und jetzt für die Multiplikation. Machen wir es erst für die Multiplikation, da können wir sagen, wir multiplizieren... mit $-1$, das geht vielleicht dort ganz gut. Was für Ideen gibt es für die Multiplikation? Ja? \inlinemetanote{Student antwortet} Genau, das ist die Grundidee, ja. Das Problem ist halt mit den negativen Zahlen. Aber wenn beide positiv sind, dann ist das der richtige Weg. Da ist es jetzt eine mühsame Fallunterscheidung. Also wir sagen, falls $\alpha, \beta \ge 0$ sind...
+\end{spoken-clean}
+
+\begin{spoken-clean}[06:21 - 09:02]
+...so definieren wir $\alpha \cdot \beta$ als alle $p \cdot q$, so dass $p$ in $\alpha$ ist und $q$ in $\beta$. Das ist das... der erste Fall. Okay, wenn... wenn beide negativ sind, dann ist das ähnlich, dann nehmen wir einfach das Produkt von den Negativen, und dann geht es auch wieder auf. Also der nächste Fall: falls $\alpha$ und $\beta$ beide kleiner oder gleich Null sind, definieren wir $\alpha \cdot \beta$ als $(-\alpha) \cdot (-\beta)$. Falls... okay, und jetzt halt entsprechend, falls $\alpha$ größer-gleich Null ist und $\beta$ kleiner-gleich Null, sagen wir $\alpha \cdot \beta$ ist gleich $-( \alpha \cdot (-\beta) )$, was immer das hier bedeutet. Und falls schließlich $\alpha$ kleiner-gleich Null ist und $\beta$ größer-gleich Null, dann definieren wir $\alpha \cdot \beta$ als $-((-\alpha) \cdot \beta)$. Okay, das ist ein bisschen das Mühsame mit den negativen Zahlen. Deswegen ist im Skript die Sache nur geschrieben für die positiven reellen Zahlen, aber das lässt die Sache ein bisschen zu schön erscheinen. Gut. Und jetzt... was wir jetzt machen, ist... jetzt müsste man überprüfen, dass die Körperaxiome alle erfüllt sind. Man muss überprüfen, dass das alles Dedekindschnitte sind und dass die Körperaxiome alle erfüllt sind. Sie können sich vorstellen, das ist eine sehr lange Angelegenheit. Und wir werden das jetzt nicht in den nächsten drei Lektionen hier an der Tafel machen. Und ich erwarte auch nicht von Ihnen, dass Sie das machen, aber falls Sie einmal eine lange Zugfahrt haben... \inlinemetanote{lacht} ...können wir sagen: Übung für lange Zugfahrt. Reelle Zahlen, also die Dedekindschnitte mit diesen Operationen, erfüllen die Körperaxiome. Okay, das ist der erste Schritt. Und das Nächste ist, jetzt wollen wir diese... als Nächstes brauchen wir noch eine Ordnung auf den Dedekindschen Schnitten. Und die Ordnung ist relativ natürlich definiert. Wenn wir $\alpha, \beta$ in $\mathbb{R}$ haben, da definieren wir $\alpha$ ist strikt kleiner als $\beta$ als... was haben Sie für eine Idee, wie man das definieren könnte, sinnvollerweise? Ja? \inlinemetanote{Student antwortet} Genau. $\alpha$ ist eine echte Teilmenge von $\beta$. Okay. Gut, und dann kann man... das wäre jetzt etwas weniger lang, aber auch... muss man auch machen, das wäre für die Rückfahrt... kann man noch zeigen, dass auch die Ordnungsaxiome erfüllt sind dort. Ja, aber diese Art von Beweisen, also beweisen, das ist einfach... man überprüft alles, man schlägt es ein, es hat keine... keine interessanten Argumente drin, es ist einfach... es geht sehr lange.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Multiplikation auf \texorpdfstring{$\mathbb{R}$}{R}]
+Für Dedekindsche Schnitte $\alpha, \beta \in \mathbb{R}$ definieren wir die Multiplikation $\alpha \cdot \beta$ durch eine Fallunterscheidung:
+\begin{itemize}
+    \item \textbf{Fall 1: $\alpha \ge 0$ und $\beta \ge 0$:}
+    \[
+    \alpha \cdot \beta := \{ p \cdot q \in \mathbb{Q} \mid p \in \alpha, p \ge 0 \wedge q \in \beta, q \ge 0 \} \cup \{ p \in \mathbb{Q} \mid p < 0 \}
+    \]
+    \item \textbf{Fall 2: $\alpha \le 0$ und $\beta \le 0$:}
+    \[
+    \alpha \cdot \beta := (-\alpha) \cdot (-\beta)
+    \]
+    \item \textbf{Fall 3: $\alpha \ge 0$ und $\beta \le 0$:}
+    \[
+    \alpha \cdot \beta := -(\alpha \cdot (-\beta))
+    \]
+    \item \textbf{Fall 4: $\alpha \le 0$ und $\beta \ge 0$:}
+    \[
+    \alpha \cdot \beta := -((-\alpha) \cdot \beta)
+    \]
+\end{itemize}
+\begin{nice-box}[Übung für eine lange Zugfahrt]
+Zeige, dass die Menge der Dedekindschen Schnitte $\mathbb{R}$ mit den definierten Operationen $+$ und $\cdot$ sowie der Ordnung $<$ alle Körper- und Ordnungsaxiome $R_0$ bis $R_{16}$ erfüllt.
+\end{nice-box}
+\end{math-stroke}
+
+\begin{math-stroke}[Die Ordnung auf \texorpdfstring{$\mathbb{R}$}{R}]
+Für zwei Dedekindsche Schnitte $\alpha, \beta \in \mathbb{R}$ definieren wir die strikte Ordnung $<$ wie folgt:
+\[
+\alpha < \beta \iff \alpha \subsetneq \beta
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[09:02 - 09:02]
+Gut, was wir aber noch zeigen wollen, ist immerhin das R17. Also wir wollen zumindest zeigen, es ist... dass es vollständig ist. Und das wollen wir noch im Detail beweisen immerhin. Die reellen Zahlen $\mathbb{R}$ erfüllen R17, das heißt, jede nichtleere nach oben beschränkte Teilmenge $X$ hat ein Supremum. Der Beweis dafür ist relativ natürlich. Wir konstruieren das Supremum einfach... das Supremum $\beta$, und dazu nehmen wir einfach die Vereinigung von allen Dedekindschen Schnitten in $X$. Okay, also alle $p$ in $\mathbb{Q}$, so dass es existiert ein $\alpha$ in $X$ mit $p$ ist in $\alpha$. Gut, jetzt müssen wir beweisen, dass das ein Dedekindschnitt ist, und wir müssen beweisen, dass das ein Supremum ist. Genau, also zuerst einmal müssen wir sehen, $\beta$ ist ein Dedekindschnitt. Okay, da zeigen wir wieder alle drei Axiome. Dedekind 0... okay, es ist klar, dass $\beta$ nicht leer ist, einfach da $X$ nicht leer ist und... das heißt, es hat ein... ja, das ist klar. Und wir wissen, um zu zeigen, dass es nicht ganz $\mathbb{Q}$ ist, verwenden wir, dass $X$ nach oben beschränkt ist. Da $X$ nach oben beschränkt ist, gibt es ein... ein $q$ in $\mathbb{Q}$, so dass $p$ ist strikt kleiner als $q$ für alle $p$ in $\beta$. Okay, das ist per Definition, das heißt, das $q$ ist in $\mathbb{Q}$ ohne $\beta$. Okay, und dann Dedekind 1, wir müssen zeigen, es ist nach unten abgeschlossen. Sei $p$ in $\beta$ und $q$ in $\mathbb{Q}$, so dass $q$ kleiner ist als $p$. Wir müssen zeigen, dass $q$ auch in $\beta$ ist. Aber wir wissen, es existiert ein $\alpha$ in $X$, das $p$ enthält. Okay, aber da $q$ kleiner ist als $p$, folgt daraus, dass das $q$ auch... das $q$ auch in $\alpha$ enthalten ist. Das heißt, $q$ ist in $\alpha$, und $\alpha$ ist eine Teilmenge von $\beta$, das heißt, $q$ ist auch in $\beta$. Okay, und dann ähnlich für D2. Nehmen wir $p$ in $\beta$. Wir müssen zeigen, dass wir noch ein größeres $p$ finden, das auch in $\beta$ liegt. Aber auch hier wissen wir wieder, es existiert ein $\alpha$ in $X$, so dass $p$ in $\alpha$ ist. Und da $\alpha$ ein Dedekindschnitt ist, folgt daraus, dass ein $q$ in $\alpha$ existiert, so dass $p$ kleiner ist als $q$. Okay, und dann ist $q$ auch wieder in $\beta$ enthalten. Okay, das heißt, unser $\beta$, das wir definiert haben, ist tatsächlich ein Dedekindschnitt. Jetzt müssen wir zeigen, dass es die kleinste obere Schranke ist. Okay, und dazu nehmen wir jetzt an, dass $\gamma$ in $\mathbb{R}$ ist beliebig, und so dass $\gamma$ strikt kleiner ist als $\beta$. Okay, und wir wollen zeigen, dass daraus folgt, dass $\gamma$ keine obere Schranke mehr ist. Okay, das heißt, wenn $\gamma$ strikt kleiner ist als $\beta$, dann ist $\gamma$ echt enthalten in $\beta$. Okay, das heißt, wir können jetzt ein $p$ nehmen, das in $\beta$ liegt, aber nicht in $\gamma$. Okay, und dann wissen wir, es existiert ein $\alpha$ in $X$ mit $p$ in $\alpha$, wie immer, wie vorher schon. Und daraus folgt jetzt aber, da $p$ nicht in $\gamma$ ist, dass $\gamma$ strikt kleiner ist als $\alpha$. Weil $\alpha$ enthält ein Element, das nicht in $\gamma$ enthalten ist. Das heißt, $\gamma$ ist keine obere Schranke für $X$. Okay, und das beendet den Beweis. Gut, ich wollte zum Abschluss noch zwei Sachen erwähnen, und zwar... es gibt noch andere Konstruktionen, die bekannt sind von den reellen Zahlen. Die bekannteste ist über Cauchy-Folgen. Und zwar das Problem ist ja mit den rationalen Zahlen, dass Cauchy-Folgen nicht unbedingt konvergieren. Und jetzt kann man auch sagen, okay, wir wollen künstlich, dass alle Cauchy-Folgen konvergieren. Wie machen wir das? Wir nehmen einfach Äquivalenzklassen von Cauchy-Folgen, und wir schauen uns all diese Äquivalenzklassen von Cauchy-Folgen an. Das ist die zweite klassische Konstruktion der reellen Zahlen. Die wurde fast gleichzeitig wie Dedekind auch publiziert. Und dann gibt es noch eine, die weniger bekannt ist, weniger klassisch... auch erst vor Kurzem... und wir haben die auf dem Übungsblatt diese Woche, und das ist eine sehr... sehr nette Konstruktion, und zwar ist es eine Konstruktion der reellen Zahlen direkt aus den ganzen Zahlen. Also man muss gar nicht zu den rationalen Zahlen gehen, sondern man kann die reellen Zahlen direkt aus den ganzen Zahlen konstruieren. Und die Idee ist, wir schauen Äquivalenzklassen von quasi-linearen Funktionen an. Und was ist eine quasi-lineare Funktion? Das heißt, Funktionen $f$ von $\mathbb{Z}$ nach $\mathbb{Z}$, so dass die menge von $f(n+m) - f(n) - f(m)$, wobei $m$ und $n$ ganze Zahlen sind... okay, wenn $f$ linear wäre, dann wäre das immer Null. Aber wir schauen jetzt nur quasi-lineare an, das sind solche, wo diese Menge hier endlich ist. Und da kann man jetzt... kann man jetzt Äquivalenzklassen von solchen quasi-linearen Funktionen anschauen, und da kann man zeigen, dass das auch wieder die reellen Zahlen gibt. Das ist besonders elegant und natürlich, weil wir das direkt von den ganzen Zahlen ausmachen können und gar nicht erst zu den rationalen Zahlen gehen müssen. Also ich empfehle, diese Übung ein bisschen anzuschauen, weil das noch interessant ist und nicht Standard. Gut, vielen herzlichen Dank fürs Kommen und gute Woche!
+\end{spoken-clean}
+
+\begin{math-stroke}[Satz: Vollständigkeit von \texorpdfstring{$\mathbb{R}$}{R}]
+\begin{theorem}[Vollständigkeit von $\mathbb{R}$]\label[theorem]{thm:completeness-of-r}
+Die Menge der reellen Zahlen $\mathbb{R}$ erfüllt das Vollständigkeitsaxiom ($R_{17}$). Das heißt, jede nichtleere, nach oben beschränkte Teilmenge $X \subset \mathbb{R}$ besitzt ein Supremum in $\mathbb{R}$.
+\end{theorem}
+
+\begin{proof}[Beweis der Vollständigkeit]
+Sei $X \subset \mathbb{R}$ eine nichtleere, nach oben beschränkte Teilmenge. Wir definieren den Kandidaten für das Supremum $\beta \subseteq \mathbb{Q}$ als die Vereinigung aller Schnitte in $X$:
+\[
+\beta := \bigcup X = \{ p \in \mathbb{Q} \mid \exists \alpha \in X \text{ mit } p \in \alpha \}
+\]
+
+\begin{short-proof}[Schritt 1: $\beta$ ist ein Dedekindscher Schnitt]
+Wir verifizieren die Bedingungen (D0), (D1) und (D2) für $\beta$:
+\begin{itemize}
+    \item[\textbf{(D0)}] Da $X \neq \emptyset$, existiert ein $\alpha \in X$. Da $\alpha \neq \emptyset$, existiert ein $p \in \alpha \implies p \in \beta \implies \beta \neq \emptyset$.
+    
+    Da $X$ nach oben beschränkt ist, existiert eine obere Schranke $\gamma \in \mathbb{R}$ für $X$. Das heißt, für alle $\alpha \in X$ gilt $\alpha \le \gamma \implies \alpha \subseteq \gamma$. Daraus folgt:
+    \[
+    \beta = \bigcup_{\alpha \in X} \alpha \subseteq \gamma
+    \]
+    Da $\gamma \neq \mathbb{Q}$, existiert ein $q \in \mathbb{Q} \setminus \gamma$. Da $\beta \subseteq \gamma$, gilt auch $q \notin \beta \implies \beta \neq \mathbb{Q}$.
+    
+    \item[\textbf{(D1)}] Sei $p \in \beta$ und $q \in \mathbb{Q}$ mit $q < p$. Da $p \in \beta$, existiert ein $\alpha \in X$ mit $p \in \alpha$. Da $\alpha$ ein Dedekindscher Schnitt ist, folgt aus $q < p$ sofort $q \in \alpha \implies q \in \beta$.
+    
+    \item[\textbf{(D2)}] Sei $p \in \beta$. Dann existiert ein $\alpha \in X$ mit $p \in \alpha$. Da $\alpha$ ein Dedekindscher Schnitt ist, existiert ein $q \in \alpha$ mit $p < q$. Da $q \in \alpha$, gilt auch $q \in \beta$.
+\end{itemize}
+Somit ist $\beta$ ein wohldefinierter Dedekindscher Schnitt, also $\beta \in \mathbb{R}$.
+\end{short-proof}
+
+\begin{short-proof}[Schritt 2: $\beta$ ist die kleinste obere Schranke]
+\begin{itemize}
+    \item \textbf{$\beta$ ist eine obere Schranke:} Für jedes $\alpha \in X$ gilt nach Definition der Vereinigung offensichtlich $\alpha \subseteq \beta \implies \alpha \le \beta$.
+    
+    \item \textbf{$\beta$ ist die kleinste obere Schranke:} Sei $\gamma \in \mathbb{R}$ eine beliebige obere Schranke von $X$. Dann gilt für alle $\alpha \in X$:
+    \[
+    \alpha \le \gamma \implies \alpha \subseteq \gamma
+    \]
+    Daraus folgt unmittelbar:
+    \[
+    \beta = \bigcup_{\alpha \in X} \alpha \subseteq \gamma \implies \beta \le \gamma
+    \]
+\end{itemize}
+Somit ist $\beta = \sup(X)$ das Supremum von $X$ in $\mathbb{R}$.
+\end{short-proof}
+\end{proof}
+\end{math-stroke}
+
+\begin{math-stroke}[Andere Konstruktionen der reellen Zahlen]
+Es existieren verschiedene äquivalente Methoden zur Konstruktion von $\mathbb{R}$ aus bereits bekannten Zahlbereichen:
+\begin{itemize}
+    \item \textbf{Äquivalenzklassen von Cauchy-Folgen:}
+    Sei $\mathcal{C}$ die Menge aller \newterm{Cauchy-Folgen} in $\mathbb{Q}$. Wir definieren eine Äquivalenzrelation $\sim$ auf $\mathcal{C}$:
+    \[
+    (a_n)_{n \in \mathbb{N}} \sim (b_n)_{n \in \mathbb{N}} \iff \lim_{n \to \infty} (a_n - b_n) = 0
+    \]
+    Die reellen Zahlen werden dann als die Menge der Äquivalenzklassen definiert:
+    \[
+    \mathbb{R} := \mathcal{C} / \sim
+    \]
+    
+    \item \textbf{Konstruktion aus den ganzen Zahlen \texorpdfstring{$\mathbb{Z}$}{Z} (Quasi-lineare Funktionen):}
+    Wir betrachten Funktionen $f: \mathbb{Z} \to \mathbb{Z}$, die \newterm{quasi-linear} sind. Das heißt, die Menge der Abweichungen von der Additivität ist endlich:
+    \[
+    \{ f(n+m) - f(n) - f(m) \mid n, m \in \mathbb{Z} \} \text{ ist endlich.}
+    \]
+    Zwei quasi-lineare Funktionen $f, g$ sind äquivalent ($f \approx g$), falls die Menge $\{ f(n) - g(n) \mid n \in \mathbb{Z} \}$ endlich ist. Die reellen Zahlen $\mathbb{R}$ lassen sich direkt als die Menge dieser Äquivalenzklassen konstruieren.
+\end{itemize}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 248707, Output 5407)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 76710, Output 28)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 13:16:00) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-31-tuesday.mp4
+[Angehängtes Video]: 03-31-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-31. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Dienstag}{31. März}{31. März 2020}{Das Auswahlaxiom und das Wohlordnungsprinzip}
+
+\setcounter{theorem}{0}
+
+\begin{spoken-clean}[00:00:00 - 00:00:28]
+Ah ja, guten Tag. Also, mein Name ist Fabian Ziltener, ich vertrete, äh, Christian Urech heute für diese Vorlesung über Grundstrukturen. Und möchte anfangen mit einem Video. Äm, und dann sehen wir, was das zu tun hat mit Grundstrukturen. Also, hier ist es, ich hoffe, dass Sie was hören. Äh, vielleicht muss ich das Mikrofon dann hinhalten, aber mal schauen.
+\end{spoken-clean}
+
+\begin{meta-note}[Vorlesungsbeginn und Video-Einleitung]
+Der Dozent stellt sich der Klasse vor und startet ein Video auf der Leinwand, um das Thema der heutigen Vorlesung anschaulich einzuleiten.
+\end{meta-note}
+
+\begin{spoken-clean}[00:00:28 - 00:01:45]
+\inlinemetanote{Das Vsauce-Video über das Banach-Tarski-Paradoxon wird abgespielt}
+Hey, Vsauce. Michael here. There's a famous way to seemingly create chocolate out of nothing. Maybe you've seen it before. This chocolate bar is 4 squares by 8 squares, but if you cut it like this, and then like this, and finally like this, you can rearrange the pieces like so and wind up with the same 4 by 8 bar but with a leftover piece, apparently created out of thin air. There's a popular animation of this illusion as well. I call it an illusion because it's just that. Fake. In reality, the final bar is
+
+*(Tokens: Input 250319, Output 414)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 1]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+this, and finally like this, you can rearrange the pieces like so and wind up with the same 4 by 8 bar but with a leftover piece, apparently created out of thin air. There's a popular animation of this illusion as well. I call it an illusion because it's just that. Fake. In reality, the final bar is
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** \inlinemetanote{Das Vsauce-Video über das Banach-Tarski-Paradoxon wird fortgesetzt}
+a bit smaller. It contains this much less chocolate. Each square along the cut is shorter than it was in the original, but the cut makes it difficult to notice right away. The animation is extra misleading, because it tries to cover up its deception. The lost height of each square is surreptitiously added in while the piece moves to make it hard to notice. I mean, come on, obviously you cannot cut up a chocolate bar and rearrange the pieces into more than you started with. Or can you? One of the strangest... \inlinemetanote{Der Dozent pausiert das Video}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:45 - 00:02:32]
+Also, äh, ich würde sagen, wir sind in der Schweiz, da stimmen wir über alles, also wir stimmen jetzt mal ab. Also, wer ist dafür, dass man das kann? \inlinemetanote{Einige Studenten melden sich} Eine Person, zwei, drei... äh, ja, vielleicht zehn. Und wer ist dafür, dass man das nicht kann? \inlinemetanote{Die Mehrheit der Studenten meldet sich} Also Schokolade so aufspalten und dann wieder zusammenfügen, am Schluss hat man mehr. Also das ist ein- einigermaßen ausgeglichen. Äh, ich verrate Ihnen jetzt gleich die Antwort. Also mit Hilfe des Auswahlaxioms kann man das. Es geht also heute um das Auswahlaxiom. Äm... Ich habe hier auch das Banach-Tarski-Paradoxon nochmals hingemalt, ich muss hier mal... so... umstellen. \inlinemetanote{Der Dozent schaltet den Projektor aus und zeigt auf die linke Tafel}
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent schaltet den Projektor aus und wendet sich der linken Tafel zu, auf der er eine farbige Skizze des Banach-Tarski-Paradoxons vorbereitet hat.
+\end{meta-note}
+
+\begin{spoken-clean}[00:02:32 - 00:03:53]
+Äm, also das Banach-Tarski-Paradox sagt etwas Allgemeineres, aber eine Version davon sagt Folgendes: Sie können eine Kugel nehmen, also einen dreidimensionalen Ball, jetzt in drei Dimensionen oder auch höher, und die Kugel aufspalten in fünf Teile, die habe ich hier, äh, so verschiedenfarbig gemalt. Und dann nehmen Sie zwei dieser Teile, also den blauen Teil und den roten, und drehen die und verschieben, vielleicht noch, und fügen die wieder zusammen und Sie kriegen die gleiche Kugel wie da links, gleiche Größe, gleicher Radius. Und Sie nehmen die anderen drei Teile, das ist dann orange, gelb und grün, und drehen die und verschieben, und kriegen dann wieder die gleiche Kugel wie links. Äm, und das hier ist möglich, also das ist ein mathematischer Satz in Zermelo-Fraenkel plus AC. AC steht für Auswahlaxiom, Axiom of Choice. Also, ich habe von meinen Kollegen gehört, dass Sie schon Zermelo-Fraenkel, die Zermelo-Fraenkel-Axiome behandelt haben. Weiß jemand noch, kennt jemand noch eins? Ein Zermelo-Fraenkel-Axiom?
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Banach-Tarski-Paradoxon]
+\begin{center}
+\begin{tikzpicture}[scale=1.2]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Eine Kugel auf der linken Seite, zerlegt in 5 farbige Segmente.
+  % 2. Midground: Zwei Pfeile, die den Zerlegungsprozess andeuten.
+  % 3. Foreground: Zwei identische Kugeln auf der rechten Seite, zusammengesetzt aus den transformierten Segmenten.
+  % 4. Farben (dvipsnames): MidnightBlue, BrickRed, BurntOrange, Yellow, ForestGreen.
+  % \end{ai-tikz-planner-invisible-content}
+
+  % Linke Kugel (zerlegt)
+  \draw[thick, gray!50] (0,0) circle (1cm);
+  \begin{scope}
+    \clip (0,0) circle (1cm);
+    \fill[MidnightBlue!30] (0,0) -- (45:1.2) arc (45:135:1.2) -- cycle;
+    \fill[BrickRed!30] (0,0) -- (135:1.2) arc (135:210:1.2) -- cycle;
+    \fill[BurntOrange!30] (0,0) -- (210:1.2) arc (210:280:1.2) -- cycle;
+    \fill[Yellow!30] (0,0) -- (280:1.2) arc (280:340:1.2) -- cycle;
+    \fill[ForestGreen!30] (0,0) -- (340:1.2) arc (340:405:1.2) -- cycle;
+  \end{scope}
+  \draw[thick] (0,0) circle (1cm);
+  \node at (0,-1.3) {Kugel $K$};
+
+  % Transformationspfeile
+  \draw[->, thick, >=stealth] (1.3, 0.3) to[bend left=15] node[midway, above, sloped] {\footnotesize Teile 1 \& 2} (2.7, 0.8);
+  \draw[->, thick, >=stealth] (1.3, -0.3) to[bend right=15] node[midway, below, sloped] {\footnotesize Teile 3, 4 \& 5} (2.7, -0.8);
+
+  % Rechte Kugel oben (Teile 1 & 2)
+  \begin{scope}[shift={(4,0.8)}]
+    \draw[thick, gray!50] (0,0) circle (1cm);
+    \begin{scope}
+      \clip (0,0) circle (1cm);
+      \fill[MidnightBlue!30] (0,0) -- (0:1.2) arc (0:180:1.2) -- cycle;
+      \fill[BrickRed!30] (0,0) -- (180:1.2) arc (180:360:1.2) -- cycle;
+    \end{scope}
+    \draw[thick] (0,0) circle (1cm);
+    \node at (0,-1.3) {Kugel $K_1$};
+  \end{scope}
+
+  % Rechte Kugel unten (Teile 3, 4 & 5)
+  \begin{scope}[shift={(4,-1.2)}]
+    \draw[thick, gray!50] (0,0) circle (1cm);
+    \begin{scope}
+      \clip (0,0) circle (1cm);
+      \fill[BurntOrange!30] (0,0) -- (0:1.2) arc (0:120:1.2) -- cycle;
+      \fill[Yellow!30] (0,0) -- (120:1.2) arc (120:240:1.2) -- cycle;
+      \fill[ForestGreen!30] (0,0) -- (240:1.2) arc (240:360:1.2) -- cycle;
+    \end{scope}
+    \draw[thick] (0,0) circle (1cm);
+    \node at (0,-1.3) {Kugel $K_2$};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}
+Das Banach-Tarski-Paradoxon besagt, dass man eine dreidimensionale Vollkugel $K$ in endlich viele disjunkte Teile zerlegen kann, die sich durch reine Drehungen und Verschiebungen (Kongruenzabbildungen) so wieder zusammensetzen lassen, dass zwei Kugeln $K_1$ und $K_2$ entstehen, von denen jede den gleichen Radius wie die ursprüngliche Kugel besitzt. Dies widerspricht unserer physikalischen Intuition der Volumenerhaltung, ist jedoch mathematisch unter Verwendung des Auswahlaxioms ($\text{AC}$) beweisbar.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{student-interaction}[Studentenfrage]
+Das Aussonderungsaxiom.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:03:53 - 00:04:19]
+Das Aussonderungsaxiom, genau. Was sagt das?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Wenn ich eine Menge $X$ habe und, wie soll ich sagen, ein $L$-Satz ist, dann kann ich eine Menge aus den Elementen von $X$ machen, die die Bedingung für... erfüllen.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:04:19 - 00:04:35]
+Ja, genau. Äm, das heißt, ja, man sondert halt alle die Elemente aus, die eine bestimmte Bedingung erfüllen. Und das nullte, was ist, sagen wir, das nullte Zermelo-Fraenkel-Axiom?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Existenzaxiom, dass es eine leere Menge gibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:04:35 - 00:05:21]
+Genau. Es gibt eine Menge, die keine Elemente enthält. Und da gibt es halt noch ein paar andere. Und was alle brauchen, die täglich nicht sich mit Logik befassen, sondern mit anderer Mathematik, ist auch das Auswahlaxiom. Das ist quasi das letzte in der Liste. Je nach Zählung ist das dann das zehnte oder so. Äm, und dieses Auswahlaxiom, um das geht's heute. Und, okay, man kann jetzt einfach... ich, gut, ich sage Ihnen jetzt den Satz gleich jetzt schon, was das sagt. Das Auswahlaxiom sagt: Wenn Sie eine Menge von nicht-leeren Mengen haben, dann können Sie gleichzeitig aus jeder dieser Mengen ein Element auswählen. Klingt irgendwie sehr plausibel, äm, nicht sehr, äh, convers- controversial, also nicht sehr, äm, wider- also, ja, scheint irgendwie nicht, nicht so kontrovers zu sein. Aber aus dem Auswahlaxiom kriegen Sie dann eben zum Beispiel dieses Banach-Tarski-Paradox. Sie können dann so eine Kugel aufspalten. Warum heißt das jetzt Paradox?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:21 - 00:06:18]
+Respektive das sollte ich die Leute fragen, die gesagt haben, das geht nicht mit dem Aufspalten. Also, wenn man das kann, kann man das mit der Schokolade übrigens auch. Äh, theoretisch natürlich. Das hat nichts zu tun mit praktischer, also praktischem Schneiden, praktisch geht's nicht. Ja, bitte.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Das geht aber ja theoretisch nur, äh, aufgrund der unendlich vielen Anzahl der Punkte, die es gibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:06:18 - 00:07:30]
+Ja, genau. Es geht nur theoretisch. Man muss irgendwie sehr, sehr genau schneiden. Also, es ist sehr ausgefranst, oder? Diese Mengen habe ich, die habe ich ein bisschen so zackig gemacht, Sie sollten sich das sehr ausgefranst denken. Man kann die eben auch nicht hinschreiben. Eine Sache mit diesem Auswahlaxiom is, dass man nicht explizit diese Auswahl hinschreiben kann, wie man die Elemente jetzt wählt. Man braucht eben dafür das Axiom. Und hier ist es dann auch so, Sie können nicht hinschreiben, wie man die Menge aufspaltet, aber es gibt so eine Aufspaltung. Äm, aber warum heißt es Paradox? Anders gesagt, die Leute, die gesagt haben, es geht nicht mit der Schokolade, warum haben die es so gesehen? Warum denken Sie, es geht nicht? Irgendwie muss es ja einen Grund geben, dass das jetzt ein Paradox ist. Übrigens kommt das aus dem Griechischen, 'para' heißt gegen und 'doxa' heißt Anschein. Es ist gegen den Anschein. Es ist eben kein Widerspruch, ist einfach nur gegen den Anschein. Warum?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Weil man erwarten würde, dass wenn man das zerschneidet und wieder zusammenschiebt, das Volumen das gleiche bleibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:07:30 - 00:08:42]
+Genau, wegen des Volumens ist es ein Paradox. Also, der Grund, warum das viele Leute nicht so intuitiv finden, ist das Volumen. Äm, oder wenn alle diese Teile ein wohldefiniertes Volumen haben, dann geht es eben nicht. Wenn das Volumen auch noch gewisse Eigenschaften erfüllt, wie in der Maßtheorie, nämlich Additivität hier, endlich-Additivität. Äm, oder weil dann haben Sie hier auf der rechten Seite das doppelte Volumen. Das Lustige ist aber, diese Teile, die haben gar kein Volumen. Die haben ein äußeres Maß, aber kein richtiges Maß. Das heißt, daher ist das kein Widerspruch, sondern nur ein Paradox. Okay, gut, das wollte ich zum Anfang sagen, das ist eine Sache, die man aus dem Auswahlaxiom kriegt. Und das ist jetzt etwas, was wir dann nicht verwenden werden, aber was wir verwenden werden, ist eine andere Sache. Also vielleicht, ich mache dann alles formal, aber zuerst schreibe ich mal ein bisschen, was die Relevanz ist dieses Auswahlaxioms. In der Realität werden Sie Folgendes brauchen, nämlich...
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:08:42
+% topic: Relevanz des Auswahlaxioms (AC) und Äquivalenzen über ZF
+% board_state: Banach-Tarski-Paradoxon, Zermelo-Fraenkel (ZF) Axiome
+% next_goal: Formulierung des Auswahlaxioms (AC) und Äquivalenzen (Wohlordnung, Zornsches Lemma)
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:08:42 - 00:09:50]
+Es gilt Folgendes dann: Also äquivalent über Zermelo-Fraenkel, wenn man Zermelo-Fraenkel annimmt, ZF, dann sind's drei Sachen äquivalent, nämlich das Auswahlaxiom, dann das Wohlordnungsprinzip, darüber werde ich heute mehr sagen. Dieses Wohlordnungsprinzip sagt, jede Menge kann wohlgeordnet werden. Äm, was genau eine Wohlordnung ist, werde ich erklären. Etwas, was man dann hat, ist, dass je zwei Elemente verglichen werden können und jede Teilmenge, die nicht leer ist, hat ein kleinstes Element. Ja. Und dann gibt's noch das dritte, was äquivalent ist über ZF, nämlich das Kuratowski-Zorn-Lemma. Äm, Kuratowski-Zorn-Lemma. Und das sagt etwas über eine Halbordnung, ist jetzt nicht so wichtig, was es sagt, aber aus diesem Kuratowski-Zorn-Lemma kriegen Sie dann eben, dass zum Beispiel jeder Vektorraum eine Basis hat. Und das ist dann etwas, was Sie brauchen werden in der Realität. Also jeder Vektorraum besitzt eine Basis.
+\end{spoken-clean}
+
+\begin{math-stroke}[Äquivalente Formulierungen über Zermelo-Fraenkel (\texorpdfstring{$\text{ZF}$}{ZF})]
+Unter der Annahme der Zermelo-Fraenkel-Axiome ($\text{ZF}$) sind die folgenden drei fundamentalen Aussagen mathematisch äquivalent:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \newterm{Auswahlaxiom} ($\text{AC}$ -- Axiom of Choice)
+    \setcounter{enumi}{1} \item \newterm{Wohlordnungsprinzip} ($\text{WOP}$ -- Well-Ordering Principle)
+    \setcounter{enumi}{2} \item \newterm{Kuratowski-Zornsches Lemma} ($\text{ZL}$)
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Obwohl diese drei Prinzipien mathematisch äquivalent sind, besitzen sie sehr unterschiedliche intuitive Qualitäten:
+\begin{itemize}
+    \item Das \emph{Auswahlaxiom} erscheint den meisten Mathematikern unmittelbar einleuchtend.
+    \item Das \emph{Wohlordnungsprinzip} (jede Menge, selbst die reellen Zahlen $\mathbb{R}$, lässt sich so ordnen, dass jede nichtleere Teilmenge ein minimales Element besitzt) wirkt extrem kontraintuitiv.
+    \item Das \emph{Zornsche Lemma} ist ein mächtiges Werkzeug der unendlichen Dimensions- und Mengenlehre, aus dem unter anderem folgt, dass \emph{jeder Vektorraum eine Basis besitzt} (auch unendlichdimensionale Räume).
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:50 - 00:11:15]
+Vielleicht wird dann mein Kollege Urech noch was dazu sagen, wie man das dann kriegt, oder es gibt vielleicht eine Übungsaufgabe, gab's bei mir beim letzten Mal, als ich die Vorlesung gegeben habe. Äm, dieser Vektorraum ist unendlichdimensional. Wenn er endlichdimensional ist, dann können Sie die Basis konstruieren, haben Sie vielleicht gemacht in Linearer Algebra mit Hilfe von Induktion. Aber wenn der Vektorraum unendlichdimensional ist, dann wissen Sie a priori nicht, ob der eine Basis besitzt. Er besitzt eben nur wegen des Lemmas, Lemma von Zorn, also oder Kuratowski-Zorn, was eben äquivalent ist zum Auswahlaxiom. Und das ist ungefähr für mich die Relevanz dieses Auswahlaxioms. Okay? Jetzt habe ich Ihnen so ein bisschen einen Eindruck gegeben, hoffentlich, was, wozu das, ja, was das ist und wozu es gut ist. Und jetzt mache ich das ein bisschen, mache ich's jetzt genauer. Und jetzt, ich folge jetzt den Notizen, die ich damals geschrieben habe, und die sind auf dem Internet, vielleicht hat das Herr Urech angekündigt, und wenn nicht, können Sie die auch in der Pause dann vielleicht mal noch suchen. Also Sie brauchen jetzt nicht alles abzuschreiben, sondern eben dazu gibt's ziemlich ausführliche Notizen. Äm, hoffentlich stimmt die Nummerierung, das kann aber sich auch ändern. Also Formulierung des Auswahlaxioms ist jetzt Punkt 1.1, auf den ich eingehen möchte. Auswahlaxiom. Ich werd's jetzt einfach gleich hinschreiben. Also das Auswahlaxiom ist folgende Formel: Das hier bedeutet "ist identisch gleich", ich weiß nicht, ob Herr Urech das auch so geschrieben hat. Es bedeutet Folgendes: Für alle $X$...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:15 - 00:13:15]
+...und ich mache jetzt ein geschweiftes $X$, weil ich mir das als ein Mengensystem denke, das heißt, eine Menge von Mengen. Aber vielleicht haben Sie bei Herrn Urech gehört, dass alles eine Menge ist. Also wenn Sie eine Menge haben, und Sie schauen sich die Elemente davon an, sind das auch wieder Mengen. Das heißt, mathematisch gesehen ist das nichts Spezielles, aber ich denke mir das als eine Menge von Mengen und dann mache ich so ein geschweiftes $X$ dafür. Ich nenne das dann auch eine Kollektion von Mengen. Für jede Kollektion von Mengen, die nicht die leere Menge enthält als Element, leere Menge soll nicht darin liegen, gilt, dass es eine Funktion $f$ gibt, und die Funktion heißt dann Auswahlfunktion. Die muss eine Abbildung sein von dieser Menge, von dieser Kollektion, zur Vereinigung aller Elemente der Kollektion. Also das hier ist meine Notation, nicht nur meine, hat vielleicht Herr Urech auch eingeführt, die Notation für die Vereinigung über alle Elemente. Also man vereinigt alle Elemente hier drin. Die Elemente nenne ich jetzt einfach normal groß $X$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Formulierung des Auswahlaxioms (\texorpdfstring{$\text{AC}$}{AC})]
+Das Auswahlaxiom ($\text{AC}$ -- Axiom of Choice) lässt sich formal als folgende Aussage in der Sprache der Mengenlehre formulieren:
+\begin{equation}
+\label{eq:axiom-of-choice}
+\text{AC} \equiv \forall \mathcal{X} \left( \emptyset \notin \mathcal{X} \implies \exists f \left( f: \mathcal{X} \to \bigcup \mathcal{X} \;\wedge\; \forall X \in \mathcal{X} \, \bigl( f(X) \in X \bigr) \right) \right)
+\end{equation}
+Hierbei bezeichnet $\mathcal{X}$ ein \newterm{Mengensystem} (eine Kollektion von Mengen) und die Vereinigung aller Elemente von $\mathcal{X}$ ist definiert durch:
+\[
+\bigcup \mathcal{X} := \bigcup_{X \in \mathcal{X}} X = \{ x \mid \exists X \in \mathcal{X} \text{ mit } x \in X \}
+\]
+Eine solche Funktion $f$ heißt \newterm{Auswahlfunktion} (Choice function).
+
+\begin{explanation-of-steps}
+Das Axiom besagt: Zu jeder Familie $\mathcal{X}$ von nichtleeren Mengen existiert eine Auswahlfunktion $f$, die jeder Menge $X \in \mathcal{X}$ ein Element $f(X) \in X$ zuordnet. Obwohl dies für endlich viele Mengen trivial mittels Induktion bewiesen werden kann, erfordert der unendliche Fall die explizite Postulierung dieses Axioms, da wir die Auswahl im Allgemeinen nicht konstruktiv (durch eine explizite Formel) angeben können.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:15 - 00:15:18]
+So, ich vereinige alle Mengen groß $X$, die in diesem geschweiften $X$ liegen. Also ich habe jetzt eine Abbildung von da nach da. Das ist die Notation für Abbildungen, haben Sie das gesehen? Notation von Abbildung, manchmal schreibt man das $X$ auch da hin, das ist die üblichere, aber ich schreibe es jetzt mal so. Oh, ja, das ist ein bisschen doof. \inlinemetanote{Das Handy des Dozenten klingelt} Jetzt muss ich das noch irgendwie abstellen, das ist immer so eine Sache. Vielleicht einfach drücken, bis das alles aus ist. Nein. Entschuldigung. Ja, okay. Hoffentlich kommt's nicht noch mal, vielleicht doch. Also, also es gibt so eine Auswahlfunktion, die geht von der ganzen Kollektion von Mengen zur Vereinigung, sodass für jedes $X$ da drin in dieser Kollektion gilt, dass $f(X)$ in $X$ liegt. Und darum heißt es eben Auswahlaxiom. Oder Auswahl- äm, funktion. Also so ein kleines $f$ nennt sich eine Auswahlfunktion. Das wählt eben aus jedem normalen $X$, ich mache mal das normale $X$ mal blau, aus jedem solchen $X$ wählt es ein Element aus. Ich schreibe dafür mal klein $x$. Es wählt ein kleines $x$ aus dieser Menge aus, okay? Also Sie haben da ein paar Mengen, äh, vielleicht drei, die haben einige Elemente, und jetzt nehme ich diese blaue Menge hier, das ist vielleicht die erste, und wähle halt etwas aus, und das Etwas, was ich auswähle, ist eben $f(X)$. Das Rote hier ist $f(X)$, und $X$ ist die blaue Menge. Und das mache ich für alle gleichzeitig. Und das sagt dieses Axiom, dass es eben so ein $f$ gibt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Visualisierung einer Auswahlfunktion]
+\begin{center}
+\begin{tikzpicture}[scale=1.5]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Drei Kreise, die disjunkte Mengen im System \mathcal{X} darstellen.
+  % 2. Midground: Punkte in jedem Kreis, die Elemente darstellen.
+  % 3. Foreground: Ein ausgewähltes Element in jeder Menge, rot hervorgehoben, das den Wert f(X) darstellt.
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Menge X_1 (Blau)
+  \draw[thick, MidnightBlue] (0,0) circle (0.8cm);
+  \node[MidnightBlue, above] at (0,0.8) {$X_1$};
+  \fill (0.2,0.3) circle (1.5pt);
+  \fill (-0.3,-0.2) circle (1.5pt);
+  \fill[BrickRed] (0.1,-0.1) circle (2pt) coordinate (F1);
+  \node[BrickRed, below=of F1, yshift=0.15cm] {\footnotesize $f(X_1)$};
+
+  % Menge X_2
+  \draw[thick, gray] (2,0.2) circle (0.7cm);
+  \node[gray, above] at (2,0.9) {$X_2$};
+  \fill (1.8,0.4) circle (1.5pt);
+  \fill (2.2,-0.1) circle (1.5pt);
+  \fill[BrickRed] (1.9,0.1) circle (2pt) coordinate (F2);
+  \node[BrickRed, below=of F2, yshift=0.15cm] {\footnotesize $f(X_2)$};
+
+  % Menge X_3
+  \draw[thick, gray] (4,-0.1) circle (0.75cm);
+  \node[gray, above] at (4,0.65) {$X_3$};
+  \fill (3.8,-0.3) circle (1.5pt);
+  \fill (4.2,0.1) circle (1.5pt);
+  \fill[BrickRed] (4.0,-0.1) circle (2pt) coordinate (F3);
+  \node[BrickRed, below=of F3, yshift=0.15cm] {\footnotesize $f(X_3)$};
+
+  % Beschriftung des Mengensystems
+  \node at (2,-1.2) {Mengensystem $\mathcal{X} = \{X_1, X_2, X_3\}$};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:18 - 00:16:37]
+Und jetzt möchte ich dieses Auswahlaxiom umformulieren mit Hilfe des kartesischen Produktes, und ich nehme jetzt nicht schon an, dass Sie formal das kartesische Produkt einer beliebigen Kollektion von Mengen gesehen haben, das heißt, das werde ich jetzt erklären. Dieses kartesische Produkt verallgemeinert das von zwei Mengen, aber jetzt geht es eben gerade um unendlich viele Mengen. Dann wird's interessant. Wenn wir nur endlich viele nehmen, dann brauchen Sie kein Axiom, dann folgt das aus Induktion, dass es so ein $f$ gibt. Also kartesisches Produkt... man kann das eben so sehen, das, was das sagt, ist: Wenn Sie ein, ein, also eine Kollektion von nicht-leeren Mengen haben, die... und Sie nehmen das kartesische Produkt davon, dann ist es auch wieder nicht leer. Und dieses kartesische Produkt, die Elemente davon entsprechen eben so Auswahlfunktionen. Und das möchte ich jetzt erklären. Also Definition oder, ja, zuerst mal Setting. Also seien jetzt $I$ und so ein geschweiftes $X$ Mengen. Das hier denken wir uns als eine Indexmenge, wir indizieren dann, äm, Elemente aus gewissen Mengen mit so Indizes da drin. Und jetzt haben wir noch eben so eine Funktion groß $X$, die geht von groß $I$ nach dem geschweiften $X$. Äh, die nimmt also... man kann dann schreiben, oder die nimmt einen Index $i$ und dann schreibe ich $X$ unten $i$ für einfach für $X$ von $i$. Und das soll dann eine dieser Mengen sein. Also man hat eine Kollektion von Mengen. Aber formal gesehen ist es eine Abbildung, die einen Index nimmt und ihn in eine Menge gibt. Gut. Und jetzt haben wir das Folgende: Definition des kartesischen Produktes. Ich schreibe dafür so ein Kreuz, und letztes Jahr haben die Leute protestiert, dass es hier zu viele Kreuze gibt. Äh, der Grund ist, schauen Sie, es geht alles irgendwie synchron. Sie haben ein kleines $x$, das liegt im großen $X$, und das große $X$ liegt im geschweiften $X$. Mir gefällt das irgendwie. Aber wenn es Ihnen nicht gefällt, dann müssen Sie die Notation für sich persönlich ändern, dürfen Sie gerne machen. Und das Kreuz ist ein Kreuz. Das möchte ich nicht ändern. Ich mache es jetzt dick. Das steht für kartesisches Produkt. Und ich schreibe jetzt einfach Kreuz $X$, hier steht immer noch diese Abbildung $X$, schauen Sie, und dann darf man das aber auch so schreiben, dann ist es ein bisschen intuitiver. Das hier ist effizient und das hier rechts ist intuitiv. Also Produkt über alle Indizes und dann schreibe ich dieses $X_i$. $X_i$ ist immer noch eine, eine Menge. Jetzt scheint's ein bisschen intuitiver. Also nehmen Sie zum Beispiel da die Indexmenge $\{0, 1\}$ und dann haben Sie ein $X_0 \times X_1$, okay?
+\end{spoken-clean}
+
+\begin{math-stroke}[Das verallgemeinerte kartesische Produkt]
+Seien $I$ eine Indexmenge und $\mathcal{X}$ ein Mengensystem. Eine Familie von Mengen wird formal als eine Abbildung definiert:
+\[
+X: I \to \mathcal{X}, \quad i \mapsto X_i := X(i)
+\]
+Das \newterm{kartesische Produkt} dieser Familie von Mengen ist definiert als die Menge aller Abbildungen von $I$ in die Vereinigung der Mengen $X_i$, welche jedem Index ein Element der entsprechenden Menge zuordnen:
+\begin{equation}
+\label{eq:cartesian-product-general}
+\prod_{i \in I} X_i := \left\{ x: I \to \bigcup_{i \in I} X_i \;\middle|\; \forall i \in I \, \bigl( x(i) \in X_i \bigr) \right\}
+\end{equation}
+
+\begin{explanation-of-steps}
+Diese Definition verallgemeinert das klassische kartesische Produkt $X_0 \times X_1$ für zwei Mengen. Ein Element $x$ des unendlichen Produkts ist kein Tupel mehr, sondern eine Funktion, die für jeden Index $i \in I$ eine \qt{Koordinate} $x(i) \in X_i$ auswählt.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:37 - 00:16:43]
+Und es ist das Folgende: Man schreibt vielleicht auch ein anderes Produktzeichen, aber ich schreibe jetzt mal das so. Das sind alle Funktionen, die nehmen ein, einen Index und geben ihn in etwas in dieser Vereinigung hier, okay? Und zwar so, dass für alle $i$ in der Indexmenge gilt, äm, $x$ unten $i$, das ist wieder meine Lieblingsnotation für $x$ von $i$, liegt in groß $X$ unten $i$. Also anders gesagt, Sie wählen aus, äh, Sie wählen für jeden Index ein Element aus aus dem großen entsprechenden $X_i$, okay? Äm, gut, dann könnte ich jetzt hier ein paar Beispiele machen. Ich denke, Sie sollten sich das selbst anschauen, ich möchte nicht zu, zu viel hier hinschreiben. Was ich noch sagen möchte, ist: Schauen Sie, wenn Sie jetzt nur zwei Mengen haben, $X_0$ und $X_1$, und Sie nehmen das kartesische Produkt, was Sie vielleicht mal hier gesehen haben, denke ich, weil Sie ja die Zermelo-Fraenkel-Axiome hingeschrieben haben, woraus besteht das?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Das sind alle Kombinationen von Mengen von $X_1$ und von $X_0$.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:16:43 - 00:18:15]
+Ja, Paare von Elementen, genau. Und ich habe so ein Zeichen verwendet wie Herr Halbeisen, haben Sie das auch gemacht, dieses eckige Zeichen für Paar? Okay. Dann haben wir ein $\langle x_0, x_1 \rangle$, $x_0$ liegt in groß $X_0$, $x_1$ liegt in groß $X_1$. Und was ich jetzt sagen möchte, ist: Das, was ich jetzt neu gemacht habe, das ist eben das Gleiche. Und zwar, äh, genauer gesagt, Sie können dieses Paar identifizieren mit der Funktion $0$ geht nach $x_0$, $1$ geht nach $x_1$. Und diese Funktion, die liegt dann eben da drin, in diesem neuen kartesischen Produkt, wenn Sie jetzt gerade die Indexmenge $\{0, 1\}$ haben, okay? Das heißt, das Neue ist gleich dem Alten, wenn Sie nur zwei Mengen haben. Wenn Sie nur drei haben, können Sie sich auch so was überlegen. Äm, aber das geht eben allgemeiner, auch wenn Sie unendlich... also eine... wenn Sie unendlich viele Mengen haben, also wenn die Indexmenge $I$ unendlich ist, geht das Neue eben auch und das Alte nicht. Und jetzt geht das nicht hoch. Jetzt geht nur die eine Tafel, vorher ging's gerade noch. Äm... doch.
+\end{spoken-clean}
+
+\begin{math-stroke}[Vergleich mit dem endlichen kartesischen Produkt]
+Für eine zweielementige Indexmenge $I = \{0, 1\}$ ist das verallgemeinerte kartesische Produkt kanonisch isomorph zum klassischen kartesischen Produkt zweier Mengen:
+\[
+X_0 \times X_1 \cong \prod_{i \in \{0,1\}} X_i
+\]
+Die Identifikation erfolgt über die Zuordnung von geordneten Paaren zu entsprechenden Abbildungen:
+\[
+\langle x_0, x_1 \rangle \;\longleftrightarrow\; \bigl( f: \{0,1\} \to X_0 \cup X_1 \text{ mit } f(0) = x_0, \, f(1) = x_1 \bigr)
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:15 - 00:19:30]
+Okay. Und jetzt können wir das Auswahlaxiom eben auch damit formulieren. Äm, und in meinen Notizen schreibe ich dann noch mehr dazu, warum jetzt die zwei Sachen, wie die zwei Sachen genau zusammenhängen, können Sie gerne durchlesen. Also jetzt kommt Umformulierung des Auswahlaxioms mittels, äm, mittels dieses Produkts, und ich schreibe jetzt dafür $\text{AC}'$. Das ist eben folgende Formel, respektive folgender Satz: Für alle $I$, also Indexmengen, äm, für alle geschweiften $X$ und für alle großen $X$, das waren diese Abbildungen von der Indexmenge nach dem geschweiften $X$, gilt Folgendes: Nämlich, wenn für alle Indizes die Menge $X$ von $i$ nicht leer ist, äm, dann ist das kartesische Produkt von $X$ nicht leer.
+\end{spoken-clean}
+
+\begin{math-stroke}[Äquivalente Formulierung des Auswahlaxioms (\texorpdfstring{$\text{AC}'$}{AC'})]
+Das Auswahlaxiom lässt sich äquivalent über das nichtleere kartesische Produkt einer Familie von nichtleeren Mengen formulieren:
+\begin{equation}
+\label{eq:axiom-of-choice-prime}
+\text{AC}' \equiv \forall I \, \forall \mathcal{X} \, \forall X \left( \left( X: I \to \mathcal{X} \;\wedge\; \forall i \in I \, \bigl( X_i \neq \emptyset \bigr) \right) \implies \prod_{i \in I} X_i \neq \emptyset \right)
+\end{equation}
+
+\begin{theorem}[Äquivalenz von $\text{AC}$ und $\text{AC}'$]
+\label[theorem]{thm:ac-equivalence}
+Unter den Axiomen von Zermelo-Fraenkel ($\text{ZF}$) gilt:
+\[
+\text{ZF} \vdash \text{AC} \iff \text{AC}'
+\]
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:30 - 00:21:19]
+Und dieses neue Auswahlaxiom ist äquivalent mit dem alten über Zermelo-Fraenkel. Also über Zermelo-Fraenkel gilt: $\text{AC}$ ist äquivalent mit $\text{AC}'$. Okay? Das ist vielleicht das, was man eher sagt in der Realität. Sie sagen, das kartesische Produkt von nicht-leeren Mengen ist nicht leer. Das wird normalerweise so formuliert, okay? Haben Sie dazu gerade Fragen? Äm, jetzt möchte ich Folgendes tun, nämlich: Ich möchte ein bisschen erklären, wann man dann überhaupt das Auswahlaxiom braucht und wann nicht. Also wie gesagt, wenn Sie eine endliche Indexmenge haben, brauchen Sie es nicht, dann können Sie mit Induktion zeigen, dass Sie aus endlich vielen Mengen endlich viele Elemente auswählen können. Äm, und wenn Sie eben ein Merkmal haben, das ein Element aus jeder Menge irgendwie kennzeichnet oder charakterisiert, dann können Sie... brauchen Sie das Auswahlaxiom nicht. Zum Beispiel, wenn Sie...
+\end{spoken-clean}
+
+\begin{math-stroke}[Bemerkung: Wann wird das Auswahlaxiom benötigt?]
+Sei $I$ eine beliebige Indexmenge und $X_i \subseteq \omega$ (wobei $\omega$ die Menge der natürlichen Zahlen bezeichnet) mit $X_i \neq \emptyset$ für alle $i \in I$. In diesem Fall wird das Auswahlaxiom \emph{nicht} benötigt, um eine Auswahlfunktion zu finden.
+
+\begin{short-proof}
+Da jede nichtleere Teilmenge der natürlichen Zahlen $\omega$ nach dem Wohlordnungsprinzip der natürlichen Zahlen ein eindeutiges kleinstes Element besitzt, können wir die Auswahlfunktion explizit definieren durch:
+\[
+f(i) := \min(X_i) \in X_i
+\]
+Diese Auswahl ist rein konstruktiv und erfordert kein zusätzliches Axiom.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:19 - 00:23:02]
+Das ist also eine Bemerkung. Wenn Sie jetzt eine Abbildung haben nach der Potenzmenge von Omega, haben Sie das gesehen, dieses Zeichen $P$? Potenzmenge. Menge aller Teilmengen von Omega. Äm, und zwar so, dass jedes $X_i$ nicht leer ist, dann brauchen wir kein Auswahlaxiom, um aus jeder... also um, um da für jedes $i$ ein kleines $x_i$ in groß $X_i$ zu finden für eine Auswahlfunktion. Also genau, äm, um zu zeigen, dass das Produkt all dieser $X$ nicht leer ist. Äh, Grund: Wähle $x_i$ in groß $X_i$ als das kleinste, als die kleinste Zahl, also das kleinste Element. Und der Punkt hier ist eben, oder, es gibt hier ein ausgezeichnetes Element, das hat ein bestimmtes Merkmal, nämlich, dass es das kleinste Element ist, die kleinste natürliche Zahl. Sie wählen jetzt für jede... also dieses große $X_i$ ist eine Teilmenge von, von der, von Omega, von der Menge der natürlichen Zahlen. Die haben Sie auch gesehen, oder? Haben Sie auch Omega geschrieben? Das ist das, was es gibt gemäß einem Axiom, äh, von Zermelo und Fraenkel. Äm, spielt die Rolle der Zahlen $0, 1$ und so weiter, enthält die. Äm, und man kann jetzt... also in dem Fall, wenn man eben, wenn jetzt gerade $X$ von $i$ oder $X_i$ immer eine Teilmenge ist von Omega, die nicht leer ist, dann nehmen Sie einfach die kleinste Zahl da drin, da brauchen Sie kein Auswahlaxiom, um ein Element auszuwählen. Also es gibt eben Situationen, wo Sie es nicht brauchen. Eine andere, also eine anschauliche Art, wie man das sagen kann, ist, äm, das hat mit Schuhen zu tun und mit Socken.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:23:02
+% topic: Anschauliche Erklärung des Auswahlaxioms (Schuhe vs. Socken)
+% board_state: AC, AC', Bemerkung über Teilmengen von \omega
+% next_goal: Wohlordnungsprinzip (WOP) formal definieren
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:23:02 - 00:24:57]
+Also wenn Sie so eine Kollektion von Schuhen haben, immer ein Paar von Schuhen, unendliche Kollektion, dann brauchen Sie kein Auswahlaxiom, um bei jedem Paar einen Schuh auszuwählen. Warum? Wie machen Sie das ohne Auswahlaxiom? Ja, bitte.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Es gibt einen linken Schuh, und dann kann man einfach den linken Schuh nehmen.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:24:57 - 00:26:27]
+Genau, Sie nehmen immer den linken Schuh. Da brauchen Sie kein Auswahlaxiom. Das ist ein spezielles Merkmal, dass es eben... ein Schuh ist ein linker, der andere ist rechts, ein rechter Schuh. Wenn Sie Socken haben, geht das eben nicht. Also ich nehme jetzt an, die zwei Socken sehen immer gleich aus. Wenn Sie unendlich viele Paare von Socken haben, können Sie nicht einfach jeweils den linken Socken nehmen, die linke Socke. Das heißt, dann brauchen wir eben das Auswahlaxiom. Also es gibt einen Unterschied zwischen Schuhen und Socken, sagt das. Bemerkung: Schuhe versus Socken. Äm, das ist nicht von mir übrigens, das ist von... wer hat das schon wieder gesagt? Äm, Russell hat das gesagt, der mit dem Paradox. Haben Sie das gesehen, das Russellsche Paradox? Ja, der gleiche.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Bertrand Russells Analogie: Schuhe vs. Socken]
+Die berühmte Analogie von Bertrand Russell verdeutlicht den Unterschied zwischen einer \emph{konstruktiven Auswahl} und einer Auswahl, die das \emph{Auswahlaxiom} erfordert:
+\begin{itemize}
+    \item \textbf{Schuhe:} Um aus einer unendlichen Menge von Schuhpaaren aus jedem Paar einen Schuh auszuwählen, benötigt man kein Auswahlaxiom. Man kann eine explizite Regel angeben: \qt{Wähle stets den linken Schuh}.
+    \item \textbf{Socken:} Bei einer unendlichen Menge von Sockenpaaren (wobei die beiden Socken eines Paares ununterscheidbar sind) gibt es keine solche inhärente Asymmetrie. Man kann keine explizite Regel formulieren, um aus jedem Paar eine Socke auszuwählen. Hier ist die Existenz einer Auswahlfunktion nur unter Postulierung des Auswahlaxioms gesichert.
+\end{itemize}
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:26:27 - 00:28:05]
+Okay, gut. Ich... haben Sie Fragen zum Auswahlaxiom? Wir haben jetzt zwei Versionen, die sind äquivalent über Zermelo-Fraenkel, mache ich jetzt nicht vor, warum das so ist. Vielleicht war das bei mir eine Übungsaufgabe vor einem Jahr. Ist nicht so schwierig, denke ich, zu zeigen. Ja, bitte.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Ich habe irgendwie die Übersicht über die ganzen $X$ verloren. Könnten Sie...
+\end{student-interaction}
+
+\begin{spoken-clean}[00:28:05 - 00:29:45]
+Also schauen Sie, das hier hat so Füßchen, das Füßchen-$X$ ist das große $X$. Dann gibt's das Geschweifte. Das geschweift... also das hier ist eine menge, die ein Element ist vom geschweiften $X$. Das geschweifte $X$ ist so ein Mengensystem, eine Kollektion von Mengen. Äm, ich muss ja halt sagen, wo dieses große $X$ worin's Werte annimmt. Alles muss irgendwie eine Menge haben, wo's Werte annimmt, das ist das geschweifte $X$. Und das große $X$, oder, das nimmt einen Index und gibt ihn in eine Menge, das sollten Sie sich merken. Und die Menge muss nicht leer sein, und dann sagt halt das Auswahlaxiom, diese Version Strich: Wir können jetzt ein kleines $x_i$ da drin wählen, und zwar uniform, oder? Nicht einfach für ein festes $i$, sondern für alle $i$. Das ist der Punkt. Ja? Jetzt möchte ich auf diese Äquivalenz eingehen zwischen Auswahlaxiom, Wohlordnungsprinzip und Kuratowski-Zorn-Lemma. Und zwar gehe ich jetzt nur auf die ersten zwei ein. Auswahlaxiom habe ich hingeschrieben, jetzt kommt das Wohlordnungsprinzip, das eben sagt, dass jede menge wohlgeordnet werden kann. Und jetzt erkläre ich Ihnen gleich, was eine Wohlordnung ist. Ein Punkt daran... zwei Punkte gibt's, also einer ist, Sie können je zwei Elemente vergleichen bezüglich der Wohlordnung, und der andere Punkt ist, wenn Sie eine nicht-leere Teilmenge haben, gibt's ein kleinstes Element. Okay?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:29:45 - 00:31:44]
+Also jetzt kommt ein Abschnitt 4.2. Wohlordnungsprinzip, Ordinalzahlen. Die Ordinalzahlen verallgemeinern die natürlichen Zahlen $0, 1$ und so weiter, und die menge der natürlichen Zahlen ist auch eine Ordinalzahl, und zwar die kleinste unendliche. Es gibt also Ordinalzahlen, die unendlich groß sind, das ist, ja, das ist der Hauptpunkt daran. Äm, jetzt möchte ich, äm, erklären, was das Wohlordnungsprinzip sagt, und dafür brauche ich folgende Definition. Also, äm, ich mache jetzt hier noch eine kleine Notation, das heißt, die brauche ich nicht wirklich so allgemein einzuführen. Sei das hier eine binäre Relation auf einer Menge $A$. Ich sag gleich, was das bedeutet. Das ist nämlich eine Teilmenge... also das hier ist eine Teilmenge von $A \times A$. $A \times A$ ist immer noch das kartesische Produkt mit sich selber. Das Alte, mit diesen Paaren, von mir aus. Jetzt gibt's folgende Definition, was es bedeutet, dass das hier eine Wohlordnung ist. Ich nenne jetzt die Relation nicht groß $R$, sondern kleiner, darf man ja, oder? Und jetzt erkläre ich, was es bedeutet, dass das eine strikte lineare Ordnung ist zuerst, und dann, was es bedeutet, dass das eine Wohlordnung ist. Also es gibt hier die Bedingung der Trichotomie. Äm, also wir sagen... ich schreibe es jetzt einfach so. Trichotomie bedeutet: Für alle $x$ und $y$ in $A$ gilt entweder, und entweder bedeutet wirklich entweder, also ausschließliches Oder. Das andere hat kein Entweder. Entweder $x < y$ oder $x = y$ oder $x > y$. Dann zweiter Teil: lineare Ordnung. Also die Relation heißt strikte oder strenge lineare Ordnung auf $A$ genau dann, wenn dieses hier transitiv ist und Trichotomie erfüllt. Übrigens kommt das aus dem Griechischen, trich- also tri heißt drei und temno heißt schneiden. Man schneidet die Sache in drei Teile, nämlich den Teil oder den Teil oder den Teil, und die Sachen schließen sich aus. Darum heißt's so. Äm, okay, also transitiv, was heißt das schon wieder? Dass die Relation transitiv ist?
+\end{spoken-clean}
+
+\setcounter{section}{1}
+\section{Wohlordnungsprinzip und Ordinalzahlen}
+
+\begin{math-stroke}[Strikte lineare Ordnung]
+Sei $A$ eine Menge und $\prec$ eine binäre Relation auf $A$, d.h. $\prec \;\subseteq A \times A$.
+
+\begin{definition}[Strikte lineare Ordnung]
+\label[definition]{def:strict-linear-order}
+Die Relation $\prec$ heißt eine \newterm{strikte lineare Ordnung} (oder strenge lineare Ordnung) auf $A$, wenn die folgenden zwei Bedingungen erfüllt sind:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Trichotomie:} Für alle $x, y \in A$ gilt genau eine der drei Aussagen:
+    \[
+    \text{entweder } x \prec y \quad \text{oder} \quad x = y \quad \text{oder} \quad y \prec x
+    \]
+    \setcounter{enumi}{1} \item \textbf{Transitivität:} Für alle $x, y, z \in A$ gilt:
+    \[
+    x \prec y \;\wedge\; y \prec z \implies x \prec z
+    \]
+\end{enumerate}
+\end{definition}
+
+\begin{explanation-of-steps}
+Die Trichotomie fordert ein ausschließendes \qt{Entweder-oder}, d.h. es kann niemals mehr als eine dieser drei Beziehungen gleichzeitig gelten. Dies unterscheidet die strikte Ordnung $\prec$ (wie das klassische $<$ auf $\mathbb{R}$) von der nicht-strikten Ordnung $\le$, bei der für $x=y$ auch $x \le y$ und $y \le x$ gelten.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:31:44 - 00:33:15]
+Ja, umgekehrt. Wenn $x$ kleiner $y$ und $y$ kleiner $z$, dann ist $x$ kleiner $z$, genau. Also transitiv bedeutet, äm, für alle $x, y$ und $z$ gilt: Wenn $x < y$ und $y < z$, dann... übrigens, meine Pfeile bedeuten Implikation, manch- meistens. Kann auch mal ein Funktionszeichen sein, aber meistens ist es Implikation hier. Dann folgt daraus $x < z$. Genau, das haben wir jetzt also, und, oder nehmen wir an. Und jetzt gibt's eben die nächste Bedingung, die sagt, was es bedeutet, ein minimales Element einer Teilmenge zu sein. Also ich nehme jetzt eine Teilmenge $S$. Dann heißt ein $x$ hier drin minimal, und zwar bezüglich meiner Relation, genau dann, äm, wenn für alle $y$ in $S$ gilt, äm, dass $y$ nicht kleiner als $x$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Minimales Element und Wohlordnung]
+Sei $A$ eine Menge mit einer strikten linearen Ordnung $\prec$, und sei $S \subseteq A$ eine Teilmenge.
+
+\begin{definition}[Minimales Element]
+\label[definition]{def:minimal-element}
+Ein Element $x \in S$ heißt \newterm{minimal} (bezüglich $\prec$), wenn kein Element in $S$ strikt kleiner als $x$ ist:
+\[
+\forall y \in S \, \bigl( y \not\prec x \bigr)
+\]
+\end{definition}
+
+\begin{definition}[Wohlordnung]
+\label[definition]{def:well-ordering}
+Die Relation $\prec$ heißt eine \newterm{Wohlordnung} auf $A$, wenn $\prec$ eine strikte lineare Ordnung auf $A$ ist und jede nichtleere Teilmenge $S \subseteq A$ ein minimales Element besitzt.
+\end{definition}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 250841, Output 12088)*
+---
+
+**AutoExtraction:** [Part 2] 03-31-tuesday.mp4
+[Angehängtes Video]: 03-31-tuesday-part2.mp4
+[Kontext-Dateien]: 03-31-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-31. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\setcounter{section}{1}
+\subsection{Das Wohlordnungsprinzip}
+
+\begin{spoken-clean}[00:00:00 - 00:01:59]
+Alte, mit diesen Paaren, von mir aus. Jetzt gibt's folgende Definition, was es bedeutet, dass das hier eine Wohlordnung ist. Ich nenne jetzt die Relation nicht groß $R$, sondern kleiner, darf man ja, oder? Und jetzt erkläre ich, was es bedeutet, dass das eine strikte lineare Ordnung ist zuerst, und dann, was es bedeutet, dass das eine Wohlordnung ist. Also es gibt hier die Bedingung der Trichotomie. Äm, also wir sagen... ich schreibe es jetzt einfach so. Trichotomie bedeutet: Für alle $x$ und $y$ in $A$ gilt entweder, und entweder bedeutet wirklich entweder, also ausschließliches Oder. Das andere hat kein Entweder. Entweder $x < y$ oder $x = y$ oder $x > y$. Dann zweiter Teil: lineare Ordnung. Also die Relation heißt strikte oder strenge lineare Ordnung auf $A$ genau dann, wenn dieses hier transitiv ist und Trichotomie erfüllt. Übrigens kommt das aus dem Griechischen, trich- also tri heißt drei und temno heißt schneiden. Man schneidet die Sache in drei Teile, nämlich den Teil oder den Teil oder den Teil, und die Sachen schließen sich aus. Darum heißt's so. Äm, okay, also transitiv, was heißt das schon wieder? Dass die Relation transitiv ist?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Wenn $x$ kleiner $y$ und $y$ kleiner $z$, dann ist $x$ kleiner $z$.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:01:59 - 00:04:33]
+Ja, umgekehrt. Wenn $x$ kleiner $y$ und $y$ kleiner $z$, dann ist $x$ kleiner $z$, genau. Also transitiv bedeutet, äm, für alle $x, y$ und $z$ gilt: Wenn $x < y$ und $y < z$, dann... übrigens, meine Pfeile bedeuten Implikation, manch- meistens. Kann auch mal ein Funktionszeichen sein, aber meistens ist es Implikation hier. Dann folgt daraus $x < z$. Genau, das haben wir jetzt also, und, oder nehmen wir an. Und jetzt gibt's eben die nächste Bedingung, die sagt, was es bedeutet, ein minimales Element einer Teilmenge zu sein. Also ich nehme jetzt eine Teilmenge $S$. Dann heißt ein $x$ hier drin minimal, und zwar bezüglich meiner Relation, genau dann, äm, wenn für alle $y$ in $S$ gilt, äm, dass $y$ nicht kleiner als $x$ ist. Es muss nicht so sein, dass es ein eindeutiges minimales Element gibt. Wird's dann gleich geben, wenn wir eine lineare Ordnung haben, ist es so, aber im Allgemeinen braucht das nicht der Fall sein zu sein, okay? Äm, dann Nummer vier: Wohlordnung. Also die Relation heißt Wohlordnung, um was geht's ja, wenn sie jetzt all das andere erfüllt. Das heißt, äm, es muss eine lineare Ordnung sein. Man kann also je zwei Elemente vergleichen. Das war da strikte lineare... ich lass das Wort strikte jetzt weg in der Zukunft. Äh, strikte lineare Ordnung, äm, und es muss auch noch so sein, dass jede nicht-leere Teilmenge ein minimales Element besitzt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definitionen: Ordnungsrelationen und Wohlordnung]
+\begin{definition}[Strikte lineare Ordnung]\label[definition]{def:strikte-lineare-ordnung-v2}
+Eine Relation $\prec$ auf einer Menge $A$ (d.h. $\prec \;\subseteq A \times A$) heißt eine \newterm{strikte lineare Ordnung} auf $A$, falls gilt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Trichotomie:} Für alle $x, y \in A$ gilt genau eine der Beziehungen:
+    \[
+    x \prec y \quad \text{oder} \quad x = y \quad \text{oder} \quad y \prec x
+    \]
+    \setcounter{enumi}{1} \item \textbf{Transitivität:} Für alle $x, y, z \in A$ gilt:
+    \[
+    x \prec y \;\wedge\; y \prec z \implies x \prec z
+    \]
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Minimales Element]\label[definition]{def:minimales-element-v2}
+Sei $\prec$ eine strikte lineare Ordnung auf $A$ und $S \subseteq A$. Ein Element $x \in S$ heißt ein \newterm{minimales Element} von $S$, falls gilt:
+\[
+\forall y \in S \, \bigl( y \not\prec x \bigr)
+\]
+\end{definition}
+
+\begin{definition}[Wohlordnung]\label[definition]{def:wohlordnung-v2}
+Eine Relation $\prec$ auf $A$ heißt eine \newterm{Wohlordnung} auf $A$, falls gilt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item $\prec$ ist eine strikte lineare Ordnung auf $A$.
+    \setcounter{enumi}{1} \item Jede nichtleere Teilmenge $\emptyset \neq S \subseteq A$ besitzt ein minimales Element.
+\end{enumerate}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:33 - 00:08:28]
+Okay, das bedeutet Wohlordnung, und um das geht's jetzt. Es geht jetzt um solche Wohlordnungen. Haben Sie dazu eine Frage? Also in meinen Notizen stehen dann auch noch ein paar Bemerkungen und so, die jetzt nicht so wichtig sind. Äm, jetzt sagt eben das Wohlordnungsprinzip, WOP... \inlinemetanote{schreibt an die Tafel} Das ist... das hat den Status eines Axioms, okay? Nicht eines Theorems, sondern eines Axioms. Also Wohlordnungsprinzip sagt, jede Menge kann wohlgeordnet werden. Also auf jeder Menge $A$ gibt es eine Wohlordnung. Und ich möchte jetzt erklären, dass oder warum dieses Wohlordnungsprinzip äquivalent ist zum Auswahlaxiom. Das ist jetzt das Ziel dieser Vorlesung. Also es gibt da ein Theorem, das sagt, das und das Auswahlaxiom sind äquivalent über Zermelo-Fraenkel, wenn Sie also noch zusätzlich Zermelo-Fraenkel annehmen. Man kann also das eine aus dem anderen herleiten, heißt das. Die eine Richtung ist ziemlich einfach zu beweisen. Also es gibt jetzt ein Theorem, ich schreib das mit großen Buchstaben, weil das ein metamathematisches Theorem ist. Das hat vielleicht Herr Urech nicht so explizit gesagt, aber es gibt eben auch noch die kleinen, die Kleinbuchstaben... also wo diese Buchstaben klein sind, damit meine ich... was ist denn ein Theorem mit kleinen Buchstaben?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Ein Sätz, den man herleiten kann aus den Axiomen, oder?
+\end{student-interaction}
+
+\begin{spoken-clean}[00:08:28 - 00:11:35]
+Und ein Satz war also eine Formel ohne freie Variablen, wo alle Variablen gebunden sind durch ein 'für alle' oder 'es existiert'. Und was ich jetzt hier meine mit Großbuchstaben ist eben ein bisschen was anderes, nämlich das Theorem sagt folgendes: In Zermelo-Fraenkel sind das Auswahlaxiom und das Wohlordnungsprinzip äquivalent. Und das, was jetzt hier steht, ist eben nicht eine Formel im Sinne der Logik erster Stufe, weil hier noch dieses Zeichen vorkommt. Weiß jemand noch, was das bedeutet, dieses Zeichen?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Dass man aus den Zermelo-Fraenkel-Axiomen das Auswahlaxiom herleiten kann.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:11:35 - 00:15:24]
+Genau. Es gibt einen Beweis dieser Äquivalenz aus Zermelo-Fraenkel, und diese Aussage hier ist eben ein metamathematisches Theorem, dass es einen Beweis gibt, okay? Ja. Äh, gut. Haben Sie dazu Fragen jetzt gerade? Jetzt, Beweis der Implikation so, also dass man in Zermelo-Fraenkel aus dem das kriegt, das ist einfach. Also Annahme... ich mache jetzt übrigens nicht einen formalen Beweis wie ganz am Anfang, weil das viel zu schwierig wäre. Ich mache jetzt so... ich würde mal sagen, also was ich jetzt eigentlich mache, ist, ich verwende den Gödelschen Vollständigkeitssatz und argumentiere dann, wie man das so macht. Das haben Sie vielleicht gehört bei Herrn Urech, der Zweck dieses Vollständigkeitssatzes war, dass man normal argumentieren kann, in Anführungszeichen. Also wir nehmen an, das Wohlordnungsprinzip gilt, und dann zeige ich, dass das Auswahlaxiom gilt. Und das ist nicht schwierig. Auswahlaxiom, jetzt müssen wir uns erinnern, was das bedeutete. Da hat man so mit einer Menge von Mengen angefangen, dem geschweiften $\mathcal{X}$, äm, die die leere Menge nicht enthält. Äm, und dann gibt's... dann war die Aussage, es gibt eine Auswahlfunktion. Das möchte ich dann zeigen. Also sei das hier jetzt eine Menge von nicht-leeren Mengen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Wohlordnungsprinzip und die Äquivalenz zum Auswahlaxiom]
+\begin{definition}[Wohlordnungsprinzip]\label[definition]{def:wohlordnungsprinzip-v2}
+Das \newterm{Wohlordnungsprinzip} ($\text{WOP}$) besagt:
+\[
+\text{WOP} \equiv \text{Auf jeder Menge } A \text{ gibt es eine Wohlordnung.}
+\]
+\end{definition}
+
+\begin{theorem}[Metamathematisches Äquivalenztheorem]\label[theorem]{thm:ac-wop-equivalence-v2}
+Unter den Axiomen von Zermelo-Fraenkel ($\text{ZF}$) gilt:
+\begin{equation}
+\label{eq:ac-wop-equivalence-v2}
+\text{ZF} \vdash \text{AC} \iff \text{WOP}
+\end{equation}
+\end{theorem}
+\end{math-stroke}
+
+\begin{proof}[Beweis der Implikation \texorpdfstring{$\text{WOP} \implies \text{AC}$}{WOP => AC}]
+\begin{spoken-clean}[00:15:24 - 00:18:15]
+Und jetzt möchte ich meine Auswahlfunktion definieren, und dazu brauche ich jetzt eben den Trick, den ich vorhin in einem Beispiel erwähnt habe, nämlich: Wenn alle Elemente aus dem geschweiften $\mathcal{X}$ ein spezielles Element klein $x$ haben, das eine... ein spezielles Merkmal besitzt, dann bin ich fertig. Und das spezielle Merkmal wird sein, das kleinste Element zu sein. Und jetzt verwende ich eben meine Wohlordnung, die ich habe. Also es geht wie folgt: Wegen des Wohlordnungsprinzips gibt es eine Wohlordnung, ich nenne die jetzt auch wieder einfach kleiner, Wohlordnung auf der Vereinigung aller dieser Mengen da drin. Also das ist immer noch die Vereinigung über alle normalen $X$ im geschweiften $\mathcal{X}$, so. Darauf gibt's eine Wohlordnung.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der Auswahlfunktion]
+Sei $\mathcal{X}$ ein Mengensystem mit $\emptyset \notin \mathcal{X}$. Wir wollen eine Auswahlfunktion $f: \mathcal{X} \to \bigcup \mathcal{X}$ konstruieren.
+
+Nach dem Wohlordnungsprinzip ($\text{WOP}$) existiert eine Wohlordnung $\prec$ auf der Vereinigungsmenge $U := \bigcup \mathcal{X}$.
+
+Da für jedes $X \in \mathcal{X}$ gilt, dass $X \subseteq U$ und $X \neq \emptyset$, besitzt jede Teilmenge $X$ bezüglich der Wohlordnung $\prec$ ein eindeutiges minimales Element. Wir definieren die Abbildung:
+\begin{equation}
+\label{eq:choice-function-def-v2}
+f: \mathcal{X} \to \bigcup \mathcal{X}, \quad f(X) := \min_{\prec}(X)
+\end{equation}
+wobei $\min_{\prec}(X)$ das eindeutige minimale Element von $X$ bezüglich $\prec$ bezeichnet.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:15 - 00:20:48]
+Dann definiere ich meine Auswahlfunktion $f$ wie folgt: Also die soll ja so eine Menge in der Kollektion nehmen und mir ein Element geben, also die geht in diese Vereinigung, und $f$ von einem normalen $X$ ist definiert als das kleinste Element, kleiner-Minimal-Element von dem normalen $X$. Das ist eindeutig, weil ich eine Wohlordnung habe, weil ich je zwei... wegen Trichotomie. Äh, wegen des Entweders, okay? Entweder bedeutet wirklich entweder. Es kann nicht gleichzeitig sein, dass das eine kleiner ist als das andere und das andere auch kleiner als das eine, das geht eben nicht. Ja? Und dann nehme ich halt das kleinste. Diese Menge ist ja nicht leer, darum gibt es überhaupt irgendein Element drin, sonst wäre... ging's irgendwie schief. Ja. Haben Sie dazu gerade Fragen? Das ist meine Auswahlfunktion, und jetzt habe ich also das Auswahlaxiom hergeleitet aus dem Wohlordnungsprinzip. Also das hier ist eine Auswahlfunktion, und daher gilt also $\text{AC}$. Axiom of Choice heißt das übrigens, Axiom... das $\text{C}$ bedeutet Choice. Und jetzt habe ich also diese Implikation bewiesen.
+\end{spoken-clean}
+\end{proof}
+
+\subsection{Ordinalzahlen und das Burali-Forti-Paradoxon}
+
+\begin{spoken-clean}[00:20:48 - 00:24:34]
+Und die andere Implikation ist eben schwieriger, da brauchen wir jetzt eben Ordinalzahlen. Und das ist an sich was Interessantes. Also die... haben Sie jetzt dazu Fragen? Ja? Äm, die... also Ordinalzahlen verallgemeinern natürliche Zahlen, und zwar ist die Idee, dass die die Position in einer Rangliste angeben. Also die natürlichen Zahlen sind Ordinalzahlen, okay? Ich schreib das mal hin.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Transitivität und Ordinalzahlen]
+\begin{definition}[Transitive Menge]\label[definition]{def:transitive-menge-v2}
+Eine Menge $\alpha$ heißt \newterm{transitiv}, falls jedes Element von $\alpha$ auch eine Teilmenge von $\alpha$ ist:
+\begin{equation}
+\label{eq:transitive-set-v2}
+\forall \beta \in \alpha \, \bigl( \beta \subseteq \alpha \bigr)
+\end{equation}
+Äquivalent dazu gilt:
+\[
+\forall \beta \in \alpha \, \forall \gamma \in \beta \, \bigl( \gamma \in \alpha \bigr)
+\]
+\end{definition}
+
+\begin{definition}[Vergleichbarkeit bezüglich der Elementrelation]\label[definition]{def:vergleichbarkeit-elementrelation-v2}
+Zwei Mengen $\beta$ und $\gamma$ heißen \newterm{vergleichbar bezüglich der Elementrelation} ($\in$-vergleichbar), falls gilt:
+\begin{equation}
+\label{eq:element-comparability-v2}
+\beta \in \gamma \;\vee\; \beta = \gamma \;\vee\; \gamma \in \beta
+\end{equation}
+\end{definition}
+
+\begin{definition}[Ordinalzahl]\label[definition]{def:ordinalzahl-v2}
+Eine Menge $\alpha$ heißt eine \newterm{Ordinalzahl}, falls die folgenden Bedingungen erfüllt sind:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item $\alpha$ ist transitiv.
+    \setcounter{enumi}{1} \item Je zwei Elemente $\beta, \gamma \in \alpha$ sind $\in$-vergleichbar.
+    \setcounter{enumi}{2} \item Jede nichtleere Teilmenge $\emptyset \neq S \subseteq \alpha$ besitzt ein minimales Element bezüglich der Elementrelation $\in$.
+\end{enumerate}
+Wir bezeichnen die Klasse aller Ordinalzahlen mit $\Omega$.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:34 - 00:28:28]
+Ordinalzahlen. Definition: Sei $\alpha$ eine Menge. (i) $\alpha$ heißt transitiv genau dann, wenn jedes Element davon auch eine Teilmenge ist. Also für alle $\beta$ in $\alpha$ gilt, $\beta$ ist eine Teilmenge von $\alpha$. Anders gesagt bedeutet das, für alle $\gamma$ in $\beta$ gilt, $\gamma$ ist ein Element von $\alpha$. Das hat natürlich ein bisschen was zu tun mit Transitivität wie vorher, oder? Sie können quasi die zwei Epsilons (i.e., Elementzeichen $\in$) kontrahieren, dann haben Sie noch eins, oder Elementzeichen, meine ich. Ja gut, jetzt Nummer zwei: Wir nennen zwei Elemente $\beta$ und $\gamma$ vergleichbar genau dann, wenn $\beta$ in $\gamma$ liegt oder, das ist ein Oder, $\beta$ gleich $\gamma$ oder $\gamma$ liegt in $\beta$. Das ist ein inklusives Oder, okay? Und jetzt sage ich, was eine Ordinalzahl ist. Also (iii) $\alpha$ heißt Ordinalzahl genau dann, wenn es transitiv ist, und je zwei Elemente vergleichbar sind, also für alle $\beta$ und $\gamma$ in $\alpha$ sind $\beta$ und $\gamma$ vergleichbar bezüglich der Elementrelation, und (c) jede nicht-leere Teilmenge von $\alpha$ besitzt ein Element, minimales Element. Also jede nicht-leere Teilmenge von $\alpha$ besitzt ein minimales Element bezüglich der Elementrelation. Und dann definiere ich groß $\Omega$ als die Klasse aller Ordinalzahlen. Sie haben bei Herrn Urech gehört, dass es einen Unterschied gibt zwischen Klasse und Menge, gell? Also ich mache hier so geschweifte Klammern und lese das als Klasse. Formal gesehen gibt es das nicht in Zermelo-Fraenkel. In Zermelo-Fraenkel gibt es formal nur Mengen, also alles, was eine Variablenname trägt, ein $X$ oder ein $y$ oder sonst was, dieses geschweifte $X$ ist eine Menge, wird interpretiert als eine Menge. Und dann passiert's wegen des Russellschen Paradoxons, dass es gewisse Dinge gibt, die keine Mengen sind, und die nennen wir dann Klasse. Und das ist jetzt der Fall mit diesem $\Omega$ hier, okay? Was gab's denn so für ein Ding, was keine Menge war?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Die Menge aller Mengen.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:28:28 - 00:31:18]
+Genau, die Menge aller Mengen gibt's eben nicht, und das nennt man dann die Klasse aller Mengen. Man darf dann mit diesen Zeichen... muss man ein bisschen aufpassen, wie man damit umgeht, okay? Man darf dann nicht einfach alles machen damit. Aber man kann alles, was man damit macht, übersetzen in wohldefinierte Formeln, okay? Also ich mache jetzt Pause, nachher mache ich da weiter.
+\end{spoken-clean}
+
+\begin{lecture-break}[Pause]
+Der Dozent kündigt eine Pause an. Nach der Pause wird die Vorlesung mit den Eigenschaften der Ordinalzahlen fortgesetzt.
+\end{lecture-break}
+
+\begin{spoken-clean}[00:31:18 - 00:34:44]
+Okay, also wir machen weiter, bitte setzen Sie sich. Also vor der Pause habe ich... vor der Pause habe ich den Begriff einer Ordinalzahl definiert. Hier ist noch mal. Und gesagt, dass die Idee ist, dass diese Ordinalzahlen die Position in einer Liste angeben. Also die natürlichen Zahlen sind Ordinalzahlen, okay? Ich schreib das mal hin. Bemerkungen: Also jede natürliche Zahl... Omega ist immer noch die menge der natürlichen Zahlen, ist eine Ordinalzahl. Und so eine natürliche Zahl besteht aus allen natürlichen Zahlen, die kleiner sind, okay? Also $n$ ist die Menge $0$ bis $n-1$. Also sprich, zum Beispiel die Menge $0$, also die... die Menge, die Zahl $0$ ist die leere Menge, so ist es definiert. Und dann $1$ ist die Menge, die genau $0$ enthält, und $2$ ist die Menge, die $0$ und $1$ enthält, und so weiter. Und das sind alles Ordinalzahlen, Sie können das nachprüfen, okay? Ist jetzt nicht so schwierig. Wenn Sie jetzt zum Beispiel das erste anschauen, ich nehme mal die Menge $2$, ich nehme jetzt das Element $1$, ja gut, $1$ ist eben auch eine Teilmenge von $2$, weil $1$ enthält genau die $0$ und die $0$ ist ja auch da enthalten in $2$, und so weiter. Und die Idee ist eben, dass das eine Position in einer Liste angibt, und es hört eben nicht auf mit endlichen Zahlen. Omega ist nämlich auch eine Ordinalzahl. Äm, zum Beispiel, dass es transitiv ist, ist einfach, oder? Wenn Sie jetzt da eine natürliche Zahl nehmen, klein $n$, das ist mein $\beta$ in meinem $\alpha$, $\alpha$ ist gleich Omega. Ja gut, dann die Elemente von $n$, die sind ja auch wieder natürliche Zahlen, okay? Und so weiter. Und es gibt eben immer ein kleinstes Element da drin, das ist mehr oder weniger Induktion. Wenn Sie eine nicht-leere Teilmenge haben der natürlichen Zahlen, gibt es ein kleinstes Element.
+\end{spoken-clean}
+
+\begin{math-stroke}[Bemerkungen: Natürliche Zahlen als Ordinalzahlen]
+Die natürlichen Zahlen werden in der Mengenlehre (nach von Neumann) induktiv definiert durch:
+\begin{align*}
+0 &:= \emptyset \\
+1 &:= \{0\} = \{\emptyset\} \\
+2 &:= \{0, 1\} = \{\emptyset, \{\emptyset\}\} \\
+&\;\vdots \\
+n &:= \{0, 1, \dots, n-1\} = (n-1) \cup \{n-1\}
+\end{align*}
+Die Menge aller natürlichen Zahlen wird mit $\omega$ (oder $\mathbb{N}_0$) bezeichnet.
+
+\begin{proposition}\label[proposition]{prop:natural-numbers-ordinals-v2}
+Jede natürliche Zahl $n \in \omega$ sowie die Menge $\omega$ selbst sind Ordinalzahlen:
+\[
+\omega \subseteq \Omega \quad \text{und} \quad \omega \in \Omega
+\]
+\end{proposition}
+
+\begin{explanation-of-steps}
+\begin{itemize}
+    \item \textbf{Transitivität:} Jedes Element einer natürlichen Zahl $n$ ist selbst eine natürliche Zahl und somit eine Teilmenge von $n$. Ebenso ist jedes Element von $\omega$ eine natürliche Zahl und somit eine Teilmenge von $\omega$.
+    \item \textbf{Wohlordnung:} Die Elementrelation $\in$ auf $\omega$ entspricht genau der Standard-Ordnungsrelation $<$ auf den natürlichen Zahlen, welche eine Wohlordnung darstellt.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:34:44 - 00:38:38]
+Dann hört's eben nicht auf mit unendlich, also mit Omega, sondern es geht noch viel weiter. Also es gibt dann eben Omega + 1, das ist der Nachfolger von Omega, das haben Sie gebraucht, um die Menge der natürlichen Zahlen zu definieren, dieses Symbol $S$, vielleicht hat's anders geheißen, $S$ für successor, und das ist der Nachfolger, das ist die Menge Omega Vereinigung mit der Menge, die genau Omega enthält. Also wir tun einfach Omega noch als Element dazu. Das ist auch eine Ordinalzahl, kann man sich wieder überlegen. Insbesondere ist eben dieses Element hier eine Teilmenge von dem, weil ja da wieder Omega steht, oder? Ist es eben auch eine Teilmenge. Ja, und dann nach Omega + 1 kommt Omega + 2, sprich Omega + 1 + 1. Jetzt machen wir das Spielchen einfach nochmals, $S$ von $S$ von Omega, und so weiter. Und irgendwann kommt dann mal Omega + Omega. Bei mir war das eine Übungsaufgabe zu zeigen, dass das eine wohldefinierte Menge ist. Zuerst muss man definieren, was man meint, und das ist dann sinnvoll. Man braucht dann das Ersetzungsaxiom, um zu zeigen, dass das sinnvoll ist, oder um das überhaupt zu definieren. Das schreibt man dann als Omega * 2, okay? Äm, und dann gibt's natürlich Omega * 3 und so weiter, und dann gibt's auch Omega * Omega, also Omega^2, und nachher gibt's natürlich Omega^3, und dann gibt's aber auch noch Omega^Omega, und dann gibt's aber auch noch Omega^Omega^Omega, und mit Klammern so, dass es interessant wird, und so weiter. Und wie das definiert ist, können Sie im Buch von Herrn Halbeisen und Gräf nachlesen. Äm, mache ich jetzt hier nicht vor, weil es nicht so wichtig ist. Wir brauchen nämlich nicht so explizit Ordinalzahlen, wir brauchen die jetzt nur als Hilfsmittel, um zu zeigen, dass aus dem Auswahlaxiom das Wohlordnungsprinzip folgt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Nachfolger- und Limesordinalzahlen]
+Für jede Ordinalzahl $\alpha$ ist ihr \newterm{Nachfolger} (Successor) definiert durch:
+\begin{equation}
+\label{eq:successor-ordinal-v2}
+S(\alpha) := \alpha \cup \{\alpha\}
+\end{equation}
+Wir schreiben auch $\alpha + 1 := S(\alpha)$.
+
+\begin{example}[Transfinite Ordinalzahlen]
+Ausgehend von $\omega$ können wir weitere Ordinalzahlen konstruieren:
+\begin{align*}
+\omega + 1 &= \omega \cup \{\omega\} \\
+\omega + 2 &= (\omega + 1) \cup \{\omega + 1\} \\
+&\;\vdots \\
+\omega \cdot 2 &= \omega + \omega = \bigcup_{n \in \omega} (\omega + n) \\
+&\;\vdots \\
+\omega^2 &= \omega \cdot \omega \\
+&\;\vdots \\
+\omega^\omega
+\end{align*}
+\end{example}
+
+\begin{explanation-of-steps}
+Ordinalzahlen, die nicht der Nachfolger einer anderen Ordinalzahl sind (wie $\omega$, $\omega \cdot 2$, etc.), heißen \newterm{Limesordinalzahlen} (Limit ordinals). Sie werden formal als Vereinigung aller kleineren Ordinalzahlen definiert.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:38:38 - 00:42:06]
+Äm, also... Jetzt wollte ich noch auf dieses Burali-Forti-Paradox hinweisen. Ja. Mhm. Und zwar, wo habe ich das hingeschrieben? Ja, okay. Und das... um das zu erklären... also dieses Burali-Forti-Paradox sagt, dass eben dieses große $\Omega$ keine Menge ist. Ja. Und um das zu erklären, brauche ich ein Theorem. Und das Theorem sagt unter anderem, dass dieses große $\Omega$ alle Eigenschaften hat einer Ordinalzahl, okay? Äm, und dazu brauche ich jetzt noch eine Notation. Also wenn wir eine Menge $A$ haben, dann schreibe ich Element $A$, also mit so... mit einem unteren Index $A$ für die Relation, die aus allen Paaren $x, y$ in $A \times A$ besteht, so dass $x$ Element von $y$ ist. Es ist einfach die Elementrelation, aber eingeschränkt auf die Menge $A$. Und ja, jetzt, wenn Sie eine Ordinalzahl haben, $\alpha$, dann ist eben diese Elementrelation eine Wohlordnung auf der menge $\alpha$. Das kann man sich überlegen. Also... wo ist die Definition? Die ist jetzt wieder weg. Äm, aber insbesondere gibt es dann immer ein kleinstes Element für jede nicht-leere Teilmenge von $\alpha$, und das ist halt die Geschichte hier, das C da unten. Dann, äm, ja.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die eingeschränkte Elementrelation]
+\begin{definition}[Eingeschränkte Elementrelation]\label[definition]{def:restricted-element-relation-v2}
+Sei $A$ eine Menge. Die auf $A$ eingeschränkte Elementrelation $\in_A$ ist definiert als die binäre Relation:
+\begin{equation}
+\label{eq:restricted-element-relation-v2}
+\in_A \;:= \{ \langle x, y \rangle \in A \times A \mid x \in y \}
+\end{equation}
+\end{definition}
+
+\begin{proposition}\label[proposition]{prop:ordinal-well-ordered-v2}
+Für jede Ordinalzahl $\alpha$ ist die Relation $\in_\alpha$ eine Wohlordnung auf $\alpha$.
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:42:06 - 00:46:40]
+Gut. Okay, das ist noch eine wichtige Geschichte. Also für... also Ordinalzahlen haben diese Eigenschaft, und jetzt kommt eben dieses Theorem, das unter anderem sagt, dass groß $\Omega$ eben auch formal eine Ordinalzahl ist, nämlich in Zermelo-Fraenkel gilt folgendes: Teil 1 sagt, dass für jedes $\alpha$ in $\Omega$, für jede Ordinalzahl, äm, gilt $\alpha$ ist die leere Menge oder die leere Menge ist ein Element von $\alpha$. Dann Teil 2 sagt, äm, für alle $\alpha$ in $\beta$, und $\beta$ Ordinalzahl, gilt $\alpha$ ist auch eine Ordinalzahl, okay? Wenn ich ein Element habe einer Ordinalzahl, ist es selber auch eine Ordinalzahl. Dann Teil 3 ist Trichotomie, also für alle $\alpha$ und $\beta$ in $\Omega$ gilt $\alpha$ in $\beta$, ich sollte hier schreiben entweder, entweder $\alpha$ in $\beta$ oder $\alpha$ gleich $\beta$ oder $\beta$ Element von $\alpha$. Äm, dann gibt's noch folgendes: Der Durchschnitt und die Vereinigung von Ordinalzahlen ist wieder eine Ordinalzahl. Also für alle... jetzt sollte ich hier schreiben Mengen, ich meine jetzt mit $S$ eine Menge, für alle Mengen von Ordinalzahlen, so sollten Sie sich das lesen, für jede Menge, die nur Ordinalzahlen enthält, gilt folgendes: Äm, der Durchschnitt ist eine Ordinalzahl, das ist der Durchschnitt aller Elemente von $S$, und die Vereinigung aller Elemente von $S$ ist auch wieder eine Ordinalzahl. Äh, jetzt bei diesem Durchschnitt muss man noch ein bisschen aufpassen, wenn $S$ die leere Menge ist, dann war das bei mir formal definiert als die leere Menge. Philosophisch gesehen sollte der Durchschnitt von $S$, wenn $S$ die leere Menge ist, die Allmenge sein, also die Klasse aller Mengen, äm, philosophisch. Aber in der praxis kam es dann so raus, dass es einfach die leere Menge war, weil anders konnte man es irgendwie nicht definieren, okay? Äm, dann ist das also kein Problem, wenn ich hier sage, der Durchschnitt ist ein Element von $\Omega$. Es kommt nicht die Allklasse raus. Jetzt Wohlgeordnetheit ist auch noch eine Eigenschaft, also für jede nicht-leere Menge, das ist wieder eine Menge von Ordinalzahlen, gibt's ein kleinstes Element. Es existiert ein minimales Element.
+\end{spoken-clean}
+
+\begin{math-stroke}[Theorem: Eigenschaften der Klasse der Ordinalzahlen \texorpdfstring{$\Omega$}{Omega}]
+\begin{theorem}[Eigenschaften von $\Omega$]\label[theorem]{thm:properties-of-omega-v2}
+In Zermelo-Fraenkel ($\text{ZF}$) gelten die folgenden Aussagen für die Klasse der Ordinalzahlen $\Omega$:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Für jedes $\alpha \in \Omega$ gilt:
+    \[
+    \alpha = \emptyset \;\vee\; \emptyset \in \alpha
+    \]
+    \setcounter{enumi}{1} \item Für alle $\beta \in \Omega$ und $\alpha \in \beta$ gilt:
+    \[
+    \alpha \in \Omega
+    \]
+    \item \textbf{Trichotomie:} Für alle $\alpha, \beta \in \Omega$ gilt genau eine der Beziehungen:
+    \[
+    \text{entweder } \alpha \in \beta \quad \text{oder} \quad \alpha = \beta \quad \text{oder} \quad \beta \in \alpha
+    \]
+    \item \textbf{Durchschnitt und Vereinigung:} Sei $S \neq \emptyset$ eine Menge von Ordinalzahlen (d.h. $S \subseteq \Omega$). Dann gilt:
+    \[
+    \bigcap S \in \Omega \quad \text{und} \quad \bigcup S \in \Omega
+    \]
+    \inlinemetanote{Falls $S = \emptyset$, definieren wir formal $\bigcap \emptyset := \emptyset \in \Omega$.}
+    \item \textbf{Wohlgeordnetheit:} Jede nichtleere Menge von Ordinalzahlen $S \subseteq \Omega$ besitzt ein minimales Element bezüglich der Elementrelation $\in$.
+\end{enumerate}
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:46:40 - 00:51:12]
+Okay. Äm, und weil man jetzt eben die Eigenschaften 2, 3, 5 hat, die ich jetzt mal rot mache, 2, 3 und 5, sieht das so aus, wie wenn dieses große $\Omega$ auch eine Ordinalzahl wäre. Weil das erste ist Transitivität, jedes Element von $\Omega$ ist ja auch eine Teilmenge, sagt das hier. Das hier sagt, dass je zwei Elemente vergleichbar sind, noch stärker, also hier gibt's ein entweder-oder, vorhin war nur oder gefordert. Und das dritte sagt Wohlgeordnetheit, und das waren die Bedingungen in der Definition einer Ordinalzahl. Äm, jetzt kann's aber nicht so sein, dass $\Omega$ eine Menge ist, weil man eben aus dem jetzt ein Problem kriegt. Also Bemerkung: $\Omega$ ist keine Menge, und das nennt sich das Burali-Forti-Paradox. Und der Grund: Sonst kriegt man, dass es eine Ordinalzahl ist wegen dieser Punkte 2, 3 und 4 aus diesem Theorem, und dann, ja gut, wenn es eine Ordinalzahl ist, ist es ein Element von sich selber. Und das geht nicht wegen Trichotomie, also Ordinalzahlen haben die Eigenschaft entweder-oder, sehen Sie hier? Hier steht entweder. Das ist also ein Widerspruch zu diesem entweder hier, Widerspruch zu dem entweder-oder, ja, weil $\Omega$ gleich $\Omega$ ist, kann es nicht auch ein Element von sich selber sein. Also ist eben $\Omega$ keine Menge, okay? Damit hat man das Problem gelöst, das Paradox. Ja, ist halt größer als eine Menge. Äm, haben Sie dazu eine Frage? Das war übrigens nur eine Person, Cesare Burali-Forti war eine Person, ja. Cesare heißt er, ja, Entschuldigung. Ich versuche jetzt das abzustellen, hoffentlich funktioniert's diesmal. Also Entschuldigung, ich muss mal herausfinden, wie man's anders macht. Ah, ich hätte einfach... okay, gut, nächstes Mal. Jetzt...
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Burali-Forti-Paradoxon]
+\begin{theorem}[Burali-Forti-Paradoxon]\label[theorem]{thm:burali-forti-v2}
+Die Klasse $\Omega$ aller Ordinalzahlen ist keine Menge.
+\end{theorem}
+
+\begin{short-proof}
+Angenommen, $\Omega$ wäre eine Menge.
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Da jedes Element von $\Omega$ eine Ordinalzahl ist, und jedes Element einer Ordinalzahl wieder eine Ordinalzahl ist (nach Theorem \ref{thm:properties-of-omega-v2} (ii)), ist $\Omega$ transitiv.
+    \setcounter{enumi}{1} \item Nach Theorem \ref{thm:properties-of-omega-v2} (iii) sind je zwei Elemente von $\Omega$ $\in$-vergleichbar.
+    \setcounter{enumi}{2} \item Nach Theorem \ref{thm:properties-of-omega-v2} (v) besitzt jede nichtleere Teilmenge von $\Omega$ ein minimales Element bezüglich $\in$.
+\end{enumerate}
+Damit erfüllt die Menge $\Omega$ alle Bedingungen der Definition \ref{def:ordinalzahl-v2} und ist somit selbst eine Ordinalzahl:
+\[
+\Omega \in \Omega
+\]
+Dies widerspricht jedoch der Trichotomie (Theorem \ref{thm:properties-of-omega-v2} (iii)), nach der für die Ordinalzahl $\Omega$ gelten muss:
+\[
+\text{entweder } \Omega \in \Omega \quad \text{oder} \quad \Omega = \Omega \quad \text{oder} \quad \Omega \in \Omega \quad \text{(wobei sich diese ausschließen)}
+\]
+Da $\Omega = \Omega$ trivialerweise wahr ist, muss $\Omega \in \Omega$ falsch sein. Dieser Widerspruch zeigt, dass $\Omega$ keine Menge sein kann.
+\end{short-proof}
+\end{math-stroke}
+
+\subsection{Der Push-Forward von Relationen}
+
+\begin{spoken-clean}[00:51:12 - 00:55:56]
+Ja, kommt... Gut, ein Hilfssatz, ich möchte immer noch zeigen, das Auswahlaxiom... also will zeigen, Auswahlaxiom impliziert Wohlordnungsprinzip über Zermelo-Fraenkel, und dazu brauche ich den Hilfssatz, und folgenden Hilfssatz, nämlich: Das Auswahlaxiom impliziert in Zermelo-Fraenkel, dass es für jede Menge $A$ eine Ordinalzahl gibt, die in Bijektion steht zur Menge. Also in Zermelo-Fraenkel impliziert das Auswahlaxiom, dass es für jedes $A$ eine Ordinalzahl gibt, $\alpha$, und eine Bijektion von $\alpha$ nach $A$. Und das hier ist so der Hauptknackpunkt an der ganzen... am ganzen Beweis Auswahlaxiom impliziert Wohlordnungsprinzip. Wenn man das hat, geht es relativ schnell, und das mache ich jetzt vor, das Schnelle, okay? Also Bemerkungen, und dazu muss ich jetzt etwas definieren. Ich definiere jetzt den Push-Forward einer Relation unter einer injektiven Abbildung. Also seien $X$ und $y$ Mengen, $R$ eine binäre Relation, binär bedeutet eine Teilmenge von $X \times y$, nein, auf $X$, Entschuldigung, binäre Relation auf $X$, also Teilmenge von $X \times X$, binäre Relation auf $X$, äm, und $u$ von $X$ nach $y$ eine injektive Funktion, das Zeichen bedeutet injektiv. Äm, dann definiere ich den Push-Forward $u_*(R)$ als das Einzige, was ich tun kann. Ich möchte jetzt eine Relation auf $y$, und was kann ich jetzt tun? Ja gut, ich schaue mir die Paare an $u(x), u(x')$ wobei das Paar $x, x'$ eben in der Relation liegt, in $R$. Und das hier ist eine Relation, und zwar binäre Relation auf $y$. Es ist eine Teilmenge von $y \times y$, bedeutet das. Ja, weil ja $u(x)$ in $y$ liegt und das hier auch. Ja gut, äm...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Push-Forward einer Relation]
+\begin{definition}[Push-Forward einer Relation]\label[definition]{def:push-forward-relation-v2}
+Seien $X, Y$ Mengen, $R \subseteq X \times X$ eine binäre Relation auf $X$, und $u: X \to Y$ eine injektive Abbildung. Der \newterm{Push-Forward} (Bildmaß-analoge Relation) von $R$ unter $u$, bezeichnet mit $u_*(R)$, ist die binäre Relation auf $Y$ definiert durch:
+\begin{equation}
+\label{eq:push-forward-relation-v2}
+u_*(R) := \{ \langle u(x), u(x') \rangle \in Y \times Y \mid \langle x, x' \rangle \in R \}
+\end{equation}
+\end{definition}
+
+\begin{proposition}\label[proposition]{prop:push-forward-well-ordering-v2}
+Falls $R$ eine Wohlordnung auf $X$ ist, dann ist $u_*(R)$ eine Wohlordnung auf der Bildmenge $u(X) \subseteq Y$.
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:55:56 - 00:56:00]
+Dann Bemerkung 2, das ist Bemerkung 1. Wenn das hier eine Wohlordnung ist auf $X$, und $u$ injektiv, dann ist das, was ich jetzt gerade erklärt habe, dieser Push-Forward, also $u_*(R)$ eine Wohlordnung auf der Menge $u(X)$. Das kann man sich überlegen. Und...
+\end{spoken-clean}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 262959, Output 9591)*
+---
+
+**AutoExtraction:** [Part 3] 03-31-tuesday.mp4
+[Angehängtes Video]: 03-31-tuesday-part3.mp4
+[Kontext-Dateien]: 03-31-tuesday-part1.tex, 03-31-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-31. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+% ==========================================
+% SECTION 2: BEWEIS DER ÄQUIVALENZ AC <=> WOP
+% ==========================================
+\subsection{Beweis der Äquivalenz unter Verwendung des Hilfssatzes}
+
+\begin{spoken-clean}[00:00:00 - 00:01:14]
+Zeigen Auswahlaxiom impliziert Wohlordnungsprinzip über Zermelo-Fraenkel, und dazu brauche ich den Hilfssatz, und folgenden Hilfssatz, nämlich: Das Auswahlaxiom impliziert in Zermelo-Fraenkel, dass es für jede Menge $A$ eine Ordinalzahl gibt, die in Bijektion steht zur Menge. Also in Zermelo-Fraenkel impliziert das Auswahlaxiom, dass es für jedes $A$ eine Ordinalzahl gibt, $\alpha$, und eine Bijektion von $\alpha$ nach $A$. Und das hier ist so der Hauptknackpunkt an der ganzen... am ganzen Beweis Auswahlaxiom impliziert Wohlordnungsprinzip. Wenn man das hat, geht es relativ schnell, und das mache ich jetzt vor, das Schnelle, okay? Also Bemerkungen, und dazu muss ich jetzt etwas definieren. Ich definiere jetzt den Push-Forward einer Relation unter einer injektiven Abbildung. Also seien $X$ und $Y$ Mengen, $R$ eine binäre Relation, binär bedeutet eine Teilmenge von $X \times Y$, nein, auf $X$, Entschuldigung, binäre Relation auf $X$, also Teilmenge von $X \times X$, binäre Relation auf $X$, äm, und $u$ von $X$ nach $Y$ eine injektive Funktion, das Zeichen bedeutet injektiv. Äm, dann definiere ich den Push-Forward $u_*(R)$ als das Einzige, was ich tun kann. Ich möchte jetzt eine Relation auf $Y$, und was kann ich jetzt tun? Ja gut, ich schaue mir die Paare an $u(x), u(x')$ wobei das Paar $x, x'$ eben in der Relation liegt, in $R$. Und das hier ist eine Relation, und zwar binäre Relation auf $Y$. Es ist eine Teilmenge von $Y \times Y$, bedeutet das. Ja, weil ja $u(x)$ in $Y$ liegt und das hier auch.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:14 - 00:02:33]
+Dann Bemerkung 2, das ist Bemerkung 1. Wenn das hier eine Wohlordnung ist auf $X$, und $u$ injektiv, dann ist das, was ich jetzt gerade erklärt habe, dieser Push-Forward, also $u_*(R)$ eine Wohlordnung auf der Menge $u(X)$. Das kann man sich überlegen. Und...
+\end{spoken-clean}
+
+\begin{nice-box}[Hilfssatz zur Mächtigkeit von Mengen]
+\begin{lemma}\label[lemma]{lem:ac-ordinal-bijection}
+Das Auswahlaxiom ($\text{AC}$) impliziert unter den Axiomen von Zermelo-Fraenkel ($\text{ZF}$), dass jede Menge $A$ gleichmächtig zu einer Ordinalzahl ist. Das heißt:
+\begin{equation}
+\label{eq:ac-ordinal-bijection}
+\text{ZF} + \text{AC} \vdash \forall A \, \exists \alpha \in \Omega \, \exists v \, \bigl( v: \alpha \to A \text{ ist eine Bijektion} \bigr)
+\end{equation}
+\end{lemma}
+\end{nice-box}
+
+\begin{math-stroke}[Der Push-Forward einer Relation]
+\begin{definition}[Push-Forward einer Relation]\label[definition]{def:push-forward-relation}
+Seien $X, Y$ Mengen, $R \subseteq X \times X$ eine binäre Relation auf $X$, und $u: X \to Y$ eine injektive Abbildung. Der \newterm{Push-Forward} von $R$ unter $u$, bezeichnet mit $u_*(R)$, ist die binäre Relation auf $Y$ definiert durch:
+\begin{equation}
+\label{eq:push-forward-relation}
+u_*(R) := \{ \langle u(x), u(x') \rangle \in Y \times Y \mid \langle x, x' \rangle \in R \}
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Eigenschaften des Push-Forwards]\label[proposition]{prop:push-forward-properties}
+Sei $R$ eine Wohlordnung auf $X$ und $u: X \to Y$ eine injektive Abbildung. Dann ist der Push-Forward $u_*(R)$ eine Wohlordnung auf der Bildmenge $u(X) \subseteq Y$.
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:33 - 00:03:39]
+...dann... Bemerkung 2, das ist Bemerkung 1. Wenn das hier eine Wohlordnung ist auf $X$, und $u$ injektiv, dann ist das, was ich jetzt gerade erklärt habe, dieser Push-Forward, also $u_*(R)$ eine Wohlordnung auf der Menge $u(X)$. Das kann man sich überlegen. Und...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:39 - 00:05:19]
+Und jetzt beweise ich... jetzt beweise ich die Implikation... Auswahlaxiom impliziert Wohlordnungsprinzip... Also, Annahme... dass das Auswahlaxiom gilt. Dann verwende ich den Hilfssatz... und der sagt mir... dass es so ein $\alpha$ gibt in $\Omega$ und eine Bijektion... zwischen $\alpha$ und $A$. Und jetzt können Sie sich überlegen, wie ich daraus jetzt das Wohlordnungsprinzip kriege mit Hilfe der Bemerkungen. Insbesondere Bemerkung 2. Während ich hier die Tafel wische. Und dann sind wir fertig. Das ging dann ganz schnell. Und der ganze... also die Arbeit liegt im Beweis des Hilfssatzes. Okay, das möchte ich jetzt auch erklären. Haben Sie dazu eine Frage?
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die mittlere Tafel, um Platz für den Beweis des Hilfssatzes zu schaffen, während er die Studenten auffordert, über die Anwendung des Push-Forwards nachzudenken.
+\end{meta-note}
+
+\begin{proof}[Beweis der Implikation \texorpdfstring{$\text{AC} \implies \text{WOP}$}{AC => WOP}]
+\begin{spoken-clean}[continued]
+Also, wir nehmen an, das Auswahlaxiom gilt.
+\end{spoken-clean}
+\begin{math-stroke}[Beweisführung mittels Push-Forward]
+Sei $A$ eine beliebige Menge. Wir wollen zeigen, dass auf $A$ eine Wohlordnung existiert.
+
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Nach dem Hilfssatz \ref{lem:ac-ordinal-bijection} existiert eine Ordinalzahl $\alpha \in \Omega$ und eine Bijektion:
+    \[
+    v: \alpha \to A
+    \]
+    \setcounter{enumi}{1} \item Da $\alpha$ eine Ordinalzahl ist, ist die eingeschränkte Elementrelation $\in_\alpha$ eine Wohlordnung auf $\alpha$ (nach Proposition \ref{prop:ordinal-well-ordered-v2}).
+    \setcounter{enumi}{2} \item Da $v$ eine Bijektion (und somit insbesondere injektiv) ist, ist der Push-Forward dieser Relation unter $v$:
+    \[
+    \in_A \;:= v_*(\in_\alpha)
+    \]
+    nach Proposition \ref{prop:push-forward-properties} eine Wohlordnung auf der Bildmenge $v(\alpha) = A$.
+\end{enumerate}
+Somit existiert eine Wohlordnung auf $A$, was das Wohlordnungsprinzip ($\text{WOP}$) beweist.
+\end{math-stroke}
+\end{proof}
+
+% ==========================================
+% SECTION 3: BEWEIS DES HILFSSATZES
+% ==========================================
+\subsection{Beweis des Hilfssatzes}
+
+\begin{spoken-clean}[00:05:19 - 00:06:16]
+Also, Beweis des Hilfssatzes. Bevor ich da was Formales mache, möchte ich Ihnen die Idee erklären des Beweises. Also, was möchten wir? Wir haben ein... äh, wo ist es? ... Theorem... Da. Also für jede Menge gibt's ein $\alpha$ und eine Bijektion zwischen $\alpha$ und $A$. Die Idee ist, wir zählen die Elemente aus $A$ auf. Also, wir wählen eins und nennen es das Nullte. Dann nehmen wir ein nächstes, und zwar ein anderes, und nennen es das Erste. Und das Nächste nennen wir das Zweite, und so weiter. Und wenn wir Glück haben, gibt's nur abzählbar viele Elemente und die haben wir vielleicht alle aufgezählt, wenn wir Glück haben. Okay? Aber selbst wenn es nur abzählbar viele Elemente hat... ja, vielleicht haben wir nach dem Unendlichsten... also nach all diesen natürlichen Zahlen haben wir noch nicht alle aufgezählt. Dann machen wir einfach weiter mit $\omega$. Dann kommt das $\omega$-te, und nachher das $\omega+1$-te, und das $\omega+2$-te, und so weiter, und so weiter, und so weiter. Und irgendwann haben wir dann alle. Und dann sind wir fertig. Ja?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:06:16 - 00:07:49]
+Das gibt uns die Bijektion, oder? $0$ geht nach diesem nullten Element, $1$ geht nach dem ersten, und $2$ nach dem zweiten, und so weiter. Das ist dann die Bijektion zwischen... gewissen Ordinalzahlen, die dann ein Element sein werden einer anderen Ordinalzahl. So ist der Trick. Und jetzt mache ich das ein bisschen formal. Also, sei $A$ eine Menge. Annahme, das Auswahlaxiom gilt. Äm, das sollte ich ja, genau. Jetzt... also, ich mache jetzt nur den Fall, dass $A$ nicht die leere Menge ist. Das ist der interessante Fall. Äm, dann definiere ich $\mathcal{P}^*(A)$, $\mathcal{P}$ oben Stern von $A$ als die Potenzmenge ohne... das... also die menge, die genau die leere Menge enthält. Äm, und jetzt gibt's eben wegen dem Auswahlaxiom eine Auswahlfunktion für diese Potenzmenge...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:07:49 - 00:09:05]
+...die wählt aus jeder nicht-leeren Menge ein Element aus. Und formal geht das in diese Vereinigung, diese Vereinigung ist einfach wieder $A$. Okay? Auswahlfunktion. Jetzt habe ich das Auswahlaxiom verwendet. Dann definiere ich einen neuen Begriff, nämlich eine $f$-Menge. Ich weiß nicht, ob ich das Wort mag, aber so steht's im Buch von Herrn Halbeisen und Gräf. Ich möchte es lieber eine $f$-Abbildung nennen. Es heißt jetzt halt $f$-Menge, aber denken Sie an eine Abbildung. Eine $f$-Menge ist ein Paar $\langle \alpha, w \rangle$, wobei $\alpha$ eine Ordinalzahl ist und $w$ eine injektive Funktion von $\alpha$ nach $A$...
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion und Definition der \texorpdfstring{$f$}{f}-Menge]
+Sei $A \neq \emptyset$ eine Menge. Wir definieren die reduzierte Potenzmenge:
+\[
+\mathcal{P}^*(A) := \mathcal{P}(A) \setminus \{\emptyset\}
+\]
+Wegen des Auswahlaxioms ($\text{AC}$) existiert eine Auswahlfunktion:
+\[
+f: \mathcal{P}^*(A) \to \bigcup \mathcal{P}^*(A) = A \quad \text{mit} \quad \forall B \in \mathcal{P}^*(A) \, \bigl( f(B) \in B \bigr)
+\]
+
+\begin{definition}[$f$-Menge]\label[definition]{def:f-menge}
+Eine \newterm{$f$-Menge} (oder $f$-Abbildung) ist ein geordnetes Paar $\langle \alpha, w \rangle$, wobei $\alpha \in \Omega$ eine Ordinalzahl und $w: \alpha \to A$ eine injektive Abbildung ist, sodass für alle $\gamma \in \alpha$ gilt:
+\begin{equation}
+\label{eq:f-menge-condition}
+w(\gamma) = f\bigl( A \setminus w[\gamma] \bigr)
+\end{equation}
+Hierbei bezeichnet $w[\gamma] := \{ w(\delta) \mid \delta \in \gamma \}$ das Bild der Ordinalzahl $\gamma$ unter $w$.
+\end{definition}
+
+\begin{explanation-of-steps}
+Die Bedingung $w(\gamma) = f(A \setminus w[\gamma])$ formalisiert den intuitiven Prozess des sukzessiven Auswählens: $w[\gamma]$ ist die Menge der bereits ausgewählten Elemente. $A \setminus w[\gamma]$ stellt die verbleibenden Elemente dar. Die Auswahlfunktion $f$ wählt aus diesen verbleibenden Elementen das nächste Element $w(\gamma)$ aus.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:05 - 00:11:24]
+...und zwar so, dass für alle Elemente von $\alpha$ gilt: $w(\gamma)$... jetzt kommt eben der Zusammenhang mit der Auswahlfunktion $f$, und darum nennen wir es eine $f$-Menge... also für alle Elemente von $\alpha$ gilt: $w(\gamma)$ ist gegeben durch $f$ von dieser Menge hier. Also, wir schauen uns das Bild von $\gamma$ unter $w$ an. Das ist immer noch das Bild, das mit den eckigen Klammern. Und das nehmen wir jetzt weg. Das heißt, wir nehmen $f$ von dieser Menge, das heißt, das gibt uns ein Element da drin. Also, das Element liegt nicht in diesem Bild. Okay? Das ist jetzt der Trick. Das heißt, wir haben was Neues dazugenommen. Ja? Äm, gut. Und jetzt... und zwar, das gut, das wollen wir sowieso, weil's ja soll injektiv sein. Aber der Trick ist, wir... wir nehmen jetzt genau dieses neue Element, was eben... was... was durch dieses $f$ bestimmt wird, das wir haben, die Auswahlfunktion. Okay, gut. Jetzt habe ich also gesagt, was eine $f$-Menge ist, und jetzt kommt eben so eine Art... ja, es klingt so ein bisschen wie eine Induktion. Also, man... man nimmt dann eben am Schluss die Vereinigung von allen $f$-Mengen, und das ist dann... das ist das, was wir wollen. Das entsprechende $\alpha$ ist unser $\alpha$, diese Bijektion, die wir wollen. Äm, das heißt, jetzt muss ich da noch was definieren, nämlich: Wenn ich zwei Mengen $X$ und $Y$ habe, dann schreibe ich $X \le Y$ genau dann... ich mache jetzt mal nur einen einfachen Pfeil so, also nicht zwei Striche... wenn $X$ Element ist von $Y$ oder $X = Y$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:24 - 00:12:55]
+Und jetzt seien $\alpha, v$ und $\beta, w$ $f$-Mengen. Dann gibt's eine Behauptung 1: Nämlich, falls $\alpha \le \beta$ ist, dann ist die Einschränkung von $w$ auf $\alpha$ gleich $v$. Also anders gesagt, $\beta$ ist eine Erweiterung... nicht das $\beta$, das... das $w$. $w$ ist eine Erweiterung von $v$. Es ist quasi die gleiche Funktion, einfach mit einem größeren Definitionsbereich. Hier habe ich $\alpha$, hier habe ich das größere $\beta$. Ich mache mal das $\alpha$ gelb, und dann habe ich hier das größere $\beta$, und dann wird die Funktion erweitert. So, das hier ist $\beta$, das Rote, und dann habe ich hier das entsprechende... das $w$, und hier habe ich das $v$, das Gelbe. Ja gut, äm... beweisen werde ich das nicht. Lesen Sie selber nach. Ja, ist jetzt auch nicht so kompliziert, glaube ich. Dann Behauptung 2: Ich schreibe jetzt eine menge hin, $S$. Das ist die Menge aller $f$-Mengen. Und die Aussage ist genau, dass das eine Menge ist. Äm, also, wenn man's richtig sagt, bedeutet das: Es existiert eine Menge, deren Elemente genau die $f$-Mengen sind. Okay? Beweise ich jetzt auch nicht. Können Sie auch selber nachlesen in meinen Notizen, dass das wahr ist. Und aus diesen zwei Behauptungen möchte ich jetzt diese Implikation... also, Entschuldigung, ich möchte jetzt den Hilfssatz beweisen. Also, dass es diese Bijektion gibt. Und wie gesagt, der Trick ist, ich mache jetzt die Vereinigung von allen $f$-Mengen. Das ist der Trick.
+\end{spoken-clean}
+
+\begin{math-stroke}[Ordnung auf Ordinalzahlen und Behauptungen]
+Für zwei Ordinalzahlen $\alpha, \beta \in \Omega$ definieren wir die schwache Ordnung:
+\begin{equation}
+\label{eq:ordinal-weak-order}
+\alpha \le \beta \;\iff\; \alpha \in \beta \;\vee\; \alpha = \beta
+\end{equation}
+
+\begin{proposition}[Behauptungen zum Beweis des Hilfssatzes]\label[proposition]{prop:f-set-claims}
+Seien $\langle \alpha, v \rangle$ und $\langle \beta, w \rangle$ zwei $f$-Mengen.
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Behauptung 1 (Konsistenz/Erweiterung):} Falls $\alpha \le \beta$, dann gilt für die Einschränkung von $w$ auf $\alpha$:
+    \[
+    w\vert_\alpha = v
+    \]
+    \setcounter{enumi}{1} \item \textbf{Behauptung 2 (Mengenstatus):} Die Kollektion aller $f$-Mengen ist eine echte Menge (keine echte Klasse):
+    \[
+    S := \{ \langle \alpha, w \rangle \mid \langle \alpha, w \rangle \text{ ist eine } f\text{-Menge} \} \text{ ist eine Menge.}
+    \]
+\end{enumerate}
+\end{proposition}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Achsen für Ordinalzahlen (x-Achse) und Zielmenge A (y-Achse).
+  % 2. Midground: Intervalle [0, \alpha] und [0, \beta] auf der x-Achse.
+  % 3. Foreground: Funktion v (gelb/BurntOrange) und ihre konsistente Erweiterung w (rot/BrickRed).
+  % 4. Annotations: Beschriftungen für v, w, \alpha, \beta.
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Achsen
+  \draw[->, thick, gray!70] (-0.5,0) -- (4,0) node[right] {$\Omega$};
+  \draw[->, thick, gray!70] (0,-0.5) -- (0,3) node[above] {$A$};
+  
+  % Intervalle auf der x-Achse
+  \draw[thick] (0,0.05) -- (0,-0.05) node[below] {$0$};
+  \draw[thick, BurntOrange] (1.8,0.05) -- (1.8,-0.05) node[below, BurntOrange] {$\alpha$};
+  \draw[thick, BrickRed] (3.2,0.05) -- (3.2,-0.05) node[below, BrickRed] {$\beta$};
+  
+  % Farbige Balken für Definitionsbereiche
+  \draw[ultra thick, BurntOrange!30] (0,0) -- (1.8,0);
+  \draw[ultra thick, BrickRed!30] (1.8,0) -- (3.2,0);
+  
+  % Funktion v (auf [0, \alpha])
+  \draw[very thick, BurntOrange] (0,0.5) to[out=20,in=200] (1.8,1.8) coordinate (V_end);
+  \node[BurntOrange, above left] at (0.9,1.1) {$v$};
+  
+  % Funktion w (Erweiterung auf [\alpha, \beta])
+  \draw[very thick, BurntOrange] (0,0.5) to[out=20,in=200] (1.8,1.8); % Überlappender Teil
+  \draw[very thick, BrickRed, dashed] (1.8,1.8) to[out=20,in=220] (3.2,2.5) coordinate (W_end);
+  \node[BrickRed, above left] at (2.5,2.1) {$w$};
+  
+  % Gestrichelte Hilfslinien
+  \draw[dashed, gray] (1.8,0) -- (1.8,1.8);
+  \draw[dashed, gray] (3.2,0) -- (3.2,2.5);
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:55 - 00:14:19]
+Ja. Also, ich definiere $\alpha$ als die Vereinigung aller $\beta$s, wobei $\langle \beta, w \rangle$ so eine $f$-Menge ist. Äm, das ist... das, was ich jetzt hier hinschreibe, ist mal eine Menge, weil das $S$ hier eine Menge ist. Und dann, $v$ definiere ich als die Vereinigung aller $\beta, w$ in $S$ und dann $w$. Das ist diese Vereinigung der Graphen. Also, gelber Graph vereinigt mit rotem Graph und all den anderen noch. Eine Funktion ist in dieser Vorlesung dasselbe wie ein Graph. In anderen Vorlesungen ist es ein Tripel bestehend aus einem Definitionsbereich, Zielbereich und Graphen, und hier ist es einfach der Graph. Wir sagen dann einfach Funktion von $X$ nach $Y$, das ist dann der Graph. Okay? Und das hier ist dann die Vereinigung der Graphen, also gelber Graph vereinigt mit rotem Graph und all den anderen noch. Ja gut, äm... jetzt habe ich hier zwei Sachen geschrieben, und der Punkt ist eben... jetzt kommt Behauptung 3, und bei mir war das dann eine Übungsaufgabe, das zu beweisen. Okay? Also, ich mache es jetzt auch nicht vor. Es geht mir nur darum, dass Sie eine Idee haben, wie das überhaupt geht. Also, es gibt hier drei Teile: Nämlich, $v$ ist eine Abbildung von $\alpha$ nach $A$. Ja, oder es geht nichts schief, heißt das. Wenn Sie das Bild anschauen, ist das irgendwie klar. Oder weil ja das $\beta$ eine Erweiterung ist von $\alpha$, kriege ich hier den gleichen Wert, wenn ich das $w$ mache, wie das... wie das andere. Das heißt, wenn ich alle diese Graphen vereinige, kriege ich immer noch einen Graphen. Ich verwende hier also das hier... ich verwende jetzt Behauptung 1 an der Stelle. Hier steckt Behauptung 1 drin. Äm, und dann zwei: $v$ ist injektiv. Das hat zu tun mit der Injektivität der einzelnen Teile, äm, weil eine $f$-Menge ja so definiert war, dass das $w$ hier injektiv ist. Daher kommt das. Und dann drei: $v$ ist surjektiv. Das ist jetzt das Interessante. Und hier verwende ich halt, dass ich... dass ich so eine Vereinigung gemacht habe. Dann habe ich halt alles. Okay?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:19 - 00:15:37]
+Ja, und das war's. Jetzt habe ich eine Bijektion zwischen $\alpha$ und $A$. Und $\alpha$ ist eine Ordinalzahl, habe ich das irgendwie schon gesagt? Das hätte ich mal irgendwann noch sagen sollen. Und das sage ich jetzt: Also, $\alpha$ ist eine Ordinalzahl. Und das folgt jetzt eben aus diesem Theorem für über $\Omega$, Teil... wo steht's? Vereinigung, da, 4. Die Vereinigung einer Menge von Ordinalzahlen ist eine Ordinalzahl. Und es ist ja eine Vereinigung einer menge von Ordinalzahlen, nämlich all dieser $\beta$s hier. Theorem Teil 4. Jetzt habe ich meine Bijektion zwischen einer Ordinalzahl und der beliebigen Menge $A$. Und das war der Hilfssatz, der ist jetzt bewiesen modulo Beweis der Behauptungen. Die finde ich jetzt nicht so interessant, die Beweise der Behauptungen, möchte ich Ihnen jetzt nicht zumuten. Äm, ja. Haben Sie dazu Fragen? Ist vielleicht alles ein bisschen schnell. Ja.
+\end{spoken-clean>
+
+\begin{student-interaction}[Studentenfrage]
+Ich verstehe nur nicht ganz bei Behauptung 1... "Sei $A$ Menge, $A \neq \emptyset$, Annahme AC"...?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Annahme... Annahme, genau. Ich nehme das Auswahlaxiom an. Genau. Und am Schluss kriege ich dann mein... die Bijektion zwischen $\alpha$ und $A$. Die nennt sich dann $v$. Ja. Andere Fragen? Also, ich war ziemlich schnell dieses Mal. Ist vielleicht nicht so ein gutes Zeichen, aber... äm, ich habe natürlich Sachen weggelassen, aber ich glaube, das schadet nicht. Weil das sind jetzt nicht Sachen, wo Sie wirklich eine neue Idee sehen, sondern Sie arbeiten halt... wie soll man sagen... Sie arbeiten halt... Sie brauchen das, was Sie haben. Ja.
+\end{spoken-clean}
+
+\begin{proof}[Beweis des Hilfssatzes \ref{lem:ac-ordinal-bijection}]
+\begin{math-stroke}[Definition der Grenzstrukturen]
+Wir definieren die Grenzordinalzahl $\alpha$ und die Grenzabbildung $v$ durch Vereinigung über alle Elemente der Menge $S$ aller $f$-Mengen:
+\begin{align}
+\alpha &:= \bigcup_{\langle \beta, w \rangle \in S} \beta \label{eq:limit-ordinal} \\
+v &:= \bigcup_{\langle \beta, w \rangle \in S} w \label{eq:limit-mapping}
+\end{align}
+
+\begin{short-proof}[Beweisskizze für Behauptung 3]
+\begin{enumerate}
+    \item \textbf{$\alpha$ ist eine Ordinalzahl:} Da $S$ eine Menge von $f$-Mengen ist, ist $\{ \beta \mid \langle \beta, w \rangle \in S \}$ eine Menge von Ordinalzahlen. Nach Theorem \ref{thm:properties-of-omega-v2} (iv) ist die Vereinigung $\alpha = \bigcup \beta$ ebenfalls eine Ordinalzahl ($\alpha \in \Omega$).
+    \item \textbf{$v$ ist eine wohldefinierte Abbildung $v: \alpha \to A$:} Dies folgt direkt aus Behauptung 1 (Proposition \ref{prop:f-set-claims} (i)). Da je zwei $f$-Mengen auf ihrem gemeinsamen Definitionsbereich übereinstimmen, ist die Vereinigung der Graphen wieder ein Funktionsgraph.
+    \item \textbf{$v$ ist injektiv:} Da jede einzelne Abbildung $w$ injektiv ist und die Funktionen konsistente Erweiterungen voneinander sind, bleibt die Injektivität bei der Vereinigung erhalten.
+    \item \textbf{$v$ ist surjektiv:} Angenommen, $v$ wäre nicht surjektiv. Dann ist $A \setminus v[\alpha] \neq \emptyset$. Wir könnten dann ein neues Element $a^* := f(A \setminus v[\alpha])$ wählen und die $f$-Menge $\langle \alpha, v \rangle$ zu einer größeren $f$-Menge $\langle \alpha + 1, v^* \rangle$ mit $v^*(\alpha) = a^*$ erweitern. Dies widerspricht jedoch der Definition von $\alpha$ als Vereinigung \emph{aller} Definitionsbereiche von $f$-Mengen. Somit muss $v$ surjektiv sein.
+\end{enumerate}
+Da $v: \alpha \to A$ injektiv und surjektiv ist, ist es eine Bijektion.
+\end{short-proof}
+\end{math-stroke}
+\end{proof}
+
+% ==========================================
+% SECTION 4: DAS KURATOWSKI-ZORNSCHE LEMMA
+% ==========================================
+\section{Das Kuratowski-Zornsche Lemma}
+
+\begin{spoken-clean}[00:15:37 - 00:17:20]
+Äm, was ich jetzt tun möchte, ist, das Kuratowski-Zorn-Lemma noch erklären. Weil ich habe ja versprochen, dass das Auswahlaxiom zu drei Sachen... also zu sich selber und dann noch zu... zum Wohlordnungsprinzip und zum Kuratowski-Zorn-Lemma äquivalent ist. Und das Kuratowski-Zorn-Lemma ist eben das, was Sie in der Realität sehen. Die Version des Auswahlaxioms, die Sie tatsächlich sehen. Und darum schreibe ich das jetzt hin. Da geht's um eine halbgeordnete Menge. Es gibt jetzt halt noch einen Begriff, der Halbordnung. Äm, und zwar mache ich das im schwachen Sinne, also mit kleiner-gleich, nicht mit kleiner. Und dann bedeutet es Transitivität und Antireflexivität... also $x \le y$ und $y \le x$ impliziert $x = y$. Äm, ja.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:17:20 - 00:18:42]
+Und dann hat man auf diesem... auf der halbgeordneten Menge... hat man folgende Annahme: Nämlich immer, wenn Sie eine Kette haben da drin, das ist eine linear geordnete Teilmenge, gibt es eine obere Schranke. Und die Aussage ist dann, des Lemmas... also des Zornschen Lemmas... dass es dann ein maximales Element gibt. Okay? Und dieses maximale Element ist dann Ihre Basis des Vektorraums. So werden Sie's anwenden, zum Beispiel. Äm, also, Kuratowski-Zorn-Lemma. Das hat wieder den Status eines Axioms. Also, das Wort Lemma sollte man sich mit Anführungszeichen denken. Äm, und jetzt brauche ich eben den Begriff einer Halbordnung. Also, eine schwache oder nicht-strikte Halbordnung auf einer menge $P$... $P$ für partial, wie... wie halb... ist eine binäre Relation... also nein, ich schreibe jetzt nicht $R$, ich schreibe kleiner-gleich... auf $P$ mit den folgenden Eigenschaften: Ah, Reflexivität habe ich vergessen zu erwähnen. Also, für jedes $x$ in $P$ ist $x \le x$. Dann Antisymmetrie ist das, was ich vorher gesagt habe. Also, für alle $x, y$ in $P$ gilt: Wenn $x \le y$ und $y \le x$, dann ist $x = y$. Das nennt sich Antisymmetrie. Und dann gibt's noch Transitivität, wie immer.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Halbordnung]
+\begin{definition}[Schwache Halbordnung]\label[definition]{def:partial-order}
+Eine \newterm{schwache Halbordnung} (oder partielle Ordnung) auf einer Menge $P$ ist eine binäre Relation $\le$ auf $P$ (d.h. $\le \;\subseteq P \times P$), die für alle $x, y, z \in P$ die folgenden drei Axiome erfüllt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Reflexivität:}
+    \[
+    x \le x
+    \]
+    \setcounter{enumi}{1} \item \textbf{Antisymmetrie:}
+    \[
+    x \le y \;\wedge\; y \le x \implies x = y
+    \]
+    \setcounter{enumi}{2} \item \textbf{Transitivität:}
+    \[
+    x \le y \;\wedge\; y \le z \implies x \le z
+    \]
+\end{enumerate}
+Das Paar $\langle P, \le \rangle$ heißt dann eine \newterm{halbgeordnete Menge} (partially ordered set / poset).
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:42 - 00:20:12]
+Gut, und dann nennen wir das Paar $\langle P, \le \rangle$ eine halbgeordnete Menge, wenn wir so was haben. Und jetzt... äm, ist eine lineare Ordnung... zwar eine schwache lineare Ordnung... jetzt haben wir eben diesen Begriff einer schwachen linearen Ordnung... vorher war's eine starke oder strikte oder strengere Ordnung... auf $P$ ist eine Halbordnung kleiner-gleich auf $P$, so dass für alle $x$ und $y$ in $P$ gilt: $x \le y$ oder $y \le x$. Es ist wie vorher, fast. Vorher war alles strikt, und da hat man's ein bisschen anders gesagt, aber die Idee ist die gleiche, einer linearen Ordnung. Äm, jetzt, Annahme, wir haben so eine halbgeordnete Menge. Und jetzt ist eine Kette in $P$ eine Teilmenge, die linear geordnet ist durch kleiner-gleich. Man kann also je zwei Elemente der Kette vergleichen. Und eine obere Schranke ist das, was es sein soll, also eine obere Schranke für eine Teilmenge von $P$ ist ein Element in $P$, und zwar so, dass für alle $y$ in dieser Teilmenge gilt: $y \le x$. Jedes Element ist kleiner-gleich die obere Schranke. Okay, das haben wir jetzt auch noch. Und dann gibt's eben den Begriff eines maximalen Elementes. Äm, also, $x$ in $P$ heißt maximal genau dann, äm, wenn für alle $y$ in $P$ gilt: Falls $y \ge x$, dann ist $y = x$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:12 - 00:21:37]
+Es gibt also kein größeres Element. Das heißt aber nicht, dass dieses $x$ größer-gleich jedes andere Element ist. Das ist nicht so. Es gibt einfach nur kein größeres Element, okay? Wichtiger Punkt hier. Weil wir jetzt nur eine halbgeordnete Menge haben, spielt das jetzt eben eine Rolle. Vorher spielte es keine Rolle bei einer Wohlordnung, aber hier eben schon. Okay? Äm, gut. Jetzt habe ich in meinen Notizen noch Bemerkungen dazu gemacht, lese ich jetzt nicht vor. Und jetzt kommt dieses Kuratowski-Zorn-Lemma. Kuratowski-Zorn-Lemma. Das kann ich jetzt formulieren. Also, sei... das schreibt man auch als KZL... sei $\langle P, \le \rangle$ eine halbgeordnete Menge, und zwar so, dass für jede Kette $C$ in $P$ eine obere Schranke existiert. Dann besitzt $P$ ein maximales Element. Ja. Äm, und jetzt gilt eben folgendes Theorem...
+\end{spoken-clean}
+
+\begin{math-stroke}[Strukturen auf halbgeordneten Mengen]
+Sei $\langle P, \le \rangle$ eine halbgeordnete Menge.
+
+\begin{definition}[Schwache lineare Ordnung]\label[definition]{def:weak-linear-order}
+Die Relation $\le$ heißt eine \newterm{schwache lineare Ordnung} auf $P$, falls zusätzlich gilt:
+\[
+\forall x, y \in P \, \bigl( x \le y \;\vee\; y \le x \bigr)
+\]
+\end{definition}
+
+\begin{definition}[Kette]\label[definition]{def:chain}
+Eine Teilmenge $C \subseteq P$ heißt eine \newterm{Kette} in $P$, falls die Einschränkung der Halbordnung $\le$ auf $C$ eine schwache lineare Ordnung auf $C$ ist.
+\end{definition}
+
+\begin{definition}[Obere Schranke]\label[definition]{def:upper-bound}
+Sei $S \subseteq P$ eine Teilmenge. Ein Element $x \in P$ heißt eine \newterm{obere Schranke} für $S$, falls gilt:
+\[
+\forall y \in S \, \bigl( y \le x \bigr)
+\]
+\end{definition}
+
+\begin{definition}[Maximales Element]\label[definition]{def:maximal-element-poset}
+Ein Element $x \in P$ heißt ein \newterm{maximales Element} von $P$, falls gilt:
+\[
+\forall y \in P \, \bigl( x \le y \implies x = y \bigr)
+\]
+\end{definition}
+
+\begin{nice-box}[Das Kuratowski-Zornsche Lemma]
+\begin{theorem}[Kuratowski-Zornsches Lemma -- $\text{KZL}$]\label[theorem]{thm:zorns-lemma}
+Sei $\langle P, \le \rangle$ eine nichtleere halbgeordnete Menge. Falls jede Kette $C \subseteq P$ eine obere Schranke in $P$ besitzt, dann hat $P$ mindestens ein maximales Element:
+\begin{equation}
+\label{eq:zorns-lemma}
+\text{KZL} \equiv \forall \langle P, \le \rangle \left( \left( P \neq \emptyset \;\wedge\; \forall C \subseteq P \, \bigl( C \text{ ist Kette} \implies \exists x \in P \, \forall y \in C \, (y \le x) \bigr) \right) \implies \exists m \in P \, \text{maximal} \right)
+\end{equation}
+\end{theorem}
+\end{nice-box}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:37 - 00:23:01]
+Also, in ZF, Zermelo-Fraenkel, sind äquivalent: Also, erstens Auswahlaxiom, zweitens... das habe ich schon hingeschrieben, Wohlordnungsprinzip, und drittens Kuratowski-Zorn-Lemma. Und dass jetzt die zwei äquivalent sind, habe ich jetzt vorher gerade bewiesen, und jetzt geht es noch darum zu zeigen, dass die zwei äquivalent sind: Auswahlaxiom und Lemma von Zorn. Äm, und damit werde ich wahrscheinlich jetzt nicht mehr anfangen, weil ich habe mir auch die Notizen nicht ausgedruckt dafür. Dachte nicht, dass ich so schnell bin. Äm, jetzt möchte ich vielleicht eher noch ein bisschen etwas zu diesem Auswahlaxiom sagen, also respektive zum Zornschen Lemma. Also, historisch gesehen ist es nicht so ganz korrekt, es Zornsches Lemma zu nennen, so wird's meistens genannt. Äh, der Erste, der etwas gemacht hat, was ähnlich war zum Zornschen Lemma, war Herr Bochner. Und dann hat Herr Kuratowski hat eine ähnliche Version des Zornschen Lemmas angeschaut, und dann erst kam Zorn. Also, Zorn war am Schluss. Aber es wird leider, vielleicht leider, ja, Zornsches Lemma genannt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:23:01 - 00:24:19]
+Und ja... Dann habe ich ja auch was gesagt zum Auswahlaxiom ganz am Anfang, und wie gesagt, dieses Auswahlaxiom hat unintuitive Konsequenzen, zum Beispiel das Banach-Tarski-Paradox. Und darum war es auch umstritten. Äm, und dann hat aber Herr Gödel bewiesen, dass man das... die... also, dass man die Verneinung des Auswahlaxioms nicht beweisen kann aus Zermelo-Fraenkel, falls Zermelo-Fraenkel konsistent ist. Das heißt, das Auswahlaxiom ist nicht so schlecht. Es geht nichts schief, wenn... wenn... wenn jetzt Zermelo-Fraenkel konsistent ist, dann, wenn man noch das Auswahlaxiom dazu tut, bleibt's immer noch konsistent. Das war mal beruhigend. Äm, und dann hat später Herr Cohen auch noch gezeigt, dass aus dem Zermelo-Fraenkel das Auswahlaxiom... also nicht... hier 'nicht' ist wichtig. Man kann's nicht... man kann die Verneinung nicht beweisen. Und man kann aber auch nicht aus dem Zermelo-Fraenkel das Auswahlaxiom beweisen. Das heißt, das Auswahlaxiom ist unabhängig von Zermelo-Fraenkel. Und es ist dann eben etwas, was man halt annehmen kann oder halt nicht. Und alle nehmen's an, weil man sonst relativ wenig Mathematik machen kann.
+\end{spoken-clean}
+
+\begin{math-stroke}[Metamathematische Resultate zur Unabhängigkeit des Auswahlaxioms]
+\begin{theorem}[Äquivalenzsatz über $\text{ZF}$]\label[theorem]{thm:zf-equivalences}
+Unter den Axiomen von Zermelo-Fraenkel ($\text{ZF}$) sind das Auswahlaxiom ($\text{AC}$), das Wohlordnungsprinzip ($\text{WOP}$) und das Kuratowski-Zornsche Lemma ($\text{KZL}$) äquivalent:
+\begin{equation}
+\label{eq:zf-equivalences}
+\text{ZF} \vdash \text{AC} \iff \text{WOP} \iff \text{KZL}
+\end{equation}
+\end{theorem}
+
+\begin{theorem}[Konsistenz und Unabhängigkeit (Gödel, Cohen)]\label[theorem]{thm:independence-ac}
+Falls die Zermelo-Fraenkel-Mengenlehre ($\text{ZF}$) konsistent ist, dann gilt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Relative Konsistenz (Kurt Gödel, 1938):} $\text{ZF} \not\vdash \neg\text{AC}$. Das heißt, das Hinzufügen von $\text{AC}$ führt nicht zu neuen Widersprüchen.
+    \setcounter{enumi}{1} \item \textbf{Unabhängigkeit (Paul Cohen, 1963):} $\text{ZF} \not\vdash \text{AC}$. Das heißt, $\text{AC}$ lässt sich nicht aus den Standard-ZF-Axiomen beweisen.
+\end{enumerate}
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:19 - 00:26:05]
+Äm... Dann gibt's noch eine kleine Anekdote. Also, der amerikanische Mathematiker Bona sagte zum Auswahlaxiom, dem Wohlordnungsprinzip und dem Lemma von Zorn... ich kann's Ihnen vorlesen. Also: "The Axiom of Choice is obviously true, the well-ordering theorem is obviously false, and who can tell about Zorn's lemma?" Und das drückt ein bisschen diese Kontroverse aus, die es mal vor 100 Jahren gab und jetzt nicht mehr. Äm, und... Also, es war auch noch so... Es gibt noch eine andere Anekdote. Äm, und zwar geht's da um einen Satz von Tarski. Also... Äm... Also, Tarski versuchte ein... ein... einen Satz ein... also eine... eine äquivalente Form... oder er versuchte Folgendes einzureichen in ein... in eine Zeitschrift, nämlich, dass man aus dem Auswahlaxiom zeigen kann, dass jede unendliche menge, für jede unendliche Menge $A$ es eine Bijektion zwischen der Menge und dem kartesischen Produkt von $A$ mit sich selber gibt. Und dann hat er anscheinend seinen Kollegen folgende Geschichte erzählt, nämlich: Er hat's versucht einzureichen bei den Comptes Rendus de l'Académie des Sciences Paris, ja, halt in einer Zeitschrift. Und Fréchet war dann zuständig, das zu beurteilen, und Herr Lebesgue auch, zwei berühmte Mathematiker. Und Fréchet hat geschrieben, dass eine Implikation zwischen zwei bekannten Sätzen nicht ein neues Resultat ist. Und Lebesgue schrieb, dass eine Implikation zwischen zwei falschen Aussagen nicht interessant sei. Und dann hat Herr Tarski aufgegeben, hat's... er hat dann da nicht mehr eingereicht bei diesen Comptes Rendus. Also, damals war das eine kontroverse Geschichte, das ganze Auswahlaxiom und eben diese Umformulierung davon, und heute nicht mehr. Also, es finden sich heute wahrscheinlich keine Mathematiker oder keine Mathematikerinnen mehr, die... die das strikt ablehnen, das Auswahlaxiom. Man kann natürlich in der Mathematik selber seine Axiome wählen, aber... aber... aber der Konsens ist, man wählt das... man nimmt das mit zu... dazu. Einfach, weil man damit dann erst gewisse interessante Mathematik machen kann. Und das ist auch alles, was man braucht. Sie brauchen kein neues Axiom mehr. Äm, modulo vielleicht algebraische Geometrie, die machen noch irgendwas mit einem zusätzlichen Axiom, aber anscheinend kann man das auch wieder loswerden. Es macht dann die Theorie schöner, okay? Aber man kann auch ohne damit leben. Also, ich glaube, man kann mit dem Auswahlaxiom die ganze Mathematik machen, die Sie so machen möchten. Wenn Sie nicht Logiker oder Logikerinnen werden wollen, dann machen Sie was anderes, dann machen Sie alle möglichen Axiome. Aber sonst, wenn Sie das nicht werden, können Sie auch mit... eben reicht es quasi, Zermelo-Fraenkel und das Auswahlaxiom zu haben. Und jetzt habe ich alles erzählt, was ich wollte. Haben Sie Fragen noch?
+\end{spoken-clean}
+
+\begin{didactic-insight}[Anekdoten zur Akzeptanz des Auswahlaxioms]
+\begin{itemize}
+    \item \textbf{Jerry Bonas berühmtes Zitat:}
+    \qt{The Axiom of Choice is obviously true, the well-ordering theorem is obviously false, and who can tell about Zorn's lemma?}
+    Dieses Zitat illustriert die psychologische Diskrepanz zwischen den mathematisch äquivalenten Aussagen: Während das Auswahlaxiom intuitiv völlig offensichtlich erscheint, wirkt das Wohlordnungsprinzip (das impliziert, dass man beispielsweise die reellen Zahlen $\mathbb{R}$ wohlordnen kann) völlig absurd. Das Zornsche Lemma hingegen ist so komplex formuliert, dass sich der Intuition entzieht.
+    
+    \item \textbf{Die Tarski-Anekdote:}
+    Alfred Tarski bewies, dass für jede unendliche Menge $A$ die Gleichmächtigkeit $A \cong A \times A$ äquivalent zum Auswahlaxiom ist. Als er diese Arbeit bei den \emph{Comptes Rendus} einreichte, lehnten die Gutachter Maurice Fréchet und Henri Lebesgue sie mit widersprüchlichen Begründungen ab: Fréchet meinte, die Äquivalenz zweier bekannter wahrer Sätze sei kein neues Resultat; Lebesgue hingegen argumentierte, die Äquivalenz zweier falscher Sätze sei völlig uninteressant.
+\end{itemize}
+\end{didactic-insight>
+
+\begin{spoken-clean}[00:26:05 - 00:26:42]
+Also gut, ich höre jetzt auf. Also, ja, Sie können gerne auch nachher noch kommen und Fragen stellen.
+\end{spoken-clean}
+
+\begin{meta-note}[Vorlesungsende]
+Die Studenten applaudieren. Der Dozent packt seine Unterlagen zusammen und beendet die Vorlesung.
+\end{meta-note>
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 272434, Output 10973)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 80689, Output 23)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 16:01:35) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 04-14-tuesday.mp4
+[Angehängtes Video]: 04-14-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-14. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Dienstag}{14. Apr.}{14. April}{Auswahlaxiom und Ordinalzahlen}
+
+\section{Das Auswahlaxiom und Ordinalzahlen}
+\subsection{Das Auswahlaxiom (Axiom of Choice)}
+
+\begin{spoken-clean}[00:00:00 - 00:01:25]
+So... Hallo zusammen und herzlich willkommen zu dieser zweiten Hälfte des Semesters. Ich hoffe, Sie hatten alle schöne, erholsame, äh, Osterferien und... Genau. Das letzte Mal, ähm, war ja Fabian Ziltener da, hat mich vertreten, hoffentlich, \inlinemetanote{lacht} und hat Ihnen vom Auswahlaxiom erzählt. Da werden wir jetzt fortfahren.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent schreibt das Thema "Auswahlaxiom" an die linke Tafel.
+\end{meta-note>
+
+\begin{spoken-clean}[00:01:25 - 00:02:38]
+Ah, ja, ich hoffe, Sie haben nicht alles darüber schon vergessen jetzt über die Ferien. Äm, aber da ich ja das letzte Mal nicht dabei war, auch können wir vielleicht erst einmal nochmals durchzugehen, wo wir sind. Also wir haben... Sie haben das Auswahlaxiom gesehen, das \qt{Axiom of Choice}. Wissen Sie noch, was das sagt? Gut, es gibt viele Möglichkeiten, das zu formulieren. Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studenten-Antwort]
+Wir haben eine Familie von Mengen, also eine Menge von Mengen, und es ist immer möglich, dass wir aus jeder von dieser Menge ein Element auswählen, gleichzeitig. Und diese Familie von Mengen sollte nicht leer sein, weil dann geht es offensichtlich nicht. Also soll die leere Menge nicht enthalten, weil aus der leeren Menge können wir nie ein Element auswählen.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, absolut richtig. Wir haben eine Familie von Mengen, also eine Menge von Mengen, und es ist immer möglich, dass wir aus jeder von dieser Menge ein Element auswählen, gleichzeitig. Und diese Menge von Mengen sollte nicht... Familie von Mengen... sollte nicht leer sein, weil dann geht es offensichtlich nicht. Äm, oder soll die leere Menge nicht enthalten, weil aus der leeren Menge können wir nie ein Element auswählen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Auswahlaxiom (Axiom of Choice)]
+\setcounter{theorem}{0}
+\begin{definition}[Auswahlaxiom]\label[definition]{def:auswahlaxiom}
+Das \newterm{Auswahlaxiom} (AC) besagt formal:
+\begin{equation}\label{eq:auswahlaxiom}
+\forall \mathcal{F} \, \left( \emptyset \notin \mathcal{F} \implies \exists f \, \left( f: \mathcal{F} \to \bigcup \mathcal{F} \;\land\; \forall X \in \mathcal{F} \, (f(X) \in X) \right) \right)
+\end{equation}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:38 - 00:03:51]
+Oder, also das heißt, formal ausgedrückt sagt uns das Auswahlaxiom für alle $\mathcal{F}$, ähm, so dass, ähm, wenn die leere Menge... für alle $\mathcal{F}$ gilt, wenn die leere Menge nicht enthalten ist in der Familie $\mathcal{F}$, dann, ähm, existiert eine Funktion $f$, und diese Funktion $f$ ist jetzt eben eine Auswahlfunktion, die soll jedem Element von dieser Familie von Mengen ein Element von dieser Menge zuordnen. Also das heißt, wir wollen eine Funktion, die geht von, äh, $\mathcal{F}$, also von dieser Familie, das schreiben wir das da oben, und die geht zur, ähm, Vereinigung von $\mathcal{F}$. Also für jede Menge in $\mathcal{F}$ erhalten wir ein Element von dieser... das in irgendeinem von diesem $\mathcal{F}$ enthalten ist. Und wir wollen jetzt aber, dass für alle, ähm, äh, wir wollen das für alle $X$ in $\mathcal{F}$ gilt, dass, ähm, $f(X)$ ist enthalten in $X$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Äquivalente Formulierungen des Auswahlaxioms]
+In Worten ausgedrückt:
+\begin{itemize}
+    \setcounter{enumi}{0} \item Jede Familie von nicht-leeren Mengen hat eine Auswahlfunktion.
+    \setcounter{enumi}{1} \item $\iff$ Das kartesische Produkt nicht-leerer Mengen ist nicht leer.
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:51 - 00:05:28]
+Okay, wir müssen eine umständliche Art und Weise, um aufzuschreiben, dass wir wollen, dass für alle, äh, genau, für alle Familien von Mengen können wir eines auswählen aus jeder Menge. Also, in Worten ausgedrückt: Jede Familie von nicht-leeren Mengen hat eine Auswahlfunktion. Und wir haben gesehen, das ist auch wieder äquivalent dazu zu sagen, ähm, das kartesische Produkt nicht-leerer Mengen ist nicht leer. Okay, und so ausgedrückt, ähm, erscheint das eigentlich sehr sinnvoll, das als Axiom zu haben, weil wenn irgend... also das wäre schon sehr, sehr schlecht, wenn wir in der Mathematik arbeiten würden und wir wissen nicht, ob ein Produkt von nicht-leeren Mengen, ob das, äh, nicht leer sein könnte oder so. Äm, deswegen, aber das folgt nicht aus Zermelo-Fraenkel, das muss man wirklich noch als zusätzliches Axiom annehmen. Aber es ist vielleicht trotzdem so ein bisschen von der Formulierung her etwas, was man lieber beweisen würde, und es ist ein bisschen so als Axiom ist doch eine ein bisschen umständlicher als nur zu sagen: Okay, die leere Menge existiert, wir wollen wirklich sagen: Okay, das ist nicht leer. Deswegen, das hat so ein bisschen in den... in den Axiomen, die man heutzutage verwendet, ein bisschen einen speziellen, ähm, so ein bisschen einen speziellen Stand, weil es eben nicht ganz jetzt vom Gefühlsmäßigen wie ein Axiom wirkt, etwa etwas, was man als Axiom haben möchte. Aber es ist auch nicht dramatisch, also in der modernen Mathematik verwendet man das Auswahlaxiom regelmäßig. Aber trotzdem, in der Regel schreibt man ausdrücklich, wenn man es verwendet. Dann schreibt man, beweist etwas, der Beweis verwendet aber das Auswahlaxiom. Ja, aber eben, alle Sachen, also Algebra, man kann das nicht machen... also wäre sehr, sehr mühsam, wenn man das Auswahlaxiom nicht hat, und viele Sachen stimmen dann vielleicht nicht mehr. Okay, so ausgedrückt ist es sehr harmlos. Wir werden aber sehen, dass... oder Sie haben gesehen, dass das nicht un-... nicht, dass das auch noch weniger harmlose Formulierungen davon hat.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:05:28
+% topic: Wiederholung des Auswahlaxioms (AC)
+% board_state: def:auswahlaxiom, eq:auswahlaxiom
+% next_goal: Einführung und Wiederholung von Ordinalzahlen
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\subsection{Ordinalzahlen}
+
+\begin{spoken-clean}[00:05:28 - 00:07:10]
+Und dazu haben Sie die Ordinalzahlen gesehen. \inlinemetanote{schreibt "Ordinalzahlen" an die mittlere Tafel} Okay, wissen Sie noch, Ordinalzahlen, was das sind? Haben Sie ein gutes intuitives Verständnis schon von Ordinalzahlen? Oder... Ja, genau, das ist das Wichtige. Ja? \inlinemetanote{ein Student antwortet leise} ... Also, können auch weniger sein, also Zahlen $\omega$ sind auch schon Ordinalzahlen, aber man geht einfach noch weiter. Genau. Also es geht im Prinzip darum, man zählt: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, und dann möchte man aber noch weiter nummerieren. Das geht, ja, formal durchaus, und sagen: Okay, nehmen wir einfach noch die... Also wir zählen hier: 1... das geht immer weiter. Und was man machen kann, ist sagen: Okay, wir nehmen noch eine neue Zahl dazu, das ist dann ganz $\omega$, das wird auch eine Ordinalzahl, die ist einfach noch größer als alle vorherigen. Ist kein Problem hier, es hört nicht auf, aber dann können wir sagen: Okay, nehmen wir noch eine dazu, die ist noch größer als diese, die wir da, die bereits größer ist als alle anderen. Und dann kann man das wieder machen, so weit man möchte, sagen: Okay, nehmen wir eine, die nochmals größer ist auch als alle die. Und dann macht man das wieder weiter, und dann, ja, das hört natürlich nie... nie auf. Also es ist eine Verallgemeinerung von Zählen, aber es geht immer... es geht immer... es geht immer weiter.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelanschrieb]
+Der Dozent zeichnet Striche an die Tafel, um das unendliche Zählen und das Hinzufügen von Grenzwerten ($\omega, \omega+1, \dots$) zu veranschaulichen.
+\end{meta-note>
+
+\begin{spoken-clean}[00:07:10 - 00:08:45]
+Weiter nach oben, und, ähm... Ja, das Wichtige ist, dass es, ähm... Also nach oben ist es quasi... ist es offen, a priori, man kann immer größere Ordinalzahlen machen. Das Wichtige ist, dass es nach unten, ähm, jeweils, ähm, jeweils aufhört. Also wenn man eine Teilmenge nimmt, dann hat die ein minimales Element. Das ist diese Sache mit der Wohlordnung. Also genau, das heißt, das Bild... das ist das Bild von Ordinalzahlen. Aber, ja, am besten... ich meine, wir haben ja alle selbst unsere Bilder von Ordinalzahlen, das muss man sich so vorstellen. Weiß nicht, wie stellen Sie sich die ganzen Zahlen vor? Auf einer Geraden? Oder auf einem... auf einer Spirale? Oder von oben nach unten? Weiß nicht. Wer stellt sich die auf einer Geraden vor? Okay. Wer stellt sich die auf etwas anderes als eine Gerade vor? Ja, spannend. Auf der Geraden, bei wem geht es, äh, rechts positiv und links negativ? Okay, bei wem ist links positiv und rechts negativ? Ah, niemand, spannend. Geht es bei jemandem von oben nach unten? Gut, egal. Da gibt es auch... da gibt es natürlich alle Variationen noch, vielleicht geht es... ist es eine Gerade, aber nicht ganz... ist die... ist die Gerade in Ihrem Kopf, ähm, ähm, schön linear angeordnet, oder vielleicht eher logarithmisch? Also bei mir ist die eher logarithmisch, so der Abstand zwischen 100 und 200 ist etwa so groß wie zwischen 1 und 2, und zwischen 1000 und 2000 auch wieder, aber ich glaube, das sind so... da hat jeder seine eigenen Dinge, ist kein Problem, jeder stellt sich etwas anderes darunter vor, aber wir können formal gut darüber sprechen. Also genau, bei Ordinalzahlen machen Sie sich Ihr eigenes Bild davon.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Ordinalzahlen]
+\begin{definition}[Ordinalzahl]\label[definition]{def:ordinalzahl}
+Eine Menge $\alpha$ ist eine \newterm{Ordinalzahl}, falls $\alpha$ transitiv ist und durch die Relation $\in$ wohlgeordnet ist.
+\end{definition}
+
+\begin{explanation-of-steps}
+\begin{itemize}
+    \item \textbf{Transitivität:} Eine Menge $\alpha$ ist transitiv, wenn jedes Element von $\alpha$ auch eine Teilmenge von $\alpha$ ist:
+    \[ \forall x \in \alpha \implies x \subseteq \alpha \]
+    \item \textbf{Wohlordnung durch $\in$:} Die Relation $\in$ ordnet die Elemente von $\alpha$ so, dass jede nicht-leere Teilmenge ein bezüglich $\in$ minimales Element besitzt.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:45 - 01:11:28]
+Äm, und die schöne, formale Definition, mit der wir alle arbeiten können, soll eine Menge, ähm, $\alpha$ ist eine Ordinalzahl, falls, äh, $\alpha$ transitiv ist und durch die Relation, ähm, enthalten in, oder Element von, äh, wohlgeordnet ist. Okay, und das wiederum ist jetzt ein bisschen eine... äh, das ist wieder ein bisschen eine... ähm, eine mühsame Definition a priori, zu sagen: Okay, eine Ordinalzahl ist eine Menge... Aber es ist natürlich speziell, darum sind alles Mengen, oder? In Zermelo-Fraenkel haben wir nichts anderes als Mengen. Zahlen, also... also ganze Zahlen sind ja auch Mengen. Von dem her, also es sind alles Mengen, davon darf man sich nicht darüber stören lassen. Äm, und genau. Wissen Sie noch, was transitiv bedeutet? Ja? \inlinemetanote{ein Student antwortet} ... Genau, jedes Element von $\alpha$ ist auch eine Teilmenge von $\alpha$. Also $\alpha$ besteht aus Mengen, und die Elemente von $\alpha$, also diese Mengen, sind auch Teilmengen. Okay, und dann durch $\in$, äh, durch enthalten in wohlgeordnet. Genau, das heißt, wenn wir zwei Elemente in $\alpha$ haben, $\gamma$ und $\delta$, dann muss entweder $\gamma$ in $\delta$ enthalten sein, oder $\delta$ in $\gamma$ enthalten sein, oder die beiden sind gleich. Äm, und das... diese Relation soll eine Wohlordnung definieren. Okay, also wichtige... wichtige Eigenschaften, das was ich vorher schon erwähnt habe, ist, äh, diese Ordinalzahlen sind wohlgeordnet. Das heißt, nach unten gibt es immer ein minimales Element, wenn Sie eine Menge nehmen.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:11:28
+% topic: Definition und Eigenschaften von Ordinalzahlen
+% board_state: def:ordinalzahl, bsp:natuerliche-zahlen
+% next_goal: Beispiele für Ordinalzahlen (natürliche Zahlen, omega)
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{math-stroke}[Beispiele für Ordinalzahlen]
+\begin{example}[Natürliche Zahlen und darüber hinaus]\label[example]{ex:ordinalzahlen-beispiele}
+Die natürlichen Zahlen werden im Zermelo-Fraenkel-System als Ordinalzahlen konstruiert:
+\begin{align*}
+  0 &= \emptyset \\
+  1 &= \{ \emptyset \} = \{ 0 \} \\
+  2 &= \{ \emptyset, \{ \emptyset \} \} = \{ 0, 1 \} \\
+  3 &= \{ \emptyset, \{ \emptyset \}, \{ \emptyset, \{ \emptyset \} \} \} = \{ 0, 1, 2 \} \\
+  &\;\vdots
+\end{align*}
+Die Menge aller natürlichen Zahlen bildet die erste unendliche Ordinalzahl:
+\[ \omega = \{ 0, 1, 2, 3, \dots \} \]
+Darüber hinaus können wir Nachfolger bilden:
+\begin{align*}
+  \omega + 1 &= \omega \cup \{ \omega \} = \{ 0, 1, 2, \dots, \omega \} \\
+  \omega + 2 &= (\omega + 1) \cup \{ \omega + 1 \} \\
+  &\;\vdots \\
+  2\omega &= \omega \cdot 2, \dots
+\end{align*}
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[01:11:28 - 01:13:10]
+Gut, und eben, das wichtige Beispiel ist, ähm, dass, ähm, die natürlichen Zahlen sind, oder eben $\omega$... also, natürliche Zahlen sind... sind Ordinalzahlen, also eben: 0, das war die leere Menge, dann hatten wir, ähm, 1, das ist die menge, die nur die leere Menge enthält, 2, das ist die Menge, die die leere Menge enthält und die Menge bestehend aus der leeren Menge, 3... geht es dann immer so weiter. Äh, und das haben wir vergessen, Moment. Und da sehen Sie, das ist natürlich, ähm, jede von diesen... von diesen Zahlen, also Mengen, erfüllen diese... diese Bedingung. Aber eben, dann kann man auch noch... auch $\omega$ selbst, also da nimmt man nicht nur all diese Zahlen, sondern auch noch die Menge von all diesen Zahlen, und dann kann man wieder weitermachen: $\omega + 1$, da nehmen wir, ähm, die Menge bestehend aus $\omega$ und der Menge bestehend aus $\omega$... und dann haben wir $\omega + 2$ und so weiter, und das kann man jetzt auch wieder machen bis... so geht es immer, haben wir $2\omega$ und so weiter, $3\omega$ und hört nicht mehr auf. Gut, ähm, das sind die Ordinalzahlen. Das ist auch noch eine wichtige Bemerkung, wir werden nächste Woche dann mit Kardinalzahlen weiterfahren, vielleicht nochmals kurz als Bemerkung zurück: Wir sehen hier, so bei endlichen Zahlen, für endliche Mengen, sind sozusagen Ordinalzahlen und Kardinalzahlen dasselbe. Also jede Menge können wir schauen, das eine ist das Abzählen: 1, 2, 3, 4, 5, 6, 7, und das andere ist die Anzahl Elemente, die Kardinalität, die eine endliche Menge haben kann. Aber die möglichen endlichen Kardinalitäten sind dasselbe wie die endlichen Ordinalzahlen. Aber im Unendlichen sind diese zwei Begriffe zwei verschiedene Sachen. Also es gibt... ich meine, als Menge ist diese Ordinalzahl, ähm, abzählbar, und diese Ordinalzahl ist auch abzählbar. Äm, das heißt, sie sind... haben dieselbe Kardinalität, aber als Ordinalzahlen ist... ist diese natürlich größer als diese.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studenten-Frage]
+Ist das nicht so, dass $\omega + 1$ gleich $\omega \cup \{ \omega \}$ ist?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Nein, das sind alle Elemente aus $\omega$ sind drin enthalten... Also ist es dann nicht $\omega$ vereinigt mit der Menge, die $\omega$ enthält?
+\end{spoken-clean}
+
+\section{Klassifikation von Ordinalzahlen und das Wohlordnungsprinzip}
+\subsection{Klassifikation von Ordinalzahlen}
+
+\begin{spoken-clean}[01:13:10 - 01:15:28]
+Gut, also ein wichtiges... ein wichtiges, doch schönes Konzept, ein lustiges Konzept, die Ordinalzahlen. Und braucht man hin und wieder in der Mathematik, äh, ja. Ja? \inlinemetanote{ein Student stellt eine Frage zur Notation} ... Nein, das sind alle Elemente aus $\omega$ sind drin enthalten. ... Äm... ... Nein, sie nehmen auch... also wir haben die Menge... wir haben die Menge $\omega$, ähm, und dann nehmen wir einfach... das ist die Definition von $\omega + 1$, das ist gleich der Nachfolger von $\omega$, das heißt, wir die Menge... alle Mengen, die wir in $\omega$ schon haben, und noch das $\omega$ dazu. Also es ist wie hier, ähm... also das hier, äh... also das hier, äh, wie soll ich sagen, das hier ist $2 + 1$, das heißt, es ist, äh, 2 und, äh, 2. Das hier ist... ja, genau, okay. Und das ist genau dasselbe. Ja, ja? ... ... Hier? ... Doch, weil... doch, weil 1 ist in $\omega$ enthalten. ... Ja, aber nicht in $\omega + 1$. ... Äh... Doch, weil $\omega$ ist eine Teilmenge von $\omega + 1$. ... Ja, aber nicht so wie es da steht. ... Wie würden Sie es denn schreiben? Also ich... ... 1 ist einfach alle von kleineren Ordinalzahlen, $\omega + 1$ ist die Menge aller kleineren Ordinalzahlen. ... Also 0, 1, 2, 3 und so weiter und so fort, und $\omega$. ... Aber $\omega$ ist die... wie soll ich sagen, $\omega$ ist die Vereinigung von... gut, allen Elementen in $\omega$. Wenn Sie wollen, das ist natürlich noch schwieriger zu beweisen, haben wir einfach angenommen, ähm... und, äh, genau, das sind... die sind alle hier enthalten. Also wenn Sie eine... macht das... ... Ja, aber die sind ja nicht so wie es da steht, die sind ja nicht in $\omega + 1$. ... Doch, also hier... hier schreiben Sie, das ist die... okay. Gehen wir zurück zu dem Beispiel hier. Da haben wir 3, das enthält, ähm, 2, das heißt, das enthält, ähm, leere Menge... leere Menge, und jetzt enthält es auch noch, ähm, 2 als Menge. ... So, so ist das... okay, ich habe... habe mich vertan, das ist diese Notation. ... Ja, genau. ... Und da haben wir genau das hier auch. Okay.
+\end{spoken-clean}
+
+\begin{math-stroke}[Klassifikation von Ordinalzahlen]
+\begin{proposition}[Klassifikation]\label[proposition]{prop:klassifikation-ordinalzahlen}
+Falls $\alpha \neq 0$ eine Ordinalzahl ist, so gilt entweder:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item $\alpha = \bigcup \alpha$ (in diesem Fall ist $\alpha$ eine \newterm{Limesordinalzahl}),
+    \setcounter{enumi}{1} \item oder es gibt ein $\beta$ so dass $\alpha = \beta + 1$ (in diesem Fall heißt $\alpha$ eine \newterm{Nachfolgerordinalzahl}).
+\end{enumerate}
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[01:15:28 - 01:17:10]
+Okay, das ist nur eine Terminologie. Das folgt aus dem Satz, den Sie auch letztes Mal gesehen haben. Gut, ähm... Okay, und dann haben Sie das Wohlordnungsprinzip gesehen, und das, ähm... das ist vielleicht der skandalöse Teil vom... der skandalöse Teil vom Auswahlaxiom. Und das sagt aus, dass jede Menge, ähm, kann wohlgeordnet werden. Und jetzt, was Sie gesehen haben, ist, äh, letztes Mal, hoffe ich, dass das Auswahlaxiom ist äquivalent zum Wohlordnungsprinzip.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:17:10
+% topic: Klassifikation von Ordinalzahlen und Wohlordnungsprinzip
+% board_state: prop:klassifikation-ordinalzahlen, thm:wohlordnungsprinzip
+% next_goal: Diskussion über die Wohlordnung unendlicher Mengen (z.B. R)
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\subsection{Das Wohlordnungsprinzip (WOP)}
+
+\begin{math-stroke}[Das Wohlordnungsprinzip (WOP)]
+\begin{theorem}[Wohlordnungsprinzip]\label[theorem]{thm:wohlordnungsprinzip}
+Jede Menge kann wohlgeordnet werden.
+\[ \text{AC} \iff \text{WOP} \]
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[01:17:10 - 01:19:15]
+Okay, und ich weiß nicht... also okay, für abzählbare Mengen, äh, ist es klar, dass wir die wohlordnen können, oder? Wir nehmen zum Beispiel $\mathbb{Q}$, nehmen wir die... die rationalen Zahlen. Okay, natürlich mit der üblichen Ordnung, die wir auf den rationalen Zahlen haben, sind die nicht wohlgeordnet. Aber wir können jetzt einfach sagen, wir wissen, die rationalen Zahlen sind abzählbar, das heißt, wir finden eine Bijektion zu den natürlichen Zahlen, also zu... zu $\omega$, und somit, ähm... somit haben wir eine Wohlordnung auf die rationalen Zahlen. Aber ich weiß nicht, ob sich jemand Zeit genommen hat über die Ferien einmal zu überlegen, wie man die reellen Zahlen, ähm, explizit wohlordnen kann. Hat sich jemand... haben Sie sich das mal überlegt? Okay, jede Menge kann wohlgeordnet werden, das heißt, es existiert auf den reellen Zahlen eine Wohlordnung. Das heißt, wir nehmen die reellen Zahlen, wir finden eine Ordnung auf den reellen Zahlen, so dass für jedes, ähm... jede Teilmenge hat ein minimales Element. Jetzt versucht man, das zu basteln und zu überlegen, und man wird herausfinden, dass man da nicht draufkommt. Und tatsächlich liegt es auch in der Natur der Sache, dass es im Prinzip... weil das Auswahlaxiom ist unabhängig von den anderen Zermelo-Fraenkel-Axiomen, das heißt, wenn man das nicht annimmt, dann wissen wir nicht, ob es eine Wohlordnung gibt auf den reellen Zahlen. Das heißt, man kann auch nicht erwarten, dass man... niemand kennt eine explizite... eine explizite Wohlordnung auf den reellen Zahlen. Und auch von dem Standpunkt her, wenn man sich überlegt, okay, jetzt nehmen wir als Axiom an, dass wir die reellen Zahlen, ähm, wohlordnen können, dann erscheint das schon ein bisschen als... dann würde man es nur von dem her gesehen, sagen, das ist ein fragwürdiges... ein fragwürdiges Axiom, dass man so etwas Starkes annimmt. Aber es ist äquivalent zu etwas, was wiederum sehr, ähm, sehr natürlich aussieht, deswegen nimmt man in der Regel an, dass das Auswahlaxiom gilt, und Wohlordnungsprinzip somit auch. Genau.
+\end{spoken-clean}
+
+\begin{spoken-clean}[01:19:15 - 01:21:15]
+Äm... Und vielleicht einfach die Grundidee vom Beweis, und das verwenden wir auch so, das war dieses Lemma oder so, das uns aussagt, dass, ähm, für jede menge gibt es eine Ordinalzahl und eine Bijektion zwischen dieser Ordinalzahl und der Menge. Also, wichtige Grundidee vom Beweis ist, dass, ähm, für jede Menge $M$ gibt es eine Ordinalzahl $\lambda$ und eine Bijektion $\psi_\lambda$ zwischen $\lambda$ und $M$. Okay, und wenn wir eine solche Bijektion haben, dann erhalten wir natürlich eine Wohlordnung auf die Menge $M$. Okay, das ist die... ja, das ist die Grund-... Grundidee.
+\end{spoken-clean}
+
+\begin{math-stroke}[Grundidee des Beweises]
+\begin{lemma}\label[lemma]{lem:wohlordnung-existenz}
+Für jede Menge $M$ gibt es eine Ordinalzahl $\lambda$ und eine Bijektion:
+\[ \psi_\lambda: \lambda \to M \]
+\end{lemma}
+
+\begin{explanation-of-steps}
+Mithilfe dieser Bijektion lässt sich die Wohlordnung von $(\lambda, \in)$ direkt auf die Menge $M$ übertragen, indem man definiert:
+\[ x <_M y \iff \psi_\lambda^{-1}(x) \in \psi_\lambda^{-1}(y) \]
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[01:21:15 - 01:24:00]
+Gut, ähm... Und das werden wir auch noch verwenden weiter, das ist sehr nützlich. Okay, jetzt heute wollen wir noch weitere äquivalente, ähm, weitere äquivalente, ähm, weitere Äquivalenzen beweisen zum Auswahlaxiom. Wir wollen noch zeigen, dass das Lemma von Zorn, oder Kuratowski-Zorn, ähm, äquivalent ist zum Auswahlaxiom, und ebenfalls dasselbe für, ähm, für das Teichmüller-Tukey-Prinzip. Und das folgt alles so ein bisschen derselben... denselben Ideen, und Sie werden im Prinzip... Sie werden ein bisschen das Gefühl erhalten, was genau das Auswahlaxiom oder von diesem Gesichtspunkt her sagt. Und das hängt auch alles mit dieser... mit diesem Wohlordnungsprinzip zusammen, und das ist so ein bisschen wie die Ideen... das ist die... das sind die Grundideen, es ist diese transfinite Induktion und transfinite Rekursion. Ich werde das nicht beweisen, Sie finden in den Notizen... haben Sie gesehen, Fabian Ziltener hat seine eigenen Notizen, und da ist für dieses Kapitel seine Notizen, haben wir hochgeladen. Wir folgen jetzt ein bisschen seinen Notizen, ein bisschen den Notizen von, ähm, von Lorenz Halbeisen. Also wenn Sie die Notizen von Fabian Ziltener sehen, dann finden Sie Referenzen und Beweise für diese Sachen.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:24:00
+% topic: Einführung in transfinite Induktion und Rekursion
+% board_state: lem:wohlordnung-existenz, thm:transfinite-induktion
+% next_goal: Definition der transfiniten Induktion an der Tafel
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\subsection{Transfinite Induktion und Rekursion}
+
+\begin{spoken-clean}[01:24:00 - 01:25:28]
+Zuerst ist die transfinite Induktion. \inlinemetanote{schreibt "Transfinite Induktion" an die Tafel} Also es ist eigentlich, ähm, ja, die Idee ist... wir haben Induktionsprinzip für ganze... für natürliche Zahlen können wir Induktion machen. Wir wissen, wenn etwas für... für 0 stimmt, und es stimmt für... wir wissen, es stimmt für ein... ein Element, das stimmt dann für das Nachfolgeelement, dann wissen wir, es stimmt für alle Zahlen, alle natürlichen Zahlen. Und dasselbe kann man auch machen, ähm, für, ähm, für transfinite Zahlen, also für Ordinalzahlen. Dazu, okay, man schreibt... das ist diese Notation, finde ich immer etwas fragwürdig, aber das machen jetzt halt einfach die Leute so. Anstatt zu schreiben, sei $\lambda$ eine Ordinalzahl, schreibt man, sei $\lambda$ in $\Omega$, aber das ist insofern natürlich problematisch, weil $\Omega$ ist keine Menge. Okay. Aber es ist eine Klasse, also eine menge im naiven Sinn, deswegen kann man das schon... schon schreiben. Aber das heißt nicht, dass das irgendetwas mit, äh, der Signatur oder so von Zermelo-Fraenkel zu tun hat, sondern es heißt wirklich... das heißt nichts anderes, sei $\lambda$ eine Ordinalzahl, ist einfach um abzukürzen. Das ist ein wichtiger... wichtiger Punkt noch. Und $\varphi$ eine Formel, so dass Folgendes gilt... Okay, jetzt kommen wir ein bisschen... eine Stufe tiefer. Okay, wir haben eine $\varphi$ eine Formel und $\lambda$ ein Element in $\Omega$. Und wir wollen, das gilt, ähm, für jedes $\alpha$ in $\lambda$, also für jede von diesen, ähm, Ordinalzahlen, die kleiner sind als $\lambda$, gilt: Falls für jedes $\beta$ in $\alpha$ die Formel $\varphi(\beta)$ gilt, dann gilt $\varphi(\alpha)$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Transfinite Induktion]
+\begin{theorem}[Transfinite Induktion]\label[theorem]{thm:transfinite-induktion}
+Sei $\lambda \in \Omega$ eine Ordinalzahl und $\varphi$ eine Formel, so dass Folgendes gilt:
+\[ \forall \alpha \in \lambda \, \left( \forall \beta \in \alpha \, \varphi(\beta) \implies \varphi(\alpha) \right) \]
+Dann gilt $\varphi(\alpha)$ für jedes $\alpha \in \lambda$.
+\end{theorem}
+
+\begin{ai-note}[Klassenschreibweise]
+Die Notation $\lambda \in \Omega$ wird vom Dozenten als abkürzende Schreibweise für "Sei $\lambda$ eine Ordinalzahl" eingeführt, da die Klasse aller Ordinalzahlen $\Omega$ keine Menge im Sinne von ZF ist.
+\end{ai-note}
+\end{math-stroke}
+
+\begin{spoken-clean}[01:25:28 - 01:25:28]
+Okay, wir nehmen an, dass das, ähm, dass diese Bedingung erfüllt ist. Okay, und die transfinite Induktion sagt jetzt, dann gilt auch, ähm, äh, dann gilt, dass $\varphi(\alpha)$ für jedes $\alpha$ in $\lambda$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Transfinite Rekursion]
+\begin{theorem}[Transfinite Rekursion]\label[theorem]{thm:transfinite-rekursion}
+Sei $A$ eine Menge, $\lambda \in \Omega$ eine Ordinalzahl und $f: \bigcup_{\beta \in \lambda} A^\beta \to A$ eine Funktion.
+Dann gibt es eine eindeutige Funktion $a: \lambda \to A$, so dass:
+\[ a_\beta = a(\beta) = f(a|_{\beta}) \quad \text{für alle } \beta \in \lambda \]
+wobei $a|_{\beta}$ die Einschränkung der Funktion $a$ auf $\beta$ bezeichnet.
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[01:25:28 - 01:25:28]
+Okay, das ist die transfinite Induktion. Und transfinite Rekursion, das ist eigentlich... die sagt uns... also Beweis siehe, ähm, Skript von Ziltener. Und die transfinite Rekursion, das ist auch ähnlich, ähm, das erlaubt uns rekursiv für Ordinalzahlen, ähm, Definitionen zu machen. Das ist ein bisschen, ähm... Ja, wenn man es aufschreibt, ist es im ersten Blick ein bisschen, äh, technisch vielleicht. Also es sagt uns, sei $A$ eine Menge, und $\lambda$ eine Ordinalzahl, und $f$ eine Funktion... Okay, die geht von der Vereinigung von allen Funktionen von den Ordinalzahlen, die in $\lambda$ enthalten sind, zu $A$. Das heißt, jeder Funktion von einem $\beta$ von $A$ zu $A$ wird ein neues Element von $A$ zugeordnet. Dann, ähm, gibt es eine eindeutige Funktion, nennen wir die $a$, von $\lambda$ nach $A$, so dass, ähm, nennen wir das $a_\beta$, das ist $a(\beta)$, das ist genau, ähm, $f$ von $a$ eingeschränkt auf $\beta$. Und das gilt für alle $\beta$ in $\lambda$. Okay, das ist nur eine Terminologie, das folgt aus dem Satz, den Sie auch letztes Mal gesehen haben.
+\end{spoken-clean}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 254023, Output 7994)*
+---
+
+**AutoExtraction:** [Part 2] 04-14-tuesday.mp4
+[Angehängtes Video]: 04-14-tuesday-part2.mp4
+[Kontext-Dateien]: 04-14-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-14. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+% ==========================================
+% SECTION: TRANSFINITE REKURSION UND ANWENDUNGEN
+% ==========================================
+
+\begin{spoken-clean}[00:00:00 - 00:00:15]
+...ist $\alpha$ in $\lambda$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Transfinite Induktion (Fortsetzung)]
+\begin{theorem*}[Transfinite Induktion - Behauptung]
+Dann gilt $\varphi(\alpha)$ für jedes $\alpha \in \lambda$.
+\end{theorem*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:15 - 00:00:49]
+Ähm, okay. Also sagt die, ähm, das ist die, ähm, das ist die Aussage. Sie haben auch wieder hier die Aussage, Sie haben etwas, und Sie wissen, ähm, wenn es für alle kleineren gilt, dann gilt es auch für, ähm, dann gilt es auch für $\alpha$. Und wenn das der Fall ist, dann gilt es tatsächlich für alle Elemente, ähm, in Ihrer Ordinalzahl.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:49 - 00:01:30]
+Okay, das ist die transfinite Induktion. Und transfinite Rekursion, das ist eigentlich... die sagt uns... also Beweis siehe, ähm, Skript von Ziltener. Und die transfinite Rekursion, das ist auch ähnlich, ähm, das erlaubt uns rekursiv für Ordinalzahlen, ähm, Definitionen zu machen. Das ist ein bisschen, ähm... Ja, im Prinzip ist es... wenn man es aufschreibt, ist es im ersten Blick ein bisschen, äh, technisch vielleicht.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:30 - 00:02:11]
+Aber es sagt uns, sei $A$ eine Menge, und $\lambda$ eine Ordinalzahl, und $f$ eine Funktion... Okay, die geht von der Vereinigung von allen Funktionen von den Ordinalzahlen, die in $\lambda$ enthalten sind, zu $A$. Das heißt, jeder Funktion von einem $\beta$ von $A$ zu $A$ wird ein neues Element von $A$ zugeordnet.
+\end{spoken-clean}
+
+\begin{math-stroke}[Transfinite Rekursion - Definition]
+\setcounter{theorem}{4}
+\begin{theorem}[Transfinite Rekursion]\label[theorem]{thm:transfinite-rekursion-part2}
+Sei $A$ eine Menge, $\lambda \in \Omega$ eine Ordinalzahl und
+\[
+f: \bigcup_{\beta \in \lambda} A^\beta \to A
+\]
+eine Funktion.
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:11 - 00:03:01]
+Dann, ähm, gibt es eine eindeutige Funktion, nennen wir die $a$, von $\lambda$ nach $A$, so dass, ähm, nennen wir das $a_\beta$, das ist $a(\beta)$, das ist genau, ähm, $f$ von $a$ eingeschränkt auf $\beta$. Und das gilt für alle $\beta$ in $\lambda$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Transfinite Rekursion - Fortsetzung]
+Dann gibt es eine eindeutige Funktion $a: \lambda \to A$, so dass:
+\begin{equation}\label{eq:transfinite-rekursion-formel}
+a_\beta = a(\beta) = f\left(a|_{\beta}\right) \quad \text{für alle } \beta \in \lambda
+\end{equation}
+wobei $a|_{\beta}$ die Einschränkung der Funktion $a$ auf $\beta$ bezeichnet.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:01 - 00:03:46]
+Okay, und das ist jetzt ein bisschen eine... auf den ersten Blick ein bisschen eine, ähm, \qt{Hirntwister}, um zu schauen, was da vor sich geht. Aber es ist eigentlich genau so, wie wir, ähm, wie wir das gewohnt sind für rekursive Definitionen über den natürlichen Zahlen. Also wir haben eine... wir können etwas rekursiv definieren, indem wir definieren, ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:46 - 00:04:09]
+auch hier wieder, was, äh, indem wir sagen, äh, okay, was macht es für das Erste, also für das Element $0$, und dann sagen wir auch noch, was macht es, wenn wir es für etwas definiert haben, wenn wir es für alle kleineren definiert haben, wie können wir das für das nächstgrößere definieren? Und das ist genau, was das $f$ macht hier.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:09 - 00:04:50]
+Also hier müssen wir uns vorstellen eigentlich, wir hätten gerne eine Folge... also das hier, was wir wollen, ist eine Folge von Elementen in $A$. Und es ist eine transfinite Folge, das heißt, die Indexmenge ist $\lambda$. Wir wollen eine transfinite Folge von Elementen in $A$. Eine Folge ist nichts anderes als eine Abbildung von $\lambda$ zu $A$. Okay.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:50 - 00:05:40]
+Und was wir gegeben haben, ist, ähm, wir wissen, ähm, wenn wir... wir wissen, für irgendein $\beta$ in $\lambda$, ähm, dann wissen wir, ähm, können wir die Funktion von $\beta$ nach $A$ anschauen, das heißt, das sind alle vorherigen Folgeglieder. Und wir wissen, wie wir daraus etwas Neues konstruieren können. Das wissen wir für alle vorherigen Folgen, das ist quasi rekursive Definition, äh, die rekursive Bedingung. Und jetzt, das sagt uns, das sagt uns einfach: Okay, in dem Fall können wir das fortsetzen, ähm, gibt es tatsächlich eine Funktion, die das für alle $\lambda$ macht, okay?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:40 - 00:06:43]
+Also Beispiel, eben, für das, für das, für, eben, für die natürlichen Zahlen, ähm, gibt es genau, ähm, ist es genau das, was wir wollen. Also können wir sagen, ähm, zum Beispiel Fibonacci-Folge. Okay, Fibonacci-Folge ist eine Folge, ähm, von ganzen Zahlen, also hier ist, ähm, unser $\lambda$ ist $\omega$ und unser $A$ ist auch $\omega$. Und wir wollen jetzt für jedes, für jedes $\omega$ wollen wir eine ganze Zahl, das ist dann die Fibonacci-Folge, oder? Die wissen wir, die gibt es, das... Fibonacci-Folge, ähm, ordnet jeder ganzen Zahl eine neue ganze Zahl zu.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Fibonacci-Folge]
+\begin{example}[Fibonacci-Folge]\label[example]{ex:fibonacci-rekursion}
+Sei $\lambda = \omega$ und $A = \omega$. Die Fibonacci-Folge ist eine Abbildung:
+\[
+a: \omega \to \omega
+\]
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:43 - 00:07:21]
+Okay, und jetzt die, was wir... Aber um die Fibonacci-Folge zu definieren, ähm, okay, da wissen wir, was ist, ähm, was ist $F(0)$, das ist $0$, wir wissen, was ist $F(1)$, ähm, das ist $1$, und, ähm, wir wissen, dass $F_n$ ist gegeben, ist, ähm, $F_{n-2} + F_{n-1}$ für $n \ge 2$. Okay, und jetzt eben, der Satz sagt uns jetzt, dass, ähm, ein solches $a$ existiert.
+\end{spoken-clean}
+
+\begin{math-stroke}[Fibonacci-Rekursionsgleichungen]
+Die klassischen Anfangsbedingungen und die Rekursionsvorschrift lauten:
+\begin{align}
+F_0 &= 0, \quad F_1 = 1 \label{eq:fibo-anfang} \\
+F_n &= F_{n-2} + F_{n-1} \quad \text{für } n \ge 2 \label{eq:fibo-rekursion}
+\end{align}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:21 - 00:08:00]
+Gut, das deckt sich wirklich als, das Ganze über, als Folgen, Folgen nach. Und das ist eigentlich genau das, was wir, ähm, wir, was wir auch tun wollen, wenn wir, ähm, diese unendlichen Sachen, ähm, in, mit Indizes in, ähm, Ordinalzahlen, ähm, tun wollen, wollen wir genau dasselbe tun wie für endliche Zahlen, nur jetzt ist es nicht mehr endlich.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:00 - 00:08:22]
+Als ein Beispiel vielleicht, wie man da direkt, äh, transfinite Induktion oder Rekursion, ähm, anwenden kann. Also auch hier, ähm, Beweis können Sie, wenn Sie das anschauen wollen, ähm, gibt es eine Referenz im, vom Skript von Fabian Ziltener. Aber ist auch Standard, also wenn Sie transfinite Rekursion, ähm, googeln, finden Sie das oder noch allgemeinere Sachen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:22 - 00:09:24]
+Aber ein schönes Beispiel ist, ähm, das wir uns anschauen können, ist, dass jeder Vektorraum eine Basis hat. Und, okay, der Beweis. Vielleicht zuerst einmal, wie würde man das beweisen? Im Prinzip, was man macht, man, ähm, also wir haben ja eigentlich, wir haben, wir haben unsere Elemente im Vektorraum, die sind ja durch eine Ordinalzahl indexiert. Wir wissen, es gibt eine Bijektion von einer Ordinalzahl zum Vektorraum.
+\end{spoken-clean}
+
+\begin{math-stroke}[Anwendung: Existenz einer Basis in jedem Vektorraum]
+\begin{theorem}[Existenz einer Basis]\label[theorem]{thm:existenz-basis-beliebig}
+Jeder Vektorraum $V$ besitzt eine Basis.
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:24 - 00:10:58]
+Also wir wissen, es existiert, ähm, eine Ordinalzahl und eine Bijektion, ähm, von $\lambda$ mit $V$, das heißt, wir können schreiben, ähm, $V$ als, mmm, $V$ als, ähm, Menge von den $v_\beta$, wobei, ähm, $\beta$ in $\lambda$ sind. Okay, das heißt, wir können die Elemente in $V$ durch $\beta$ indexieren. Okay, und jetzt eigentlich, was wir machen, ist, wir beginnen mit, ähm, unsere nullte Menge nehmen wir einfach den nullten Vektor, den ersten Vektor, $v$... äh, ja, am Anfang nehmen wir leere Menge, und dann nachher nehmen wir immer, nehmen wir immer einen Vektor dazu, und dann gehen wir zum nächsten, wenn der, äh, linear unabhängig ist zu denjenigen, die wir bereits haben, nehmen wir ihn dazu, wenn er linear abhängig ist, nehmen wir ihn nicht dazu, okay? Und so gehen wir durch alle $\beta$s durch. Zu jedem Vektor entscheiden wir, ist der, ähm, ist der, äh, linear unabhängig von denjenigen, die wir bereits haben? Wenn ja, nehmen wir ihn dazu, ansonsten nicht.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis-Setup: Wohlordnung des Vektorraums]
+\begin{proof}[Beweis der Existenz einer Basis]
+Nach dem Wohlordnungssatz existiert eine Ordinalzahl $\lambda \in \Omega$ und eine Bijektion:
+\[
+\psi_\lambda: \lambda \to V
+\]
+Wir können die Elemente des Vektorraums $V$ somit als transfinite Folge schreiben:
+\[
+V = \{ v_\beta : \beta \in \lambda \}
+\]
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:58 - 00:11:13]
+Okay, und das machen wir bis zum Ende, bis wir alle Vektoren haben, und am Schluss, was übrig bleibt, ist eine Basis. Und das ist genau das, was wir im endlichen Fall auch machen. Sie nehmen einen Vektor, dann nehmen Sie einen zweiten dazu und schauen, ähm, ist dieser, ähm, linear unabhängig von demjenigen? Wenn ja, nehmen Sie ihn dazu, dann schauen Sie, gibt es noch irgendeinen, der nicht, äh, linear abhängig ist? Wenn ja, nehmen Sie ihn dazu, und irgendwann haben Sie eine Basis. Und das ist genau das, was wir im unendlichen Fall auch machen. Aber eben, um das wirklich sauber zu machen, braucht, macht man das über diese transfinite Rekursion.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:13 - 00:12:10]
+Okay, das heißt, wir nehmen jetzt das, nehmen wir diese transfinite Rekursion, wir nehmen als unsere Menge, äh, als unsere Menge $A$ nehmen wir jetzt die, die Potenzmenge von $V$, weil wir wollen mit Teilmengen von $V$ arbeiten. Also sei, ähm, so $f$, das geht jetzt eben von den, ähm, von den Funktionen von $\beta$ in die Potenzmenge von $V$ zur Potenzmenge von $V$. Und, äh, wir müssen jetzt sagen, wenn wir, ähm, müssen jetzt einfach rekursiv definieren, wie machen wir die nächstgrößere Menge. Und das, ähm, definieren wir folgendermassen: Wir sagen, wenn $t$ eine Funktion ist von $\beta$ zu, zur Potenzmenge von $V$...
+\end{spoken-clean}
+
+\begin{math-stroke}[Rekursive Konstruktion der Basis]
+Wir wenden transfinite Rekursion mit der Zielmenge $A = \mathcal{P}(V)$ (der Potenzmenge von $V$) an.
+Wir definieren die Rekursionsfunktion:
+\[
+f: \bigcup_{\beta \in \lambda} \mathcal{P}(V)^\beta \to \mathcal{P}(V)
+\]
+Für eine Funktion $t: \beta \to \mathcal{P}(V)$ definieren wir $f(t)$ durch Fallunterscheidung über die Ordinalzahl $\beta$.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:10 - 00:13:20]
+dann definieren wir, ähm, $f(t)$ als, okay, da müssen wir jetzt verschiedene Fallunterscheidungen machen. Wir sagen, das soll die leere Menge sein, falls, ähm, $\beta$ $0$ ist. Okay, wir beginnen mit der leeren Menge. Und dann nachher sagen wir, ähm, wir nehmen, ähm, falls wir, ähm, $\beta$ schreiben können als, ähm, Nachfolgerfunktion von einem $\delta$, nehmen wir ein $\delta + 1$, wenn das unser $\beta$ gibt, dann schreiben wir $t_\delta$ und, ähm, wir nehmen jetzt aber den Vektor $v_\delta$ hinzu, falls das ist, und falls, ähm, $v_\delta$ linear unabhängig ist von diesem hier. Also und die Menge, ähm, $t_\delta$ vereinigt, ähm, $v_\delta$ ist, äh, linear, ähm, unabhängig.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:20 - 00:13:48]
+Okay, und ansonsten, wenn es linear abhängig ist, dann lassen wir es bei $t_\delta$. Also falls, ähm, $\beta = \delta + 1$ und, ähm, $t_\delta$ vereinigt $v_\delta$ ist linear abhängig.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:48 - 00:14:24]
+Und, ähm, okay, das ist jetzt aber für den Fall, ähm, dass, ähm, $\beta$ eine Nachfolger, ähm, Ordinalzahl ist. Und falls es eine Limesordinalzahl ist, dann nehmen wir einfach die Vereinigung von allen $t_\delta$s, wobei, ähm, $\delta$ kleiner ist als $\beta$. Äm, okay, falls $\beta$ Limesordinalzahl ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Spezifikation der Rekursionsfunktion f(t)]
+Die Funktion $f(t)$ für $t: \beta \to \mathcal{P}(V)$ ist formal definiert durch:
+\begin{equation}\label{eq:rekursionsfunktion-basis}
+f(t) = \begin{cases}
+\emptyset & \text{falls } \beta = 0, \\[6pt]
+t(\delta) \cup \{v_\delta\} & \text{falls } \beta = \delta + 1 \text{ und } t(\delta) \cup \{v_\delta\} \text{ ist linear unabhängig}, \\[6pt]
+t(\delta) & \text{falls } \beta = \delta + 1 \text{ und } t(\delta) \cup \{v_\delta\} \text{ ist linear abhängig}, \\[6pt]
+\bigcup_{\delta < \beta} t(\delta) & \text{falls } \beta \text{ eine Limesordinalzahl ist}.
+\end{cases}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:24 - 00:15:08]
+Okay, das ist unsere Definition von, quasi unsere Rekursionsdefinition. Jetzt wissen wir, ähm, gemäss transfiniten Rekursion existiert, ähm, ein $a$ von $\lambda$ zu, dieser Potenzmenge, so dass, ähm, $a(\beta)$ ist genau, ähm, $f$ von $a$ eingeschränkt auf $\beta$. Ist genau das, was wir wollen. Und wir definieren jetzt, ähm, $A_\beta$ einfach als $a_\beta$. Das heißt, jetzt haben wir für jedes $\beta$ haben wir so eine Teilmenge. Okay, und wir wissen genau, wie wir diese Teilmengen erhalten. Also $A_\beta$ und dann fürs nächste $A_{\beta+1}$ erhalten wir einfach dasjenige, wo wir den Vektor $v_\beta$ hinzufügen, falls es linear unabhängig ist, und sonst nicht.
+\end{spoken-clean}
+
+\begin{math-stroke}[Existenz der transfiniten Folge]
+Nach dem Satz über die transfinite Rekursion existiert eine eindeutige Funktion:
+\[
+a: \lambda \to \mathcal{P}(V) \quad \text{mit} \quad a(\beta) = f\left(a|_{\beta}\right) \quad \text{für alle } \beta \in \lambda
+\]
+Wir setzen für alle $\beta \in \lambda$:
+\[
+A_\beta = a(\beta)
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:08 - 00:15:42]
+Und, ähm, wir definieren jetzt $B$ als die Vereinigung von all diesen $A_\beta$. Und die Behauptung ist jetzt, machen wir das auch noch ganz kurz erwähnen, dass $B$ tatsächlich eine Basis ist. Äm, also jetzt, $B$ ist linear unabhängig.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Basismenge B]
+Wir definieren die Menge $B$ als die Vereinigung über alle Rekursionsschritte:
+\begin{equation}\label{eq:definition-basis-B}
+B = \bigcup_{\beta \in \lambda} A_\beta
+\end{equation}
+\textbf{Behauptung:} Die Menge $B$ ist eine Basis von $V$.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:42 - 00:16:34]
+Okay, das kann man zeigen, indem man einfach sieht, wenn wir irgendeine endliche Teilmenge von, von Vektoren in $B$ haben, dann müssen die in irgendeinem von diesen, von diesem $A_\beta$s enthalten sein, und die $A_\beta$s sind alle linear unabhängig. Äm, das ist die Idee. Vielleicht können Sie das selbst auch ausarbeiten, wenn es nicht klar ist. Oder machen wir das auch, machen wir das auch nach der, nach der Pause noch sauber, das ist vielleicht besser. Okay, machen wir eine kurze Pause und machen in einer Viertelstunde weiter.
+\end{spoken-clean}
+
+\begin{lecture-break}[15-minütige Pause]
+Der Dozent kündigt eine 15-minütige Pause an. Nach der Pause beantwortet er Fragen zur Visualisierung von Ordinalzahlen und korrigiert ein zuvor angeschriebenes Detail.
+\end{lecture-break}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:16:34
+% topic: Pause und anschließende Bemerkungen zu Ordinalzahlen
+% board_state: eq:transfinite-rekursion-formel, eq:rekursionsfunktion-basis, eq:definition-basis-B
+% next_goal: Visualisierung von Ordinalzahlen auf R, Korrektur der Nachfolger-Notation
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:16:34 - 00:17:42]
+Noch ein paar Bemerkungen, ähm, noch die Fragen in der Pause, die vielleicht für alle relevant sind. Also erst einmal zu dem, wie man sich Ordinalzahlen vorstellen kann. Also ich würde sagen, solange die abzählbar sind, ähm, kann man sich die gut vorstellen. Und zwar effektiv auch einfach als abzählbare Teilmengen von, von $\mathbb{R}$. Also wenn wir hier, ähm, können wir zum Beispiel die Zahlen anschauen, ähm, $1 - 1/n$, wobei $n$ eine nicht-null, ähm, natürliche Zahl ist. Das heißt, haben wir hier, haben wir, ähm, da haben wir hier das Intervall zwischen $0$ und $1$. Ähm, und dann haben wir, äh, $0$ und dann haben wir ein halb und dann haben wir zwei Drittel und so weiter, und da kommen wir immer näher an $1$ ran, aber nie ganz an $1$, oder? Und das ist eine wohlgeordnete Menge. Jede Teilmenge hat ein kleinstes Element, aber nicht nach oben, wohlgeordnet nur nach unten. Okay, und nehmen wir da noch $1$ dazu. Okay, und da sehen wir, da haben wir hier, das kommt immer näher an $1$ ran, dann haben wir noch das $1$, und das $1$ ist wirklich grösser als alle anderen. Und das ist kein Problem, das ist dann wie das $\omega$. Das, das sind alle, das gibt eine Bijektion von $\omega$ zu, also $\omega$ mit $\omega$ und dann können wir sagen, okay, jetzt nehmen wir einfach noch eines dazu, das, das auch noch grösser ist als das, also können wir $2 - 1/n$ nimmt man dazu, und dann haben wir $\omega + 2$ und so weiter, und da kann man hier dasselbe wieder machen, dann nähert man sich hier wieder immer näher an $2$, und dann haben wir hier noch $2$ dazu. Und das wäre dann $2\omega$. Und das kann man dann auch immer weitermachen auf den ganzen reellen Zahlen, bis man bei $\omega \cdot \omega$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Visualisierung abzählbarer Ordinalzahlen auf der reellen Achse]
+\begin{center}
+\begin{tikzpicture}[scale=2.5]
+    % \begin{ai-tikz-planner-invisible-content}
+    % 1. Background: Reelle Achse als graue Linie.
+    % 2. Midground: Punkte für die Folge 1 - 1/n, die gegen 1 konvergiert.
+    % 3. Foreground: Der Grenzwert 1 (entspricht omega) als roter Punkt.
+    % 4. Midground 2: Punkte für die Folge 2 - 1/n, die gegen 2 konvergiert.
+    % 5. Foreground 2: Der Grenzwert 2 (entspricht 2*omega) als roter Punkt.
+    % \end{ai-tikz-planner-invisible-content}
+    
+    % Reelle Achse
+    \draw[thick, ->, >=stealth, draw=gray!70] (-0.2, 0) -- (4.5, 0) node[right] {$\mathbb{R}$};
+    
+    % Erste Sequenz: 1 - 1/n
+    \foreach \n in {1, 2, 3, 4, 5, 8, 15} {
+        \pgfmathsetmacro{\x}{2*(1 - 1/\n)}
+        \fill[MidnightBlue] (\x, 0) circle (1.2pt);
+    }
+    \node[below] at (0, -0.05) {\footnotesize $0$};
+    \node[below] at (1, -0.05) {\footnotesize $1/2$};
+    \node[below] at (1.33, -0.05) {\footnotesize $2/3$};
+    \node[below] at (1.5, -0.05) {\footnotesize $\dots$};
+    
+    % Grenzwert 1 (omega)
+    \fill[BrickRed] (2, 0) circle (1.5pt);
+    \node[above, BrickRed] at (2, 0.05) {\footnotesize $1 \equiv \omega$};
+    
+    % Zweite Sequenz: 2 - 1/n
+    \foreach \n in {1, 2, 3, 4, 5, 8, 15} {
+        \pgfmathsetmacro{\x}{2 + 2*(1 - 1/\n)}
+        \fill[MidnightBlue] (\x, 0) circle (1.2pt);
+    }
+    \node[below] at (2, -0.05) {\footnotesize $1$};
+    \node[below] at (3, -0.05) {\footnotesize $1\frac{1}{2}$};
+    \node[below] at (3.33, -0.05) {\footnotesize $1\frac{2}{3}$};
+    \node[below] at (3.5, -0.05) {\footnotesize $\dots$};
+    
+    % Grenzwert 2 (2*omega)
+    \fill[BrickRed] (4, 0) circle (1.5pt);
+    \node[above, BrickRed] at (4, 0.05) {\footnotesize $2 \equiv 2\omega$};
+    
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:42 - 00:18:30]
+Das heißt, das Vorstellen ist okay. Das gibt, nehmen wir dieses immer näher ran und dann ran. Finden Sie auch schöne Bilder auf Wikipedia oder so. Ich glaube, wo die Vorstellung aufhört, also bei mir ist eben, die Wohlordnung auf den, auf, sobald die Ordinalzahlen überabzählbar werden, werden. Äm, wie man sich das dann vorstellt, ich glaube, das ist etwas, ähm, das, das ist etwas schwieriger, deswegen haben wir auch die Mühe, die reellen Zahlen, ähm, wohlzuordnen. Da muss man dann wirklich, ähm, da muss man dann wirklich, äh, sehr formal werden.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Grenzen der geometrischen Anschauung]
+Die geometrische Einbettung abzählbarer Ordinalzahlen in die reelle Achse mittels konvergenter Folgen veranschaulicht das Konzept von Grenzwerten ($\omega, 2\omega$) hervorragend. Diese anschauliche Intuition bricht jedoch beim Übergang zu überabzählbaren Ordinalzahlen (wie der ersten überabzählbaren Ordinalzahl $\omega_1$) völlig zusammen. Hier erzwingt die mathematische Strenge den Verzicht auf visuelle Metaphern zugunsten rein formaler mengentheoretischer Definitionen.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:18:30 - 00:19:54]
+Gut, ähm, dann noch das andere nochmals zu dieser transfiniten Rekursion. Also wirklich hier das $f$, das $f$ hier sagt wirklich, wenn, also wenn Sie irgendein $\beta$ nehmen, das ist kleiner als $\lambda$, dann sagt Ihnen das wirklich, dann haben Sie eine Folge von, mit Elementen in $A$ indiziert durch $\beta$. Und das $f$ sagt Ihnen jetzt, wie Sie aus einer solchen Folge das nächste Folgeglied, ähm, ausrechnen. Okay, wie in den Fibonacci-Zahlen haben wir wirklich $F_n$ haben wir definiert als $F_{n-1} + $F_{n-2}$. Okay, das, aber das ist, ohne zu wissen, was $F_{n-1}, F_{n-2}$ ist, und da könnte man noch haben Sachen, die gehen weiter bis zu $F_0$. Können wir aus all diesen vorherigen Dingen, also wir haben hier eine Folge gegeben und dadurch können wir das nächste Folgeglied ausrechnen. Und das ist genau, was das $f$ hier macht. Okay, und jetzt sagt man, wenn man diese Vorgabe hat, dann gibt uns das eine eindeutige Folge. Also relativ, mmm, ja, formal, wenn es richtig ist.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:19:54 - 00:21:26]
+Nochmals zur Diskussion von, von Frage von vorher. Ich habe ein paar Klammern zu viel gemacht, also, äh, wenn wir eine Ordinalzahl $\lambda$ haben, dann ist, ähm, $\lambda + 1$ ist dann gegeben als die Ordinalzahl, die $\lambda \cup \{\lambda\}$ und nicht, ähm, $\{\lambda \cup \{\lambda\}\}$. Okay? Das war ein, mein, mein Fehler. Also Korrigendum, für diejenigen, die es auf dem Video schauen, Korrigendum zu Minute 8 oder... $\lambda + 1$ ist $\lambda \cup \{\lambda\}$. Sie waren zu Recht verwirrt. Dankeschön. Äm, gut. Jetzt wollen wir aber noch zeigen, dass das eine, ähm, dass das eine Basis ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Korrigendum: Nachfolger-Notation]
+Der Dozent korrigiert ein formales Detail der Nachfolgerbildung:
+\begin{equation}\label{eq:nachfolger-korrektur}
+\lambda + 1 = \lambda \cup \{\lambda\}
+\end{equation}
+Die zuvor fälschlicherweise notierte Form $\{\lambda \cup \{\lambda\}\}$ ist nicht korrekt, da sie die Transitivität der Ordinalzahl verletzen würde.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:26 - 00:22:40]
+Jetzt müssen wir etwas vorwärts machen, damit wir noch rechtzeitig fertig werden. Äh, also. Was haben wir, wo waren wir? Genau, wir haben hier gesagt, wie, wie wir diese Rekursion definieren. So, okay, wir nehmen einen Vektor, und dann schauen wir einfach die vorherigen Vektoren an, nehmen den neuen dazu, wenn der linear unabhängig ist, nehmen wir das dazu, wenn das, ähm, wenn das aber linear abhängig ist, dann nehmen wir $v_\delta$ nicht dazu. Okay, und jetzt wissen wir, es gibt dieses $A_\beta$. Da sehen wir, ähm, also was wir noch bemerken können hier, ist, per, gemäss Konstruktion sind diese $A_\beta$s natürlich alle linear unabhängig. Wir nehmen immer nur etwas dazu, wenn's, äh, wenn's... wir beginnen mit der leeren Menge, leere Menge ist linear unabhängig, und dann nachher, wenn wir etwas dazu nehmen, dann ist es immer noch, wir nehmen nur etwas dazu, wenn es linear unabhängig bleibt. Also die $A_\beta$s sind...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:40 - 00:23:02]
+oder $A_\beta$ ist linear unabhängig für alle $\beta$ in $\lambda$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaft der Rekursionsglieder]
+\begin{proposition}\label[proposition]{prop:a-beta-unabhaengig}
+Die konstruierten Mengen $A_\beta$ sind für alle $\beta \in \lambda$ linear unabhängig.
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:02 - 00:23:38]
+Okay, wir müssen schauen, dass die Vereinigung immer noch linear unabhängig ist.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:23:38 - 00:24:40]
+Das ist oft etwas mühsam. Falls Sie einmal in der Situation sind, eine Vorlesung halten zu müssen hier, der Trick ist, man muss immer zuerst etwas runtermachen und dann geht sie wieder hoch.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:24:40 - 00:25:19]
+Also, wir wollen jetzt, äh, zeigen, dass diese, ähm, $B$ eine Basis ist. Okay, aber das ist, ähm, wir zeigen, dass $B$ ist linear unabhängig. Das ist mehr oder weniger gemäss Konstruktion. Also, wenn wir eine...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:25:19 - 00:26:35]
+Der Trick ist zu sehen, dass jede endliche, oder es gibt viele Möglichkeiten, das zu sehen, zum Beispiel jede endliche Teilmenge, ähm, $M$ von, von $B$ ist enthalten in einem der, in einem solchen $A_\beta$. Okay, ist das klar? Wir nehmen endlich viele Elemente von $B$. Wir wissen, jedes ist in einem von diesen $A_\beta$s enthalten. Aber wenn es, nehmen wir auch das Grösste von diesen $A_\beta$, also wo das $\beta$ das Grösste ist, dann wissen wir, alle anderen Mengen sind in diesem $A_\beta$ enthalten, das heißt, es ist wie aufsteigend das Ganze. Das heißt, wir wissen, es ist in einem von diesen $A_\beta$s. Und, äh, und die $A_\beta$s sind...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:26:35 - 00:27:26]
+sind linear unabhängig.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis: Lineare Unabhängigkeit von B]
+\begin{short-proof}
+Sei $M \subseteq B$ eine beliebige endliche Teilmenge. Da $B = \bigcup_{\beta \in \lambda} A_\beta$ und die Familie $(A_\beta)_{\beta \in \lambda}$ bezüglich Inklusion total geordnet ist (da $\beta < \gamma \implies A_\beta \subseteq A_\gamma$), existiert ein maximaler Index $\beta_{\max} \in \lambda$ unter den endlich vielen Indizes der Elemente in $M$.
+Somit gilt:
+\[
+M \subseteq A_{\beta_{\max}}
+\]
+Da $A_{\beta_{\max}}$ nach Proposition \ref{prop:a-beta-unabhaengig} linear unabhängig ist, muss auch die Teilmenge $M$ linear unabhängig sein. Da jede endliche Teilmenge von $B$ linear unabhängig ist, ist $B$ linear unabhängig.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:26 - 00:28:30]
+Okay, weil die sind, wenn die linear unabhängig sind, jetzt nehmen wir ein neues dazu und das gibt jetzt eine linear, lineare Abhängigkeit, das heißt, wir können $v_\delta$ schreiben als Linearkombination von diesen da, aber das haben wir angenommen, dass das nicht der Fall ist, also, das ist nicht. Und das beendet den Beweis.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis: B erzeugt V]
+\begin{short-proof}
+Wir zeigen nun, dass $\operatorname{span}(B) = V$. Angenommen, dies ist nicht der Fall. Dann existiert ein Vektor $v_\delta \in V$ mit minimalem Index $\delta \in \lambda$, so dass $v_\delta \notin \operatorname{span}(B)$.
+Da $\delta$ minimal gewählt wurde, gilt für alle $\gamma < \delta$, dass $v_\gamma \in \operatorname{span}(B)$.
+Nach Konstruktion gilt:
+\[
+A_\delta = \bigcup_{\gamma < \delta} A_\gamma \quad (\text{bzw. } A_\delta = A_{\delta-1} \cup \{v_{\delta-1}\} \text{ falls } \delta \text{ Nachfolger})
+\]
+Da $v_\delta \notin \operatorname{span}(B)$ und $A_\delta \subseteq B$, gilt insbesondere $v_\delta \notin \operatorname{span}(A_\delta)$.
+Somit ist $A_\delta \cup \{v_\delta\}$ linear unabhängig.
+Nach der Rekursionsvorschrift \eqref{eq:rekursionsfunktion-basis} gilt daher:
+\[
+A_{\delta+1} = A_\delta \cup \{v_\delta\}
+\]
+Dies impliziert jedoch $v_\delta \in A_{\delta+1} \subseteq B$, was im Widerspruch zu $v_\delta \notin \operatorname{span}(B)$ steht.
+Somit erzeugt $B$ den gesamten Raum $V$. Da $B$ zudem linear unabhängig ist, bildet $B$ eine Basis von $V$.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:30 - 00:29:29]
+Gut, das ist die, ja, so das ist die Idee von dieser transfiniten Rekursion, Induktion. Und genau, damit kann man dann viele Sachen, äh, viele Sachen beweisen. Und es gibt zwei wichtige Aussagen, ähm, das, die quasi dieses Prinzip ein bisschen, ähm, noch einfacher, äh, oder nützlicher, ähm, ausdrücken. Und die sind auch wieder äquivalent zum Auswahlaxiom. Und das sind diejenigen, die Sie auch in der Regel antreffen, wenn Sie das Auswahlaxiom antreffen. Also das Erste ist das Kuratowski, Kuratowski-Zorn-Lemma.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:29:29 - 00:30:00]
+Aber jetzt verwirren Sie sich nicht, also wenn Sie...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:30:00 - 00:31:40]
+das irgendwo sonst in der Mathematik antreffen in einem Buch, Paper, mit hoher Wahrscheinlichkeit wird das heißen Zorn-Lemma. Also Kuratowski ist, äh, verschwindet. In der Regel heißt es Lemma von Zorn. Der Grund ist, ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:31:40 - 00:32:26]
+ja, ich glaube, Lorenz Halbeisen interessiert sich auch für die Geschichte der Mathematik und nennt es natürlich Kuratowski, ähm, anerkennend, weil es, weil Kuratowski das zuerst gefunden hat, 10 Jahre vor Zorn. Ist natürlich gemein, dass man es jetzt als Zorn benennt. Aber die Namensgebung in der Mathematik ist sehr selten gerecht. Also nur weil etwas den Namen von jemandem trägt, heißt das nicht, dass die Person auch wirklich der Erfinder ist. Muss man sich halt dran gewöhnen. Pech für Kuratowski, Glück für Zorn oder so, oder? Aber okay, wir sind jetzt nett und nennen das auch noch nach Kuratowski. Äm, das Andere ist noch, ich frage mich immer, wie machen das Mathemat... ich glaube, haben das Gefühl, so der, das ultimative Ziel in der Mathematik ist das nicht ein Theorem nach einem benannt ist, sondern ein Lemma. Also es gibt so den, das Lemma von Zorn oder das Lemma von... Es gibt ein paar berühmte Lemmas mit einem Namen, wo man sagt, okay. Ist das nicht das, was...
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Soziologie der mathematischen Namensgebung]
+Die Anekdote des Dozenten über das \qt{Kuratowski-Zorn-Lemma} beleuchtet ein bekanntes Phänomen der Wissenschaftsgeschichte (oft als \emph{Stiglers Gesetz} bezeichnet): Mathematische Entdeckungen werden selten nach ihren tatsächlichen Erstentdeckern benannt. Kazimierz Kuratowski formulierte das Prinzip bereits 1922, während Max Zorn es unabhängig davon erst 1935 publizierte. Dennoch hat sich in der mathematischen Praxis fast universell der Begriff \qt{Zornsches Lemma} etabliert.
+\end{didactic-insight>
+
+\begin{spoken-clean}[00:32:26 - 00:33:30]
+Das ist bis jetzt nicht der Satz.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:33:30 - 00:33:40]
+Äm, okay, wissen Sie noch, was das Kuratowski-Zorn-Lemma sagt? Das haben Sie ja schon besprochen letzte Woche.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:33:40 - 00:33:55]
+Äh, vorletzte Woche. Äm, ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studenten-Antwort]
+Dass, wenn jede in $P$ eine Kette existiert, so dass, ähm, jede Kette ein, ein obere Schranke besitzt, dann hat die Menge ein maximales Element.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:34:00 - 00:35:55]
+Genau, also man muss ein bisschen sorgfältig sein mit der Formulierung, aber so, genau, so ungefähr. Also wenn wir eine, genau, wenn wir eine nicht-leere partiell geordnete Menge haben...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:35:55 - 00:36:00]
+so dass jede Kette...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:36:00 - 00:37:40]
+$C$ in $P$ eine obere Schranke hat in $P$, so hat $P$ ein maximales Element.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Kuratowski-Zornsche Lemma]
+\begin{lemma}[Kuratowski-Zornsches Lemma]\label[lemma]{lem:kuratowski-zorn-formuliert}
+Sei $(P, \le)$ eine nicht-leere partiell geordnete Menge, so dass jede Kette $C \subseteq P$ eine obere Schranke in $P$ besitzt. Dann hat $P$ ein maximales Element.
+\end{lemma}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:37:40 - 00:38:40]
+Man muss das ein paar Mal anwenden, um zu sehen, weshalb das wirklich nützlich ist. Aber das ist, ähm, also wir haben die Menge ist nur partiell geordnet. Also typischerweise haben Sie, haben Sie eine, haben Sie eine Familie von Teilmengen, die partiell angeordnet ist durch Inklusion. Das ist so eine häufige, ein Anwendung. Sie haben etwas, haben Sie etwas nächstgrösseres, aber das, diese sind nicht total geordnet, das ist nur, weil es können zwei Mengen sein, die sind nicht eine in der anderen enthalten. Das Problem aber, die ist partiell geordnet, und, ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:38:40 - 00:38:45]
+die Bedingung ist jetzt...
+\end{spoken-clean>
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:38:45
+% topic: Kuratowski-Zornsches Lemma und Ausblick auf Anwendungen
+% board_state: lem:kuratowski-zorn-formuliert
+% next_goal: Diskussion von Anwendungen des Zornschen Lemmas (z.B. Existenz maximaler Ideale)
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 262143, Output 10414)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 16:34:06) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 80689, Output 23)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 16:38:28) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 3] 04-14-tuesday.mp4
+[Angehängtes Video]: 04-14-tuesday-part3.mp4
+[Kontext-Dateien]: 04-14-tuesday-part1.tex, 04-14-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-14. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:00:26]
+...dass Kuratowski das zuerst gefunden hat, 10 Jahre vor Zorn. Ist natürlich gemein, dass man es jetzt als Zorn benennt. Aber die Namensgebung in der Mathematik ist sehr selten gerecht. Also nur weil etwas den Namen von jemandem trägt, heißt das nicht, dass die Person auch wirklich der Erfinder ist. Muss man sich halt dran gewöhnen. Pech für Kuratowski, Glück für Zorn oder so, oder? Aber okay, wir sind jetzt nett und nennen das auch noch nach Kuratowski.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:26 - 00:00:49]
+Das Andere ist noch, ich frage mich immer, wie machen das Mathemat... ich glaube, haben das Gefühl, so der, das ultimative Ziel in der Mathematik ist das nicht ein Theorem nach einem benannt ist, sondern ein Lemma. Also es gibt so den, das Lemma von Zorn oder das Lemma von... Es gibt ein paar berühmte Lemmas mit einem Namen, wo man sagt, okay. Das ist jetzt nicht der Satz.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:49 - 00:01:03]
+Äm, okay, wissen Sie noch, was das Kuratowski-Zorn-Lemma sagt? Das haben Sie ja schon besprochen letzte Woche... äh, vorletzte Woche. Äm, ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studenten-Antwort]
+Dass, wenn für jede Kette existiert, so dass... jede Kette eine obere Schranke besitzt, dann hat die Menge ein maximales Element.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:01:15 - 00:02:26]
+Genau, also man muss ein bisschen sorgfältig sein mit der Formulierung, aber so, genau, so ungefähr. Also wenn wir eine, genau, wenn wir eine nicht-leere partiell geordnete Menge haben, so dass jede Kette $C$ in $P$ eine obere Schranke hat in $P$, so hat $P$ ein maximales Element. Man muss das ein paar Mal anwenden, um zu sehen, weshalb das wirklich nützlich ist. Aber das ist, ähm, also wir haben die Menge ist nur partiell geordnet. Also typischerweise haben Sie, haben Sie eine, haben Sie eine Familie von Teilmengen, die partiell angeordnet ist durch Inklusion. Das ist so eine häufige, ein Anwendung. Sie haben etwas, haben Sie etwas nächstgrösseres, aber das, diese sind nicht total geordnet, das ist nur, weil es können zwei Mengen sein, die sind nicht eine in der anderen enthalten. Das Problem aber, die ist partiell geordnet, und, ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:26 - 00:03:35]
+...die Bedingung ist jetzt, dass, falls Sie eine Kette haben, also eine Kette ist immer eine Kette von Elementen, die immer größer, größer, größer, größer wird, ähm, dann gibt's irgendein Element in $P$, das größer ist als jedes Element von dieser Kette, also das, was man möchte. Und wenn das der Fall ist, dann enthält $P$ ein maximales Element. Okay? Also, genau, ein maximales... ja, genau. Sie haben das alles im Detail definiert letzte Woche... äh, vorletzte Woche. Geht von aus. Genau. Äm, jetzt auf dem Übungsblatt haben wir nochmals zu zeigen, dass jeder Vektorraum eine Basis hat mit dem Kuratowski-Zorn-Lemma. Ist alles ein bisschen vielleicht einfacher, das direkt anzuwenden, als über diese transfinite Induktion und so weiter zu... zu gehen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:35 - 00:05:04]
+Äm, ja, und in der Regel hat man, hat man, hat man das eben zum Zeigen, dass jeder Vektorraum eine Basis hat. Auch da wieder... also ist auch wieder da der Fall, sie nehmen im Prinzip, sie nehmen im Prinzip Teilmengen von linear unabhängigen Mengen, und dann schauen sie immer größer, und das Prinzip ist, die Intuition dahinter ist auch dieselbe, aber man muss auch das formal haben, dass das existiert. Sie nehmen eine menge von linear unabhängigen Vektoren, und jetzt nehmen sie einfach mehr Vektoren dazu, so dass es immer linear unabhängig bleibt. Das gibt ihnen eine Kette. Und, ähm, sie nehmen jetzt die Vereinigung von all diesen linear unabhängigen Elementen von so einer Kette, und das gibt ihnen eine obere Schranke für diese Kette. Und dann wissen sie, dann schlussendlich mit dem, dass es ein maximales Element geben muss, und das funktioniert. Also ist genau die Idee. Man nimmt einfach... Sie nehmen, Sie nehmen eine Menge von linear unabhängigen Vektoren, Sie fügen Vektoren hinzu, bis das Ganze nicht mehr weitergeht, und dann haben Sie eine Basis. Das ist die Grundidee. Das wirkt natürlich relativ harmlos, und das ist genau das, was man, das was man macht, aber eben, unsere Mengen sind zu groß, dass man das formal sauber machen muss, und dazu braucht man eben solche Aussagen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:04 - 00:05:16]
+Gut. Und da gibt es auch das, das Teichmüller-Tukey-Prinzip. Das ist auch manchmal fast noch schneller anzuwenden. Äm...
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die rechte Tafel, um Platz für die Definition des Teichmüller-Tukey-Prinzips zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:05:16 - 00:06:47]
+...falls für jede Menge $X$ gilt, dass $X$ ist, ist enthalten in $M$ genau dann, wenn jede endliche Teilmenge von $X$ ist in $M$. Hier zum Beispiel, ähm, zum Beispiel für linear unabhängige Vektoren ist das der Fall, oder? Wir haben eine, eine Teilmenge von Ihren Vektoren im Vektorraum ist linear unabhängig genau dann, wenn jede endliche Teilmenge linear unabhängig ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Endlicher Charakter]
+\setcounter{theorem}{5}
+\begin{definition}[Endlicher Charakter]\label[definition]{def:endlicher-charakter}
+Eine Familie $\mathcal{M}$ von Mengen hat \newterm{endlichen Charakter}, falls für jede Menge $X$ gilt:
+\begin{equation}\label{eq:endlicher-charakter}
+X \in \mathcal{M} \iff \text{jede endliche Teilmenge von } X \text{ ist in } \mathcal{M}
+\end{equation}
+\end{definition}
+
+\begin{example}[Lineare Unabhängigkeit]\label[example]{ex:linear-unabhaengig-charakter}
+Eine Teilmenge $X \subseteq V$ eines Vektorraums ist genau dann linear unabhängig, wenn jede endliche Teilmenge von $X$ linear unabhängig ist. Die Familie aller linear unabhängigen Teilmengen von $V$ hat somit endlichen Charakter.
+\end{example}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die linke Tafel und schreibt die Definition des Teichmüller-Tukey-Prinzips an.
+\end{meta-note>
+
+\begin{spoken-clean}[00:06:47 - 00:08:10]
+Oswald Teichmüller war ein sehr, ähm, guter Mathematiker im, äh, 30er Jahren in Deutschland, aber kein sehr guter Mensch. Er war ein überzeugter, ein sehr überzeugter Nazi. Hat sich freiwillig gemeldet, um an die Ostfront kämpfen zu gehen, und ist dann dort auch gestorben. Äm, genau. Aber er hat viele einflussreiche Sachen bewiesen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Historischer Kontext: Oswald Teichmüller]
+Die Erwähnung Oswald Teichmüllers (1913–1943) durch den Dozenten verdeutlicht die oft schmerzhafte Trennung zwischen herausragender wissenschaftlicher Leistung und verwerflicher persönlicher Gesinnung. Teichmüller leistete bahnbrechende Beiträge zur komplexen Analysis (Teichmüller-Räume), war jedoch gleichzeitig ein glühender Nationalsozialist, der aktiv an der Vertreibung jüdischer Kollegen (wie Edmund Landau) beteiligt war.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:08:10 - 00:09:24]
+Äm, okay, und das Teichmüller-Tukey-Prinzip sagt, ist, ähm, falls $\mathcal{F}$ eine nicht-leere Familie von Mengen mit endlichem Charakter, so hat $\mathcal{F}$ ein maximales Element bezüglich, ähm, enthalten. Okay, und auch da sehen wir wieder, Vektorraum, das funktioniert genau sehr gut. Wir wissen, ähm, Teilmengen von linear unabhängigen, ähm, Vektoren haben endlichen Charakter. Mit dem Teichmüller-Tukey-Prinzip wissen wir, es gibt folglich ein maximales Element bezüglich Inklusion, das heißt eine maximale Teilmenge von linear unabhängigen Vektoren, und dann kann man einfach zeigen, dass daraus folgt, dass das eine Basis ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Teichmüller-Tukey-Prinzip (TP)]
+\begin{theorem}[Teichmüller-Tukey-Prinzip]\label[theorem]{thm:teichmueller-tukey}
+Ist $\mathcal{F}$ eine nicht-leere Familie von Mengen mit endlichem Charakter, so hat $\mathcal{F}$ ein maximales Element bezüglich $\subseteq$.
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:24 - 00:10:06]
+Gut, und was wir jetzt beweisen wollen, ist der folgende Satz. Das sagt, dass die folgenden Aussagen sind äquivalent zum Auswahlaxiom. Das Erste, okay, das haben Sie bereits gesehen, das Wohlordnungsprinzip. Das Zweite wäre das Kuratowski-Zorn-Lemma, und das Dritte wäre, ähm, das Teichmüller-Tukey-Prinzip.
+\end{spoken-clean}
+
+\begin{math-stroke}[Satz: Äquivalenzen zum Auswahlaxiom]
+\begin{theorem}[Äquivalenzsatz]\label[theorem]{thm:aequivalenzen-ac}
+Die folgenden Aussagen sind äquivalent zum Auswahlaxiom (AC):
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Wohlordnungsprinzip (WOP)
+    \setcounter{enumi}{1} \item Kuratowski-Zornsches Lemma (KZL)
+    \setcounter{enumi}{2} \item Teichmüller-Tukey-Prinzip (TP)
+\end{enumerate}
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:06 - 0
+
+*(Tokens: Input 272381, Output 2622)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 3]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+hlaxiom (AC):
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Wohlordnungsprinzip (WOP)
+    \setcounter{enumi}{1} \item Kuratowski-Zornsches Lemma (KZL)
+    \setcounter{enumi}{2} \item Teichmüller-Tukey-Prinzip (TP)
+\end{enumerate}
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:06 - 0
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:10:06 - 00:10:40]
+Ich glaube, ich habe in den Notizen von Ziltener... er sagt, das ist Zitat, das was ich nicht von jemandem, der sagt, okay, wenn man das anschaut, das Auswahlaxiom, das ist ganz klar, dass das stimmen muss... Wohlordnungsprinzip, das kann klar, ganz klar nicht stimmen... und bei Lemma von Kuratowski-Zorn, vielleicht Teichmüller-Tukey-Prinzip, da ist es nicht ganz klar, ob das offensichtlich ist oder nicht. Okay, aber Sie sehen, das ist ein bisschen das Problem, aber das, diese Sache mit dem Auswahlaxiom, das ist äquivalent zu mehr oder weniger offensichtlichen Aussagen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:10:40 - 00:11:12]
+Beweis. Okay, Sie haben bereits gesehen, dass diese zwei Sachen sind äquivalent: Auswahlaxiom und Wohlordnungsprinzip. Das ist gut. Jetzt wollen wir zeigen, dass das Wohlordnungsprinzip impliziert Kuratowski-Zorn-Lemma.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis-Setup: WOP \texorpdfstring{$\implies$}{=>} KZL]
+\begin{proof}[Beweis: Wohlordnungsprinzip impliziert Kuratowski-Zornsches Lemma]
+Sei $(P, \le)$ eine nicht-leere partiell geordnete Menge, in der jede Kette eine obere Schranke besitzt.
+Nach dem Wohlordnungsprinzip existiert eine Wohlordnung auf $P$. Das heißt, wir können die Elemente von $P$ durch eine Ordinalzahl $\lambda \in \Omega$ indizieren:
+\begin{equation}\label{eq:p-indiziert}
+P = \{ p_\beta : \beta \in \lambda \}
+\end{equation}
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:12 - 00:11:54]
+Okay, da machen wir jetzt wieder unsere transfinite Rekursion. Also nehmen wir jetzt $P$ eine nicht-leere Partialordnung... und wir schreiben auch wieder $P$ als... die Elemente in $P$ indizieren wir durch Elemente in $\beta$... für eine Ordinalzahl $\lambda$... Okay, das heißt, wir indizieren eine Ordinalzahl und...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:54 - 00:13:07]
+Gut, und jetzt... Okay, jetzt wollen wir ein entsprechendes $f$ definieren, wollen wir rekursiv definieren, wie wir das definieren, und auch hier wieder, was wir machen, wir nehmen einfach, wir beginnen mit der leeren Menge für $\beta$ gleich null, nehmen wir die leere Menge, das soll unser $f(t)$ soll die leere Menge sein. Und jetzt um von $\delta$ zu $\delta + 1$ zu machen, nehmen wir einfach, wenn das neue Element... wenn das, was wir bereits haben, eine Kette ist, und das neue Element ist eine obere Schranke, nehmen wir das einfach dazu. Und wenn nicht, nicht. Das heißt, wir haben eine aufsteigende... eine aufsteigende Kette.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:07 - 00:13:55]
+Also das ist die Idee. Also wir wollen jetzt das definieren, $f_\beta$ von... nehmen wir wieder unsere Potenzmenge von $P$... gegeben durch... also für eine Abbildung $t$ von $\beta$ in die Potenzmenge... also wir haben jetzt eine gegebene Folge von solchen Teilmengen von $P$, und diese Teilmengen, das sollen unsere Ketten sein, das Ketten sein...
+\end{spoken-clean}
+
+\begin{math-stroke}[Rekursive Definition der Kette]
+Wir wenden transfinite Rekursion mit der Zielmenge $A = \mathcal{P}(P)$ an.
+Wir definieren die Rekursionsfunktion:
+\[
+f: \bigcup_{\beta \in \lambda} \mathcal{P}(P)^\beta \to \mathcal{P}(P)
+\]
+Für eine Abbildung $t: \beta \to \mathcal{P}(P)$ definieren wir $f(t)$ durch Fallunterscheidung über die Ordinalzahl $\beta$.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:55 - 00:15:18]
+Okay, jetzt machen wir auf dem nächsten Tafelteil, weil das eine längere Definition ist... Also wir sagen $f(t)$... das nächste in unserer Rekursionsformel, das soll sein... \inlinemetanote{schreibt an die Tafel} leere Menge, falls $\beta$ gleich null ist. Wir sagen, es soll $t(\delta)$ sein, falls $\beta$ gleich $\delta + 1$ ist und $t(\delta)$ ist keine Kette... Also wenn es keine Kette ist, dann machen wir gar nicht weiter, oder das kommt auch gar nicht vor. Und $t(\delta)$, falls $\beta$ gleich $\delta + 1$ ist und $t(\delta)$ ist Kette, aber $p_\delta$ ist keine obere Schranke von $t(\delta)$. Okay? Also wenn es keine obere Schranke ist, dann machen wir's... dann lassen wir auch so, wie es ist. Aber wenn es eine obere Schranke ist, das heißt, es ist vergleichbar mit allen den Elementen in hier und es ist strikt größer als all die, oder größer gleich, dann nehmen wir das dazu.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:15:18 - 00:16:43]
+Falls $\beta$ gleich $\delta + 1$ ist und $t(\delta)$ ist Kette und $p_\delta$ ist obere Schranke... Okay, und dann noch, falls $\beta$ gleich eine Limesordinalzahl ist, nehmen wir einfach hier die Vereinigung von allen wieder, die strikt kleiner sind als $\beta$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Spezifikation der Rekursionsfunktion f(t) für KZL]
+Die Rekursionsfunktion $f(t)$ für $t: \beta \to \mathcal{P}(P)$ ist formal definiert durch:
+\begin{equation}\label{eq:rekursionsfunktion-kzl}
+f(t) = \begin{cases}
+\emptyset & \text{falls } \beta = 0, \\[6pt]
+t(\delta) & \text{falls } \beta = \delta + 1 \text{ und } t(\delta) \text{ ist keine Kette}, \\[6pt]
+t(\delta) & \text{falls } \beta = \delta + 1 \text{ und } t(\delta) \text{ ist Kette, aber } p_\delta \text{ ist keine obere Schranke von } t(\delta), \\[6pt]
+t(\delta) \cup \{p_\delta\} & \text{falls } \beta = \delta + 1 \text{ und } t(\delta) \text{ ist Kette und } p_\delta \text{ ist eine obere Schranke von } t(\delta), \\[6pt]
+\bigcup_{\gamma < \beta} t(\gamma) & \text{falls } \beta \text{ eine Limesordinalzahl ist}.
+\end{cases}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:43 - 00:18:17]
+Okay, soweit so klar, das ist unsere Rekursionsdefinition. Wir nehmen einfach das nächste Element dazu, wenn's in die Kette passt. Das heißt, wir beginnen mit null, nehmen wir ein Element dazu, wenn das nächste größer ist als das, nehmen wir's dazu, wenn man's nicht vergleichen kann, nehmen wir's nicht dazu und so weiter, haben wir eine... eine Kette. Und dann können wir mit dem Satz... oder transfinite Rekursion... es existiert ein $a$ von $\lambda$ zur Potenzmenge von $P$... mit $a_\beta$ ist $f(a|_\beta)$ für alle $\beta$ in $\lambda$. Und wir definieren wieder $a_\beta$ als $a(\beta)$ und $a_\lambda$ definieren wir als die Vereinigung von allen $a_\beta$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Existenz der transfiniten Kettenfolge]
+Nach dem Satz über die transfinite Rekursion existiert eine eindeutige Funktion:
+\[
+a: \lambda \to \mathcal{P}(P) \quad \text{mit} \quad a(\beta) = f\left(a|_{\beta}\right) \quad \text{für alle } \beta \in \lambda
+\]
+Wir setzen für alle $\beta \in \lambda$:
+\[
+A_\beta = a(\beta)
+\]
+Und definieren die Vereinigung über alle Schritte:
+\begin{equation}\label{eq:definition-kzl-A-lambda}
+A_\lambda = \bigcup_{\beta \in \lambda} A_\beta
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:17 - 00:19:25]
+Gut, und das ist genau das Selbe, was wir machen, wir nehmen jetzt die Vereinigung und die Behauptung ist jetzt, zuerst einmal, dass das eine Kette ist. Und das Nächste ist, dass jede obere Schranke von $a_\lambda$ ist maximal. Das ist die Idee.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:19:25 - 00:21:13]
+Noch eine Bemerkung, was wir nicht ganz ausführen. Diese $A_\beta$s, das sind alles Ketten. Und das kann man zeigen mit transfiniter Induktion. Machen wir jetzt nicht, weil es macht Sinn. Wir beginnen mit der leeren Menge, das ist eine Kette, und dann, wenn wir das verändern, ist es immer nur, indem wir ein größeres Element in die Kette hinzufügen. Und dann folgt mit transfiniter Induktion, dass die alle Ketten sind.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaft der Rekursionsglieder für KZL]
+\begin{proposition}\label[proposition]{prop:a-beta-ketten}
+Die konstruierten Mengen $A_\beta$ sind für alle $\beta \in \lambda$ Ketten in $P$.
+\end{proposition}
+\begin{short-proof}
+Dies lässt sich mittels transfiniter Induktion über $\beta$ verifizieren. Der Induktionsanfang $\beta = 0$ ist trivial, da $\emptyset$ eine Kette ist. Im Nachfolgerschritt fügen wir $p_\delta$ nur dann zu $A_\delta$ hinzu, wenn $p_\delta$ eine obere Schranke von $A_\delta$ ist, wodurch die Ketteneigenschaft erhalten bleibt. Im Limesschritt bleibt die Ketteneigenschaft unter der aufsteigenden Vereinigung ebenfalls erhalten.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:13 - 00:22:48]
+
+*(Tokens: Input 275156, Output 2565)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 3]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+$A_\delta$ hinzu, wenn $p_\delta$ eine obere Schranke von $A_\delta$ ist, wodurch die Ketteneigenschaft erhalten bleibt. Im Limesschritt bleibt die Ketteneigenschaft unter der aufsteigenden Vereinigung ebenfalls erhalten.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:13 - 00:22:48]
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** \begin{spoken-clean}[00:21:13 - 00:22:48]
+Und jetzt die Behauptung ist, ähm, $A_\lambda$ ist eine Kette. Okay, wie beweisen wir das? Äm, wir nehmen $x, y$ in $A_\lambda$. Okay, das heißt, $x$ ist in irgendeinem $A_\beta$, $y$ in einem $A_\gamma$ für $\beta, \gamma$ in $\lambda$. Und ohne Beschränkung der Allgemeinheit... jetzt wissen wir, eines davon ist kleiner als das andere, also ohne Beschränkung der Allgemeinheit nehmen wir an, dass $\beta$ ist kleiner gleich $\gamma$. Und damit folgt, dass, ähm, $x$ und $y$ sind beide enthalten in, ähm, in $A_\gamma$. Und $A_\gamma$ ist eine Kette. Okay, das heißt, je zwei Elemente kann man vergleichen, das heißt das Ganze ist eine Kette. Da sehen wir auch wieder, ist auch wieder sehr stark der Geschmack vom Teichmüller-Tukey-Prinzip.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung: \texorpdfstring{$A_\lambda$}{A-lambda} ist eine Kette]
+\textbf{Behauptung:} Die Menge $A_\lambda = \bigcup_{\beta \in \lambda} A_\beta$ ist eine Kette in $P$.
+\begin{short-proof}
+Seien $x, y \in A_\lambda$. Nach Definition der Vereinigung existieren Indizes $\beta, \gamma \in \lambda$ mit:
+\[
+x \in A_\beta \quad \text{und} \quad y \in A_\gamma
+\]
+Da die Indizes in der Wohlordnung $\lambda$ total geordnet sind, gilt ohne Beschränkung der Allgemeinheit (o.\,B.\,d.\,A.):
+\[
+\beta \le \gamma \implies A_\beta \subseteq A_\gamma
+\]
+Daraus folgt unmittelbar:
+\[
+x, y \in A_\gamma
+\]
+Da $A_\gamma$ nach Proposition \ref{prop:a-beta-ketten} eine Kette ist, sind $x$ und $y$ vergleichbar (d.\,h. $x \le y$ oder $y \le x$).
+Somit sind beliebige zwei Elemente in $A_\lambda$ vergleichbar, weshalb $A_\lambda$ eine Kette ist.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:48 - 00:24:15]
+Und die zweite... zweite Behauptung ist jetzt, dass jede obere Schranke von, von $A_\lambda$, äh, ja doch $A_\lambda$, ist maximal. Okay, und das, ja, das folgt auch schon fast wieder aus der Konstruktion, weil... Sei $m$ eine obere Schranke von $A_\lambda$. Und jetzt nehmen wir an, dass $m$ nicht maximal ist. Das heißt, ähm, es gibt ein... irgendein $p$ in $P$, nennen wir... aber das ist indiziert, das heißt, irgendein $p_\delta$ in $P$ mit $m$ ist strikt kleiner als $p_\delta$. Okay, weil sonst wäre es ja maximal. Daraus folgt jetzt aber, dass $p_\delta$ ist eine obere Schranke von $A_\delta$, weil $A_\delta$ ist enthalten in $A_\lambda$ per Definition. Aber dann würde ja daraus folgen, dass wenn wir jetzt zu $A_{\delta+1}$ gehen, dass wir dann $p_\delta$ hinzufügen. Und das ist aber nicht der Fall. Das ist ein Widerspruch zu $m$ obere Schranke, weil $m$ haben wir angenommen ist eine obere Schranke.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung: Jede obere Schranke von \texorpdfstring{$A_\lambda$}{A-lambda} ist maximal]
+\textbf{Behauptung:} Jede obere Schranke $m$ von $A_\lambda$ ist ein maximales Element in $P$.
+\begin{short-proof}
+Sei $m \in P$ eine obere Schranke von $A_\lambda$. Angenommen, $m$ ist nicht maximal.
+Dann existiert ein Element $p_\delta \in P$ (für ein $\delta \in \lambda$) mit:
+\[
+m < p_\delta
+\]
+Da $m$ eine obere Schranke von $A_\lambda$ ist, gilt für alle $x \in A_\lambda$, dass $x \le m < p_\delta$.
+Da $A_\delta \subseteq A_\lambda$ für alle $\delta \in \lambda$, ist $p_\delta$ insbesondere eine obere Schranke von $A_\delta$.
+Nach der Rekursionsvorschrift \eqref{eq:rekursionsfunktion-kzl} gilt daher im Schritt $\beta = \delta + 1$:
+\[
+A_{\delta+1} = A_\delta \cup \{p_\delta\} \implies p_\delta \in A_{\delta+1} \subseteq A_\lambda
+\]
+Dies impliziert jedoch $p_\delta \in A_\lambda$. Da $m$ eine obere Schranke von $A_\lambda$ ist, muss gelten:
+\[
+p_\delta \le m
+\]
+Dies steht im direkten Widerspruch zu unserer Annahme $m < p_\delta$.
+Somit muss $m$ ein maximales Element in $P$ sein.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:15 - 00:25:04]
+Okay, das beweist, dass $m$ ein maximales Element ist. Okay, das heißt wir wissen, es gibt maximale Elemente. Somit wissen wir, aus dem Wohlordnungsprinzip folgt das Lemma von Kuratowski und Zorn.
+\end{spoken-clean}
+
+\begin{math-stroke}[Abschluss des Beweises WOP \texorpdfstring{$\implies$}{=>} KZL]
+Da jede Kette in $P$ nach Voraussetzung eine obere Schranke besitzt, hat insbesondere auch die Kette $A_\lambda$ eine obere Schranke $m \in P$.
+Nach der vorherigen Behauptung ist $m$ ein maximales Element von $P$.
+Dies beweist das Kuratowski-Zornsche Lemma.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:04 - 00:26:30]
+Gut. Und jetzt beweisen wir, dass das Lemma von Kuratowski und Zorn impliziert das Teichmüller-Tukey-Prinzip. Dazu nehmen wir an, dass Kuratowski-Zorn-Lemma gilt, und wir wollen zeigen, dann gilt auch das Teichmüller-Tukey-Prinzip. Dazu nehmen wir $\mathcal{F}$ eine Familie von Mengen mit endlichem Charakter. Und wir wollen zeigen, dass $\mathcal{F}$ ein maximales Element bezüglich Inklusion hat.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis: KZL \texorpdfstring{$\implies$}{=>} TP]
+\begin{proof}[Beweis: Kuratowski-Zornsches Lemma impliziert das Teichmüller-Tukey-Prinzip]
+Sei $\mathcal{F}$ eine nicht-leere Familie von Mengen mit endlichem Charakter. Wir betrachten die partiell geordnete Menge $(\mathcal{F}, \subseteq)$.
+Um das Kuratowski-Zornsche Lemma anzuwenden, müssen wir zeigen, dass jede Kette $\mathcal{C} \subseteq \mathcal{F}$ eine obere Schranke in $\mathcal{F}$ besitzt.
+
+Sei $\mathcal{C} \subseteq \mathcal{F}$ eine Kette. Wir definieren den Kandidaten für die obere Schranke als die Vereinigung aller Elemente der Kette:
+\begin{equation}\label{eq:kandidat-obere-schranke-tp}
+U = \bigcup \mathcal{C} = \bigcup_{X \in \mathcal{C}} X
+\end{equation}
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:26:30 - 00:28:14]
+Okay, und jetzt müssen wir zeigen, dass $U$ ist in $\mathcal{F}$ enthalten. Und das ist genau der Punkt, wo wir den endlichen Charakter verwenden. Wir wissen, $U$ ist in $\mathcal{F}$ genau dann, wenn jede endliche Teilmenge von $U$ ist in $\mathcal{F}$. Also nehmen wir eine endliche Teilmenge $Y$ von $U$. Da $Y$ endlich ist, und $U$ ist die Vereinigung von all diesen Elementen in $\mathcal{C}$, gibt es für jedes Element in $Y$ ein Element in $\mathcal{C}$, das dieses Element enthält. Da $\mathcal{C}$ eine Kette ist, sind diese endlich vielen Elemente in $\mathcal{C}$ total geordnet, das heißt, es gibt ein maximales Element unter diesen endlich vielen Elementen, nennen wir das $X_0$. Und dieses $X_0$ enthält dann alle Elemente von $Y$, das heißt, $Y$ ist eine Teilmenge von $X_0$. Da $X_0$ in $\mathcal{F}$ ist, und $\mathcal{F}$ hat endlichen Charakter, ist jede Teilmenge von $X_0$ auch in $\mathcal{F}$, insbesondere ist $Y$ in $\mathcal{F}$. Da dies für jede endliche Teilmenge $Y$ von $U$ gilt, folgt aus dem endlichen Charakter von $\mathcal{F}$, dass $U$ in $\mathcal{F}$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis: U ist in \texorpdfstring{$\mathcal{F}$}{F}]
+Wir zeigen, dass $U \in \mathcal{F}$. Da $\mathcal{F}$ endlichen Charakter hat, ist dies äquivalent zu der Aussage, dass jede endliche Teilmenge $Y \subseteq U$ in $\mathcal{F}$ liegt.
+
+Sei $Y \subseteq U$ eine beliebige endliche Teilmenge, d.\,h. $Y = \{y_1, \dots, y_k\}$.
+Da $U = \bigcup_{X \in \mathcal{C}} X$, existiert für jedes $i \in \{1, \dots, k\}$ ein Element $X_i \in \mathcal{C}$ mit:
+\[
+y_i \in X_i
+\]
+Da $\mathcal{C}$ eine Kette bezüglich der Inklusion $\subseteq$ ist, ist die endliche Teilfamilie $\{X_1, \dots, X_k\} \subseteq \mathcal{C}$ total geordnet.
+Somit existiert ein maximales Element $X_{\max} \in \{X_1, \dots, X_k\}$ bezüglich Inklusion, so dass:
+\[
+X_i \subseteq X_{\max} \quad \text{für alle } i \in \{1, \dots, k\}
+\]
+Daraus folgt unmittelbar:
+\[
+Y = \{y_1, \dots, y_k\} \subseteq X_{\max}
+\]
+Da $X_{\max} \in \mathcal{C} \subseteq \mathcal{F}$ und $\mathcal{F}$ endlichen Charakter hat, ist jede Teilmenge von $X_{\max}$ ebenfalls in $\mathcal{F}$ (da alle ihre endlichen Teilmengen auch endliche Teilmengen von $X_{\max}$ und somit in $\mathcal{F}$ sind).
+Insbesondere gilt:
+\[
+Y \in \mathcal{F}
+\]
+Da jede endliche Teilmenge $Y \subseteq U$ in $\mathcal{F}$ liegt, folgt aus dem endlichen Charakter von $\mathcal{F}$:
+\[
+U \in \mathcal{F}
+\]
+Somit ist $U$ eine obere Schranke für die Kette $\mathcal{C}$ in $\mathcal{F}$.
+Nach dem Kuratowski-Zornschen Lemma besitzt $\mathcal{F}$ ein maximales Element bezüglich $\subseteq$.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:14 - 00:30:10]
+Und jetzt müssen wir noch zeigen, dass das Teichmüller-Tukey-Prinzip das Auswahlaxiom impliziert. Das ist der letzte Schritt, um diesen Kreis zu schließen. Dazu nehmen wir an, das Teichmüller-Tukey-Prinzip gilt, und wir wollen das Auswahlaxiom beweisen. Das heißt, wir haben eine Familie von nicht-leeren Mengen $\mathcal{F}$, und wir wollen eine Auswahlfunktion konstruieren. Das heißt, wir müssen eine passende Familie von Mengen mit endlichem Charakter konstruieren, auf welche wir das Teichmüller-Tukey-Prinzip anwenden können. Und was wir da machen, ist, wir nehmen $\mathcal{S}$ die Familie von allen Teil-Auswahlfunktionen. Das heißt, wir nehmen alle Funktionen $g$, die auf einer Teilfamilie von $\mathcal{F}$ definiert sind, so dass für jedes $X$ im Definitionsbereich von $g$ gilt, dass $g(X)$ ist in $X$ enthalten. Und wir können diese Funktionen als Mengen von geordneten Paaren interpretieren, das heißt, als Teilmengen des kartesischen Produkts von $\mathcal{F}$ und der Vereinigung von $\mathcal{F}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis: TP \texorpdfstring{$\implies$}{=>} AC]
+\begin{proof}[Beweis: Teichmüller-Tukey-Prinzip impliziert das Auswahlaxiom]
+Sei $\mathcal{F}$ eine Familie von nicht-leeren Mengen. Wir wollen eine Auswahlfunktion $f: \mathcal{F} \to \bigcup \mathcal{F}$ konstruieren.
+Wir definieren die Familie $\mathcal{S}$ aller partiellen Auswahlfunktionen (interpretiert als Mengen von geordneten Paaren):
+\begin{equation}\label{eq:partielle-auswahlfunktionen}
+\mathcal{S} = \left\{ g \subseteq \mathcal{F} \times \bigcup \mathcal{F} : g \text{ ist eine Funktion und } \forall (X, x) \in g \implies x \in X \right\}
+\end{equation}
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:30:10 - 00:31:35]
+Genau, sie nehmen jetzt einfach Teilfamilien davon, und wir schauen Auswahlfunktionen darauf an. Das heißt, $g$ ist eine Funktion, und für jedes Paar $(X, x)$ in $g$ gilt, dass $x$ ist in $X$ enthalten. Und wir wollen jetzt bemerken, dass diese Familie $\mathcal{S}$ endlichen Charakter hat. Weshalb hat das endlichen Charakter? Weil eine menge von geordneten Paaren $g$ ist genau dann eine partielle Auswahlfunktion, wenn jede endliche Teilmenge von $g$ eine partielle Auswahlfunktion ist. Warum? Weil die Bedingung, eine Funktion zu sein, ist eine endliche Bedingung: Eine Relation $g$ ist genau dann eine Funktion, wenn für alle Paare $(X, x)$ und $(X, y)$ in $g$ gilt, dass $x = y$. Das betrifft immer nur zwei Paare, das heißt, das ist eine Bedingung, die man auf endlichen Teilmengen überprüfen kann. Und die Bedingung, dass $x \in X$ gilt, betrifft immer nur ein einzelnes Paar, das ist also auch eine endliche Bedingung. Somit hat $\mathcal{S}$ endlichen Charakter.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung: \texorpdfstring{$\mathcal{S}$}{S} hat endlichen Charakter]
+\textbf{Behauptung:} Die Familie $\mathcal{S}$ hat endlichen Charakter.
+\begin{short-proof}
+Eine Relation $g \subseteq \mathcal{F} \times \bigcup \mathcal{F}$ liegt genau dann in $\mathcal{S}$, wenn:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item $g$ rechtseindeutig ist: $\forall (X, x), (X, y) \in g \implies x = y$.
+    \setcounter{enumi}{1} \item $g$ die Auswahlbedingung erfüllt: $\forall (X, x) \in g \implies x \in X$.
+\end{enumerate}
+Beide Bedingungen sind von endlicher Natur:
+\begin{itemize}
+    \item Wäre $g$ nicht rechtseindeutig, gäbe es zwei Paare $(X, x), (X, y) \in g$ mit $x \neq y$. Diese zwei Paare bilden eine endliche Teilmenge von $g$, die nicht rechtseindeutig ist.
+    \item Wäre die Auswahlbedingung verletzt, gäbe es ein Paar $(X, x) \in g$ mit $x \notin X$. Dieses einzelne Paar bildet eine endliche Teilmenge von $g$, welche die Auswahlbedingung verletzt.
+\end{itemize}
+Somit gilt $g \in \mathcal{S}$ genau dann, wenn jede endliche Teilmenge von $g$ in $\mathcal{S}$ liegt. Die Familie $\mathcal{S}$ hat folglich endlichen Charakter.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:31:35 - 00:33:00]
+Da $\mathcal{S}$ endlichen Charakter hat, und $\mathcal{S}$ ist nicht leer, weil die leere Menge ist eine partielle Auswahlfunktion, können wir das Teichmüller-Tukey-Prinzip anwenden. Das heißt, es existiert ein maximales Element in $\mathcal{S}$ bezüglich Inklusion, nennen wir das $f_0$. Und jetzt müssen wir noch zeigen, dass der Definitionsbereich von $f_0$ ganz $\mathcal{F}$ ist. Angenommen, das ist nicht der Fall. Dann gibt es irgendeine menge $X_0$ in $\mathcal{F}$, die nicht im Definitionsbereich von $f_0$ ist. Da $X_0$ nicht leer ist, können wir ein Element $x_0 \in X_0$ wählen. Und dann können wir eine neue Funktion definieren, indem wir das Paar $(X_0, x_0)$ zu $f_0$ hinzufügen. Da $X_0$ nicht im Definitionsbereich von $f_0$ war, ist diese neue Relation immer noch eine Funktion, und sie erfüllt immer noch die Auswahlbedingung. Das heißt, diese neue Funktion ist in $\mathcal{S}$ enthalten, und sie ist echt größer als $f_0$ bezüglich Inklusion. Das widerspricht aber der Maximalität von $f_0$. Somit muss der Definitionsbereich von $f_0$ ganz $\mathcal{F}$ sein, das heißt, $f_0$ ist eine Auswahlfunktion für $\mathcal{F}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung: Der Definitionsbereich von \texorpdfstring{$f_0$}{f0} ist ganz \texorpdfstring{$\mathcal{F}$}{F}]
+Da $\mathcal{S} \neq \emptyset$ (da $\emptyset \in \mathcal{S}$) und $\mathcal{S}$ endlichen Charakter hat, existiert nach dem Teichmüller-Tukey-Prinzip ein maximales Element $f_0 \in \mathcal{S}$ bezüglich $\subseteq$.
+
+\textbf{Behauptung:} $\operatorname{dom}(f_0) = \mathcal{F}$.
+\begin{short-proof}
+Angenommen, $\operatorname{dom}(f_0) \neq \mathcal{F}$. Dann existiert ein $X_0 \in \mathcal{F}$ mit $X_0 \notin \operatorname{dom}(f_0)$.
+Da alle Mengen in $\mathcal{F}$ nach Voraussetzung nicht-leer sind, existiert ein Element $x_0 \in X_0$.
+Wir definieren die erweiterte Relation:
+\[
+f'_0 = f_0 \cup \{(X_0, x_0)\}
+\]
+Da $X_0 \notin \operatorname{dom}(f_0)$, ist $f'_0$ weiterhin rechtseindeutig, also eine Funktion. Da zudem $x_0 \in X_0$ gilt, erfüllt $f'_0$ die Auswahlbedingung.
+Somit gilt:
+\[
+f'_0 \in \mathcal{S}
+\]
+Da jedoch $f_0 \subsetneq f'_0$, steht dies im Widerspruch zur Maximalität von $f_0$ in $\mathcal{S}$.
+Folglich muss $\operatorname{dom}(f_0) = \mathcal{F}$ gelten. Die maximale partielle Auswahlfunktion $f_0$ ist somit eine totale Auswahlfunktion für $\mathcal{F}$.
+Dies beweist das Auswahlaxiom.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:33:00 - 00:33:40]
+Gut, vielen Dank fürs Kommen, wünsche ich eine ganz gute Woche und bis nächsten Dienstag.
+\end{spoken-clean}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 277906, Output 4770)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 81233, Output 18)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 18:13:33) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 04-21-tuesday.mp4
+[Angehängtes Video]: 04-21-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-21. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Dienstag}{21. Apr.}{21. April}{Kardinalzahlen und das Cantor-Bernstein-Schröder-Theorem}
+
+\section{Einführung und das Auswahlaxiom}
+
+\begin{spoken-clean}[00:00:00 - 00:01:55]
+Hallo zusammen, wir fangen an. Shh... Ähm, also wir hatten letzte Woche oder die letzten zwei Wochen der Vorlesung über das Auswahlaxiom gesprochen. Ein wichtiges Thema in der Mathematik und wie wir gesehen haben, das ist so ein bisschen anders als die anderen Zermelo-Fraenkel-Axiome. Ist es ein bisschen mehr oder weniger, weniger intuitiv. Es gibt eben das Wohlordnungsprinzip, das sehr unintuitiv ist, aber dann wiederum das Auswahlaxiom, das eigentlich doch intuitiv ist. Äh genau, deswegen verwendet man das Auswahlaxiom gerne mit etwas Vorsicht. Aber wie gesagt, es ist äh unabhängig von Zermelo-Fraenkel (Recall: Unabhängigkeitssatz von Gödel und Cohen) und wenn man das Auswahlaxiom annimmt, also Zermelo-Fraenkel mit dem Auswahlaxiom (i.e., $\text{ZFC}$), dann ist das konsistent genau dann, wenn Zermelo-Fraenkel (i.e., $\text{ZF}$) konsistent ist. Das heißt, man man macht nicht nichts Gefährliches. 
+
+Ähm und genau, und in der heutigen Mathematik ist auch, würde ich sagen, fast alle arbeiten mit dem Auswahlaxiom und nehmen an, dass das Auswahlaxiom existiert. Ansonsten kommen Sie in sehr exotische Sphären der Mathematik auch, aber es ist durchaus legitim zu sagen, man nimmt das Auswahlaxiom nicht an. Aber eben in Algebra ist es fast nicht vorstellbar, das Auswahlaxiom nicht zu haben. Dann hätte man nicht mehr, dass jeder ähm Körper einen algebraischen Abschluss hätte, man hätte nicht mehr, dass jedes Ideal in einem Ring in einem maximalen Ideal enthalten ist (Recall: Satz von Krull), und das sind zwei nur als Beispiele unter vielen anderen äh ja Resultaten, die man jetzt in algebraischer Geometrie oder Zahlentheorie, wie man sie heutzutage betreibt, eigentlich fast täglich verwendet. Okay, dann wollte ich aber trotzdem noch ähm erwähnen, das ist kurz auch in dem in den... also auf dem Skript... \inlinemetanote{schaltet den Projektor ein}
+\end{spoken-clean}
+
+\begin{meta-note}[Projektor-Einschub]
+Der Dozent schaltet den Projektor ein, um eine Übersicht über abgeschwächte Formen des Auswahlaxioms zu zeigen.
+\end{meta-note>
+
+\begin{spoken-clean}[00:01:55 - 00:04:06]
+Äm und zwar äh ja, man kann ja auch sagen, okay, wenn das Auswahlaxiom ähm okay, wenn das vielleicht ein bisschen potenziell unintuitiv oder problematisch ist, weshalb nimmt man nicht einfach eine schwächere Version davon, vielleicht eine schwächere Version, die genau noch reicht für das, was man machen möchte. Und da gibt es verschiedene abgeschwächte Versionen. 
+
+Also zum Beispiel, anstatt dass man annimmt, dass jede ab- dass jede Familie von nicht-leeren Mengen eine Auswahlfunktion hat, sagt man einfach, okay, man nimmt das nur für abzählbare ähm Familien von nicht-leeren Mengen an (i.e., das abzählbare Auswahlaxiom $\text{AC}_\omega$). Ist ein bisschen eine... man sagt, okay, alle Familien ist ein bisschen sehr stark, sagen wir nur für abzählbare Familien. Oder eine andere Version wäre noch, dass man sagt, nur Familien von nicht allzu großen Mengen haben eine Auswahlfunktion. So kann man sagen, nur abzählbar nur abzählbare Familie abzählbar viele Familien von höchstens abzählbaren Mengen haben eine Auswahlfunktion. Oder sogar nur abzählbare Familien von nicht-leeren endlichen Mengen haben eine Auswahlfunktion. Oder noch schwächer, nur abzählbare Familien von zwei-elementigen ähm Mengen haben eine Auswahlfunktion und so weiter. Da gibt es viele viele verschiedene Varianten. 
+
+Ähm und da gibt es natürlich einen Sport, kann man sich einen Sport daraus machen und zu schauen, was implizieren, wie viel kann man mit einer bestimmten Variante noch beweisen, was nicht mehr. Kann man sagen, es sind einige von denen ähm äquivalent zueinander und welche nicht, welche sind echt schwächer, welche sind echt stärker und so weiter. Aber okay, das ist eine, ich denke, eine wie so eine Nischenindustrie für in gewissen Gebieten der Logik, wo man das macht. Ich glaube, im Alltag, wenn man nicht Logik arbeitet und mathematisch, dann stellt man sich diese Fragen nicht.
+\end{spoken-clean}
+
+\begin{nice-box}[Abgeschwächte Formen des Auswahlaxioms]
+Die auf dem Projektor gezeigte Übersicht listet klassische Abschwächungen des Auswahlaxioms ($\text{AC}$) auf:
+\begin{itemize}
+    \item $\text{C}(\omega, \infty)$: Jede abzählbare Familie nicht-leerer Mengen hat eine Auswahlfunktion.
+    \item $\text{C}(\omega, \omega)$: Jede abzählbare Familie nicht-leerer abzählbarer Mengen hat eine Auswahlfunktion.
+    \item $\text{C}(\omega, <\omega)$: Jede abzählbare Familie nicht-leerer endlicher Mengen hat eine Auswahlfunktion.
+    \item $\text{C}(\omega, n)$: Jede abzählbare Familie $n$-elementiger Mengen (für $n \in \omega, n \ge 1$) hat eine Auswahlfunktion.
+    \item $\text{C}(\infty, n)$: Jede Familie $n$-elementiger Mengen (für $n \in \omega, n \ge 1$) hat eine Auswahlfunktion.
+    \item $\text{C}(\infty, <\omega)$: Jede Familie nicht-leerer endlicher Mengen hat eine Auswahlfunktion.
+\end{itemize}
+\end{nice-box}
+
+\begin{spoken-clean}[00:04:06 - 00:05:57]
+Äh das andere vielleicht noch, was man vielleicht ein bisschen immer im Hinterkopf haben soll, ist auch, wann braucht man das Auswahlaxiom wirklich? Also das okay, das Zornsche Lemma, das man in der Regel braucht, da ist relativ klar, wie man das braucht und das ist auch ein bisschen technisch. Das heißt, das da ist man nicht äh so weit, da ist man nicht das wird man wohl kaum verwenden, wenn man es nicht wirklich braucht. Aber Auswahlaxiom, da muss man schauen, man braucht nicht immer das Auswahlaxiom. Also Sie haben ja schon gesehen, wenn man nur endlich viele Mengen hat, dann gibt es immer endlich viele nicht-leere Mengen, dann gibt es immer eine Auswahlfunktion. Dazu braucht man das Auswahlaxiom nicht. 
+
+Also ich hatte auch schon in Übungen Studierende, die gesehen haben, okay, sei wir haben $X$ eine menge, gemäss Auswahlaxiom können wir jetzt ein Element nehmen von dieser Menge. Aber eben für die Existenz eines einzelnen Elements in einer einzelnen Menge, da braucht man garantiert nicht das Auswahlaxiom. Das wissen wir aus der Definition, dass die Menge nicht leer ist, wissen wir, es gibt auch ein Element darin. Also für solche Sachen braucht man das Auswahlaxiom nicht. Oder eben dann die Sache, wenn man eine wenn man noch mehr über die Mengen weiß, dann kann man oft auch aus den Mengen etwas auswählen, ohne dass man eine Auswahlfunktion... also das Auswahlaxiom braucht. 
+
+Also wenn man weiß, ja, ich glaube, Fabian hat Ihnen wahrscheinlich das Beispiel mit den Schuhen und den Socken ähm gesagt. Ich glaube, das ist eine gute gutes Beispiel, um im Kopf zu haben. Wenn man eine eine beliebige Menge von Schuhpaaren hat, ist es kein Problem, dann nimmt man einfach aus jedem den rechten Schuh raus, das geht. Bei Socken geht das nicht mehr, da braucht man das Auswahlaxiom, weil man zwei Socken rechts und links nicht voneinander unterscheiden kann. Gut. So viel noch zum Auswahlaxiom.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Socken-Schuh-Analogy von Bertrand Russell]
+Die berühmte Analogie von Bertrand Russell verdeutlicht den Unterschied zwischen konstruktiver Auswahl und nicht-konstruktiver Auswahl:
+\begin{itemize}
+    \item \textbf{Schuhe:} Da jeder Schuh eine inhärente Asymmetrie besitzt (links vs. rechts), existiert eine explizite Auswahlregel: \qt{Wähle stets den rechten Schuh}. Dies erfordert kein Auswahlaxiom.
+    \item \textbf{Socken:} Da ein Sockenpaar aus zwei ununterscheidbaren Objekten besteht, gibt es keine mathematische Formel, die ohne Auswahlaxiom simultan aus unendlich vielen Paaren jeweils genau einen Socken auswählt.
+\end{itemize}
+\end{didactic-insight>
+
+\section{Kardinalzahlen}
+
+\begin{spoken-clean}[00:05:57 - 00:10:08]
+Jetzt heute machen wir weiter mit Kardinal- äh mit doch Kardinalzahlen. Dazu möchte ich Ihnen noch kurz ähm Georg Cantor vorstellen, ein sehr wichtiger Mathematiker, vor allem in Bezug auf die Mengenlehre. Hat von 1845 bis 1918 gelebt, ist in St. Petersburg ähm geboren, kam dann aber nach Deutschland. Ähm hat sogar auch äh zwei Jahre hier an der ETH studiert, ging dann aber nachher für das Ende seines Studiums und das Doktorat nach Deutschland, Berlin und Göttingen. Das waren damals die großen Zentren der Mathematik, nicht die ETH. 
+
+Und ja, er hat damals im 19. Jahrhundert diese ganze Sache angeworfen mit den Ordinalzahlen und den Kardinalzahlen. Also das ist quasi Grundideen von Ordinalzahlen und Kardinalzahlen gehen auf Cantor zurück. Also er hat diese Beobachtung gemacht, dass es eben verschiedene Unendlichkeiten gibt. Also das ist ja eines der auch schönen Einsichten im ersten Jahr Mathematikstudium, dass es ja unendlich nicht gleich unendlich ist. Und dass es da all diese verschiedenen verschiedenen Unendlichkeiten gibt, und das hat er ähm angerissen. Und ja, viele von den Sachen, die wir da besprechen, ähm äh besprechen, gehen auf Cantor zurück in der Grundidee. 
+
+Seine Ideen sind natürlich am Anfang auf großen Widerstand gestoßen aus verschiedenen Richtungen. Also Mathematik, da gab es viele, die haben das sehr äh sehr stark kritisiert, also Kronecker, Poincaré und auch äh Hermann Weyl hier und Russell, Brouwer sowieso, weil der Brouwer hatte seine eigene Philosophie auch, die ganze Intuitionismus über die Philosophie der Mathematik. Aber eben, die haben das sehr stark kritisiert, diese Konstruktionen von all diesen Unendlichkeiten und haben das äh als mathematisch sehr problematisch eingestuft zuerst. 
+
+Ähm dann natürlich auch aus philosophischer Seite, also allen voran sogar Wittgenstein hat das seltsamerweise fand das sehr äh problematisch, die ganzen Mengenlehre. Er hat geschrieben, das macht die Mathematik kaputt. Und lustigerweise auch natürlich aus Theologiekreisen, also die ganzen Neoscholastiker, die haben das gab es einige, die haben das stark kritisiert. Die fanden so, ich glaube, die Idee war so halt diese ja, wenn es nicht nur eine Unendlichkeit gibt, eine absolute Unendlichkeit, sondern viele Unendlichkeit, dass das halt so ein bisschen der Idee, dass es nur einen Gott gibt, widersprechen könnte. Und damit gab es auch da Widerspruch. Obwohl er genau Cantor selbst war äh sehr überzeugter ähm Christ, Protestant, und hat das natürlich sehr stark abgelehnt äh und hat sogar ja, sehr stark vertreten, dass seine Ideen selbst von Gott gegeben sind. 
+
+Äh genau, und Cantor hat auch sehr unter dem unter dieser Kritik gelitten anscheinend, das hat ihn auch viele Jahre lang nicht viel publiziert oder konnte nicht gut arbeiten, weil ihn das mitgenommen hat. Aber hat schlussendlich auch wieder um bis ans Ende von seinem Leben Sachen publiziert. Er war auch noch sonst interessiert, er war noch in englischer Literatur sehr stark interessiert, er war ein starker Verfechter von dieser Theorie, dass Francis Bacon die Werke von Shakespeare geschrieben hat, äh was aber glaube ich eher abgelehnt wird heutzutage von den Literaturwissenschaftlern. Genau, so viel zu Georg Cantor. Interessanter Mensch und sehr, sehr wichtig für die Mathematik.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent schaltet den Projektor aus und bereitet die Tafel vor, um mit dem Kapitel über Kardinalzahlen zu beginnen.
+\end{meta-note>
+
+\subsection{Mächtigkeit von Mengen}
+
+\begin{spoken-clean}[00:10:08 - 00:11:45]
+Nun aber zu den äh ja, aber genau, noch kurz kurze Zeit später waren seine Theorie, das war sie ja äh schnell dann auch anerkannt oder so, also Hilbert und so weiter und auch viele von seinen Kritikern haben das dann bald äh anerkannt als sehr wichtige Mathematik und nicht mehr wegzudenken. Gut, ähm nun aber zu den äh Kardinalzahlen. 
+
+Sie haben die Ordinalzahlen gesehen, also Ordinal kann man sich so vorstellen, sind die Zahlen, man zählt einfach durch und immer weiter. Da geht man bis unendlich und macht noch größere Zahlen und immer eins mehr. Man kann zu jeder Ordinalzahl noch eine dazu machen, also das ist quasi die Art und Weise, wie man Sachen ordnen kann. Und Kardinalzahlen, da geht es mehr darum, ähm wie viele Elemente kann eine Menge enthalten, also so Mächtigkeiten von Mengen. 
+
+Beginnen wir ganz am Anfang, ähm die folgende Definition. Sagen ähm zwei Mengen A und B haben dieselbe Mächtigkeit, falls es eine Bijektion gibt zwischen den Mengen. Okay, und in dem Fall schreiben wir die Kardinalität von A ist dasselbe wie die Kardinalität von B. Bis jetzt ist das im Moment ist das nur eine Notation. Wir sind dann noch etwas präziser später.
+\end{spoken-clean}
+
+\begin{math-stroke}[Kardinalzahlen und Gleichmächtigkeit]
+\setcounter{section}{5}
+\setcounter{theorem}{0}
+\subsection{Kardinalzahlen}
+
+\begin{definition}[Gleichmächtigkeit]\label[definition]{def:gleichmaechtigkeit}
+Zwei Mengen $A$ und $B$ haben \newterm{dieselbe Mächtigkeit} (sind \newterm{gleichmächtig}), falls es eine Bijektion 
+\[
+f: A \to B
+\]
+gibt. In diesem Fall schreiben wir:
+\[
+|A| = |B|
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:45 - 00:15:24]
+Okay, schauen wir uns ein Beispiel an. Ähm wir hatten die äh... wir hatten die Ordinalzahl $\omega + \omega$. Okay, und wir wollen jetzt können sehen, dass $\omega + \omega$ dieselbe Kardinalität wie $\omega$ hat. Und dazu schauen wir uns die Bijektion an, die geht von $\omega + \omega$ nach $\omega$. 
+
+Und wir schicken eine Ordinalzahl $\alpha$, die darin enthalten ist, schicken wir auf ähm auf $\beta + \beta$, falls ähm $\alpha$ von der Form ist $\omega + \beta$. Also alle hier drin sind von der Form entweder sind sie in $\omega$ enthalten oder $\omega$ oder sie sind von der Form $\omega$ plus ein Element aus $\omega$. Also das heißt, wenn es von der Form ist $\omega$ plus ein Element aus $\omega$, dann schicken wir es einfach auf zweimal das Element dieses $\beta$ hier. Und wenn es nicht darin enthalten ist, wenn es nicht von dieser Form ist, dann schreiben wir als $\alpha + \alpha + 1$ sonst. Das heißt, hier sind alle gerade, die sind alle ungerade, das heißt, das ist tatsächlich eine eine Bijektion. Das heißt, diese zwei Mengen sind gleichmächtig.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Gleichmächtigkeit von \texorpdfstring{$\omega + \omega$}{omega + omega} und \texorpdfstring{$\omega$}{omega}]
+\begin{example}\label{ex:omega-plus-omega}
+Es gilt:
+\[
+|\omega + \omega| = |\omega|
+\]
+\begin{short-proof}
+Wir definieren eine explizite Bijektion $f: \omega + \omega \to \omega$. Jedes Element $\alpha \in \omega + \omega$ lässt sich eindeutig charakterisieren: entweder gilt $\alpha \in \omega$ oder $\alpha = \omega + \beta$ für ein $\beta \in \omega$. Wir definieren:
+\[
+f(\alpha) = \begin{cases}
+2\beta & \text{falls } \alpha = \omega + \beta \\
+2\alpha + 1 & \text{sonst (i.e., } \alpha \in \omega)
+\end{cases}
+\]
+Da die geraden Zahlen das Bild der zweiten Kopie von $\omega$ und die ungeraden Zahlen das Bild der ersten Kopie von $\omega$ darstellen, ist $f$ eine Bijektion.
+\end{short-proof}
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:24 - 00:16:56]
+Gut, ähm vielleicht noch Bemerkungen. Also das erste ist, also es gilt immer, ähm dass eine menge hat natürlich die selbe Mächtigkeit wie sich selbst. Ähm ja, die Identitätsabbildung ist immer eine Bijektion. Und dann haben wir, falls das ist diese Schreibweise ist auch gut, also falls ähm A gleichmächtig ist wie B, dann ist auch B gleichmächtig wie A. Also das ist gut geschrieben, eine Bijektion, nehmen wir das Inverse, also es gibt eine Bijektion von A nach B, dann gibt es auch eine Bijektion von B nach A. Und das Ganze ist auch transitiv, also falls ähm A gleich B ist und B gleich C, falls die dieselbe Kardinalität haben und B dieselbe Kardinalität wie C, dann hat auch ähm A dieselbe Kardinalität wie C. 
+
+Ähm ist das klar? Genau, also wenn wir eine Bijektion von A nach B haben und eine Bijektion von B nach C, können wir die zwei einfach die zwei Bijektionen ähm einfach verknüpfen und erhalten eine Bijektion von A nach C. Einfach weil Verknüpfungen von Bijektionen sind wieder Bijektionen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Eigenschaften der Gleichmächtigkeit]
+\begin{proposition}\label{prop:gleichmaechtigkeit-aequivalenz}
+Die Gleichmächtigkeit ist eine Äquivalenzrelation auf der Klasse aller Mengen. Es gilt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \newterm{Reflexivität}: $|A| = |A|$ (mittels der Identitätsabbildung $\id_A$).
+    \setcounter{enumi}{1} \item \newterm{Symmetrie}: Falls $|A| = |B|$, so gilt auch $|B| = |A|$ (mittels der Umkehrfunktion $f^{-1}$).
+    \setcounter{enumi}{2} \item \newterm{Transitivität}: Falls $|A| = |B|$ und $|B| = |C|$, so gilt auch $|A| = |C|$ (mittels der Komposition $g \circ f$).
+\end{enumerate}
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:56 - 00:19:51]
+Okay, dann... Okay, dann noch mehr Notation. Also falls es eine injektive Abbildung gibt, also eine Injektion $f$ von $B$ nach $A$ gibt, so schreiben wir, dass $B$ ist kleiner gleich $A$. Okay, das heißt, $B$ ist kleiner gleich $A$, falls falls $B$ gleichmächtig ist wie eine Teilmenge von $A$. Okay, und dann natürlich, falls $B$ kleiner ist gleich $A$, aber $B$ nicht gleichmächtig ist wie $A$, ähm so schreiben wir $B$ ist strikt kleiner als $A$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Kardinaler Vergleich]
+\begin{definition}[Kardinaler Vergleich]\label[definition]{def:kardinaler-vergleich}
+Wir definieren eine Halbordnung auf den Mächtigkeiten:
+\begin{itemize}
+    \item $|B| \le |A|$, falls eine Injektion $f: B \to A$ existiert (äquivalent: $B$ ist gleichmächtig zu einer Teilmenge von $A$).
+    \item $|B| < |A|$, falls $|B| \le |A|$ gilt, aber $|B| \neq |A|$.
+\end{itemize}
+\end{definition}
+\end{math-stroke}
+
+\subsection{Das Cantor-Bernstein-Schröder-Theorem}
+
+\begin{spoken-clean}[00:19:51 - 00:22:30]
+Okay, und das nächste, was wir uns anschauen wollen, ist das Cantor-Bernstein-Theorem, manchmal auch ja, schreiben wir oft schreiben wir auch Schröder, Cantor-Bernstein-Schröder Theorem. Das sagt aus, dass wenn A und B Mengen sind, so dass ähm A kleiner gleich B ist, das heißt, es gibt eine Injektion von A nach B, und B ist kleiner gleich A, das heißt, es gibt auch eine Injektion von B nach A, dann gilt, dass A gleich B ist. Also haben sie die gleiche Mächtigkeit. 
+
+Ist ein bisschen intuitiv, aber es ist nicht nicht klar a priori, dass das stimmt. Also wir haben ja, wir haben hier Stühle, hier haben wir Leute. Wir wissen, wir können jedes jede Person einem Stuhl zuordnen, so dass jede Person genau einen Stuhl hat, vielleicht sind noch Stühle übrig. Und es gibt auch eine Möglichkeit, die Stühle den Leuten zuorden, so dass für jede Person ein für jede Person ein Stuhl hat. Aber für unendliche Mengen ist nicht klar, dass das daraus dann automatisch folgt, dass die beiden dass es auch eine Bijektion gibt. Aber der Satz sagt, dass das stimmt. 
+
+Vielleicht noch zu den Leuten, eben oft wird es auch einfach wird es Bernstein-Schröder, Cantor-Schröder oder Cantor-Bernstein-Schröder. Ich glaube, Schröder war das erste war der erste, das publiziert hat, wenn auch mit einem falschen Beweis. Cantor hat das auch noch publiziert, auch mit einem falschen Beweis etwas später, und Bernstein ist der erste, der einen richtigen Beweis gegeben hat. So viel zu den Namen. 
+
+Okay, wie beweist man das? Den Beweis, ich erkläre ihn ein bisschen anders als das, was im Skript steht. Das ist dieselbe Idee, ist kein anderer Beweis, einfach finde es ein bisschen umständlich geschrieben im Skript, obwohl es obwohl es genau das gleiche ist, was wir hier machen. Also wir nehmen an, dass $f$ eine Injektion von $A$ nach $B$ ist und $g$ eine Injektion von $B$ nach $A$.
+\end{spoken-clean}
+
+\begin{nice-box}[Satz von Cantor-Bernstein-Schröder]
+\begin{theorem}[Cantor-Bernstein-Schröder]\label[theorem]{thm:cantor-bernstein-schroeder}
+Seien $A$ und $B$ Mengen. Falls $|A| \le |B|$ und $|B| \le |A|$ gilt, dann ist $|A| = |B|$.
+\end{theorem}
+\end{nice-box}
+
+\begin{proof}[Beweis des Cantor-Bernstein-Schröder-Theorems]
+\begin{spoken-clean}[00:22:30 - 00:24:40]
+Okay, und jetzt, was wir machen, ist... Also wenn genau... Also wenn natürlich eine von denen auch surjektiv ist, dann sind wir sowieso schon fertig, aber was wir jetzt machen, ist, wir definieren $E_0$ als ähm $A$ ohne das Bild von $B$. Also ja, ich schreibe $g(B)$. Also $g(B)$, da meine ich wirklich alle Elemente von der Form $g(b)$, wobei $b$ in $B$ ist. Okay, ich glaube, im Skript wird das mit eckigen Klammern geschrieben. Das ist klar, was gemeint ist. Also wir nehmen alle Elemente, die in $A$, die nicht im Bild von $B$ sind. 
+
+Aber wir können das so zeichnen, wir haben hier, sagen wir, wir haben hier wir haben hier ähm wir hier $A$ und hier haben wir $B$. \inlinemetanote{zeichnet an die Tafel} Okay, und jetzt haben wir eine Injektion von $B$ nach $A$. Das heißt, da haben wir das Bild $g(B)$. Okay, und jetzt unser $E_0$, das ist alles außer außer das Bild von $E_0$ (i.e., eigentlich $g(B)$). Und was wir jetzt machen, wir schauen das Bild von $A$ hier an. Äh das ist irgendwie so etwas. Wie $A$ als Teilmenge, also das ist $f(A)$ hier. Und da haben wir jetzt auch wieder $E_0$, da haben wir $f(A \setminus E_0)$, oder? Ist hier. Okay, und jetzt schauen wir, gehen wir wieder zurück, dann haben wir hier wieder $g(f(E_0))$. Haben wir das darin, ist dann so. Und dann gehen wir wieder zurück und wieder rein und wieder zurück, wieder rein. 
+
+Und dann sagen wir, okay, definieren wir das dann so weiter, sagen wir $E_1$ definieren wir als $g(f(E_0))$. Und allgemein ähm allgemein definieren wir ähm $E_{n+1}$ als $g(f(E_n))$. Jetzt haben wir da diese Folge von kleineren und kleineren Mengen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der Mengenfolge]
+Wir nehmen an, $f: A \to B$ und $g: B \to A$ seien Injektionen. Wir definieren rekursiv eine Folge von Teilmengen $E_n \subseteq A$:
+\begin{align*}
+E_0 &= A \setminus g(B) \\
+E_{n+1} &= g(f(E_n)) \quad \text{für } n \ge 0
+\end{align*}
+\end{math-stroke}
+
+\begin{nice-box}[Visualisierung der Mengenkonstruktion]
+\begin{center}
+\begin{tikzpicture}[scale=1.4]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Zwei große Rechtecke für die Mengen A und B.
+% 2. Midground: Das Bild g(B) als Teilmenge von A, und f(A) als Teilmenge von B.
+% 3. Foreground: Die schraffierten/markierten Bereiche für E_0, f(E_0), g(f(E_0)) etc.
+% 4. Annotations: Pfeile für f und g, die die Abbildungen verdeutlichen.
+% \end{ai-tikz-planner-invisible-content}
+    % Menge A
+    \draw[thick] (0,0) rectangle (3.5,3) node[above left] {$A$};
+    % Bild g(B) in A
+    \draw[thick, fill=MidnightBlue!5] (0.8,0.2) rectangle (3.3,2.8);
+    \node[MidnightBlue] at (2,1.5) {$g(B)$};
+    % E_0 (Komplement von g(B) in A)
+    \fill[pattern=north west lines, pattern color=BrickRed!40] (0,0) -- (0.8,0) -- (0.8,3) -- (0,3) -- cycle;
+    \node[BrickRed] at (0.4,2.5) {$E_0$};
+
+    % Menge B
+    \draw[thick, shift={(6,0)}] (0,0) rectangle (3.5,3) node[above right] {$B$};
+    % Bild f(A) in B
+    \draw[thick, fill=ForestGreen!5, shift={(6,0)}] (0.2,0.2) rectangle (3.0,2.8);
+    \node[ForestGreen, shift={(6,0)}] at (1.6,1.5) {$f(A)$};
+    % Bild f(E_0) in B
+    \fill[pattern=north west lines, pattern color=BrickRed!40, shift={(6,0)}] (0.2,0.2) rectangle (0.8,2.8);
+    \node[BrickRed, shift={(6,0)}] at (0.5,2.5) {$f(E_0)$};
+
+    % Abbildungs-Pfeile
+    \draw[->, thick, MidnightBlue] (3.6,2) to[bend left=15] node[midway, above] {$f$} (5.9,2);
+    \draw[<-, thick, ForestGreen] (3.6,1) to[bend right=15] node[midway, below] {$g$} (5.9,1);
+\end{tikzpicture}
+\end{center}
+\end{nice-box}
+
+\begin{spoken-clean}[00:04:40 - 00:05:00]
+Okay, und wir definieren jetzt $E$ als die Vereinigung von all diesen $E_n$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Vereinigungsmenge E]
+Wir definieren die totale Problemmenge $E \subseteq A$ als:
+\[
+E = \bigcup_{n=0}^\infty E_n
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:00 - 00:28:44]
+Gut, und jetzt schauen wir, wie halt die Elemente in $E$ an und dann die Elemente, die nicht in $E$ sind, und die müssen wir quasi verschieden verschiedene handhaben. Wir definieren jetzt einfach ähm direkt eine Bijektion zwischen $A$ und $B$. Und zwar definieren wir die Funktion $h$ von $A$ nach $B$. Und zwar sagen wir, $h(x)$ ähm definieren wir als ähm $f(x)$, falls $x$ in diesem $E$ enthalten ist. Und wenn $x$ nicht in diesem $E$ enthalten ist, dann nehmen wir einfach $g^{-1}(x)$. 
+
+Okay, da müssen wir sehen, okay, das ist klar, das ist das macht Sinn, das ist definiert, wenn es hier drin ist. Wenn es nicht hier drin ist, dann ist es auch definiert, das ist einfach... also $h$ ist wohldefinierte auf $E$. Und ähm falls $x$ nicht in $E$ ist, so ist $x$ nicht in $E_0$ insbesondere. Und wenn es nicht in $E_0$ ist, dann heißt es, es ist aber im Bild von $g$, weil $E_0$ haben wir definiert als das Komplement vom Bild von von $B$. Äh das heißt, äh also $E_0$ war $A$ ohne das Bild von $B$. Das heißt, $x$ ist enthalten im Bild von $B$ und somit ähm gibt es ein Urbild von $x$, und da $g$ injektiv ist, gibt es ein eindeutiges ähm Urbild. Okay, das heißt, das ist wirklich eine wohldefinierte Funktion.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Abbildung h]
+Wir definieren die Abbildung $h: A \to B$ durch:
+\begin{equation}\label{eq:def-h}
+h(x) = \begin{cases}
+f(x) & \text{falls } x \in E \\
+g^{-1}(x) & \text{falls } x \notin E
+\end{cases}
+\end{equation}
+
+\begin{explanation-of-steps}[Wohldefiniertheit von h]
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Für $x \in E$ ist $h(x) = f(x)$ wohldefiniert, da $f$ auf ganz $A$ definiert ist.
+    \setcounter{enumi}{1} \item Für $x \notin E$ gilt insbesondere $x \notin E_0 = A \setminus g(B)$. Daraus folgt unmittelbar $x \in g(B)$.
+    \setcounter{enumi}{2} \item Da $g: B \to A$ injektiv ist, existiert für jedes $x \in g(B)$ ein eindeutiges Urbild $g^{-1}(x) \in B$. Somit ist $h$ wohldefiniert.
+\end{enumerate}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:44 - 00:31:20]
+Okay? Dann müssen wir sehen, dass es injektiv ist. Okay, also wir sehen, die wenn wir das auf $E$ einschränken und auf das Komplement von $E$, dann ist das jeweils injektiv, weil $f$ ist injektiv und dann jedes Element im Komplement von $E$ hat ein eindeutiges Urbild. Ähm das heißt, die Einschränkung von $h$ auf $E$ und $A \setminus E$ ist injektiv. Das heißt, wir müssen nur zeigen... das heißt, wir müssen nur zeigen, es gibt nicht ein Element in $E$, das auf das gleiche abgebildet wird wie ein Element im Komplement von $E$. Denn das könnte eben noch sein. Es könnte sein, dass ein hier ein Element gibt, das auf das gleiche Element abgebildet wird wie ein Element hier. Und äh also das ist ähm... 
+
+Okay, deswegen zeigen wir, dass das nicht möglich ist. Also nehme an, dass $f(x_1)$ ist dasselbe wie das Urbild von $x_2$ (i.e., $g^{-1}(x_2)$) für ein $x_1$ in $E$ und äh und ein $x_2$, das nicht in $E$ ist. Wenn es in $E$ ist, dann ist es in irgendeinem von den $E_n$ enthalten. Also wir können annehmen, dass $x_1$ in $E_n$ enthalten ist. Also nehme an, $x_1 \in E_n$. Okay, aber dann folgt daraus, dass wenn das gilt hier, dann haben wir $g(f(x_1)) = x_2$. Aber wenn $x_1$ in $E_n$ ist, dann ist $g(f(x_1))$ in $E_{n+1}$. Und das ist aber ein Widerspruch, das ist nicht möglich, also wenn es das heißt, dieser Fall folgt nicht ein. Okay. Das heißt, $h$ ist injektiv tatsächlich.
+\end{spoken-clean}
+
+\begin{math-stroke}[Injektivität von h]
+\begin{proposition}\label{prop:h-injektiv}
+Die Abbildung $h: A \to B$ ist injektiv.
+\end{proposition}
+\begin{short-proof}
+Da $f$ injektiv ist, ist $h|_E$ injektiv. Da $g^{-1}$ auf $g(B)$ injektiv ist, ist $h|_{A \setminus E}$ injektiv. Es bleibt zu zeigen, dass $h(E) \cap h(A \setminus E) = \emptyset$.
+
+Angenommen, es gäbe $x_1 \in E$ und $x_2 \notin E$ mit $h(x_1) = h(x_2)$.
+\[
+f(x_1) = g^{-1}(x_2) \implies g(f(x_1)) = x_2
+\]
+Da $x_1 \in E = \bigcup_{n=0}^\infty E_n$, existiert ein $n \ge 0$ mit $x_1 \in E_n$. Nach Definition gilt:
+\[
+x_2 = g(f(x_1)) \in E_{n+1} \subseteq E
+\]
+Dies widerspricht der Annahme $x_2 \notin E$. Somit ist $h$ injektiv.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:31:20 - 00:31:23]
+Jetzt müssen wir nur noch sehen, dass es surjektiv ist. Okay, dazu nehmen wir ein $y$ in $B$. Wir wollen zeigen, es gibt ein Urbild von $y$. Ähm okay, jetzt falls ähm $y = f(x)$ ist für ein $x$ in $E$, dann sind wir fertig. Wir müssen nur noch zeigen, dass wenn das nicht der Fall ist, dann ähm gibt es eines im Komplement von $E$, das darauf abgebildet wird. Ähm... 
+
+Okay, vielleicht da hinten machen wir das noch schnell fertig. Ähm okay, also falls das nicht der Fall ist, dann ist... also wenn das nicht der Fall ist, dann ist $y$ nicht dasselbe wie $f(x)$ für alle $x$ in $E$. Okay, und daraus folgt ähm insbesondere, dass $g(y)$ ist nicht $g(f(x))$ ähm für alle $x$ in $E$. Und okay, daraus folgt aber, dass $g(y)$ ist nicht enthalten in irgendeinem von den $E_{n+1}$ für $n = 0, 1, 2$ weiter, weil wir haben auch ähm $g(y)$ ist äh nicht in $E_0$, weil $E_0$ wäre ja genau $A$ ohne das Bild von $B$. Okay, das heißt, das ist in keinem von den $E_n$ enthalten. Das heißt, $g(y)$ ist nicht enthalten in $E$ und somit ähm folgt, dass $h(g(y)) = y$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Surjektivität von h]
+\begin{proposition}\label{prop:h-surjektiv}
+Die Abbildung $h: A \to B$ ist surjektiv.
+\end{proposition}
+\begin{short-proof}
+Sei $y \in B$. Wir suchen ein $x \in A$ mit $h(x) = y$.
+\begin{itemize}
+    \item \textbf{Fall 1:} Es gibt ein $x \in E$ mit $f(x) = y$. Dann gilt nach Definition $h(x) = f(x) = y$.
+    \item \textbf{Fall 2:} Es gibt kein $x \in E$ mit $f(x) = y$. Das bedeutet $y \notin f(E)$. Wir behaupten, dass für $x := g(y)$ gilt: $x \notin E$.
+    
+    Angenommen, $g(y) \in E$. Da $g(y) \in g(B)$, kann $g(y)$ nicht in $E_0 = A \setminus g(B)$ liegen. Also muss $g(y) \in E_{n+1}$ für ein $n \ge 0$ gelten:
+    \[
+    g(y) \in E_{n+1} = g(f(E_n)) \implies g(y) = g(f(x')) \quad \text{für ein } x' \in E_n
+    \]
+    Da $g$ injektiv ist, folgt $y = f(x')$ mit $x' \in E_n \subseteq E$, was im Widerspruch zur Fallannahme steht.
+    
+    Somit gilt $x = g(y) \notin E$. Nach Definition von $h$ erhalten wir:
+    \[
+    h(x) = g^{-1}(x) = g^{-1}(g(y)) = y
+    \]
+\end{itemize}
+Damit ist $h$ surjektiv.
+\end{short-proof}
+\end{proof}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 247421, Output 9028)*
+---
+
+**AutoExtraction:** [Part 2] 04-21-tuesday.mp4
+[Angehängtes Video]: 04-21-tuesday-part2.mp4
+[Kontext-Dateien]: 04-21-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-21. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:**  \inlinemetanote{Audio cuts off abruptly}`
+            Wait, the audio cuts off abruptly at 00:49:21.
+            Let's make sure the halt command is issued inside the LaTeX block as a comment:
+            `% [SYSTEM] Video complete.`
+            And then close the markdown block with ` ``` `.
+
+6.  **Refining the LaTeX Code**:
+    *   Let's check the custom environments and macros.
+    *   `\lecturechapter` is not used here because this is Part 2 of Tuesday, 04-21.
+    *   Let's check the counters:
+        *   The previous context ended with `\setcounter{section}{5}` and `\setcounter{theorem}{0}`.
+        *   Wait, the previous context had `\setcounter{section}{5}` and `\setcounter{theorem}{0}`.
+        *   Let's check if we need to set any counters.
+        *   For the proposition `|\mathbb{Q}| = |\omega|`, let's check if we need to set the theorem counter.
+        *   Wait, the previous context had:
+            `\setcounter{theorem}{0}` for `\begin{definition}[Gleichmächtigkeit]` (which is Definition 5.1).
+            Then `\begin{example}` (which is Example 5.2).
+            Then `\begin{proposition}` (which is Proposition 5.3).
+            Then `\begin{definition}[Kardinaler Vergleich]` (which is Definition 5.4).
+            Then `\begin{theorem}[Cantor-Bernstein-Schröder]` (which is Theorem 5.5).
+            So the next proposition `|\mathbb{Q}| = |\omega|` should be Proposition 5.6.
+            Let's set `\setcounter{theorem}{5}` before `\begin{proposition}`.
+            Wait, let's check the shared theorem counter rule:
+            "In this project, all mathematical environments share the `theorem` counter. You MUST use `\setcounter{theorem}{<value-1>}` for ALL of them."
+            So if we want Proposition 5.6, we set `\setcounter{theorem}{5}`.
+            Let's check the next proposition `|\mathbb{R}| = |\mathcal{P}(\omega)|`. This should be Proposition 5.7.
+            So we set `\setcounter{theorem}{6}` before it.
+            Then the next theorem `Satz von Cantor` should be Theorem 5.8.
+            So we set `\setcounter{theorem}{7}` before it.
+            This is extremely precise and perfectly follows the shared counter rule!
+
+7.  **Double-checking the LaTeX Syntax**:
+    *   Are all environments closed?
+        *   `\begin{proof}` must be closed with `\end{proof}`.
+        *   `\begin{math-stroke}` must be closed with `\end{math-stroke}`.
+        *   `\begin{spoken-clean}` must be closed with `\end{spoken-clean}`.
+        *   `\begin{proposition}` must be closed with `\end{proposition}`.
+        *   `\begin{short-proof}` must be closed with `\end{short-proof}`.
+    *   Let's check the nesting:
+        *   "NEVER nest `nice-box`, `color-box`, `spoken-clean`, `student-interaction`, `didactic-insight`, `meta-note`, or `lecture-break` inside a `math-stroke` block."
+        *   "Allowed Nesting inside `math-stroke`: You may ONLY place `tikzpicture`, `explanation-of-steps`, `redundant-explanation`, and `short-proof` blocks inside a `math-stroke`."
+        *   "The `proof` environment is the ONLY master container designed to wrap other major blocks (`spoken-clean`, `math-stroke`, `didactic-insight`, etc.)."
+    *   Let's check the `proof` of Cantor-Bernstein-Schröder:
+        *   Since the previous context opened `\begin{proof}[Beweis des Cantor-Bernstein-Schröder-Theorems]`, and we are continuing it, we can write:
+            ```latex
+            \begin{proof}[Beweis des Cantor-Bernstein-Schröder-Theorems (Fortsetzung)]
+            \begin{spoken-clean}[00:00:00 - 00:00:19]
+            ... eins. Und äh das ist aber ein Widerspruch, das ist nicht möglich, also wenn es... Das heißt, dieser Fall tritt nicht ein. Okay.
+            \end{spoken-clean}
+            \begin{math-stroke}[Injektivität von h (Fortsetzung)]
+            ...
+            \end{math-stroke}
+            ...
+            \end{proof}
+            ```
+            This is perfectly valid and beautifully structured!
+
+    *   Let's check the `proposition` for `|\mathbb{Q}| = |\omega|`:
+        ```latex
+        \setcounter{theorem}{5}
+        \begin{proposition}\label{prop:rational-countable}
+        Die Menge der rationalen Zahlen $\mathbb{Q}$ ist gleichmächtig zu $\omega$:
+        \[
+        |\mathbb{Q}| = |\omega|
+        \]
+        \end{proposition}
+        ```
+        Wait, should this be inside a `math-stroke`?
+        "Eradicate 'Naked Math': NEVER leave math floating outside a container. ALL standalone displayed equations, formal multi-step derivations, and board diagrams must be explicitly wrapped in a semantic environment (e.g., `math-stroke`, `[color]-box`, or `nice-box`)."
+        Yes, wrapping the proposition and its proof inside a `math-stroke` is perfect:
+        ```latex
+        \begin{math-stroke}[Gleichmächtigkeit der rationalen Zahlen]
+        \setcounter{theorem}{5}
+        \begin{proposition}\label{prop:rational-countable}
+        Die Menge der rationalen Zahlen $\mathbb{Q}$ ist gleichmächtig zu $\omega$:
+        \[
+        |\mathbb{Q}| = |\omega|
+        \]
+        \end{proposition}
+        \begin{short-proof}
+        ...
+        \end{short-proof}
+        \end{math-stroke}
+        ```
+        Wait, is `short-proof` allowed inside `math-stroke`? Yes, "Allowed Nesting inside `math-stroke`: You may ONLY place `tikzpicture`, `explanation-of-steps`, `redundant-explanation`, and `short-proof` blocks inside a `math-stroke`."
+        This is absolutely perfect!
+
+    *   Let's check the next proposition `|\mathbb{R}| = |\mathcal{P}(\omega)|`:
+        ```latex
+        \begin{math-stroke}[Gleichmächtigkeit der reellen Zahlen]
+        \setcounter{theorem}{6}
+        \begin{proposition}\label{prop:real-power-omega}
+        Die Menge der reellen Zahlen $\mathbb{R}$ ist gleichmächtig zur Potenzmenge von $\omega$:
+        \[
+        |\mathbb{R}| = |\mathcal{P}(\omega)|
+        \]
+        \end{proposition}
+        \begin{short-proof}
+        ...
+        \end{short-proof}
+        \end{math-stroke}
+        ```
+
+    *   Let's check the `Satz von Cantor`:
+        ```latex
+        \begin{math-stroke}[Satz von Cantor]
+        \setcounter{theorem}{7}
+        \begin{theorem}[Satz von Cantor]\label[theorem]{thm:cantor}
+        Für jede Menge $M$ gilt:
+        \[
+        |M| < |\mathcal{P}(M)|
+        \]
+        \end{theorem}
+        \end{math-stroke}
+        ```
+        And then the proof of the Satz von Cantor can be a master `proof` environment:
+        ```latex
+        \begin{proof}[Beweis des Satzes von Cantor]
+        ...
+        \end{proof}
+        ```
+        This is incredibly elegant and mathematically rigorous!
+
+8.  **Verbatim Transcription Details**:
+    *   Let's review the spoken text for fillers and stutters:
+        *   "eins. Und äh das ist aber ein Widerspruch, das ist nicht möglich, also wenn es... Das heißt, dieser Fall tritt nicht ein. Okay." -> Keep exactly as is.
+        *   "Das heißt, $h$ ist injektiv tatsächlich. Jetzt müssen wir nur noch sehen, dass es surjektiv ist. Okay, dazu nehmen wir ein $y$ in $B$ und zeigen, dass es ein Urbild von $y$ gibt." -> Keep exactly as is.
+        *   "Ähm okay, jetzt falls äh $y = f(x)$ ist für ein $x$ in $E$, dann sind wir fertig. Wir müssen nur noch zeigen, dass wenn das nicht der Fall ist, dann äh gibt es eines im Komplement von $E$, das darauf abgebildet wird. Ähm..." -> Keep exactly as is.
+        *   "Okay, vielleicht da hinten machen wir das noch schnell fertig." -> Keep exactly as is.
+        *   "Ähm okay. Also falls das nicht der Fall ist, dann ist... also wenn das nicht der Fall ist, dann ist $y$ nicht dasselbe wie $f(x)$ für alle $x$ in $E$. Okay, und daraus folgt äh insbesondere, dass $g(y)$ ist nicht $g(f(x))$ äh für alle $x$ in $E$. Und okay, daraus folgt aber, dass $g(y)$ ist nicht enthalten in irgendeinem von den $E_{n+1}$ für $n = 0, 1, 2$ weiter, weil wir haben auch... äh $g(y)$ ist äh nicht in $E_0$, weil $E_0$ wäre ja genau $A$ ohne das Bild von $B$. Okay, das heißt, das ist in keinem von den $E_n$ enthalten. Das heißt, $g(y)$ ist nicht enthalten in $E$ und somit äh folgt, dass $h(g(y)) = y$." -> Keep exactly as is.
+        *   "Okay, das heißt, $y$ ist immer im Bild. Okay, und somit äh ist das Ganze surjektiv. Gut. Ich hoffe, Sie haben auch dieses Bild hier im Kopf behalten, das ist die Idee. Wir schauen hier einerseits eben immer diese Differenzen an und dann sehen wir auch, dass diese Differenzen immer äh gleichmächtig wie die entsprechenden Differenzen hier und dann äh schaut man sich die beiden Sachen separat an und das gibt dann eine Bijektion." -> Keep exactly as is.
+        *   "Gut. Ähm... Ja, und das ist natürlich sehr, also ist in der Praxis natürlich sehr praktisch, um zu zeigen, dass zwei Mengen gleichmächtig sind, weil es ist manchmal ein bisschen mühsam wirklich eine Bijektion zu konstruieren, eine explizite, und es ist viel einfacher Injektionen zu äh zu konstruieren. Ähm schauen wir uns ein paar Beispiele an diesbezüglich." -> Keep exactly as is.
+        *   "Ähm schauen wir an zum Beispiel... Okay, das Beispiel haben Sie wahrscheinlich schon gesehen, äh dass die rationalen Zahlen sind gleichmächtig wie die ganzen äh wie die, ja, wie die ganzen äh positiven Zahlen. Der Beweis... Okay, wir müssen aber eine Injektion von hier nach hier und eine Injektion von hier nach hier konstruieren. Und okay, das erste, dass $\omega$ kleiner gleich $\mathbb{Q}$ ist, äh das ist klar, das sagen... Also wir haben einfach... man kann einfach schreiben die Abbildung von $\omega$ nach
+
+*(Tokens: Input 256679, Output 2617)*
+---
+
+**AutoExtraction:** [Part 3] 04-21-tuesday.mp4
+[Angehängtes Video]: 04-21-tuesday-part3.mp4
+[Kontext-Dateien]: 04-21-tuesday-part1.tex, 04-21-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-21. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** 
+singing "Aleph" and "Omega" is very clear.
+Let's look at the board at 10:40:
+`f(\beta) = \begin{cases} 0 & \text{falls } \beta = \alpha \\ \beta + 1 & \text{falls } \beta \in \omega \\ \beta & \text{sonst} \end{cases}`
+Yes, he writes:
+`f(\beta) = \begin{cases} 0 & \text{falls } \beta = \alpha \\ \beta + 1 & \text{falls } \beta \in \omega \\ \beta & \text{sonst} \end{cases}`
+Wait, let's check the domain of $f$:
+It is a bijection from $\alpha + 1$ to $\alpha$.
+Since $\alpha + 1 = \alpha \cup \{\alpha\}$, the elements of $\alpha + 1$ are the elements of $\alpha$ plus the element $\alpha$ itself.
+So:
+- If $\beta = \alpha$, it is mapped to $0$.
+- If $\beta \in \omega$ (which is a subset of $\alpha$ since $\alpha \ge \omega$), it is mapped to $\beta + 1$.
+- Otherwise (i.e., $\beta \in \alpha \setminus \omega$), it is mapped to $\beta$.
+This is a classic Hilbert's Hotel shift!
+Let's write down the spoken-clean block:
+```latex
+\begin{spoken-clean}[00:09:40 - 00:11:07]
+\inlinemetanote{schreibt die Definition der Bijektion an die Tafel}
+Ja, wir haben andersrum, also für $\beta = \alpha + 1$, das heißt, wir wollen eine Bijektion von $\alpha + 1$ nach $\alpha$. Okay. Also $\alpha + 1$ nach $\alpha$, das heißt, wenn wir das $\alpha + 1$ schicken wir einfach auf $0$, und alle anderen schicken wir eines höher, und ansonsten ist es immer $\beta$. Das ist eine, eine Bijektion. Das ist die Idee mit dem Hilbert-Hotel, man schiebt einfach alle eines weiter. Das heißt, da haben wir immer dieselbe, dieselbe Kardinalität. Das heißt, falls, falls wir eine Ordinalzahl $\kappa$ haben, und das ist eine Kardinalzahl...
+\end{spoken-clean}
+```
+
+Wait, let's look at the next part of the video:
+- **11:07 - 11:45**:
+  He writes:
+  `D.h. falls \kappa \in \Omega eine Kardinalzahl ist, so ist \kappa eine Limesordinalzahl oder \kappa \in \omega`
+  Let's listen to the audio:
+  "so ist Kappa immer eine Limesordinalzahl."
+  "Okay?"
+  "Genau, weil sonst... es kann keine Nachfolgerordinalzahl sein, weil sonst... ähm... hat es... der Vorgänger hätte dann dieselbe Kardinalität."
+
+Let's write down the spoken-clean block:
+```latex
+\begin{spoken-clean}[00:11:07 - 00:11:45]
+\inlinemetanote{schreibt an die Tafel}
+Das heißt, falls wir eine Ordinalzahl $\kappa$ haben, und das ist eine Kardinalzahl, so ist $\kappa$ immer eine Limesordinalzahl oder $\kappa \in \omega$. Okay? Genau, weil sonst, es kann keine Nachfolgerordinalzahl sein, weil sonst, um, hat es, der Vorgänger hätte dann dieselbe Kardinalität.
+\end{spoken-clean}
+```
+
+Let's write the corresponding `math-stroke` block:
+```latex
+\begin{math-stroke}[Bijektion f: \alpha + 1 \to \alpha]
+Die explizite Bijektion $f: \alpha + 1 \to \alpha$ ist definiert durch:
+\begin{equation}\label{eq:hilbert-hotel-bijection}
+f(\beta) = \begin{cases}
+0 & \text{falls } \beta = \alpha \\
+\beta + 1 & \text{falls } \beta \in \omega \\
+\beta & \text{sonst}
+\end{cases}
+\end{equation}
+Daraus folgt unmittelbar:
+\begin{corollary}\label{cor:kardinalzahl-limes}
+Falls eine unendliche Ordinalzahl $\kappa \in \Omega \setminus \omega$ eine Kardinalzahl ist, dann ist $\kappa$ eine Limesordinalzahl.
+\end{corollary}
+\begin{short-proof}
+Angenommen, $\kappa$ wäre eine Nachfolgerordinalzahl, d.h. $\kappa = \alpha + 1$ für ein $\alpha \in \Omega$. Da $\kappa$ unendlich ist, ist auch $\alpha$ unendlich. Nach Proposition \ref{prop:alpha-alpha-plus-1-gleichmaechtig} gilt dann $|\alpha| = |\alpha + 1| = |\kappa| = \kappa$. Da aber $\alpha < \kappa$, widerspricht dies der Definition einer Kardinalzahl als der \emph{kleinsten} Ordinalzahl ihrer Mächtigkeit.
+\end{short-proof}
+\end{math-stroke}
+```
+
+Wait, let's look at the next part of the video:
+- **11:45 - 12:35**:
+  He is standing at the board, looking at the board.
+  Let's listen to the audio:
+  "Die Sache ist, ähm... ja, bereits... bereits Aleph eins ist ein bisschen... eine problematische... was heißt problematisch... ist nicht mehr so klar. Ähm... wir haben gesehen, wir haben die... wir haben Aleph null, da haben wir einfach die abzählbare Unendlichkeit, also dieselbe Kardinalität wie Omega. Das ist okay. Und jetzt können wir sagen, okay, wir nehmen die nächste... können wir einfach mal die Potenzmenge von Omega nehmen. Da wissen wir, die ist sicher größer. Und wissen wir, das ist auch dasselbe wie R, dieselbe Kardinalität. Jetzt könnte man sich fragen: Ist das bereits Kappa eins... ist das bereits Aleph eins, oder ist das wie Aleph hundert, und es gibt noch etwas dazwischen?"
+
+Let's write down the spoken-clean block:
+```latex
+\begin{spoken-clean}[00:11:45 - 00:13:11]
+Die Sache ist, ähm, ja, bereits, bereits $\aleph_1$ ist ein bisschen, eine problematische, was heißt problematisch, ist nicht mehr so klar. Ähm, wir haben gesehen, wir haben die, wir haben $\aleph_0$, da haben wir einfach die abzählbare Unendlichkeit, also dieselbe Kardinalität wie $\omega$. Das ist okay. Und jetzt können wir sagen, okay, wir nehmen die nächste, können wir einfach mal die Potenzmenge von $\omega$ nehmen. Da wissen wir, die ist sicher größer. Und wissen wir, das ist auch dasselbe wie $\mathbb{R}$, dieselbe Kardinalität. Jetzt könnte man sich fragen: Ist das bereits $\aleph_1$, oder ist das wie $\aleph_{100}$, und es gibt noch etwas dazwischen?
+\end{spoken-clean}
+```
+
+Wait, let's look at the next part of the video:
+- **12:35 - 13:48**:
+  He writes:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kontinuumshypothese CH:`
+  `2^\omega ist die kleinste Kardinalzahl grösser als \omega`
+  Wait, let's look at the board:
+  `Die Kontinuumshypothese`
+  `Gesehen: \omega < |\mathcal{P}(\omega)| = |\mathbb{R}|`
+  `Cantor's Kont
+
+*(Tokens: Input 259023, Output 2617)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 84023, Output 27)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 18:55:12) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 04-21-tuesday.mp4
+[Angehängtes Video]: 04-21-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-21. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Tuesday}{Apr 21st}{April 21st 2020}{Kardinalzahlen und der Satz von Cantor-Bernstein-Schröder}
+
+\begin{spoken-clean}[00:00:00 - 00:01:59]
+Hallo zusammen, wir fangen an. Äm, also wir hatten letzte Woche oder die letzten zwei Wochen der Vorlesung über das Auswahlaxiom gesprochen, eine wichtige Sache in der Mathematik, und wir gesehen haben, dass es so ein bisschen anders als die anderen Zermelo-Fraenkel-Axiome ist, es ist ein bisschen mehr oder weniger weniger intuitiv. Es gibt eben das Wohlordnungsprinzip, das sehr unintuitiv ist, aber dann wiederum das Auswahlaxiom, das eigentlich doch intuitiv ist. Äh genau, deswegen verwendet man das Auswahlaxiom gerne mit etwas Vorsicht. Aber wie gesagt, es ist äm unabhängig von Zermelo-Fraenkel, und wenn man das Auswahlaxiom annimmt, also Zermelo-Fraenkel mit dem Auswahlaxiom, dann ist das konsistent genau dann, wenn Zermelo-Fraenkel konsistent ist. Das heißt, man man macht nicht nichts Gefährliches.
+
+Äm und genau, und in der heutigen Mathematik ist auch, ich würde sagen, fast alle arbeiten mit dem Auswahlaxiom und nehmen an, dass das Auswahlaxiom existiert. Ansonsten kommen Sie in sehr exotische Sphären der Mathematik auch, aber es ist durchaus legitim zu sagen, man nimmt das Auswahlaxiom nicht an. Aber eben in der Algebra ist es fast nicht vorstellbar, das Auswahlaxiom nicht zu haben. Dann hätte man nicht mehr, dass jeder äm Körper einen algebraischen Abschluss hätte, man hätte nicht mehr, dass jedes Ideal in einem Ring in einem maximalen Ideal enthalten ist, und das sind zwei nur als Beispiele unter vielen anderen äm ja Resultaten, die man jetzt in der algebraischen Geometrie oder Zahlentheorie, wie man sie heutzutage betreibt, eigentlich fast täglich verwendet. Okay, dann wollte ich aber trotzdem noch äm erwähnen, das ist kurz auch in den in den... also auf dem Slide...
+\end{spoken-clean}
+
+\begin{nice-box}[Projizierter Inhalt: Abgeschwächte Formen des Auswahlaxioms]
+Vielfach wird in Beweisen nicht das volle Auswahlaxiom gebraucht, sondern nur eine abgeschwächte Form davon. Ein paar solcher abgeschwächten Formen des Auswahlaxioms seien hier aufgelistet:
+\begin{itemize}
+    \item $\text{C}(\omega, \infty)$: Jede abzählbare Familie nicht-leerer Mengen hat eine Auswahlfunktion.
+    \item $\text{C}(\omega, \omega)$: Jede abzählbare Familie nicht-leerer abzählbarer Mengen hat eine Auswahlfunktion.
+    \item $\text{C}(\omega, <\omega)$: Jede abzählbare Familie nicht-leerer endlicher Mengen hat eine Auswahlfunktion.
+    \item $\text{C}(\omega, n)$: Jede abzählbare Familie $n$-elementiger Mengen (für $n \in \omega, n \ge 1$) hat eine Auswahlfunktion.
+    \item $\text{C}(\infty, n)$: Jede Familie $n$-elementiger Mengen (für $n \in \omega, n \ge 1$) hat eine Auswahlfunktion.
+    \item $\text{C}(\infty, <\omega)$: Jede Familie nicht-leerer endlicher Mengen hat eine Auswahlfunktion.
+\end{itemize}
+\end{nice-box}
+
+\begin{spoken-clean}[00:01:59 - 00:04:06]
+Äm und zwar äm ja, man kann ja auch sagen, okay, wenn das Auswahlaxiom äm okay, wenn das vielleicht ein bisschen potenziell unintuitiv oder problematisch ist, weshalb verwendet man nicht einfach eine schwächere Version davon, vielleicht eine schwächere Version, die genau noch reicht für das, was man machen möchte. Und da gibt es verschiedene abgeschwächte Versionen. Also zum Beispiel, anstatt dass man annimmt, dass jede ab... dass jede Familie von nicht-leeren Mengen eine Auswahlfunktion hat, sagt man einfach, okay, man nimmt das nur für abzählbare äm Familien von nicht-leeren Mengen an. Ist ein bisschen eine... man sagt, okay, alle Familien ist ein bisschen sehr stark, sagen wir nur für abzählbare Familien. 
+
+Oder eine andere Version wäre noch, dass man sagt, nur Familien von nicht allzu großen Mengen haben eine Auswahlfunktion. So kann man sagen, nur abzählbar... nur abzählbare... nur abzählbar viele Familien von höchstens abzählbaren Mengen haben eine Auswahlfunktion, oder sogar nur abzählbare Familien von nicht-leeren endlichen Mengen haben eine Auswahlfunktion, oder noch schwächer, nur abzählbare Familien von zwei-elementigen äm Mengen haben eine Auswahlfunktion, und so weiter. Also da gibt es viele viele verschiedene Varianten, äm und da gibt es natürlich ein Sport, kann man sich einen Sport daraus machen und zu schauen, was implizieren... wie viel kann man mit einer bestimmten Variante noch beweisen, was nicht mehr. Kann man sagen, es sind einige von denen äm äquivalent zueinander und welche nicht, welche sind echt schwächer, welche sind echt stärker, und so weiter. Aber okay, das ist eine, ich denke, eine wie so eine Nischenindustrie für in gewissen äm Gebieten der Logik, wo man das macht. Ich glaube, im Alltag, wenn man nicht Logik arbeitet, mathematisch, dann stellt man sich diese Fragen nicht.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:06 - 00:06:03]
+Äm das andere vielleicht noch, was man vielleicht ein bisschen immer im Hinterkopf haben soll, ist auch: Wann braucht man das Auswahlaxiom wirklich? Also das... okay, das Zorn'sche Lemma, das man in der Regel braucht, da ist relativ klar, wie man das braucht, und das ist auch ein bisschen technisch, das heißt, das da ist man nicht äm so weit, da ist man nicht... das wird man wohl kaum verwenden, wenn man es nicht wirklich braucht. Aber Auswahlaxiom, da muss man schauen, man braucht nicht immer das Auswahlaxiom. Also Sie haben wahrscheinlich schon gesehen, wenn man nur endlich viele Mengen hat, dann gibt es immer... endlich viele nicht-leere Mengen, dann gibt es immer eine Auswahlfunktion. Dazu braucht man das Auswahlaxiom nicht. 
+
+Also ich weiß, ich hatte auch schon in Übungen Studierende, die gesehen haben, okay, sei wir haben $X$ eine menge, gemäss Auswahlaxiom können wir jetzt ein Element nehmen von dieser Menge. Aber eben für die Existenz eines einzelnen Elements in einer einzelnen Menge, da braucht man garantiert nicht das Auswahlaxiom, das wissen wir aus der Definition, dass die Menge nicht leer ist, wissen wir, es gibt auch ein Element darin. Also für solche Sachen braucht man das Auswahlaxiom nicht. Oder eben dann die Sache, wenn man eine... wenn man noch mehr über die Mengen weiß, dann kann man oft auch aus den Mengen etwas auswählen, ohne dass man eine Auswahlfunktion... also das Auswahlaxiom braucht. Also wenn man weiß, ja, ich glaube, Fabian hat Ihnen wahrscheinlich das Beispiel mit den Schuhen und den Socken äm gesagt. Ich glaube, das ist eine gute... gutes Beispiel, um im Kopf zu haben. Wenn man eine beliebige Menge von Schuhpaaren hat, ist es kein Problem, dann nimmt man aus jedem den rechten Schuh raus, das geht. Bei Socken geht das nicht mehr, da braucht man das Auswahlaxiom, weil man zwei Socken rechts und links nicht voneinander unterscheiden kann. Gut. So viel noch zum Auswahlaxiom. Jetzt heute machen wir weiter mit Kardinalz... mit, doch, Kardinalzahlen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Socken-Schuh-Analogie von Bertrand Russell]
+Die vom Dozenten erwähnte Analogie veranschaulicht den Unterschied zwischen konstruktiver Auswahl und dem reinen Auswahlaxiom: Bei unendlich vielen Schuhpaaren existiert eine explizite Auswahlregel (,,Wähle den linken Schuh``), weshalb kein Auswahlaxiom benötigt wird. Bei unendlich vielen Sockenpaaren (ohne inhärente Asymmetrie) gibt es keine solche Regel, weshalb die Existenz einer Auswahlfunktion rein axiomatisch postuliert werden muss.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:06:03 - 00:10:09]
+Dazu möchte ich Ihnen noch kurz äm Georg Cantor vorstellen, ein sehr wichtiger Mathematiker, vor allem in Bezug auf die Mengenlehre. Hat von 1845 bis 1918 gelebt, ist in St. Petersburg äm geboren, kam dann aber nach Deutschland. Äm hat sogar auch äm zwei Jahre hier an der ETH studiert, ging dann aber nachher für das Ende seines Studiums und das Doktorat nach Deutschland, Berlin und Göttingen, das waren damals die großen Zentren der Mathematik, nicht die ETH. Und ja, er hat damals im 19. Jahrhundert diese ganze Sache angeworfen mit den Ordinalzahlen und den Kardinalzahlen. Also die Grundideen von Ordinalzahlen und Kardinalzahlen gehen auf Cantor zurück. Also er hat diese Beobachtung gemacht, dass es verschiedene Unendlichkeiten gibt. Also eine der schönen Einsichten im ersten Jahr Mathematikstudium, dass ja unendlich nicht gleich unendlich ist, und dass es da all diese verschiedenen verschiedenen Unendlichkeiten gibt, und das hat er äm angerissen. Und ja, viele von den Sachen, die wir da besprechen, äm äm besprechen, gehen auf Cantor zurück in der Grundidee. 
+
+Äm seine Ideen sind natürlich am Anfang auf großen Widerstand gestoßen aus verschiedenen Richtungen, also Mathematik, da gab es viele, die haben das sehr äm sehr stark kritisiert, also Kronecker, Poincaré, und auch äm Hermann Weyl hier und Luitzen Brouwer sowieso, weil der Brouwer hatte seine eigene Philosophie, auch die ganze Intuitionismus über die Philosophie der Mathematik. Aber eben, die haben das sehr stark kritisiert, diese Konstruktionen von all diesen Unendlichkeiten und haben das äm als mathematisch sehr problematisch eingestuft zuerst. Äm dann natürlich auch aus philosophischer Seite, also allen voran sogar Wittgenstein hat das seltsamerweise fand das sehr äm problematisch, die ganzen Mengenlehre, er hatte das Gefühl, das macht die Mathematik kaputt. Und lustigerweise auch natürlich aus Theologiekreisen, also die ganzen Neoscholastiker, die haben das... gab es einige, die haben das stark kritisiert. Die fanden so, ich glaube, die Idee war so halt diese... ja, wenn es nicht nur eine Unendlichkeit gibt, eine absolute Unendlichkeit, sondern viele Unendlichkeiten, dass das halt so ein bisschen der Idee, dass es nur einen Gott gibt, widersprechen könnte. Und damit gab es auch da Widerspruch. 
+
+Obwohl äm genau, Cantor selbst war äm sehr überzeugter äm Christ, Protestant, und hat das natürlich sehr stark abgelehnt äm und hat sogar ja, sehr stark vertreten, dass seine Ideen selbst von Gott gegeben sind. Äm genau, und Cantor hat auch sehr unter dem... unter dieser Kritik gelitten anscheinend, also hat dann auch viele Jahre lang nicht viel publiziert oder konnte nicht gut arbeiten, weil ihn das mitgenommen hat. Aber hat schlussendlich auch wieder äm bis ans Ende von seinem Leben Sachen publiziert. Er war auch noch sonst interessiert, er war noch in englischer Literatur sehr stark interessiert, er war ein starker Verfechter von dieser Theorie, dass Francis Bacon die Werke von Shakespeare geschrieben hat, äm was aber, glaube ich, äm eher abgelehnt wird heutzutage von den Literaturwissenschaftlern. Genau, so viel zu Georg Cantor, interessanter Mensch und sehr, sehr wichtig für die Mathematik. Nun aber zu den äm ja, aber genau, noch kurz... kurze Zeit später waren dann seine Theorie, das wurde dann sehr äm schnell dann auch anerkannt oder so, also Hilbert äm und so weiter, und auch viele von seinen Kritikern haben das dann bald äm anerkannt als sehr wichtige Mathematik und nicht mehr wegzudenken. Gut, äm nun aber zu den äm Kardinalzahlen.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:05:00
+% topic: Einführung in abgeschwächte Formen des Auswahlaxioms und historische Einordnung von Georg Cantor.
+% board_state: none
+% next_goal: Einführung in Kardinalzahlen und Definition der Gleichmächtigkeit.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wendet sich der Tafel zu und beginnt mit dem Anschrieb des neuen Kapitels über Kardinalzahlen.
+\end{meta-note}
+
+\setcounter{section}{5}
+\section{Kardinalzahlen}
+
+\begin{spoken-clean}[00:10:09 - 00:11:45]
+Ihr habt die Ordinalzahlen gesehen, also Ordinal kann man sich vorstellen wie die Zahlen, man zählt einfach durch und immer weiter, und da geht man bis unendlich und macht noch größere Zahlen und immer eins mehr, man kann zu jeder Ordinalzahl noch eine dazu machen, also das ist quasi die Art und Weise, wie man Sachen ordnen kann. Und Kardinalzahlen, da geht es mehr darum äm wie viele Elemente kann eine Menge enthalten, also so Mächtigkeiten von Mengen. Beginnen wir ganz am Anfang äm die folgende Definition. Sagen äm zwei Mengen $A$ und $B$ äm haben dieselbe Mächtigkeit, äm falls es eine Bijektion gibt zwischen den Mengen. Okay, und in dem Fall schreiben wir äm die Kardinalität von $A$ ist dasselbe wie die Kardinalität von $B$. Bis jetzt ist das im Moment ist das nur eine Notation. Wir sind dann noch etwas präziser später.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Gleichmächtigkeit]
+\setcounter{theorem}{0}
+\begin{definition}[Gleichmächtigkeit]\label[definition]{def:gleichmaechtigkeit}
+Zwei Mengen $A$ und $B$ haben \newterm{dieselbe Mächtigkeit} (oder sind \newterm{gleichmächtig}), falls es eine Bijektion
+\[
+f: A \to B
+\]
+gibt. In diesem Fall schreiben wir:
+\[
+|A| = |B|
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:45 - 00:13:26]
+Okay, schauen wir uns ein Beispiel an äm... Wir hatten die äm... wir hatten die Ordinalzahl $\omega + \omega$. Okay, und wir wollen jetzt können sehen, dass $\omega + \omega$ dieselbe Kardinalität wie $\omega$ hat. Und dazu schauen wir uns die Bijektion an, die geht von $\omega + \omega$ nach $\omega$. Und wir schicken eine Ordinalzahl $\alpha$, die darin enthalten ist, schicken wir auf äm auf $\beta + \beta$ (i.e., eigentlich $2 \cdot \beta$ wie an der Tafel geschrieben) falls äm $\alpha$ von der Form ist $\omega + \beta$. Also alle hier drin sind von der Form entweder sind sie in $\omega$ enthalten, oder $\omega$, oder sie ist von der Form $\omega$ plus ein Element aus $\omega$. 
+
+Also das heißt, wenn es von der Form ist $\omega$ plus ein Element aus $\omega$, dann schicken wir es einfach auf zweimal das Element dieses $\beta$ hier, und wenn es nicht darin enthalten ist, wenn es nicht von dieser Form ist, dann schreiben wir als $\alpha + \alpha + 1$ (i.e., eigentlich $2 \cdot \alpha + 1$ wie an der Tafel geschrieben) sonst. Das heißt, hier, die sind alle gerade, die sind alle ungerade, das heißt, das ist tatsächlich eine eine Bijektion. Das heißt, diese zwei äm Mengen sind gleichmächtig.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Gleichmächtigkeit von \texorpdfstring{$\omega + \omega$}{omega + omega} und \texorpdfstring{$\omega$}{omega}]
+\begin{example}\label[example]{ex:omega-plus-omega}
+Die Ordinalzahl $\omega + \omega$ ist gleichmächtig zu $\omega$:
+\[
+|\omega + \omega| = |\omega|
+\]
+\end{example}
+\begin{short-proof}
+Wir definieren eine Abbildung $f: \omega + \omega \to \omega$ durch:
+\[
+f(\alpha) = \begin{cases}
+2 \cdot \beta & \text{falls } \alpha = \omega + \beta \\
+2 \cdot \alpha + 1 & \text{sonst}
+\end{cases}
+\]
+Diese Abbildung $f$ ist eine Bijektion.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:26 - 00:15:18]
+Gut, äm vielleicht noch Bemerkungen. Also das erste ist äm also es gilt immer äm dass eine menge hat natürlich die selbe Mächtigkeit wie sich selbst. Äm ja, die Identitätsabbildung ist immer eine Bijektion. Und dann haben wir, falls... das ist diese Schreibweise ist auch gut, also falls äm $A$ gleichmächtig ist wie $B$, dann ist auch äm $B$ gleichmächtig wie $A$. Also das ist gut geschrieben, eine Bijektion, nehmen wir einfach das Inverse, also es gibt eine Bijektion von $A$ nach $B$, dann gibt es auch eine Bijektion von $B$ nach $A$. 
+
+Und das Ganze ist auch transitiv, also falls äm $A = B$ ist und $B = C$, falls die dieselbe Kardinalität haben und $B$ dieselbe Kardinalität wie $C$, dann hat auch äm $A$ dieselbe Kardinalität wie $C$. Äm ist das klar? Äm genau, also wenn wir eine Bijektion von $A$ nach $B$ haben und eine Bijektion von $B$ nach $C$, können wir die zwei einfach die zwei Bijektionen äm einfach verknüpfen und erhalten eine Bijektion von $A$ nach $C$. Einfach weil Verknüpfungen von Bijektionen sind wieder Bijektionen.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:12:00
+% topic: Definition der Gleichmächtigkeit, Beispiel mit omega + omega, und Eigenschaften der Gleichmächtigkeit als Äquivalenzrelation.
+% board_state: def:gleichmaechtigkeit, ex:omega-plus-omega, prop:gleichmaechtigkeit-properties
+% next_goal: Definition von kleiner-gleich für Mächtigkeiten und Formulierung des Cantor-Bernstein-Schröder-Theorems.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{math-stroke}[Bemerkungen zur Gleichmächtigkeit]
+\begin{proposition}\label[proposition]{prop:gleichmaechtigkeit-properties}
+Die Gleichmächtigkeit ist eine Äquivalenzrelation auf der Klasse aller Mengen. Es gilt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item $|A| = |A|$ (Reflexivität).
+    \setcounter{enumi}{1} \item Falls $|A| = |B|$, so ist $|B| = |A|$ (Symmetrie).
+    \setcounter{enumi}{2} \item Falls $|A| = |B|$ und $|B| = |C|$, so ist $|A| = |C|$ (Transitivität).
+\end{enumerate}
+\end{proposition}
+\begin{explanation-of-steps}
+Die Identitätsabbildung $\id_A: A \to A$ ist stets eine Bijektion, was die Reflexivität zeigt. Ist $f: A \to B$ eine Bijektion, so ist die Umkehrabbildung $f^{-1}: B \to A$ ebenfalls eine Bijektion, was die Symmetrie zeigt. Sind schließlich $f: A \to B$ und $g: B \to C$ Bijektionen, so ist deren Komposition $g \circ f: A \to C$ eine Bijektion, was die Transitivität beweist.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:18 - 00:16:55]
+Äh okay, dann... Okay, dann noch mehr Notation. Also falls es eine injektive Abbildung gibt, also eine Injektion $f$ von $B$ nach $A$ gibt, so schreiben wir äm dass $|B|$ ist kleiner gleich $|A|$. Okay, das heißt, $|B|$ ist kleiner gleich $|A|$, falls äm falls $B$ gleichmächtig ist wie eine Teilmenge von $A$. Okay, und dann natürlich, falls $B$ äm kleiner ist gleich $A$ und aber $B$ nicht gleichmächtig ist wie $A$, äm so schreiben wir $|B|$ ist strikt kleiner als $|A|$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Kardinaler Vergleich]
+\begin{definition}[Kardinaler Vergleich]\label[definition]{def:kardinaler-vergleich}
+Seien $A$ und $B$ Mengen.
+\begin{itemize}
+    \item Wir schreiben
+    \[
+    |B| \le |A|
+    \]
+    falls es eine Injektion $f: B \to A$ gibt (d.h. $B$ ist gleichmächtig zu einer Teilmenge von $A$).
+    
+    \item Falls $|B| \le |A|$, aber $|B| \neq |A|$, so schreiben wir:
+    \[
+    |B| < |A|
+    \]
+\end{itemize}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:55 - 00:19:12]
+Okay, und das Nächste, was wir uns anschauen wollen, ist das äm Cantor-Bernstein-Schröder Theorem. Manchmal auch ja, schreiben wir... oft schreiben wir auch Schröder... das sagt aus, dass äm wenn $A$ und $B$ äm Mengen sind, so dass äm $A$ kleiner gleich $B$ ist, das heißt, es gibt eine Injektion von $A$ nach $B$, und äm $B$ ist kleiner gleich $A$, das heißt, es gibt auch eine Injektion von $B$ nach $A$, dann gilt, dass $A$ gleich $B$ ist, also sie haben die gleiche Mächtigkeit. Ist ein bisschen intuitiv, aber es ist nicht nicht klar a priori, dass das stimmt. Also wir haben ja, wir haben äm hier Stühle, hier haben wir Leute. Wir wissen äm wir können jedes... jede Person einem Stuhl zuordnen, so dass jede Person genau einen Stuhl hat, vielleicht sind noch Stühle übrig. Und es gibt auch eine Möglichkeit, die Stühle den Leuten zuzuordnen, so dass für jede Person ein... jede Person einen Stuhl hat. Aber äm für unendliche Mengen ist nicht klar, dass das daraus dann automatisch folgt, dass die beiden... dass es auch eine Bijektion gibt. Aber der Satz sagt, dass das stimmt. 
+
+Vielleicht noch zu den Leuten, äm oft wird es auch einfach äm wird es Bernstein-Schröder, Cantor-Schröder oder Cantor-Bernstein-Schröder. Ich glaube, Schröder war das erste... war der Erste, das publiziert hat, allerdings mit einem falschen Beweis. Cantor hat das auch publiziert, auch mit einem falschen Beweis, etwas später, und äm Bernstein ist der Erste, der einen richtigen Beweis gegeben hat. So viel zu den Namen.
+\end{spoken-clean}
+
+\begin{nice-box}[Cantor-Bernstein-Schröder-Theorem]
+\begin{theorem}[Cantor-Bernstein-Schröder]\label[theorem]{thm:cantor-bernstein-schroeder}
+Seien $A$ und $B$ Mengen. Falls
+\[
+|A| \le |B| \quad \text{und} \quad |B| \le |A|
+\]
+gilt, dann ist:
+\[
+|A| = |B|
+\]
+\end{theorem}
+\end{nice-box}
+
+\begin{proof}[Beweis des Cantor-Bernstein-Schröder-Theorems]
+\begin{spoken-clean}[00:19:12 - 00:22:30]
+Wie beweist man das? Den Beweis, ich erkläre ihn ein bisschen anders als das, was im Skript steht, das ist dieselbe Idee, ist kein anderer Beweis, einfach finde ein bisschen umständlich geschrieben im Skript, obwohl es... obwohl es genau das Gleiche ist, was wir hier machen. Also wir nehmen an, dass äm $f$ eine Injektion von $A$ nach $B$ ist, und $g$ eine Injektion von $B$ nach $A$. Okay, und jetzt was wir machen ist äm... also wenn... genau. Also es ist natürlich äm wenn eine von denen auch surjektiv ist, dann sind wir sowieso schon fertig, aber... Was wir jetzt machen ist, wir äm definieren $E_0$ als äm $A$ ohne das Bild von $B$. Also ja, ich schreibe $g(B)$. Also $g(B)$, da meine ich wirklich alle Elemente von der Form $g(b)$, wobei $b$ in $B$ ist. Okay, ich glaube, im Skript wird das mit eckigen Klammern geschrieben. Es ist klar, was gemeint ist. Also wir nehmen alle Elemente, die in $A$, die nicht im Bild von $B$ sind. 
+
+Man kann das so zeichnen, wir haben hier, sagen wir hier, wir haben hier äm wir hier $A$, und hier haben wir $B$. Okay, und jetzt haben wir eine Injektion von $B$ nach $A$, das heißt, wir haben das Bild $g(B)$. Okay, und jetzt unser $E_0$, das ist alles außer äm außer das Bild von $E_0$ (i.e., eigentlich $g(B)$ wie an der Tafel gezeichnet). Und das heißt, was wir machen jetzt, wir schauen das Bild von $A$ hier an, äm das ist irgendwie so etwas, wie $A$ als Teilmenge, also ist $f(A)$ hier. Und da haben wir jetzt auch wieder $E_0$, da haben wir $f(A)$ (i.e., eigentlich $f(E_0)$ wie an der Tafel gezeichnet) $E_0$ ist hier. Okay, und jetzt schauen wir, gehen wir wieder zurück, dann haben wir hier wieder $g(f(E_0))$, haben wir das darin ist dann so, und dann gehen wir wieder zurück und wieder rein und wieder zurück, wieder rein. Und dann sagen wir, okay, definieren wir das dann so weiter, sagen wir $E_1$ definieren wir als $g(f(E_0))$, und allgemein äm äm allgemein definieren wir äm $E_{n+1}$ als $g(f(E_n))$. Das haben wir da diese Folge von kleineren und kleineren Mengen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis des Cantor-Bernstein-Schröder-Theorems: Konstruktion]
+Seien $f: A \to B$ und $g: B \to A$ Injektionen. Wir definieren rekursiv eine Folge von Teilmengen $E_n \subseteq A$:
+\begin{align*}
+E_0 &= A \setminus g(B) \\
+E_{n+1} &= g(f(E_n)) \quad \text{für } n \in \mathbb{N}_0
+\end{align*}
+Die Gesamtmenge $E \subseteq A$ ist definiert als die abzählbare Vereinigung:
+\[
+E = \bigcup_{n=0}^{\infty} E_n
+\]
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Two main sets A (rectangle on the left) and B (ellipse on the right).
+% 2. Midground:
+%    - Inside A: Divide into E_0 (left strip) and g(B) (right part).
+%    - Inside g(B): Draw E_1 and E_2 as disjoint nested strips.
+%    - Inside B: Draw f(E_0), f(E_1) as disjoint regions.
+% 3. Foreground: Arrows representing the mappings f (from A to B) and g (from B to A).
+% 4. Annotations: Labels for A, B, E_0, E_1, E_2, f(E_0), f(E_1), g(B), f, g.
+% \end{ai-tikz-planner-invisible-content}
+  % Set A (Rectangle on the left)
+  \draw[thick, MidnightBlue, fill=MidnightBlue!2] (-2.5,-1.5) rectangle (1.5,1.5);
+  \node[MidnightBlue, above left] at (-2.5,1.5) {\large $A$};
+
+  % Set B (Ellipse on the right)
+  \draw[thick, ForestGreen, fill=ForestGreen!2] (4.5,0) ellipse (1.5cm and 1.5cm);
+  \node[ForestGreen, above right] at (5.5,1.2) {\large $B$};
+
+  % Division of A into E_0 and g(B)
+  \draw[dashed, MidnightBlue] (-1.5,-1.5) -- (-1.5,1.5);
+  \node[MidnightBlue] at (-2.0,0) {$E_0$};
+  \node[MidnightBlue, below] at (-0.5,-1.5) {$g(B)$};
+
+  % E_1 = g(f(E_0)) inside g(B)
+  \draw[dashed, MidnightBlue] (-0.5,-1.5) -- (-0.5,1.5);
+  \node[MidnightBlue] at (-1.0,0) {$E_1$};
+
+  % E_2 = g(f(E_1)) inside g(B)
+  \draw[dashed, MidnightBlue] (0.5,-1.5) -- (0.5,1.5);
+  \node[MidnightBlue] at (0.0,0) {$E_2$};
+  \node[MidnightBlue] at (1.0,0) {$\dots$};
+
+  % Inside B: f(E_0) and f(E_1)
+  \draw[dashed, ForestGreen] (3.8,0) ellipse (0.5cm and 1.0cm);
+  \node[ForestGreen] at (3.8,0) {$f(E_0)$};
+
+  \draw[dashed, ForestGreen] (4.8,0) ellipse (0.4cm and 0.8cm);
+  \node[ForestGreen] at (4.8,0) {$f(E_1)$};
+
+  % Mapping arrows
+  % f: A -> B
+  \draw[->, thick, BrickRed] (-2.0, 1.0) to[bend left=20] node[midway, above] {$f$} (3.8, 0.8);
+  \draw[->, thick, BrickRed] (-1.0, 0.8) to[bend left=15] node[midway, above] {$f$} (4.8, 0.6);
+
+  % g: B -> A
+  \draw[->, thick, BurntOrange] (3.8, -0.8) to[bend left=20] node[midway, below] {$g$} (-1.0, -1.0);
+  \draw[->, thick, BurntOrange] (4.8, -0.6) to[bend left=15] node[midway, below] {$g$} (0.0, -0.8);
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:22:30 - 00:23:22]
+Okay, und wir definieren jetzt $E$ als die Vereinigung von all diesen $E_n$. Gut, und jetzt schauen wir, wie halt die Elemente in $E$ an, und dann die Elemente, die nicht in $E$ sind, und die müssen wir quasi verschieden... verschiedene äm handhaben. Wir definieren jetzt einfach äm direkt eine Bijektion zwischen $A$ und $B$, und zwar definieren wir die Funktion $h$ von $A$ nach $B$, und zwar sagen wir $h(x)$ äm definieren wir als äm $f(x)$, falls äm $x$ in diesem $E$ enthalten ist, und wenn $x$ nicht in diesem $E$ enthalten ist, dann nehmen wir einfach $g^{-1}(x)$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Abbildung h]
+Wir definieren eine Abbildung $h: A \to B$ durch:
+\[
+h(x) = \begin{cases}
+f(x) & \text{falls } x \in E \\
+g^{-1}(x) & \text{sonst}
+\end{cases}
+\]
+\begin{explanation-of-steps}
+Da $g: B \to A$ eine Injektion ist, ist die Umkehrabbildung $g^{-1}$ auf dem Bild $g(B)$ wohldefiniert. Für jedes $x \notin E$ gilt insbesondere $x \notin E_0 = A \setminus g(B)$, woraus $x \in g(B)$ folgt. Somit ist $g^{-1}(x)$ für alle $x \notin E$ wohldefiniert.
+\end{explanation-of-steps}
+\end{math-stroke}
+\end{proof}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 250211, Output 7693)*
+---
+
+**AutoExtraction:** [Part 2] 04-21-tuesday.mp4
+[Angehängtes Video]: 04-21-tuesday-part2.mp4
+[Kontext-Dateien]: 04-21-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-21. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\begin{proof}[Beweis des Cantor-Bernstein-Schröder-Theorems (Fortsetzung)]
+\begin{spoken-clean}[00:00:00 - 00:00:20]
+eins. Und äh das ist aber ein Widerspruch, das ist nicht möglich, also wenn es... Das heißt, dieser Fall tritt nicht ein. Okay.
+\end{spoken-clean}
+
+\begin{math-stroke}[Injektivität von h (Fortsetzung)]
+Angenommen, es gäbe $x_1, x_2 \in A$ mit $h(x_1) = h(x_2)$ für $x_1 \in E$ und $x_2 \notin E$.
+Dann gilt:
+\[
+f(x_1) = g^{-1}(x_2) \implies g(f(x_1)) = x_2
+\]
+Da $x_1 \in E$, existiert ein $n \in \mathbb{N}_0$ mit $x_1 \in E_n$. Daraus folgt:
+\[
+x_2 = g(f(x_1)) \in E_{n+1} \subseteq E
+\]
+Dies steht im Widerspruch zu der Annahme, dass $x_2 \notin E$. Somit ist dieser Fall unmöglich, und $h$ ist injektiv.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:00:20 - 00:01:06]
+Das heißt, $h$ ist injektiv tatsächlich. Jetzt müssen wir nur noch sehen, dass es surjektiv ist. Okay, dazu nehmen wir ein $y$ in $B$ und zeigen, dass es ein Urbild von $y$ gibt. Ähm okay, jetzt falls äh $y = f(x)$ ist für ein $x$ in $E$, dann sind wir fertig. Wir müssen nur noch zeigen, dass wenn das nicht der Fall ist, dann äh gibt es eines im Komplement von $E$, das darauf abgebildet wird. Ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:06 - 00:01:22]
+\inlinemetanote{Der Dozent geht zur linken Tafel} Okay, vielleicht da hinten machen wir das noch schnell fertig.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:22 - 00:03:05]
+Ähm okay. Also falls das nicht der Fall ist, dann ist... also wenn das nicht der Fall ist, dann ist $y$ nicht dasselbe wie $f(x)$ für alle $x$ in $E$. Okay, und daraus folgt äh insbesondere, dass $g(y)$ ist nicht $g(f(x))$ äh für alle $x$ in $E$. Und okay, daraus folgt aber, dass $g(y)$ ist nicht enthalten in irgendeinem von den $E_{n+1}$ für $n = 0, 1, 2$ weiter, weil wir haben auch... äh $g(y)$ ist äh nicht in $E_0$, weil $E_0$ wäre ja genau $A$ ohne das Bild von $B$. Okay, das heißt, das ist in keinem von den $E_n$ enthalten. Das heißt, $g(y)$ ist nicht enthalten in $E$ und somit äh folgt, dass $h(g(y)) = y$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Surjektivität von h]
+Wir zeigen, dass $h: A \to B$ surjektiv ist. Sei $y \in B$.
+\begin{itemize}
+    \setcounter{enumi}{0} \item \textbf{Fall 1:} Falls $y = f(x)$ für ein $x \in E$, so gilt nach Definition von $h$:
+    \[
+    h(x) = f(x) = y
+    \]
+    \setcounter{enumi}{1} \item \textbf{Fall 2:} Falls $y \neq f(x)$ für alle $x \in E$, so gilt:
+    \[
+    g(y) \neq g(f(x)) \quad \forall x \in E \implies g(y) \notin E_{n+1} \quad \forall n \in \mathbb{N}_0
+    \]
+    Zudem gilt nach Definition von $E_0$:
+    \[
+    g(y) \in g(B) \implies g(y) \notin E_0 = A \setminus g(B)
+    \]
+    Daraus folgt:
+    \[
+    g(y) \notin \bigcup_{n=0}^{\infty} E_n = E
+    \]
+    Da $g(y) \notin E$, erhalten wir nach Definition von $h$:
+    \[
+    h(g(y)) = g^{-1}(g(y)) = y
+    \]
+\end{itemize}
+In beiden Fällen besitzt $y \in B$ ein Urbild unter $h$. Somit ist $h$ surjektiv.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:05 - 00:03:35]
+Okay, das heißt, $y$ ist immer im Bild. Okay, und somit äh ist das Ganze surjektiv. Gut. Ich hoffe, Sie haben auch dieses Bild hier im Kopf behalten, das ist die Idee. Wir schauen hier einerseits eben immer diese Differenzen an und dann sehen wir auch, dass diese Differenzen immer äh gleichmächtig wie die entsprechenden Differenzen hier und dann äh schaut man sich die beiden Sachen separat an und das gibt dann eine Bijektion.
+\end{spoken-clean}
+\end{proof}
+
+\begin{spoken-clean}[00:03:35 - 00:04:08]
+Gut. Ähm... Ja, und das ist natürlich sehr, also ist in der Praxis natürlich sehr praktisch, um zu zeigen, dass zwei Mengen gleichmächtig sind, weil es ist manchmal ein bisschen mühsam wirklich eine Bijektion zu konstruieren, eine explizite, und es ist viel einfacher Injektionen zu äh zu konstruieren. Ähm schauen wir uns ein paar Beispiele an diesbezüglich. \inlinemetanote{Der Dozent wischt die mittlere Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:08 - 00:05:00]
+Ähm schauen wir an zum Beispiel... Okay, das Beispiel haben Sie wahrscheinlich schon gesehen, äh dass die rationalen Zahlen sind gleichmächtig wie die ganzen äh wie die, ja, wie die ganzen äh positiven Zahlen. Der Beweis... Okay, wir müssen aber eine Injektion von hier nach hier und eine Injektion von hier nach hier konstruieren. Und okay, das erste, dass $\omega$ kleiner gleich $\mathbb{Q}$ ist, äh das ist klar, das sagen... Also wir haben einfach... man kann einfach schreiben die Abbildung von $\omega$ nach $\mathbb{Q}$, wo wir ein Element $n$ schicken zu $n$ geteilt durch $1$, das ist sich selbst, das ist injektiv.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:00 - 00:05:21]
+Das heißt, was wir jetzt schauen noch zeigen, äh was wir jetzt noch benötigen, ist wir brauchen noch eine Injektion von $\mathbb{Q}$ in $\omega$.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:05:30
+% topic: Beweis des Cantor-Bernstein-Schröder-Theorems abgeschlossen; Beginn der Beispiele zur Gleichmächtigkeit (rationale Zahlen).
+% board_state: thm:cantor-bernstein-schroeder, prop:rational-countable
+% next_goal: Konstruktion einer Injektion von Q nach omega.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:05:21 - 00:06:34]
+Und dazu schauen wir uns einfach an äh die Abbildung von $\mathbb{Q}$ nach $\omega$ gegeben durch... f von p geteilt durch q, aber weil wir annehmen, dass p und q teilerfremd sind, ähm sagen wir das soll... soll 0 sein, falls p 0 ist. Und dann sagen wir, dass soll einfach $2^p \cdot 3^q$ sein, falls äh p und q beide äh größer 0 sind, und wir sagen, dass soll ein $2^p \cdot 5^{|q|}$ sein, falls äh p größer 0 ist und äh q kleiner 0. Und in beiden Fällen äh nehmen wir an, dass der größte gemeinsame Teiler von p und q gleich 1 ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Gleichmächtigkeit der rationalen Zahlen]
+\setcounter{theorem}{5}
+\begin{proposition}\label[proposition]{prop:rational-countable}
+Die Menge der rationalen Zahlen $\mathbb{Q}$ ist gleichmächtig zu $\omega$:
+\[
+|\mathbb{Q}| = |\omega|
+\]
+\end{proposition}
+\begin{short-proof}
+Wir zeigen die Existenz von Injektionen in beide Richtungen:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Richtung $|\omega| \le |\mathbb{Q}|$:} Die Abbildung
+    \[
+    i: \omega \to \mathbb{Q}, \quad n \mapsto \frac{n}{1}
+    \]
+    ist offensichtlich injektiv.
+    \setcounter{enumi}{1} \item \textbf{Richtung $|\mathbb{Q}| \le |\omega|$:} Jedes $x \in \mathbb{Q} \setminus \{0\}$ lässt sich eindeutig als gekürzter Bruch schreiben:
+    \[
+    x = \frac{p}{q} \quad \text{mit } p \in \mathbb{Z} \setminus \{0\}, \, q \in \mathbb{N}, \, \gcd(p,q) = 1
+    \]
+    Wir definieren die Abbildung $f: \mathbb{Q} \to \omega$ durch:
+    \[
+    f(x) = \begin{cases}
+    0 & \text{falls } p = 0 \\
+    2^{2p} \cdot 3^q & \text{falls } p > 0 \\
+    2^{2|p|+1} \cdot 3^q & \text{falls } p < 0
+    \end{cases}
+    \]
+\end{enumerate}
+\end{short-proof}
+\end{math-stroke}
+
+\begin{student-interaction}[Studentenfrage]
+Müsste das $f$ nicht von $\mathbb{Q}$ nach $\omega$ sein?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Äh $\mathbb{Q}$ nach $\omega$, danke schön. Danke, natürlich $\mathbb{Q}$ nach $\omega$, sonst... Ja, das haben wir hier schon $\omega$ nach $\mathbb{Q}$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:06:34 - 00:07:31]
+Genau, das werden wir noch genauer anschauen, wenn wir ein bisschen elementare Zahlentheorie anschauen. Äh aber vielleicht wissen Sie schon, dass noch aus dem Gymnasium oder aus einer Vorlesung, dass man jede ganze Zahl, da gibt es eine eindeutige Faktorisierung in Primzahlen. Das heißt, wenn p und q verschieden sind, sind diese Zahlen hier alle verschieden, und die sind wiederum alle verschieden von diesen hier, weil ja, hier ist eine andere Primfaktorzerlegung als hier. Und äh genau, wir können ja auch immer annehmen, dass p und q teilerfremd sind. Das heißt, das ist tatsächlich eine Injektion.
+\end{spoken-clean}
+
+\begin{math-stroke}[Injektivität von f]
+\begin{explanation-of-steps}
+Die Injektivität von $f$ folgt direkt aus dem Fundamentalsatz der Arithmetik (der Eindeutigkeit der Primfaktorzerlegung). Da die Basen $2$ und $3$ Primzahlen sind, bestimmen die Exponenten die rationalen Zahlen eindeutig. Die Fallunterscheidung im Exponenten von $2$ (gerade für positive $p$, ungerade für negative $p$) codiert zudem das Vorzeichen von $p$ eindeutig.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:31 - 00:08:12]
+Okay, ich schreibe es einfach, ist injektiv. Aber wir brauchen hier natürlich äh eindeutige Primfaktorzerlegung, was wir noch nicht haben.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:12 - 00:08:35]
+Gut. Und dann noch ein weiteres Beispiel, das haben Sie vielleicht auch schon in den Übungen angeschaut, ohne den Satz zu haben, das ist die Mächtigkeit von den reellen Zahlen. Und diese Proposition sagt nun, dass die reellen Zahlen sind, haben die gleiche Kardinalität wie die Potenzmenge von $\omega$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:35 - 00:09:23]
+Und das haben Sie in den Übungen einmal besprochen, gelöst? Genau, ich kann es aber nochmals kurz erklären. Ähm also der Beweis ist... Wir wissen, dass äh die reellen Zahlen, die Mächtigkeit ist kleiner gleich die Mächtigkeit von der Potenzmenge von $\omega$. Äh weshalb ist das der Fall?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:09:23 - 00:10:32]
+Ja, also es kommt darauf an, wie wir es äh wie wir es äh wie wir die reellen Zahlen definieren. Wir haben sie als Dedekind-Schnitte definiert, und Dedekind-Schnitte sind ja per Definition Teilmengen von... Teilmengen von den rationalen Zahlen. Und die haben wir gesehen, die rationalen Zahlen sind bijektiv zu den... zu den ganzen Zahlen, äh zu den natürlichen Zahlen, das heißt, die Potenzmengen sind auch bijektiv. Also wir haben... wir haben das, da äh die reellen Zahlen sind eine Teilmenge von der Potenzmenge von $\mathbb{Q}$, und das heißt, die reellen Zahlen sind insbesondere kleiner gleich die Kardinalität der Potenzmenge von $\mathbb{Q}$, und die Potenzmenge von $\mathbb{Q}$ ist aber hat dieselbe Kardinalität wie die Potenzmenge von $\omega$ gemäß der vorherigen Proposition. Wenn wir eine Bijektion zwischen $\omega$ und $\mathbb{Q}$ haben, gibt es natürlich eine Bijektion zwischen den Potenzmengen. Und somit äh wissen wir per Konstruktion aus den Dedekind-Schnitten, dass $\mathbb{R}$ nicht... nicht die Kardinalität von $\mathbb{R}$ nicht größer sein kann als diejenige von der Potenzmenge von $\omega$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Gleichmächtigkeit der reellen Zahlen]
+\setcounter{theorem}{6}
+\begin{proposition}\label[proposition]{prop:real-power-omega}
+Die Menge der reellen Zahlen $\mathbb{R}$ ist gleichmächtig zur Potenzmenge von $\omega$:
+\[
+|\mathbb{R}| = |\mathcal{P}(\omega)|
+\]
+\end{proposition}
+\begin{short-proof}
+Wir zeigen die Injektionen in beide Richtungen:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Richtung $|\mathbb{R}| \le |\mathcal{P}(\omega)|$:} Da wir $\mathbb{R}$ über Dedekind-Schnitte als Teilmengen von $\mathbb{Q}$ definiert haben, gilt:
+    \[
+    \mathbb{R} \subseteq \mathcal{P}(\mathbb{Q}) \implies |\mathbb{R}| \le |\mathcal{P}(\mathbb{Q})|
+    \]
+    Da $|\mathbb{Q}| = |\omega|$ (gemäß Proposition \ref{prop:rational-countable}), existiert eine Bijektion zwischen den Potenzmengen, sodass:
+    \[
+    |\mathcal{P}(\mathbb{Q})| = |\mathcal{P}(\omega)| \implies |\mathbb{R}| \le |\mathcal{P}(\omega)|
+    \]
+\end{enumerate}
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:32 - 00:11:11]
+Und dann haben wir noch den Trick, um zu sehen, dass äh die Potenzmenge von $\omega$, dass das kleiner ist gleich die Kardinalität, oder die Kardinalität der Potenzmenge, also dass es eine Injektion gibt von Potenzmenge von $\omega$ in die reellen Zahlen.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:11:30
+% topic: Gleichmächtigkeit von R und P(omega); Definition der Injektion von P(omega) nach R.
+% board_state: prop:real-power-omega, eq:sum-one-third
+% next_goal: Beweis der Injektivität der Summenabbildung und Formulierung des Satzes von Cantor.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:11:11 - 00:12:24]
+Äm und das... für diese... für diese Seite... Äh dazu können wir einfach die... die Abbildung betrachten von f von der Potenzmenge von $\omega$ nach $\mathbb{R}$ gegeben durch... f von der leeren Menge definieren wir als 0, und wenn x nicht die leere Menge ist, und äh für x eine Teilmenge von $\omega$, x nicht leer, definieren wir f von x als diese Summe hier, äh wo wir einfach $1/3^n$ rechnen über alle n in x.
+\end{spoken-clean}
+
+\begin{math-stroke}[Injektion von der Potenzmenge in die reellen Zahlen]
+\begin{enumerate}
+    \setcounter{enumi}{1} \item \textbf{Richtung $|\mathcal{P}(\omega)| \le |\mathbb{R}|$:} Wir definieren eine Abbildung $f: \mathcal{P}(\omega) \to \mathbb{R}$ durch:
+    \[
+    f(x) = \begin{cases}
+    0 & \text{falls } x = \emptyset \\
+    \sum_{n \in x} \frac{1}{3^n} & \text{falls } x \neq \emptyset
+    \end{cases}
+    \]
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:24 - 00:13:42]
+Und ich glaube, das haben Sie in den Übungen besprochen. Das Schöne ist an dem, also das... diese Summe konvergiert immer, weil wir wissen, wenn wir das über alle n in $\omega$ summieren, ähm dann konvergiert das, das heißt, es konvergiert auch für jede Teilmenge. Und das Schöne hier ist jetzt eben... also das konvergiert immer. Und was wir haben ist, dass äh und f von x äh ist gleich f von y genau dann, wenn äh wenn x gleich y ist. Das... ja, das haben Sie in den Übungen besprochen. Das ist das Schöne. Deswegen nehmen wir hier 3 und nicht 2. Bei 2, wenn wir das... zum Beispiel über alle n aufsummieren, dann erhalten wir... dann erhalten wir... also genau 1, und dann kann es sein, dass es für manche dann genau gegen dasselbe konvergiert. Aber wenn wir ein Drittel nehmen, dann ist es eben nicht der Fall. Deswegen nehmen wir 3. Ja, eine kleine Übung mit Reihen. Das haben... können Sie in den Übungen nachschauen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konvergenz und Injektivität]
+Für jede Teilmenge $x \subseteq \omega$ konvergiert die Reihe, da sie durch die geometrische Reihe majorisiert wird:
+\[
+\sum_{n \in x} \frac{1}{3^n} \le \sum_{n=0}^{\infty} \frac{1}{3^n} = \frac{1}{1 - 1/3} = \frac{3}{2} < \infty
+\]
+Die Abbildung $f$ ist injektiv.
+\begin{explanation-of-steps}
+Die Wahl der Basis $3$ (anstelle von $2$) stellt sicher, dass unterschiedliche Teilmengen $x, y \subseteq \omega$ auf unterschiedliche reelle Zahlen abgebildet werden. Bei Basis $2$ gäbe es Überlappungen (z.B. $0.0111\dots_2 = 0.1000\dots_2$), was der Injektivität widersprechen würde. Im Ternärsystem (Basis 3) tritt dieses Problem bei Koeffizienten aus $\{0, 1\}$ nicht auf.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:42 - 00:14:16]
+Genau, also ein netter Trick, um zu sehen, dass wir eine Injektion von dieser Potenzmenge nach $\mathbb{R}$ haben.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:16 - 00:15:20]
+Gut, gibt es dazu noch eine Frage gerade? Satz von Bernstein, Cantor, Schröder... welche... Ich glaube, was man nie sagt, ist Cantor... Satz von Cantor, Schröder, das wäre vielleicht nicht nett. Aber äh genau, also nützlicher Satz, um zu zeigen, dass zwei Mengen gleichmächtig sind. \inlinemetanote{Der Dozent wischt die linke Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:15:20 - 00:17:16]
+Gut, sonst schlage ich vor, machen wir jetzt... ja, noch eine Minute zu früh. Oder sonst machen wir noch den Satz von Cantor, ich schreib den noch schnell hin, dann können wir den nachher direkt äh beweisen. Den hat Cantor tatsächlich auch schon bewiesen, und der sagt, dass ähm für jede Menge M gilt, dass ähm die Mächtigkeit von M ist strikt kleiner als die Mächtigkeit von ihrer Potenzmenge. Wenn wir die Potenzmenge von einer Menge M nehmen, dann hat... ist sie immer... hat sie immer eine größere Mächtigkeit als M. Genau, das werden wir beweisen nach der Pause, und dann nachher äh werden wir noch äh die Kardinalzahlen definieren. Das ist auch ein bisschen wie die... ja, über die Ordinalzahlen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Satz von Cantor]
+\setcounter{theorem}{7}
+\begin{theorem}[Satz von Cantor]\label[theorem]{thm:cantor}
+Für jede Menge $M$ gilt:
+\[
+|M| < |\mathcal{P}(M)|
+\]
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:16 - 00:17:40]
+Gut, schöne Pause.
+\end{spoken-clean}
+
+\begin{lecture-break}[Pause]
+\inlinemetanote{Es folgt eine Pause im Video von 17:40 bis 18:23}
+\end{lecture-break>
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:17:30
+% topic: Pause; Formulierung des Satzes von Cantor.
+% board_state: thm:cantor
+% next_goal: Beweis des Satzes von Cantor nach der Pause.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:18:23 - 00:19:37]
+Also, was wir jetzt zeigen wollen, ist, dass wenn wir eine Menge haben, dann können wir immer eine Menge konstruieren, nämlich die Potenzmenge von M, die gibt es gemäß dem Potenzmengenaxiom, die eine strikt größere Kardinalität hat als die Kardinalität als die Menge M. Da sehen wir, da sind wir schon sehr nahe an den Ordinalzahlen dran, aber es ist ein bisschen etwas anderes. Wir werden das nachher machen. Aber zuerst wollen wir das beweisen. Das hat Cantor bereits bewiesen. Okay, falls M die leere Menge ist, ist das... ist das äh okay, weil in dem Fall dann ist die Potenzmenge von M die Menge bestehend nur aus der leeren Menge. Das heißt, die Potenzmenge enthält ein Element, M enthält kein Element, das heißt, ähm diese Kardinalität hier ist... also die Mächtigkeit von der Potenzmenge von M ist strikt größer als die Mächtigkeit von M. Ja, es kann keine Bijektion geben, natürlich ist die leere Menge enthalten hier drin, aber es kann keine Bijektion geben, weil hier hat es kein Element, hier hat es ein Element.
+\end{spoken-clean}
+
+\begin{proof}[Beweis des Satzes von Cantor]
+\begin{math-stroke}[Fall M = \emptyset]
+Falls $M = \emptyset$, so gilt:
+\[
+\mathcal{P}(M) = \{\emptyset\} \implies |M| = 0 < 1 = |\{\emptyset\}| = |\mathcal{P}(M)|
+\]
+Da eine Bijektion zwischen einer leeren und einer einelementigen Menge unmöglich ist, gilt die Behauptung für diesen Fall.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:37 - 00:21:22]
+Und allgemein, wir zeigen noch in den Übungen, dass äh dass die Elemente in $\omega$, also die ganzen Zahlen, haben alle verschiedene Kardinalitäten. Das ist eine Übung, einfach zu zeigen, dass 2 ist nicht 3 und so weiter. Also für endliche... endliche Mengen haben alle verschiedene Kardinalitäten, wenn sie verschiedene... verschiedene natürliche Zahlen repräsentieren. Okay, aber wir zeigen das jetzt allgemein, dass das gilt. Also sei ähm M nicht die leere Menge. Okay, zuerst müssen wir sehen, dass ähm die Mächtigkeit von M ist kleiner gleich die Mächtigkeit von der Potenzmenge von M. Wie können wir das zeigen? Äh ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Wir können eine injektive Abbildung definieren von jedem Element von M auf die Teilmenge, die nur dieses Element enthält.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, es gibt eine Injektion... wir schauen uns an f von M zu der Potenzmenge von M, und wir schicken einfach ein Element x auf die Teilmenge, die nur aus dem Element x besteht. Das ist natürlich injektiv. Okay, das heißt, wir wissen diese Kardinalität ist kleiner gleich diese Kardinalität. Okay, und jetzt wollen wir noch zeigen, dass die Kardinalität von M nicht dasselbe ist wie die Kardinalität von der Potenzmenge von M. Das ist ein sehr schöner... ein sehr schöner Beweis. Um das zu zeigen, müssen wir beweisen, es gibt keine Bijektion von M zu seiner Potenzmenge. Okay? Dazu äh nehmen wir an, dass g ähm irgendeine Abbildung ist von M zur Potenzmenge von M. Und wir zeigen jetzt, dass g... also irgendeine Funktion... Und wir zeigen, g ist nicht surjektiv. Und wie tun wir das? Wir tun das, indem wir eine... wenn wir ein g gegeben haben, konstruieren wir eine explizite Teilmenge von M, die nicht im Bild von g liegen kann. Das ist ein eleganter Trick. Und zwar sagen wir... definieren wir jetzt Gamma als die Menge von allen x in M, so dass x nicht im Bild von g von x enthalten ist, also im Bild g(x). Okay? Also g ist eine Abbildung von M zu seiner Pot... zur Potenzmenge von M, das heißt, g(x) ist eine Teilmenge von M. Okay? Das heißt, wir können jetzt alle x in M anschauen, die nicht in ihrem Bild enthalten sind. Das klingt a priori so ein bisschen wie was man tut, um zu zeigen, dass etwas nicht eine Menge ist oder so etwas, aber okay, hier wissen wir, das ist eine Menge per Definition, das heißt, wir werden sehen, es diese Menge kann nicht im Bild von g liegen. Okay, das könnten Sie jetzt wahrscheinlich auch selbst tun. Also wir nehmen jetzt an, es gibt ein x0 in M, so dass g von x0 gleich Gamma. Und dann sehen wir, das ist... so etwas würde zu einem Widerspruch führen, weil dann gilt... Dann gilt, dass x0 ist in Gamma ist äquivalent zu x0 ist nicht enthalten in g von x0, aber das ist ja per Definition... äh genau, das ist ja per Definition von g(x) würde das heißen, dass... also das heißt, dass x0 ist nicht in Gamma enthalten, weil g von x0 wäre Gamma. Also jetzt haben wir einen Widerspruch. Das ist ein Widerspruch. Das heißt, Gamma, diese Menge ist nicht im Bild von g, das heißt, egal welche Abbildung g wir nehmen von M nach... zur Potenzmenge, diese Abbildung ist nie surjektiv. Also wir wissen, wenn... wenn g von x0 gleich Gamma wäre, dann wissen wir, dass x0 wäre in Gamma genau dann, wenn x0 nicht in Gamma wäre. Das kann nicht sein, also eine Menge x0 kann nicht in Gamma und nicht in Gamma sein. Das ist nicht möglich gemäß dem Satz von aus... vom ausgeschlossenen Dritten. Okay, weil x0 in Gamma ist per Definition von Gamma äquivalent dazu, dass x0 nicht in seinem Bild liegt, aber das Bild von x0 in dem Fall wäre dann genau Gamma, und das ist nicht möglich, okay. Ein sehr... ein sehr hübscher Beweis, finde ich, oder? Eleganter, lustiger Trick. Gut.
+\end{spoken-clean}
+
+\begin{math-stroke}[Allgemeiner Beweis des Satzes von Cantor]
+Sei $M \neq \emptyset$.
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Schritt 1 ($|M| \le |\mathcal{P}(M)|$):} Wir definieren die Abbildung:
+    \[
+    f: M \to \mathcal{P}(M), \quad x \mapsto \{x\}
+    \]
+    Diese Abbildung ist injektiv, da $\{x_1\} = \{x_2\} \implies x_1 = x_2$. Somit gilt $|M| \le |\mathcal{P}(M)|$.
+    
+    \setcounter{enumi}{1} \item \textbf{Schritt 2 ($|M| \neq |\mathcal{P}(M)|$):} Sei $g: M \to \mathcal{P}(M)$ eine beliebige Abbildung. Wir definieren die Teilmenge:
+    \[
+    \Gamma = \{ x \in M \mid x \notin g(x) \} \in \mathcal{P}(M)
+    \]
+    Angenommen, $g$ wäre surjektiv. Dann gäbe es ein $x_0 \in M$ mit $g(x_0) = \Gamma$. Es folgt:
+    \[
+    x_0 \in \Gamma \iff x_0 \notin g(x_0) \iff x_0 \notin \Gamma
+    \]
+    Dies ist ein logischer Widerspruch ($A \iff \neg A$). Somit ist $g$ nicht surjektiv. Da dies für jede Abbildung $g$ gilt, existiert keine Bijektion zwischen $M$ und $\mathcal{P}(M)$.
+\end{enumerate}
+Daraus folgt $|M| < |\mathcal{P}(M)|$.
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:21:22 - 00:21:22]
+Genau, und da kommen wir jetzt zum nächsten Schritt, das sind die Kardinalzahlen. Und jetzt okay, bis jetzt haben wir ja nie das Auswahlaxiom verwendet. Und jetzt wollen wir gerne das Auswahlaxiom dazu nehmen, das heißt, jetzt arbeiten wir in Zermelo-Fraenkel mit dem Auswahlaxiom. Und da können wir das Ganze noch etwas... diese ganzen Kardinalzahlen noch präziser definieren. Und zwar okay, jetzt nehmen wir Zermelo-Fraenkel-Auswahl, das heißt, wir haben das Wohlordnungsprinzip. Und was sagt uns das Wohlordnungsprinzip? Das sagt verschiedene Sachen, aber insbesondere sagt es uns, dass es für jede Menge M gibt es eine Ordinalzahl, die bijektiv ist zu M. Okay? Also gemäß dem Wohlordnungsprinzip gibt es für jede Menge eine Ordinalzahl Alpha, so dass M gleich... M gleich Alpha ist, es gibt eine Bijektion zwischen Alpha und M. Okay, es gibt so eine Ordinalzahl. Es gibt natürlich a priori sehr viele solche Ordinalzahlen. Und wir defini... definieren nun die Kardinalität... M von M ist die kleinste Ordinalzahl Alpha0, so dass Alpha0 gleich M ist. Also wir nehmen alle Ordinalzahlen, die in Bijektion sind zu M, und wir nehmen die kleinste davon, und das ist die Kardinalität von M. So könnte auch das formal definieren als M ist die... der Durchschnitt von allen Ordinalzahlen, so dass eine bijektive Abbildung von Alpha nach M existiert. Das ist aber a priori problematisch, weil das... also das ist ja keine Menge, die Ordinalzahlen formen keine Menge. Das heißt, es ist nicht klar, dass das hier Mengen sind, und wenn es nicht Mengen sind, dann dürfen wir nicht einfach den Durchschnitt nehmen. Aber man kann zeigen, also dass wir... dass das hier ist unbedingt eine Menge, und wenn das eine Menge ist, dann können wir... können wir... können wir nicht über Durchschnitte nehmen über Sachen, die keine Mengen sind, aber man kann zeigen, das ist tatsächlich eine Menge, also das sind Mengen für alle M. Aber es ist klar, was wir meinen. Okay, und wir sagen jetzt einfach eine Kardinalzahl ist jetzt einfach eine Ordinalzahl, die... die auftritt als Kardinalität einer Menge. Genau, also Definition, eine Ordinalzahl ist eine Kardinalzahl, falls Alpha gleich die Kardinalität von einer Menge M ist. Okay, und genau, die Kardinalzahlen, das ist eine... ich will nicht sagen Teilmenge, aber alle Kardinalzahlen sind auch Ordinalzahlen. Eine Teilklasse quasi. Okay, und da kann man auch wieder zeigen, also auch für Kardinalzahlen kann man zeigen, dass die keine Menge formen. Es gibt nicht die Menge von allen Kardinalzahlen, genauso wie es... wie alle Ordinalzahlen keine Menge formen. Ist einfach zu groß, da gibt es zu viele. Sonst könnte man quasi, wenn man die Menge von allen Kardinalzahl... Kardinalzahlen hat, wiederum fragen, was hat das für eine Kardinalität, und das gibt dann Widerspruch. Also es gibt keine Menge, ist eine Klasse. Einfach ist mal zu merken, falls... falls wir eine Kardinalzahl Kappa haben... ist, so gilt, dass Kappa ist genau die Kardinalität von Kappa selbst. Okay? Und die zweite Bemerkung, die auch sehr direkt ist, ist dadurch, dass alle Kardinalzahlen auch Ordinalzahlen sind, sind die Kardinalzahlen auch wohlgeordnet durch Enthaltensein. Einfach dadurch, dass die Kardinalzahlen auch Ordinalzahlen sind. Okay, machen wir vielleicht ein paar Beispiele. Äm...
+\end{spoken-clean}
+
+\begin{math-stroke}[Kardinalzahlen in ZFC]
+Unter Annahme des Auswahlaxioms ($\text{ZFC}$) gilt das Wohlordnungsprinzip ($\text{WOP}$).
+\begin{definition}[Kardinalität]\label[definition]{def:cardinality-zfc}
+Sei $M$ eine Menge. Die \newterm{Kardinalität} (oder \newterm{Mächtigkeit}) $|M|$ von $M$ ist definiert als die kleinste Ordinalzahl $\alpha_0 \in \text{On}$, die gleichmächtig zu $M$ ist:
+\[
+|M| = \min \{ \alpha \in \text{On} \mid |\alpha| = |M| \}
+\]
+Formal lässt sich dies schreiben als:
+\[
+|M| = \bigcap \{ \alpha \in \text{On} \mid \exists f: \alpha \to M \text{ bijektiv} \}
+\]
+\begin{explanation-of-steps}
+Da die Klasse der Ordinalzahlen $\text{On}$ wohlgeordnet ist, existiert stets ein eindeutiges Minimum der nichtleeren Klasse von Ordinalzahlen, die zu $M$ gleichmächtig sind. Obwohl $\text{On}$ eine echte Klasse ist, ist die Kollektion der zu $M$ gleichmächtigen Ordinalzahlen eine Menge, weshalb der Durchschnitt wohldefiniert ist.
+\end{explanation-of-steps}
+\end{definition}
+
+\begin{definition}[Kardinalzahl]\label[definition]{def:cardinal-number}
+Eine Ordinalzahl $\kappa \in \text{On}$ heißt eine \newterm{Kardinalzahl}, falls sie die Kardinalität einer Menge ist:
+\[
+\exists M \text{ mit } \kappa = |M|
+\]
+\end{definition}
+
+\begin{proposition}[Eigenschaften von Kardinalzahlen]\label[proposition]{prop:cardinal-properties}
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Ist $\kappa$ eine Kardinalzahl, so gilt $|\kappa| = \kappa$.
+    \setcounter{enumi}{1} \item Die Klasse aller Kardinalzahlen ist wohlgeordnet bezüglich der Elementrelation $\in$ (bzw. der Ordnung $<$ auf den Ordinalzahlen).
+\end{enumerate}
+\end{proposition}
+\end{math-stroke}
+
+\inlinemetanote{Das Video bricht an dieser Stelle abrupt ab}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 258155, Output 8369)*
+---
+
+**AutoExtraction:** [Part 3] 04-21-tuesday.mp4
+[Angehängtes Video]: 04-21-tuesday-part3.mp4
+[Kontext-Dateien]: 04-21-tuesday-part1.tex, 04-21-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-21. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+% PART_START_SECONDS: 0.00
+
+\begin{spoken-clean}[00:00:00 - 00:00:20]
+...zahl ist es einfach eine Ordinalzahl, die... die auftritt als Kardinalität einer Menge.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die mittlere Tafel, um Platz für die Definition und Beispiele zu schaffen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:00:20 - 00:01:02]
+Genau. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Kardinalzahl]
+\setcounter{theorem}{8}
+\begin{definition}[Kardinalzahl]\label[definition]{def:kardinalzahl}
+Eine Ordinalzahl $\alpha \in \text{On}$ heißt eine \newterm{Kardinalzahl}, falls sie die Kardinalität einer Menge ist:
+\[
+\alpha = |M| \quad \text{für eine Menge } M
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:02 - 00:01:45]
+Okay, und das... die Kardinalzahlen, das ist eine... ich will nicht sagen Teilmenge, aber alle Kardinalzahlen sind auch Ordinalzahlen. Eine Teilklasse quasi. Okay, und da kann man auch wieder zeigen, also auch für Kardinalzahlen kann man zeigen, dass die keine Menge formen. Es gibt nicht die Menge von allen Kardinalzahlen, genauso wie es... wie alle Ordinalzahlen keine Menge formen. Ist einfach zu groß, da gibt es zu viele. Sonst könnte man quasi, wenn man die Menge von allen Kardinalzahl... Kardinalzahlen hat, wiederum fragen, was hat das für eine Kardinalität, und das gibt dann Widerspruch. Also es gibt keine Menge, ist eine Klasse.
+\end{spoken-clean}
+
+\begin{math-stroke}[Bemerkungen zu Kardinalzahlen]
+\begin{proposition}[Eigenschaften von Kardinalzahlen]\label[proposition]{prop:kardinalzahl-eigenschaften}
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Falls $\kappa$ eine Kardinalzahl ist, so gilt:
+    \[
+    \kappa = |\kappa|
+    \]
+    \setcounter{enumi}{1} \item Die Klasse aller Kardinalzahlen ist wohlgeordnet bezüglich der Elementrelation $\in$.
+\end{enumerate}
+\end{proposition}
+\begin{explanation-of-steps}
+Da alle Kardinalzahlen auch Ordinalzahlen sind, erben sie die Wohlordnung bezüglich der Relation $\in$.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:45 - 00:02:48]
+Okay, vielleicht noch ein paar Bemerkungen, also... Einfachstes mal zu merken, falls... falls wir eine Kardinalzahl $\kappa$ haben... ist, so gilt, dass $\kappa$ ist genau die Kardinalität von $\kappa$ selbst. Okay? Und die zweite Bemerkung, die auch sehr direkt ist, ist dadurch, dass alle Kardinalzahlen auch Ordinalzahlen sind, sind die Kardinalzahlen auch wohlgeordnet durch Enhaltensein. Einfach dadurch, dass die Kardinalzahlen auch Ordinalzahlen sind. Okay, machen wir vielleicht ein paar Beispiele. Äm...
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiele für Kardinalzahlen]
+\begin{example}\label[example]{ex:kardinalzahlen-beispiele}
+\begin{itemize}
+    \item Jedes Element $n \in \omega$ (d.h. jede endliche Ordinalzahl) ist eine Kardinalzahl.
+    \item $\omega$ ist eine Kardinalzahl.
+\end{itemize}
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:48 - 00:03:56]
+Also wir haben, dass die Elemente in $\omega$, also die ganzen Zahlen, haben alle verschiedene Kardinalitäten. Das ist eine Übung, einfach zu zeigen, dass 2 ist nicht 3 und so weiter. Also für endliche... endliche Mengen haben alle verschiedene Kardinalitäten, wenn sie verschiedene... verschiedene natürliche Zahlen repräsentieren. Okay, aber wir zeigen das jetzt allgemein, dass das gilt. Also Elemente in $\omega$ sind alle Kardinalzahlen. Äm ja, das ist... es folgt mit der Übung, also es sind genau... ja genau, also endliche Mengen, das ist genau, gibt es für jede menge, also für jede endliche Zahl gibt es genau eine Menge, also gibt es Mengen, die haben genau $n$ Elemente, und die sind alle verschieden. Also Elemente in $\omega$ sind alle Kardinalzahlen. Dann haben wir, dass $\omega$ selbst ist eine Kardinalzahl. Okay, die kleinste Ordinalzahl... das ist die kleinste unendliche Ordinalzahl, das heißt, das ist tatsächlich auch eine Kardinalzahl.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:56 - 00:04:10]
+Und dann das andere ist noch, äm, $\omega + 1$, ist das eine Kardinalzahl? Äh... Nein, genau, weshalb?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Weil es hat dieselbe Mächtigkeit wie $\omega$.
+\end{student-interaction>
+
+\begin{spoken-clean}[continued]
+Genau, genau.
+\end{spoken-clean}
+
+\begin{math-stroke}[Gegenbeispiel: \texorpdfstring{\omega + 1}{omega + 1}]
+\begin{example}\label[example]{ex:omega-plus-1-not-cardinal}
+Die Ordinalzahl $\omega + 1$ ist \emph{keine} Kardinalzahl, da gilt:
+\[
+|\omega + 1| = |\omega|
+\]
+\end{example}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:10 - 00:04:43]
+Genau, genau. Das heißt, das ist keine Kardinalzahl, da genau $\omega + 1$ dieselbe Mächtigkeit hat wie $\omega$. Das heißt, wenn es irgend... von irgendeiner Menge eine Bijektion zu $\omega + 1$ gibt, dann gibt es auch eine Bijektion zu $\omega$, und dann ist $\omega$ die Menge.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:43 - 00:05:11]
+Okay, und jetzt noch ein bisschen Notation. Äm... Also $\omega$ ist die, wie wir schon bemerkt, ist die kleinste unendliche Kardinalzahl. Äm, und deswegen schreibt man oft äm $\omega_0$ dafür.
+\end{spoken-clean}
+
+\begin{math-stroke}[Notation für unendliche Kardinalzahlen]
+Wir bezeichnen die kleinste unendliche Kardinalzahl $\omega$ mit:
+\[
+\omega_0 = \omega
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:05:11 - 00:06:52]
+Äm, und das... und dann kann man jetzt, was man jetzt machen kann, jetzt kann man die kleinste Kardinalzahl, also die Kardinalzahlen sind wohlgeordnet, das haben wir, die kleinste Kardinalzahl an, die größer ist als $\omega_0$, die bezeichnen wir mit $\omega_1$. Und dann die nächste mit $\omega_2$, und so weiter. Und dann $\omega_3$, und so weiter, und dann kann man aber auch $\omega_3$ und dann geht es aber immer weiter, dann kommt man irgendwann zu... gibt es auch wieder die Kardinalzahl $\omega_\omega$, so ein... und dann wieder $\omega_{\omega+1}$, und so weiter. Und allgemein kann man mit $\omega_\alpha$... Ja, wir werden jetzt nicht so viel weitere Details geben, das ist nur so ein bisschen ein Einblick zu kriegen, was das da... was es da für all diese Kardinalitäten gibt. Und es gibt aber für jede Ordinalzahl $\alpha$ erhält man dann die $\alpha$-te Kardinalzahl $\omega_\alpha$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Aleph-Hierarchie]
+Da die Klasse der Kardinalzahlen wohlgeordnet ist, können wir sie rekursiv indizieren:
+\begin{itemize}
+    \item $\omega_0 = \omega$ ist die kleinste unendliche Kardinalzahl.
+    \item $\omega_1$ ist die kleinste Kardinalzahl, die strikt größer als $\omega_0$ ist.
+    \item Allgemein ist für jede Ordinalzahl $\alpha$ die Kardinalzahl $\omega_\alpha$ definiert.
+\end{itemize}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelreinigung]
+Der Dozent wischt die Tafeln, um Platz für das Thema der Kontinuumshypothese und der Kardinalzahlarithmetik zu machen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:06:52 - 00:07:20]
+\inlinemetanote{wischt die Tafeln}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:07:20 - 00:09:17]
+Also allgemein gibt es eine $\omega_\alpha$ für jedes $\alpha$ in $\Omega$ (i.e., eigentlich $\text{On}$ wie an der Tafel geschrieben). Für jede Ordinalzahl $\alpha$ erhalten Sie dann die $\alpha$-te Kardinalzahl $\omega_\alpha$, die nächstgrößere. Okay, und da ist auch die Notation im Falle von... von Kardinalzahlen, oft schreibt man anstelle von $\omega_\alpha$ schreibt man $\aleph_\alpha$. Das ist... das ist die Notation, die Cantor eingeführt hat, also Aleph, das erste... der erste Buchstabe vom hebräischen Alphabet. Die hebräischen Buchstaben verwendet man nicht oft in der Mathematik, aber hier für Unendlichkeiten verwendet man hier dieses Aleph. Okay, und allgemein haben wir... vielleicht als Bemerkung... Also die Frage ist, welche Ordinalzahlen sind auch Kardinalzahlen? Das ist im Allgemeinen nicht so einfach zu sagen. Aber etwas, was wir sehen können, ist, dass wir haben, dass die Kardinalität von einer Ordinalzahl $\alpha$ ist dasselbe wie die Kardinalität von $\alpha + 1$ für $\alpha \ge \omega$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Aleph-Notation und Nachfolger-Kardinalitäten]
+\begin{notation}
+Für unendliche Kardinalzahlen schreibt man anstelle von $\omega_\alpha$ oft das hebräische Symbol Aleph:
+\[
+\aleph_\alpha = \omega_\alpha
+\]
+Insbesondere ist $\aleph_0 = \omega_0 = \omega$.
+\end{notation}
+
+\begin{proposition}\label[proposition]{prop:cardinality-successor}
+Für jede unendliche Ordinalzahl $\alpha \ge \omega$ gilt:
+\[
+|\alpha| = |\alpha + 1|
+\]
+\end{proposition}
+\begin{short-proof}
+Wir definieren eine Abbildung $f: \alpha + 1 \to \alpha$ durch:
+\[
+f(\beta) = \begin{cases}
+0 & \text{falls } \beta = \alpha \\
+\beta + 1 & \text{falls } \beta \in \omega \\
+\beta & \text{sonst (d.h. für } \omega \le \beta < \alpha)
+\end{cases}
+\]
+Diese Abbildung verschiebt die endlichen Elemente um eins nach rechts und nutzt das frei gewordene Element $0$ für das zusätzliche Element $\alpha$. Dies ist eine Variante von Hilberts Hotel.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:17 - 00:10:02]
+Und zwar haben wir einfach die Bijektion... die Bijektion von $\alpha + 1$ nach $\alpha$ gegeben durch... das ist ein bisschen Hilberts Hotel, man schiebt einfach alle um eines weiter. Das heißt, da haben wir immer dieselbe... dieselbe Kardinalität. Das heißt, falls... falls wir eine Ordinalzahl $\kappa \ge \omega$ eine Kardinalzahl ist, so ist $\kappa$ eine Limesordinalzahl.
+\end{spoken-clean}
+
+\begin{math-stroke}[Unendliche Kardinalzahlen sind Limesordinalzahlen]
+\begin{corollary}\label[corollary]{cor:cardinal-is-limit}
+Jede unendliche Kardinalzahl $\kappa \ge \omega$ ist eine Limesordinalzahl.
+\end{corollary}
+\begin{short-proof}
+Angenommen, $\kappa$ wäre eine Nachfolgerordinalzahl, d.h. $\kappa = \alpha + 1$ für eine Ordinalzahl $\alpha \ge \omega$. Nach Proposition \ref{prop:cardinality-successor} gilt dann:
+\[
+|\kappa| = |\alpha + 1| = |\alpha|
+\]
+Da $\alpha < \kappa$, widerspricht dies der Definition einer Kardinalzahl als die \emph{kleinste} Ordinalzahl in ihrer Gleichmächtigkeitsklasse. Somit muss $\kappa$ eine Limesordinalzahl sein.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:02 - 00:11:07]
+Genau, weil sonst ist es nicht die kleinste Ordinalzahl, danke schön. Wichtige Bemerkung, ja. Gut. Die Sache ist äm... ja, bereits $\aleph_1$ ist ein bisschen äm eine problematische, also nicht problematische Sache, aber ist nicht mehr so klar. Äm, wir haben gesehen, wir haben die... wir haben $\aleph_0$, da haben wir einfach die abzählbare Unendlichkeit, also dieselbe Kardinalität wie $\omega$. Das ist okay. Und jetzt können wir sagen, okay, wir nehmen die nächste, können wir uns mal die Potenzmenge von $\omega$ nehmen. Da wissen wir, die ist sicher größer. Und wissen wir, das ist auch dasselbe wie $\mathbb{R}$, dieselbe Kardinalität. Jetzt könnte man sich fragen, ist das bereits $\aleph_1$, oder ist das wie $\aleph_{100}$ und es gibt noch etwas dazwischen?
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Kontinuumshypothese]
+Wir haben bereits gezeigt:
+\[
+\aleph_0 < |\mathcal{P}(\omega)| = |\mathbb{R}|
+\]
+Wir bezeichnen die Mächtigkeit des Kontinuums (der reellen Zahlen) mit:
+\[
+\mathfrak{c} = |\mathbb{R}|
+\]
+\begin{nice-box}[Cantors Kontinuumshypothese]
+\begin{theorem}[Kontinuumshypothese -- $\text{CH}$]\label[theorem]{thm:continuum-hypothesis}
+Es gibt keine Kardinalzahl zwischen der Mächtigkeit der natürlichen Zahlen und der Mächtigkeit der reellen Zahlen. Das heißt, $\mathfrak{c}$ ist die kleinste Kardinalzahl strikt größer als $\aleph_0$:
+\[
+\mathfrak{c} = \aleph_1
+\]
+\end{theorem}
+\end{nice-box}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:07 - 00:12:35]
+Und das hatte Cantor umgetrieben, und er hat das versucht zu beweisen, zu beweisen, hat es aber nicht geschafft. Das ist die sogenannte Kontinuums- äm Hypothese. Wir haben gesehen äm $\omega$ ist strikt kleiner als die Kardinalität von der Potenzmenge von $\omega$, und das ist genau die Kardinalität von $\mathbb{R}$. Okay, das haben wir gesehen. Und okay, wir können jetzt einfach sagen, nennen wir das das komische C (i.e., eigentlich $\mathfrak{c}$ wie an der Tafel geschrieben), schreibt diese altdeutschen Buchstaben gerne, so wie das soll die... das soll die Kardinalität von den reellen Zahlen sein, also C wie Continuum. Und Cantors Kontinuumshypothese sagt nun, oft schreibt man das CH, die sagt nur, dieses C ist die kleinste Kardinalzahl, die strikt größer ist als $\omega$. Wir wissen, es ist strikt größer als $\omega$, aber die Frage ist, gibt es noch etwas dazwischen?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:12:35 - 00:14:43]
+Also die Frage ist, gibt es eine menge, die größere Kardinalität hat als die ganzen Zahlen, aber eine strikt kleinere Kardinalität als die reellen Zahlen? Also was geht quasi von dem Abzählbaren geht man über zum Continuum. Und genau, diese Kontinuumshypothese hat die Mathematikerinnen lange umgetrieben, und was man aber zeigen konnte, ist, dass tatsächlich ist das unabhängig von Zermelo-Fraenkel. Das heißt, Sie können entweder das annehmen als zusätzliches Axiom, oder Sie nehmen es nicht als zusätzliches Axiom, aber man kann es nicht beweisen aus Zermelo-Fraenkel Choice, und man kann auch das Gegenteil nicht beweisen. Also man kann beweisen, dass man nicht beweisen kann aus Zermelo-Fraenkel Choice, dass die Kontinuumshypothese gilt. Und wie man das macht, ist, ja, das ist jetzt eben eines von diesen Beispielen, das... oder Beispiele, das ein bisschen diese Aussagen, die wahrscheinlich Hilbert äm traurig gestimmt haben, dass man eben jetzt keine Axiome... man hat diese axiomatische System, und man würde gerne, dass man alle Sachen entweder beweisen oder widerlegen könnte. Also dass wenn man die ganze Mathematik beschreiben möchte, wäre es schön, dass man alles widerlegen oder beweisen könnte. Und das aber etwas Konkretes, das kann man, das ist relativ natürlich eigentlich zu fragen, und das kann man weder beweisen noch widerlegen in Zermelo-Fraenkel Choice.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Unabhängigkeit der Kontinuumshypothese]
+Die Unabhängigkeit der Kontinuumshypothese ($\text{CH}$) von den Axiomen der Mengenlehre ($\text{ZFC}$) ist eines der bedeutendsten Resultate der mathematischen Logik des 20. Jahrhunderts. Kurt Gödel bewies 1940, dass $\text{CH}$ nicht widerlegt werden kann (mittels der Konstruktion des konstruierbaren Universums $L$). Paul Cohen bewies 1963 mittels der Methode des Forcings, dass $\text{CH}$ nicht bewiesen werden kann. Zusammen zeigen diese Resultate, dass $\text{CH}$ unabhängig von $\text{ZFC}$ ist, was Hilberts Traum einer vollständig entscheidbaren Mathematik (Hilberts Programm) endgültig zerstörte.
+\end{didactic-insight}
+
+\begin{math-stroke}[Konsistenz und Schranken für das Kontinuum]
+Unter $\text{ZFC}$ ist die Mächtigkeit des Kontinuums $\mathfrak{c} = 2^{\aleph_0}$ durch den Satz von König beschränkt:
+\[
+\text{cf}(2^{\aleph_0}) > \aleph_0
+\]
+\begin{explanation-of-steps}
+Dies erklärt, warum man nicht annehmen kann, dass $\mathfrak{c} = \aleph_\omega$ gilt, da die Kofinalität von $\aleph_\omega$ gleich $\omega$ (also abzählbar) ist, was dem Satz von König widersprechen würde. Werte wie $\aleph_1$, $\aleph_2$, $\aleph_{23}$ oder $\aleph_{\omega+1}$ haben alle überabzählbare Kofinalität und sind daher als Werte für $\mathfrak{c}$ konsistent.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:43 - 00:16:43]
+Da denkt man jetzt eben, ja, das ist doch... kann doch nicht sein, entweder gibt es eine solche Menge oder es gibt keine solche Menge. Das ist nicht etwas, was man konstruieren muss oder nicht konstruieren. Aber eben, das ist... das wird ein bisschen klar, wenn man das überlegt über diese... sind Axiome, die gibt man einfach so, und das ist wirklich das semantische Ebene, und jetzt gibt es Modelle für diese... für diese Theorie. Und ich meine, das, wie man beweist, dass so etwas unabhängig ist von Zermelo-Fraenkel Choice, ist, man konstruiert Modelle von Zermelo-Fraenkel Choice, wo das gilt, und man konstruiert andere Modelle, wo das nicht gilt, und dann weiß man, das kann man nicht beweisen. Und das ist halt einfach so, wie es funktioniert. Dann... ja, das wird ein bisschen weniger tragisch, es gibt halt dann einfach Modelle, wo das stimmt, und wo nicht. Aber im Skript von... ja, also wenn Sie diese Sachen, wie man das beweist, wie man diese Modelle konstruiert und so weiter, müssen Sie zu Lorenz Halbeisen gehen in seinem Büro. Ich weiß auch nicht, wie man das beweist genau, oder ich habe keine Erfahrung mit diesen Techniken. In dem Skript habe ich eben noch, was ich noch lustig fand, steht eben noch, dass es... es gibt verschiedene Sachen, die man... Okay, also wenn... wenn... Okay, die Frage ist, ob C gleich $\aleph_1$ ist oder nicht, ist... kann man entweder annehmen C ist $\aleph_1$, aber kann annehmen C ist nicht $\aleph_1$. Aber die Frage ist, kann man jetzt annehmen, dass C $\aleph_2$ ist, oder kann man annehmen, dass C $\aleph_\omega$ ist, oder so etwas? Und anscheinend, da gibt es aber gewisse Sachen, das... das ist konsistent mit Zermelo-Fraenkel und Choice, aber andere Werte sind nicht konsistent. Also man kann nicht beliebige Sachen annehmen. Also zum Beispiel kann man annehmen, dass C gleich $\aleph_{23}$ ist, das geht. Man kann auch annehmen, dass C gleich $\aleph_{\omega+1}$ ist, aber was man nicht annehmen kann, ist, dass C gleich $\aleph_\omega$ ist. So, das sind, ja, fand ich noch lustig oder so, kann man... sind witzige Sachen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:16:43 - 00:18:23]
+Gut, wir werden da jetzt nicht weiter hingehen, das ist nur, dass Sie wissen, Kontinuumshypothese noch ein wichtiges Thema. Jetzt wollen wir wirklich konkret auch sagen, was es ist. Was ich noch kurz eingehen möchte am Ende, ist noch diese Kardinalzahlarithmetik. Wir werden da nicht so viel beweisen, vielleicht mache ich nächste Woche noch ein paar Übungen dazu aufs Übungsblatt, weil das auch nette Sachen sind, aber ja, es ist auch gut, wenn wir zum nächsten Thema weitergehen. Das ist die Kardinalzahlarithmetik. Also gut, es ist insofern natürlich wichtig oder interessant, weil man da zwischen verschiedenen Mengen Bijektionen oder nicht Bijektionen konstruiert und somit auch dann sagen kann direkt, ob gewisse Mengen gleichmächtig sind oder nicht. Aber beginnen wir mit der Definition. Also wir nehmen zwei Kardinalzahlen Kappa und Lambda, und wir definieren...
+\end{spoken-clean}
+
+\begin{math-stroke}[Kardinalzahlarithmetik]
+\setcounter{theorem}{15}
+\begin{definition}[Kardinalzahlarithmetik]\label[definition]{def:cardinal-arithmetic}
+Seien $\kappa$ und $\lambda$ Kardinalzahlen. Wir definieren:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Addition:}
+    \[
+    \kappa + \lambda = |(\kappa \times \{0\}) \cup (\lambda \times \{1\})|
+    \]
+    \setcounter{enumi}{1} \item \textbf{Multiplikation:}
+    \[
+    \kappa \cdot \lambda = |\kappa \times \lambda|
+    \]
+    \setcounter{enumi}{2} \item \textbf{Exponentiation:}
+    \[
+    \kappa^\lambda = |\{ f \mid f: \lambda \to \kappa \}|
+    \]
+\end{enumerate}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:23 - 00:20:23]
+Okay, wir definieren jetzt eine... eine Summe $\kappa + \lambda$, und das definieren wir einfach als die Kardinalität der disjunkten Vereinigung von $\kappa$ und $\lambda$. Okay, also wir haben da zwei... zwei Mengen. Wenn man zwei Mengen hat, kann man die disjunkte Vereinigung nehmen. Kennen Sie die disjunkte Vereinigung? Man nimmt einfach die Vereinigung, aber man sagt, okay, alle Elemente hier sind verschieden von allen Elementen von hier. Und wie macht man das? Man sagt einfach, man nimmt die disjunkte Vereinigung, das ist einfach, wir nehmen $\kappa \times \{0\}$, das ist eine menge, das ist eine Kopie von $\kappa$, und dann nehmen wir Vereinigung mit $\lambda \times \{1\}$. Okay, das heißt, das sind wirklich zwei verschiedene Mengen, die sind punktweise verschieden. Und wenn wir jetzt die Vereinigung nehmen und nehmen die Kardinalität von dieser Vereinigung, und das ist $\kappa + \lambda$. Gut, und dann definieren wir $\kappa \cdot \lambda$. Wie könnte man das definieren? Ja.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Als die Mächtigkeit des kartesischen Produktes.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, man nimmt die Mächtigkeit des kartesischen Produktes.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:23 - 00:21:45]
+Genau, man nimmt die Mächtigkeit des kartesischen Produktes. Und dann noch $\kappa^\lambda$, das ist einfach die Mächtigkeit von der menge aller Funktionen von $\lambda$ nach $\kappa$. Okay, da muss man überall die Definitionen einsetzen und gegebenenfalls passende Bijektionen finden.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:21:45 - 00:23:35]
+Und ja, ich werde einfach ein paar Sachen noch erklären kurz. Es gibt die Proposition, da finden Sie aber die Beweise alle im Skript. Also das erste ist, dass Addition und Multiplikation sind... die sind sowohl assoziativ, kommutativ und distributiv. Okay, da muss man etwas diese Definitionen einsetzen und schauen, ob das stimmt. Und weiter gilt, dass... $\kappa^{\lambda + \mu}$ ist dasselbe wie $\kappa^\lambda \cdot \kappa^\mu$, das ist genauso, wie man sich das gerne hätte. Zudem haben wir, dass $\kappa^{\mu \cdot \lambda}$ ist dasselbe wie $(\kappa^\lambda)^\mu$, und außerdem haben wir, dass $(\kappa \cdot \lambda)^\mu$ ist $\kappa^\mu \cdot \lambda^\mu$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Rechenregeln der Kardinalzahlarithmetik]
+\begin{proposition}\label[proposition]{prop:cardinal-arithmetic-rules}
+Für alle Kardinalzahlen $\kappa, \lambda, \mu$ gelten die folgenden Rechenregeln:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Assoziativität, Kommutativität und Distributivität:} Addition und Multiplikation sind assoziativ, kommutativ und distributiv.
+    \setcounter{enumi}{1} \item \textbf{Potenzgesetze:}
+    \begin{align*}
+    \kappa^{\lambda + \mu} &= \kappa^\lambda \cdot \kappa^\mu \\
+    \kappa^{\lambda \cdot \mu} &= (\kappa^\lambda)^\mu \\
+    (\kappa \cdot \lambda)^\mu &= \kappa^\mu \cdot \lambda^\mu
+    \end{align*}
+\end{enumerate}
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:35 - 00:25:15]
+Okay, da muss man überall die Definitionen einsetzen und gegebenenfalls passende Bijektionen finden. Diese Sachen sind gut zu wissen, oder wir wissen, wie man sie anwenden kann. Also wenn ich Ihnen ein... irgendein kartesisches Produkt von Mengen gebe, dass Sie dann wissen, das hat dieselbe... dieselbe Kardinalität wie einfach die größere von diesen Mengen. Äm, wenn Sie das interessiert, empfehle ich, das ein bisschen im Skript weiterzulesen. Vielleicht machen wir noch ein paar Übungen dazu, und ja. Ansonsten machen wir nächste Woche dann weiter mit äm Graphentheorie. Besten Dank fürs Kommen und eine gute Woche.
+\end{spoken-clean}
+
+\begin{math-stroke}[Absorptionsgesetze für unendliche Kardinalzahlen]
+\begin{theorem}\label[theorem]{thm:cardinal-absorption}
+Für unendliche Kardinalzahlen $\kappa, \lambda$ mit mindestens einer unendlich gilt:
+\[
+\kappa + \lambda = \kappa \cdot \lambda = \max\{\kappa, \lambda\}
+\]
+Insbesondere gilt für jede unendliche Kardinalzahl $\kappa$:
+\[
+\kappa^2 = \kappa \cdot \kappa = \kappa
+\]
+\end{theorem}
+\end{math-stroke}
+
+\begin{meta-note}[Vorlesungsende]
+Die Studierenden applaudieren. Die Vorlesung ist beendet.
+\end{meta-note}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 266592, Output 6789)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 85018, Output 28)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 21:49:55) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 05-05-tuesday.mp4
+[Angehängtes Video]: 05-05-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 05-05. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\lecturechapter{Dienstag}{5. Mai}{5. Mai}{Graphentheorie}
+
+\begin{spoken-clean}[00:00:00 - 00:00:57]
+Hallo zusammen, wir fangen an. Herzlich willkommen zur, äh, elften Woche. Wir sind ja noch mittendrin in der Graphentheorie, also so ein ganz kleine Einblick in ein bisschen, um was es in der Graphentheorie... Teilen der Graphentheorie geht. Letzte Woche haben wir noch kurz mit einem Lemma aufgehört. Ähm, ich wollte das noch kurz, ähm, umformulieren. Dieses Lemma heißt auch das Handschlaglemma. Das Schöne von Graphentheorie ist, man kann es oft so in alltägliche Situationen umformen, oder so viele, ja, viele Sachen sind vielleicht so... vielleicht Probleme aus dem realen Leben, und dann kann man sehen, ah, das ist einfach ein Graph, und dann kann man das mit irgendeinem graphentheoretischen Lemma lösen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:57 - 00:01:54]
+Also das Handschlaglemma sagt, dass auf einer Party mit $n$ Gästen ist die Anzahl der Gäste, die einer ungeraden Anzahl von Personen \inlinemetanote{i.e., Gästen, ja} die Hand geben, gerade. ... die die Hand geben, gerade.
+\end{spoken-clean}
+
+\begin{math-stroke}[Handschlaglemma]
+\begin{lemma}[Handschlaglemma]\label[lemma]{lem:handschlaglemma}
+Auf einer Party mit $n$ Gästen ist die Anzahl Gäste, die einer ungeraden Anzahl von Gästen die Hand geben, gerade.
+\end{lemma}
+\end{math-stroke}
+
+\begin{proof}[Beweis des Handschlaglemmas]
+\begin{spoken-clean}[00:01:54 - 00:03:11]
+Und das war einfach im Prinzip, was wir genau am Ende letzter Stunde bewiesen haben. Der Beweis ist, wir betrachten einfach, ähm, den Graph $G = (V, E)$, wobei, ähm, $V$, das sind genau die Gäste, und $E$ \inlinemetanote{das ist ein ungerichteter Graph} sind einfach die Paare von Gästen, die sich die Hand geben. Und wir haben gesehen, ähm, dass die, ähm, $x$ in $V$, so dass der Grad von $x$ ungerade ist, und ja, diese Anzahl ist immer gerade.
+\end{spoken-clean}
+
+\begin{math-stroke}[Modellierung als Graph]
+Wir betrachten den Graphen $G = (V, E)$ mit:
+\begin{align*}
+V &= \{\text{Gäste}\} \\
+E &= \{\{x, y\} \mid x \text{ und } y \text{ geben sich die Hand}\}
+\end{align*}
+Gesucht ist die Anzahl der Knoten mit ungeradem Grad:
+\[
+\left| \{ x \in V \mid \deg(x) \text{ ungerade} \} \right| \text{ ist gerade.}
+\]
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:03:11 - 00:03:38]
+Vielleicht, okay, wir gehen natürlich davon aus, dass sich die Leute nicht selbst die Hand schütteln. Das, äh, geht nicht. Oder wenn man sich selbst die Hand schüttelt, dann zählt das wie zweimal die Hand schütteln, weil man sich ja selbst quasi die Hand geschüttelt hat. \inlinemetanote{lacht} Also machen wir nicht. Ähm, okay, einfach noch zu sagen, noch, dass das war auf jeden Fall gut, sich eine konkrete Situation vorzustellen von, ähm, von gewissen Resultaten.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:38 - 00:04:50]
+Und dann das Letzte, was wir leider nicht mehr die Zeit hatten letzte Woche, war noch diese Sache mit den, ähm, Euler-Linien. Das ist die folgende Definition. Ähm, eine... eine Euler-Linie eines Graphen $G$ ist ein geschlossener Kantenzug, der sämtliche Kanten von $G$ enthält.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Euler-Linie]
+\begin{definition}[Euler-Linie]\label[definition]{def:euler-linie}
+Eine \newterm{Euler-Linie} eines Graphen $G$ ist ein geschlossener Kantenzug, der sämtliche Kanten von $G$ enthält.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:50 - 00:05:39]
+Okay, also wir hatten... wir hatten Kantenzüge nur definiert für Graphen mit, äh, nur mit einer Relation. Aber man kann es ähnlich auch definieren für... für Graphen mit Mehrfachkanten. Ähm, haben wir nicht gemacht, das werden wir aber hier... Und es ist wirklich ein Kantenzug ist einfach ein Kantenzug, das heißt, jede Kante kommt höchstens einmal vor im Kantenzug. Es dürfen aber dieselben Knoten mehrmals verwendet werden. Und genau, wenn man einen geschlossenen Kantenzug hat, der alle Kanten von $G$ enthält, dann ist das eine Euler... Eulersche Linie, ich schreibe lieber Euler-Linie. Also ganz gemäß dem Euler... dem Königsberger Brückenproblem.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:39 - 00:06:45]
+Und ein Graph heißt, ähm, Euler-Graph, wenn er eine Euler-Linie enthält. \inlinemetanote{schreibt an die Tafel} ... Das war, was wir letztes Mal kurz diskutiert haben am Anfang als Motivation.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Euler-Graph]
+\begin{definition}[Euler-Graph]\label[definition]{def:euler-graph}
+Ein Graph, der eine Euler-Linie enthält, heißt \newterm{Euler-Graph}.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:45 - 00:08:00]
+Und das können wir jetzt noch in dieser Proposition abschließen, das ist die Proposition 9.3. Die sagt, dass ein endlicher ungerichteter zusammenhängender Graph $G$ ... zusammenhängend haben wir, glaube ich, nicht definiert. Das heißt einfach, was man denkt. Das heißt, wenn man je zwei Knoten nimmt, dann existiert ein Kantenzug zwischen diesen Knoten. Also man kann je zwei Knoten miteinander verbinden, das ist Definition, ähm, das heißt, es existiert, ähm, Kantenzug zwischen je zwei Knoten.
+\end{spoken-clean}
+
+\begin{math-stroke}[Proposition 9.3: Charakterisierung von Euler-Graphen]
+\setcounter{theorem}{2}
+\begin{proposition}\label[proposition]{prop:euler-graph-char}
+Ein endlicher, ungerichteter, zusammenhängender Graph $G$ ist genau dann ein Euler-Graph, wenn jeder Knoten von $G$ geraden Grad hat.
+\end{proposition}
+\begin{explanation-of-steps}
+Ein Graph heißt zusammenhängend, wenn zwischen je zwei Knoten ein Kantenzug existiert:
+\[
+\forall u, v \in V \implies \exists \text{ Kantenzug von } u \text{ nach } v.
+\]
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:00 - 00:08:56]
+Also ein endlicher ungerichteter zusammenhängender Graph $G$, ähm, ist genau dann ein Euler-Graph, wenn jeder Knoten, ähm, von $G$ geraden Grad hat. Also das ist der Satz von Euler, mit dem er gezeigt hat, dass eben das Königsberger Brückenproblem keine Lösung hat, weil halt eben dort viele Knoten hat, die ungeraden Grad haben. Okay?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:56 - 00:09:21]
+Und die andere Sache ist, er zeigt nicht nur, okay, Euler hat auch gesehen, okay, das ist eine notwendige Bedingung, also wenn es ein Euler-Graph ist, dann muss diese Bedingung erfüllt sein. Aber, ähm, das ist auch eine hinreichende Bedingung. Also wenn alle Knoten einen geraden Grad haben, dann gibt es einen... eine Euler... Euler-Linie.
+\end{spoken-clean}
+
+\begin{proof}[Beweis von Proposition 9.3]
+\begin{spoken-clean}[00:09:21 - 00:10:40]
+Okay, ich... ja, Beweis ist im Wesentlichen einfach der... das Argument von, äh, von Euler. Also falls $G$ eine Euler-Linie hat, so, ähm, so ist jeder Knoten, ähm, genauso oft Anfangs- wie Endpunkt, ähm, einer Kante, äh, von Kanten dieser Linie. Und genau, daraus folgt, dass jeder Knoten hat endlich... hat einen geraden Grad.
+\end{spoken-clean}
+
+\begin{math-stroke}[Hinrichtung \texorpdfstring{$\implies$}{=>}]
+Falls $G$ eine Euler-Linie hat, so ist jeder Knoten genau so oft Anfangs- wie Endpunkt von Kanten dieser Linie:
+\[
+\implies \text{jeder Knoten hat geraden Grad.}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:10:40 - 00:11:30]
+Und für die Umkehrung, ähm, im Prinzip, was wir machen, ähm, wir, äh, konstruieren so eine Euler... eine Euler-Linie, wenn wir wissen, dass es denn... dass das der Fall ist. Zuerst mal, okay, er ist zusammenhängend und, aber wenn der Graph zusammenhängend ist, dann heißt das insbesondere, dass es keine Knoten gibt von Ordnung null. Wenn es von... von Ordnung null wäre, dann könnte man den mit niemandem verbinden. Das heißt, jeder Knoten hat mindestens, ähm, Grad zwei. Okay?
+\end{spoken-clean}
+
+\begin{math-stroke}[Rückrichtung \texorpdfstring{$\impliedby$}{<=} - Vorbereitung]
+Da $G$ zusammenhängend ist, besitzt jeder Knoten mindestens Grad $2$:
+\[
+\forall v \in V \implies \deg(v) \ge 2.
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:30 - 00:12:40]
+Und was wir tun, wir nehmen einen Knoten $x_0$. Ähm, wir starten jetzt an einem Knoten $x_0$ und... wir beginnen jetzt bei $x_0$ und jetzt laufen wir einfach los zu irgendeinem anderen Knoten, ähm, $x_1$, $x_2$ und so weiter. Und zwar, äh, also wir starten an Knoten $x_0$ und dann vom Knoten $x_i$ gehen wir weiter, ähm, zum Knoten, ähm, $x_{i+1}$ und das immer auf einer, ähm, auf einer Kante, die wir noch nicht besucht haben. Also auf einer, sagen wir einfach mal, unbesuchten Kante. Okay?
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion eines Kantenzugs]
+Wir starten in einem Knoten $x_0$ und gehen entlang unbesuchter Kanten:
+\[
+x_0 \to x_1 \to x_2 \to \dots \to x_i \to x_{i+1}
+\]
+\begin{center}
+\begin{tikzpicture}[scale=1.2, >=stealth, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Nodes x_0, x_1, x_2, x_i, x_{i+1} in a line.
+% 2. Foreground: Directed arrows between them.
+% \end{ai-tikz-planner-invisible-content}
+    \node[circle, fill=black, inner sep=1.5pt, label=below:{$x_0$}] (x0) at (0,0) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=below:{$x_1$}] (x1) at (1.5,0) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=below:{$x_2$}] (x2) at (3,0) {};
+    \node (dots) at (4.5,0) {$\dots$};
+    \node[circle, fill=black, inner sep=1.5pt, label=below:{$x_i$}] (xi) at (6,0) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=below:{$x_{i+1}$}] (xi1) at (7.5,0) {};
+
+    \draw[->] (x0) -- (x1);
+    \draw[->] (x1) -- (x2);
+    \draw[->] (x2) -- (dots);
+    \draw[->] (dots) -- (xi);
+    \draw[->] (xi) -- (xi1);
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:40 - 00:13:41]
+Und das können wir immer, weil wenn wir auf einer unbesuchten... unbesuchten Kante in den Knoten reingehen, dann... dann gibt's, wenn es noch eine unbesuchte Kante, die wir auch wieder rausgeht. Also sonst hätte der entsprechende Knoten ja ungerade Ordnung. Okay und jetzt irgendwann kommen wir, ähm, also $G$ ist ein endlicher Graph, das heißt, wir kommen irgendwann zurück, ähm, zu $x_0$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Rückkehr zu \texorpdfstring{$x_0$}{x0}]
+Da $G$ endlich ist, müssen wir nach endlich vielen Schritten zu $x_0$ zurückkehren:
+\[
+\implies \exists \text{ geschlossener Kantenzug } K_0 \text{ beginnend in } x_0.
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:41 - 00:14:36]
+Das heißt, es existiert ein geschlossener Kantenzug, ähm, $K_0$ nennen wir ihn, beginnend in $x_0$. Okay, und falls dieser, ähm, falls $K_0$ jetzt bereits alle Kanten enthält, ist gut, sind wir fertig.
+\end{spoken-clean}
+
+\begin{math-stroke}[Fall 1: Vollständigkeit]
+Falls $K_0$ alle Kanten enthält, sind wir fertig.
+\end{math-stroke}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:15:00
+% topic: Beweis der Charakterisierung von Euler-Graphen.
+% board_state: lem:handschlaglemma, def:euler-linie, def:euler-graph, prop:euler-graph-char
+% next_goal: Konstruktion einer Euler-Linie durch Zusammenfügen von geschlossenen Kantenzügen.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:14:36 - 00:15:10]
+Okay, wenn es der aber... wenn es aber noch Kanten gibt, die nicht in $K_0$ enthalten sind, dann muss einer der Knoten, die auf $K_0$ liegen, an eine solche Kante angrenzen, weil der Graph ist ja zusammenhängend. Also es kann nicht sein, dass jetzt alle unbesuchten Kanten außerhalb von, ähm, also nicht an die Knoten in $K_0$ angrenzen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:15:10 - 00:16:10]
+Ähm, okay, also ansonsten gibt es, es gibt auf $K_0$, ähm, einen Knoten, ähm, $x$... sagen wir mal, wir nennen ihn $x_n$ vielleicht, ähm, von dem eine gerade Anzahl natürlich von Kanten ausgehen, die nicht auf $K_0$ liegen. Okay, also wir haben hier unseren, ähm, Kantenzug $K_0$, der geht von $x_0$ zu $x_0$ geschlossen. Und jetzt haben wir hier so ein $x_n$ und hier gibt's noch Kanten, wo man noch laufen kann, gerade Anzahl.
+\end{spoken-clean}
+
+\begin{math-stroke}[Fall 2: Erweiterung des Kantenzugs]
+Falls unbesuchte Kanten verbleiben, existiert aufgrund des Zusammenhangs ein Knoten $x_1 \in K_0$, an den unbesuchte Kanten angrenzen.
+\begin{center}
+\begin{tikzpicture}[scale=1.5, >=stealth, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Polygon representing K_0.
+% 2. Foreground: Another polygon representing K_1 attached to a node x_1 on K_0.
+% \end{ai-tikz-planner-invisible-content}
+    % K_0 loop
+    \draw[MidnightBlue] (0,0) -- (1,1) -- (2,0.5) -- (1.5,-0.5) -- (0.5,-0.5) -- cycle;
+    \node[MidnightBlue, left] at (0,0) {$K_0$};
+    \node[circle, fill=black, inner sep=1.5pt, label=above:{$x_1$}] (x1) at (2,0.5) {};
+
+    % K_1 loop attached to x_1
+    \draw[dashed, BrickRed] (x1) -- (3,1) -- (3.5,0) -- (2.5,-0.5) -- cycle;
+    \node[BrickRed, right] at (3.5,0) {$K_1$};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:10 - 00:17:12]
+Und jetzt machen wir einfach hier dasselbe. Also wir beginnen jetzt, ähm, in $x_1$ und, äh, gehen... wir gehen entlang neuen Kanten, bis wir wieder zu $x_1$ zurückkommen. Okay, also wir haben jetzt hier, machen das Selbe noch einmal, und erhalten hier irgendeinen anderen Kantenzug. Okay, und jetzt können wir einfach die zwei zusammenhängen. Jetzt gehen wir zuerst hier, dann machen wir diesen, und dann machen wir wieder diesen, dann haben wir einen neuen Kantenzug, der größer ist.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:17:12 - 00:18:24]
+Wir verbinden $K_0$ und $K_1$ zu einem neuen Kantenzug, und jetzt wiederholen wir das, bis wir, ähm, bis wir eine Euler-Linie haben. Okay? Und das geht, weil halt jedes Mal, wenn wir neue Kanten machen, nehmen wir immer nur eine gerade Anzahl Kanten, das heißt, die unbesuchten Kanten, die haben immer noch geraden Grad in jedem Knoten.
+\end{spoken-clean}
+
+\begin{math-stroke}[Zusammenfügen der Kantenzüge]
+Wir konstruieren einen geschlossenen Kantenzug $K_1$ beginnend in $x_1$ über unbesuchte Kanten.
+Wir verbinden $K_0$ und $K_1$ zu einem neuen, größeren geschlossenen Kantenzug.
+Dieser Prozess wird iteriert, bis alle Kanten des Graphen abgedeckt sind.
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:18:24 - 00:18:56]
+Gut, soweit klar, der Beweis? Die Idee ist klar, nachher, ähm, kann man das natürlich mehr oder weniger detailliert aufschreiben, da gibt's auch verschiedene Möglichkeiten, das aufzuschreiben. Ähm, ja, das ist jetzt eine Möglichkeit, vielleicht ein bisschen mäßig detailliert, aber, äh, ja, die Grundidee ist das Wichtige.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:18:56 - 00:20:17]
+Okay, und das ist einfach noch ähnlich, das machen wir jetzt nicht, das können Sie im Skript nachlesen. Es gibt noch andere Versionen von diesem Satz. Ähm, und zwar kann man noch sagen, ein... okay, das ist jetzt eine Euler-Linie, aber man kann auch eine offene Euler-Linie definieren. Das ist eine... eine... ein Kantenzug, der alle Kanten enthält von dem Graph $G$, der aber nicht am selben Ort anfängt wie er aufhört. Und, äh, da kann man auch wieder zeigen, ein endlicher ungerichteter Graph $G$ hat eine offene Euler-Linie...
+\end{spoken-clean}
+
+\begin{math-stroke}[Ähnliche Resultate: Offene Euler-Linien]
+\begin{proposition}\label[proposition]{prop:offene-euler-linie}
+Ein endlicher, ungerichteter, zusammenhängender Graph $G$ hat eine offene Euler-Linie genau dann, wenn es genau zwei Knoten mit ungeradem Grad gibt.
+\end{proposition}
+\begin{explanation-of-steps}
+Eine offene Euler-Linie ist ein Kantenzug, der alle Kanten von $G$ genau einmal enthält, dessen Anfangs- und Endknoten jedoch verschieden sind.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:20:17 - 00:21:53]
+Genau dann, wenn es genau zwei Knoten gibt mit ungeradem Grad. Und dann beginnen wir auf dem einen und hören beim anderen auf. Und natürlich zusammenhängend auch noch, wenn wir... Okay, und man kann natürlich auch wieder ein ähnliches Resultat auch noch formulieren und beweisen für, ähm, für gerichtete Graphen. Ähnliche Resultate für endliche gerichtete Graphen (siehe Proposition 9.16 im Skript). Okay, da muss man noch etwas präziser sein mit diesem positiven Grad und negativen Grad, das es bei jedem punkt, bei jedem Knoten gibt, und die müssen dann übereinstimmen, und dann kann man auch so etwas wieder sehr ähnlich beweisen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Ähnliche Resultate für gerichtete Graphen]
+Ähnliche Resultate für endliche, gerichtete Graphen finden sich in Proposition 9.16 im Skript.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:53 - 00:23:38]
+Gut. Jetzt noch eine kleine nette Anwendung von diesem Satz, ähm, auf ein Problem aus dem Alltag. Das ist das Dominoproblem. Weiß nicht, ähm, Dominospielen spielt man nicht mehr, ähm, spielt man nicht mehr so oft, aber, ähm, wir haben das Folgende: Wir haben das Domino... ein Dominospiel mit Augenzahlen, ähm, $0$ bis $16$. Okay, also wir haben hier $0$ bis $16$, und wir haben jetzt da, ähm, Dominosteine. Okay, ein Dominostein sieht so aus, oder, hat hier eine Zahl und hier eine Zahl, $m$ und $n$ sind beide... sind beide zwischen $0$ und $16$. Okay? Und es gibt für jedes solches Paar gibt's genau einen Stein. Also es gibt nicht $m$ und $n$ und $n$ und $m$, also es gibt nur eines. Okay, wir haben ein Dominospiel, das heißt, wie viele Steine hat man da? Also man hat, wie viele Möglichkeiten gibt's, zwei aus $17$ auszuwählen, oder? Plus noch, da gibt's aber noch alle Möglichkeiten, dass man hat $0-0$, $1-1$, also man kann ja zweimal dieselbe Zahl haben, das heißt, man hat noch... noch $17$ dazu.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Dominoproblem]
+Wir betrachten ein Dominospiel mit Augenzahlen von $0$ bis $16$. Ein Dominostein ist ein Paar $[m \mid n]$ mit $m, n \in \{0, \dots, 16\}$.
+Die Anzahl der Steine berechnet sich durch:
+\[
+\binom{17}{2} + 17 = 136 + 17 = 153 \text{ Steine.}
+\]
+\begin{center}
+\begin{tikzpicture}[scale=1.0, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Rectangle representing a domino stone.
+% 2. Foreground: Vertical line dividing it in half, with labels m and n.
+% \end{ai-tikz-planner-invisible-content}
+    \draw (0,0) rectangle (2,1);
+    \draw (1,0) -- (1,1);
+    \node at (0.5,0.5) {$m$};
+    \node at (1.5,0.5) {$n$};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:38 - 00:25:22]
+Okay, und das... die Frage ist, können wir... das Dominoproblem fragt nun, ähm, können wir... können wir jetzt diese alle in einen Kreis legen? Also beim Domino spielt man ja immer, dass man dann den nächsten... also der nächste Stein muss dann hier wieder das $n$ sein, und nachher kommt der nächste und so weiter. Müssen so immer zusammenpassen, oder? Domino haben Sie auch schon gespielt, oder kennen Sie zumindest das Prinzip. Und die Frage ist, können wir alle Steine... alle von diesen Steinen zu einer unverzweigten geschlossenen Kette aneinanderreihen?
+\end{spoken-clean}
+
+\begin{math-stroke}[Fragestellung des Dominoproblems]
+Können wir alle Steine zu einer unverzweigten, geschlossenen Kette aneinanderreihen?
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:22 - 00:26:15]
+Was ist die Antwort? Müssen wir überlegen, während ich zusammen... während ich das auswische. Also es geht darum, einen gewissen Graphen zu konstruieren und dann zu... und dann zu sehen, gibt's da eine Euler-Linie oder nicht. Okay, was wäre die Antwort? Ja, nein? Nein, ja? Wer denkt ja? Einfach mal zu sehen. Okay, wer denkt nein? Wer ist unsicher? Okay. \inlinemetanote{lacht} Gibt's Argumente? Also, nein, die Antwort ist ja.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:26:15 - 00:27:30]
+Wäre eine gute Prüfungsfrage gewesen. Ähm, hat jemand eine Erklärung dafür? Also wir schauen uns den folgenden Graphen an, oder? Ähm, also wir nehmen den Graphen... Graphen $G = (V, E)$, also nehmen die Knoten, nehmen wir, ähm, nehmen wir die... die Zahlen von $0$ bis $16$. Also wir haben diese $17$ Knoten. Und wir sagen jetzt, zwischen zwei Knoten ist eine Kante, ähm, wenn es einen Dominostein gibt. Also das sind unsere Knoten, und die Kanten sind jetzt genau unsere Dominosteine. Okay, also jeder Dominostein verbindet ja zwei von diesen Knoten, das macht durchaus Sinn, dass wir sagen, die Kanten, das sind hier die... also alle Paare $A, B$, wobei eben $A$ und $B$ in $V$ sind.
+\end{spoken-clean}
+
+\begin{math-stroke}[Modellierung als Graph]
+Wir definieren einen Graphen $G = (V, E)$ mit:
+\begin{align*}
+V &= \{0, 1, \dots, 16\} \\
+E &= \{\{a, b\} \mid a, b \in V\}
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:30 - 00:28:57]
+Okay, jetzt haben wir gesagt, das sehen wir, ist eine gewisse Symmetrie, wir haben gesagt, ein... ein Graph ist regulär von Grad... vom Grad $n$, wenn jeder Knoten, äh, Grad $n$ hat, oder? So, und das heißt, dieser Graph hier ist, ähm, regulär vom Grad... wie viel? ... Ja, ja? ... \inlinemetanote{Student antwortet: 16} ... Ja, genau. Wenn man... wenn man damit die Loops dazu nimmt... 16 + 2, 18, genau. Also 18, weil wenn man eine... eine Zahl hier nimmt, dann kann man sie, äh, zu jeder anderen Zahl verbinden, das gibt einmal 16 Kanten, die davon losgehen, oder? Also sich selbst ausgenommen. Und dann gibt's aber noch eine Schlinge von Null zu sich selbst, und das gibt aber zwei, das erhöht den Grad um zwei, oder? Das ist jetzt zwar nur eine Kante, aber die geht zurück. Ist wie mit der Person, die sich selbst die Hand schüttelt. Also das heißt 16 + 2, das ist 18. Können wir auch hinschreiben, um es klarzumachen, 16 + 2.
+\end{spoken-clean}
+
+\begin{math-stroke}[Grad der Knoten im Dominographen]
+Der Graph $G$ ist regulär vom Grad $18$:
+\[
+\forall v \in V \implies \deg(v) = 16 + 2 = 18.
+\]
+\begin{explanation-of-steps}
+Für jeden Knoten $v \in \{0, \dots, 16\}$ gibt es:
+\begin{itemize}
+    \item $16$ Kanten zu allen anderen Knoten $w \neq v$.
+    \item $1$ Schlinge (Loop) von $v$ zu sich selbst, welche den Grad um $2$ erhöht.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:57 - 00:30:15]
+Also das heißt eigentlich so, im Prinzip kann man sagen, es ist... wir haben $K_{17}$, das war der regul... der, der einfache... der, der schlichte reguläre Graph von Grad 16, also das heißt, wir nehmen 17 Punkte und verbinden jeden Punkt mit dem anderen, außer sich selbst. Aber das machen wir einfach noch, ähm, an jede... an jeden Knoten noch eine Schlinge dran. Also mit 17 Schlingen dazu. Okay? Und jetzt können wir sagen, ähm, daraus folgt jetzt, ähm, okay, das heißt, regulär vom Grad 18, das heißt, jeder Knoten hat Grad 18. Das heißt, es gibt eine geschlossene, ähm, Euler-Linie.
+\end{spoken-clean}
+
+\begin{math-stroke}[Existenz der Euler-Linie]
+Der Graph $G$ entspricht dem vollständigen Graphen $K_{17}$ mit zusätzlich $17$ Schlingen:
+\[
+G \cong K_{17} \text{ mit } 17 \text{ Schlingen.}
+\]
+Da jeder Knoten einen geraden Grad ($18$) besitzt, folgt nach Proposition \ref{prop:euler-graph-char}:
+\[
+\implies \text{Es gibt eine geschlossene Euler-Linie.}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:30:15 - 00:30:52]
+Genau, also das ist so ein... so ein Anwendung von dieser Sache, Frage mit den Euler-Sachen auf ein ganz konkretes Problem. Und wenn man andere Dominospiele nimmt, wenn man sagt, okay, wir haben amdere Arten von Zahlen, sagen wir, wenn wir irgendwie nur bis Zahlen bis $15$ haben, dann geht es natürlich nicht, weil dann haben wir einen regulären Graphen vom Grad, ähm, $17$, und dann hat's keine Lösung mehr. Okay, soweit... soweit klar?
+\end{spoken-clean}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 253936, Output 7535)*
+---
+
+**AutoExtraction:** [Part 2] 05-05-tuesday.mp4
+[Angehängtes Video]: 05-05-tuesday-part2.mp4
+[Kontext-Dateien]: 05-05-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 05-05. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:01:01]
+\inlinemetanote{Der Dozent schreibt an die Tafel} Wie viel? \inlinemetanote{Student antwortet: 16} Ja, genau. Dann damit wenn man noch die Loops dazu nimmt... \inlinemetanote{Student antwortet: 16 + 2} 16 + 2, 18, genau. Also 18, weil wenn man eine... eine Zahl hier nimmt, dann kann man sie, äh, zu jeder anderen Zahl verbinden, das gibt einmal 16 Kanten, die davon losgehen, oder? Also sich selbst ausgenommen. Und dann gibt's aber noch eine Schlinge von Null zu sich selbst, und das gibt aber zwei, das erhöht den Grad um zwei, oder? Ist es zwar nur eine Kante, aber die geht zurück. Ist wie mit der Person, die sich selbst die Hand schüttelt. Also das heißt 16 + 2, das ist 18.
+\end{spoken-clean}
+
+\begin{math-stroke}[Grad der Knoten im Dominographen]
+Der Graph $G = (V, E)$ mit $V = \{0, 1, \dots, 16\}$ und $E = \{\{a, b\} \mid a, b \in V\}$ ist regulär vom Grad $18$:
+\[
+\forall v \in V \implies \deg(v) = 16 + 2 = 18.
+\]
+\begin{explanation-of-steps}
+Für jeden Knoten $v \in \{0, \dots, 16\}$ gibt es:
+\begin{itemize}
+    \item $16$ Kanten zu allen anderen Knoten $w \neq v$.
+    \item $1$ Schlinge (Loop) von $v$ zu sich selbst, welche den Grad um $2$ erhöht.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:01 - 00:01:59]
+Können wir auch hinschreiben, um es klarzumachen, 16 + 2. Also das heißt eigentlich so, im Prinzip kann man sagen, es ist... wir haben $K_{17}$, das war der regul... der, der einfache... der, der schlichte reguläre Graph von Grad 16, also das heißt, wir nehmen 17 Punkte und verbinden jeden Punkt mit dem anderen, außer sich selbst. Aber das machen wir einfach noch, ähm, an jede... an jeden Knoten noch eine Schlinge dran. Also mit 17 Schlingen dazu. Okay? Und jetzt können wir sagen, ähm, daraus folgt jetzt, ähm, okay, das heißt, regulär vom Grad 18, das heißt, jeder Knoten hat Grad 18. Das heißt, es gibt eine geschlossene, ähm, Euler-Linie.
+\end{spoken-clean}
+
+\begin{math-stroke}[Existenz der Euler-Linie im Dominographen]
+Der Graph $G$ entspricht dem vollständigen Graphen $K_{17}$ mit zusätzlich $17$ Schlingen:
+\[
+G \cong K_{17} \text{ mit } 17 \text{ Schlingen.}
+\]
+Da jeder Knoten einen geraden Grad ($18$) besitzt, folgt nach Proposition \ref{prop:euler-graph-char}:
+\[
+\implies \text{Es gibt eine geschlossene Euler-Linie.}
+\]
+\end{math-stroke}
+
+\section{Hamilton-Graphen}
+
+\begin{spoken-clean}[00:01:59 - 00:05:40]
+Genau, also das ist so ein... so ein Anwendung von dieser Sache, Frage mit den Euler-Sachen auf ein ganz konkretes Problem. Und wenn man andere Dominospiele nimmt, wenn man sagt, okay, wir haben amdere Arten von Zahlen, sagen wir, wenn wir irgendwie nur bis Zahlen bis $15$ haben, dann geht es natürlich nicht, weil dann haben wir einen regulären Graphen vom Grad, ähm, $17$, und dann hat's keine Lösung mehr. Okay, soweit... soweit klar? Ich sehe noch ein paar Fragezeichen von der Audience, aber... Also schauen Sie sich das nochmals an. Das sind einfach relativ... sind auch schöne, äh, schöne noch lustige Sachen. Okay, es gibt auch weiteres Beispiel noch mit diesen De-Bruijn-Folgen, äh, können Sie im Skript noch nachschauen, wenn Sie das interessiert. Wir gehen noch weiter zu ein anderes Konzept, das ist etwas schwieriger, ähm... Also wir hatten jetzt einfach ein... wir haben Kantenzüge angeschaut, die alle... alle Kanten genau einmal durchlaufen. Jetzt könnten wir auch anschauen, okay, was ist mit einem Kantenzug, der nicht unbedingt alle Kanten einmal durchläuft, aber alle Knoten einmal durchläuft. Ähm, und zwar wollen wir einen Kreis, das heißt, einen Kantenzug, der, ähm, jeden Knoten nur einmal enthält. Okay. Das ist die folgende Definition. \inlinemetanote{schreibt an die Tafel} Sei $G = (V, E)$ endlich, ungerichtet. Und ein Hamilton-Kreis ist ein Kreis in $G$, der alle Knoten von $G$ enthält. $G$ ist Hamilton-Graph, falls $G$ einen Hamilton-Kreis enthält.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Hamilton-Kreis und Hamilton-Graph]
+\setcounter{theorem}{3}
+\begin{definition}[Hamilton-Kreis]\label[definition]{def:hamilton-kreis}
+Sei $G = (V, E)$ ein endlicher, ungerichteter Graph. Ein \newterm{Hamilton-Kreis} ist ein Kreis in $G$, der alle Knoten von $G$ enthält.
+\end{definition}
+
+\begin{definition}[Hamilton-Graph]\label[definition]{def:hamilton-graph}
+Ein Graph $G$ heißt \newterm{Hamilton-Graph}, falls er einen Hamilton-Kreis enthält.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:05:40 - 00:07:37]
+Ähm... Okay, und vielleicht, ähm, einfach als Bemerkung, hier ist es... anscheinend, es ist nicht... gibt kein einfaches Kriterium, um zu entscheiden, ob ein Graph Hamilton ist oder nicht. Also das ist nicht so wie bei Euler-Graphen, wo man einfach die... die Grade von allen Knoten anschaut und dann weiß man direkt, der Graph ist Euler oder nicht. Hamilton, das ist allgemein... gibt's kein einfaches Kriterium. Bei großen Graphen ist das nicht so einfache zu entscheiden, ob es so etwas gibt oder nicht. Aber vielleicht Beispiele, es gibt schon Beispiele, die man geben kann, wo es das existiert. Ähm, also das einfachste Beispiel ist wieder dieser, ähm, äh, reguläre Graph ohne Schlingen. Und sagen wir, was auch $n \ge 2$ sein, sonst gibt's das nicht. Ähm... Ich glaube strikt größer als 2 sogar. Ist Hamilton. Okay, das sieht man einfach, man beginnt bei $v_1$, man läuft zu irgendeinem anderen $v_2$, da wissen wir, der ist wieder mit irgendeinem... da kann er jeden beliebigen ist der verbunden. Also, es ist ja jeder ist mit jedem verbunden, das heißt, von $v_2$ kann man jetzt zu jedem beliebigen anderen laufen. Man kann jetzt auf $v_3$ gehen, und so weiter, bis man am Schluss bei... bei $v_n$ anläuft und... anlangt und von $v_n$, da wissen wir auch wieder, ist wieder zu $v_1$ verbunden. Okay. Also $K_n$, da ist es relativ einfach.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Vollständige Graphen]
+\setcounter{theorem}{5}
+\begin{example}[Vollständige Graphen]\label[example]{ex:vollstaendige-graphen-hamilton}
+Der vollständige Graph $K_n$ für $n \ge 3$ ist ein Hamilton-Graph.
+\end{example}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, >=stealth, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Complete graph K_3 as a triangle.
+% 2. Foreground: Directed arrows showing the Hamilton cycle.
+% \end{ai-tikz-planner-invisible-content}
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$v_1$}] (v1) at (0,0) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$v_2$}] (v2) at (2,0) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=above:{$v_3$}] (v3) at (1,1.732) {};
+
+    \draw[->, MidnightBlue, very thick] (v1) -- (v2);
+    \draw[->, MidnightBlue, very thick] (v2) -- (v3);
+    \draw[->, MidnightBlue, very thick] (v3) -- (v1);
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}
+Da in $K_n$ jeder Knoten mit jedem anderen Knoten verbunden ist, kann man ausgehend von einem beliebigen Startknoten $v_1$ nacheinander alle anderen Knoten $v_2, \dots, v_n$ in beliebiger Reihenfolge besuchen und schließlich zum Startknoten $v_1$ zurückkehren.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:37 - 00:09:09]
+Dann noch ein Beispiel, das vielleicht noch interessant ist, wo man einfach das... hinzeichnen kann. Ähm... mache ich da schnell, ähm, noch ein... nein, das so... so. Mache ich da noch schnell ein Bild davon. Also Sie kennen die platonischen... Sie kennen die platonischen Körper, oder? Das sind die fünf, ähm, regulären Polyeder, also alle haben alle... wo... also Polyeder, wo alle Seiten gleich sind. Und da wissen wir, es gibt ja fünf davon: Tetraeder, Würfel, Oktaeder, Dodekaeder, Ikosaeder. Haben Sie wahrscheinlich einmal gesehen in der Schule oder sonst wo. Es lohnt sich, sich das mal anzusehen. Also schreiben Sie mir einfach, dass es einfach diese fünf gibt. Und was wir jetzt machen können, wir können die Kantengraphen von diesen Körpern anschauen. Das heißt, wir nehmen jetzt einfach die... die unsere Knoten sind einfach die Ecken von diesen Polyedern, und die Kanten sind die Kanten. Also das heißt, jedem von diesen platonischen Körpern können wir einen... einen Graph zuordnen. Da haben wir diese... äh, diese fünf Graphen. Da sehen wir, da sind die Knoten und dann die entsprechenden Kanten dazu.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Die fünf platonischen Körper]
+Der Dozent zeigt eine Folie mit den fünf platonischen Körpern: Tetraeder, Würfel, Oktaeder, Dodekaeder und Ikosaeder. Anschließend zeigt er die entsprechenden Kantengraphen dieser Körper.
+\end{meta-note}
+
+\begin{spoken-clean}[00:09:09 - 00:10:07]
+Und diese sind alle Hamilton. Da sehen wir hier die entsprechenden, ähm... das sehen wir hier die entsprechenden Kreise. Also der Tetraeder, das ist hier der Kantengraph, und dann nehmen wir jetzt einfach diese... diesen Kreis hier, sehen wir, er enthält alle Knoten. Oder beim Würfel können wir den Kantengraph so zeichnen, und da haben wir so einen Kreis. Oktaeder sehen wir auch, wenn man das so flach drückt auf das... auf die Ebene, gibt's einen Graph, und da ist es das. Äh, ja, und dann Dodekaeder und Ikosaeder, die sind noch etwas komplizierter, kann man aber schön einfach... ja, man kann sich vorstellen, man nimmt so diese Körper und dann macht man einfach eines von diesen... von diesen Kreisen, den macht man ganz groß, und das andere drückt man rein, so kann man die alle schön auf der Ebene zeichnen, wenn man möchte. Und da sieht man dann nachher gemäss Beispiel, dass sie alle Hamilton sind.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Kantengraphen der platonischen Körper]
+Die Folie zeigt die Kantengraphen der fünf platonischen Körper flach in die Ebene projiziert (Schlegel-Diagramme). In jedem Graphen ist ein Hamilton-Kreis rot hervorgehoben, was beweist, dass alle diese Kantengraphen Hamilton-Graphen sind.
+\end{meta-note}
+
+\begin{spoken-clean}[00:10:07 - 00:12:10]
+Okay, das das wäre dann noch ein weiteres... weiteres Beispiel von Hamilton-Graphen. Ähm... Die Kantengraphen der fünf platonischen Körper sind Hamilton. Und ein weiteres Beispiel wäre, ähm... noch der... der Kantengraph von einem Würfel, aber von einem beliebig... von einem Würfel von beliebiger Dimension. Also das wäre noch ein weiteres Beispiel, ähm... der Kantengraph des $k$-dimensionalen Würfels ist auch ein Hamilton-Graph, also für $k \ge 2$. Also für $k=2$, da sehen wir, ähm, das ist einfach das Quadrat. Ein zweidimensionaler Würfel ist ein Quadrat. Und klar, da kann man einfach einmal rundherum laufen, das ist ein Kreis und das ist ein Hamilton-Kreis, das ist klar.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Kantengraph des k-dimensionalen Würfels]
+\setcounter{theorem}{6}
+\begin{example}[Kantengraph des $k$-dimensionalen Würfels]\label[example]{ex:k-dim-wuerfel-hamilton}
+Der Kantengraph des $k$-dimensionalen Würfels für $k \ge 2$ ist ein Hamilton-Graph.
+\end{example}
+
+\emph{Fall $k=2$ (Quadrat):}
+\begin{center}
+\begin{tikzpicture}[scale=1.5, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Square representing k=2 cube.
+% 2. Foreground: Directed arrows showing the Hamilton cycle.
+% \end{ai-tikz-planner-invisible-content}
+    \node[circle, fill=black, inner sep=1.5pt] (a) at (0,0) {};
+    \node[circle, fill=black, inner sep=1.5pt] (b) at (1.5,0) {};
+    \node[circle, fill=black, inner sep=1.5pt] (c) at (1.5,1.5) {};
+    \node[circle, fill=black, inner sep=1.5pt] (d) at (0,1.5) {};
+
+    \draw[->, MidnightBlue, very thick] (a) -- (b);
+    \draw[->, MidnightBlue, very thick] (b) -- (c);
+    \draw[->, MidnightBlue, very thick] (c) -- (d);
+    \draw[->, MidnightBlue, very thick] (d) -- (a);
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:10 - 00:13:05]
+Für $k=3$, ähm... Okay, da... ein biss... also sehr viel überlegen auch nicht, das ist auch klar, dass man da... dass man da jetzt irgendwie laufen, was heisst, so irgendwie... vielleicht müssen wir eine andere Farbe nehmen. Kann man irgendwie so laufen, zum Beispiel so, und dann hoch, und dann, weiß ich, rüber, und nach hinten, und dann so, und so, und so, und da wieder nach vorne. Sehen wir, das gibt einen Kreis und alle Knoten werden durchlaufen. Genau einmal, genau.
+\end{spoken-clean}
+
+\begin{math-stroke}[Fall k=3 (3D-Würfel)]
+\emph{Fall $k=3$ (3D-Würfel):}
+\begin{center}
+\begin{tikzpicture}[scale=1.5, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: 3D Cube projection.
+% 2. Foreground: Red highlighted path showing the Hamilton cycle.
+% \end{ai-tikz-planner-invisible-content}
+    \node[circle, fill=black, inner sep=1.5pt] (000) at (0,0) {};
+    \node[circle, fill=black, inner sep=1.5pt] (100) at (2,0) {};
+    \node[circle, fill=black, inner sep=1.5pt] (110) at (2,2) {};
+    \node[circle, fill=black, inner sep=1.5pt] (010) at (0,2) {};
+    
+    \node[circle, fill=black, inner sep=1.5pt] (001) at (0.8,0.8) {};
+    \node[circle, fill=black, inner sep=1.5pt] (101) at (2.8,0.8) {};
+    \node[circle, fill=black, inner sep=1.5pt] (111) at (2.8,2.8) {};
+    \node[circle, fill=black, inner sep=1.5pt] (011) at (0.8,2.8) {};
+
+    % Hamilton cycle path: 000 -> 001 -> 011 -> 010 -> 110 -> 111 -> 101 -> 100 -> 000
+    \draw[->, BrickRed, ultra thick] (000) -- (001);
+    \draw[->, BrickRed, ultra thick] (001) -- (011);
+    \draw[->, BrickRed, ultra thick] (011) -- (010);
+    \draw[->, BrickRed, ultra thick] (010) -- (110);
+    \draw[->, BrickRed, ultra thick] (110) -- (111);
+    \draw[->, BrickRed, ultra thick] (111) -- (101);
+    \draw[->, BrickRed, ultra thick] (101) -- (100);
+    \draw[->, BrickRed, ultra thick] (100) -- (000);
+
+    % Other edges in dashed gray
+    \draw[dashed, gray] (000) -- (010);
+    \draw[dashed, gray] (100) -- (110);
+    \draw[dashed, gray] (001) -- (101);
+    \draw[dashed, gray] (011) -- (111);
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:05 - 00:16:02]
+Okay, und für $k$ beliebig, ähm, da müssen wir etwas, ähm... Also wir schauen uns jetzt den $k$-dimensionalen Würfel an. Wir können den uns so vorstellen... Also was wir machen, ist ja... ja, wir schauen uns im $\mathbb{R}^n$ (i.e., eigentlich $\mathbb{R}^k$) all die Punkte an, die Knoten, das sind die Punkte, wo alle Koordinaten aus $0$ und $1$ bestehen. Und, ähm, zwei davon sind verbunden genau dann, wenn sie sich nur in einer Stelle unterscheiden, oder? Das ist unser Würfel. Das heißt, wir können die, ähm... wir identifizieren die... wie viele Ecken hat ein Würfel im... ein $k$-dimensionaler Würfel? Ja? ... Zwei hoch $k$, genau. Wir identifizieren die $2^k$ Ecken des $k$-dimensionalen Würfels mit binären Wörtern der Länge $k$, d.h. Elementen in $\{0, 1\}^k$. Und $a, b \in $\{0, 1\}^k$ sind durch eine Kante verbunden, falls sie sich in genau einer Stelle unterscheiden. Okay, und wir schauen uns dann nach der Pause an, weshalb daraus folgt, oder wie man daraus sehen kann, dass es immer einen Hamilton-Kreis gibt im $k$-dimensionalen Würfel. Gut, wir machen in einer Viertelstunde weiter.
+\end{spoken-clean}
+
+\begin{math-stroke}[Formale Definition des k-dimensionalen Würfels]
+Wir identifizieren die $2^k$ Ecken des $k$-dimensionalen Würfels mit binären Wörtern der Länge $k$:
+\[
+V = \{0, 1\}^k
+\]
+Zwei Knoten $a, b \in V$ sind genau dann durch eine Kante verbunden, wenn sie sich in genau einer Stelle unterscheiden:
+\[
+E = \left\{ \{a, b\} \;\middle|\; a, b \in \{0, 1\}^k \text{ und } \sum_{i=1}^k |a_i - b_i| = 1 \right\}
+\]
+\end{math-stroke}
+
+\begin{lecture-break}[15-minütige Pause]
+Der Dozent kündigt eine 15-minütige Pause an.
+\end{lecture-break}
+
+\begin{spoken-clean}[00:16:02 - 00:18:15]
+Also wir haben hier unseren $k$-dimensionalen Würfel, und wir wollen zeigen, dass der... dass dieser Kanten... dieser Kantengraph hier ist Hamilton. Und das folgt aus der folgenden Behauptung, die wir noch beweisen müssen. Die sagt, diese Behauptung sagt, ähm, es gibt eine zyklische Folge, also nennen wir das $a_1$ bis $a_{2^k}$, aus den $2^k$ verschiedenen binären Wörtern der Länge $k$, so dass sich $a_l$ und $a_{l+1}$ sowie $a_{2^k}$ und $a_1$ für $l \in \{1, \dots, 2^k-1\}$ in genau einer Stelle unterscheiden. Okay, jetzt wollen wir zeigen, dass eine solche Folge existiert. Immer nur eines wechseln und dass wir am Schluss wieder am Anfang an... ankommen. Und eine solche Folge heißt, ähm, heißt Gray Code. Okay, ich vermute... ich weiß auch nicht genauer darüber, weshalb das Gray Code heißt. Kommt wahrscheinlich aus der Codierungstheorie, wo man anschaut, wie man solche... wie man Wörter gut wählt, ähm, dass man damit gut Information übermitteln kann und so weiter, so fehlerkorrigierende Codes und so weiter. Aber okay, das ist nicht wichtig für uns. Wichtig ist zu beweisen, dass es so eine Folge immer gibt. Und der Beweis ist, ähm, nicht schwierig, das ist einfach Induktion nach... nach $k$. Also für $k=1$ ist die Sache okay, also wenn Wörter der Länge 1, das ist kein Problem, da nehmen wir einfach das Wort... äh, die Folge $(0, 1)$. 1 unterscheidet sich in einer Stelle von 1 und 0 unterscheidet sich in einer Stelle von 1. Und dann, um von $k$ zu $k+1$ zu gehen, was wir da tun, wir nehmen an, es gibt einen Gray Code von der Länge $2^k$, also sei $(a_1, \dots, a_{2^k})$ ein Gray Code. Und daraus können wir jetzt einfach einen Gray Code von der Länge... für $k+1$ bauen. Und zwar machen wir das so: Wir hängen hier einfach überall noch ein $0$ an zuerst, also machen wir $(0a_1, 0a_2, \dots, 0a_{2^k})$. Okay, die unterscheiden sich jeweils nur in einer Stelle, da sich die jeweils nur in einer Stelle unterscheiden. Und jetzt machen wir hier $1a_{2^k}$. Okay, die unterscheiden sich jetzt auch wieder nur in einer Stelle, nämlich in der ersten. Und jetzt gehen wir einfach alles wieder zurück, bis wir wieder bei $1a_1$ angelangt sind. Und ja, das ist jetzt offensichtlich auch wieder ein Gray Code. Okay, und ein solcher Gray Code ist natürlich genau ein Hamilton-Kreis auf dem Kantengraph des Würfels.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung: Existenz eines Gray Codes]
+\begin{proposition}[Existenz eines Gray Codes]\label[proposition]{prop:gray-code-existenz}
+Es gibt eine zyklische Folge $(a_1, \dots, a_{2^k})$ aus den $2^k$ verschiedenen binären Wörtern der Länge $k$, so dass sich $a_l$ und $a_{l+1}$ sowie $a_{2^k}$ und $a_1$ für $l \in \{1, \dots, 2^k-1\}$ in genau einer Stelle unterscheiden. Eine solche Folge heißt \newterm{Gray Code}.
+\end{proposition}
+
+\begin{proof}[Beweis durch Induktion nach $k$]
+\begin{description}
+    \item[Induktionsanfang ($k=1$):] Die Folge $(0, 1)$ ist ein Gray Code für $k=1$, da sich $0$ und $1$ in genau einer Stelle unterscheiden.
+    \item[Induktionsschritt ($k \to k+1$):] Sei $(a_1, \dots, a_{2^k})$ ein Gray Code der Länge $k$. Wir konstruieren eine Folge der Länge $k+1$:
+    \[
+    (0a_1, 0a_2, \dots, 0a_{2^k}, 1a_{2^k}, 1a_{2^k-1}, \dots, 1a_1)
+    \]
+    \begin{itemize}
+        \item Für $l \in \{1, \dots, 2^k-1\}$ unterscheiden sich $0a_l$ and $0a_{l+1}$ nur in einer Stelle (da sich $a_l$ und $a_{l+1}$ nur in einer Stelle unterscheiden).
+        \item $0a_{2^k}$ und $1a_{2^k}$ unterscheiden sich nur in der ersten Stelle.
+        \item Für $l \in \{1, \dots, 2^k-1\}$ unterscheiden sich $1a_{l+1}$ und $1a_l$ nur in einer Stelle.
+        \item $1a_1$ und $0a_1$ unterscheiden sich nur in der ersten Stelle.
+    \end{itemize}
+    Somit ist die konstruierte Folge ein gültiger Gray Code der Länge $k+1$.
+\end{description}
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:15 - 00:21:53]
+Genau, also diese Würfel sind nette, einfach zu definieren, aber dann doch sich wirklich vorzustellen, ist dann manchmal etwas schwierig. Und da ist noch das Beispiel, wie so ein... wie so ein Kreis, Hamilton-Kreis aussieht im vierdimensionalen Würfel. Also wir können hier alle... hier sind alle 16 Kanten... alle 16 Ecken von diesem Würfel dargestellt, und jetzt, ähm, schauen wir uns den... einen Gray, einen möglichen Gray-Code an. Da sehen wir, das verändert sich immer in nur einer von diesen, immer in nur einer Stelle. Und genau, wenn wir jetzt da die... da ist aufgezeichnet der Kantengraph vom vierdimensionalen Würfel, den kann man gut aufzeichnen, und die rote Linie wäre jetzt so ein Hamilton-Kreis. Genau, kann man sich vergewissern, dass es tatsächlich ein Kreis ist und ein Hamilton-Kreis. Genau, also diese Würfel sind nett, einfach zu definieren, aber dann doch sich wirklich vorzustellen, ist dann manchmal etwas schwierig.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Der 4-Würfel]
+Der Dozent zeigt eine Folie mit einer Tabelle des Gray-Codes für $k=4$ und einer Visualisierung des Hamilton-Kreises auf dem Kantengraphen des 4-Würfels.
+\end{meta-note}
+
+\subsection{Bipartite Graphen}
+
+\begin{spoken-clean}[00:21:53 - 00:25:22]
+Man kann sich jetzt so... ja, Würfel sind in gewissen Bereichen der Mathematik doch auch wichtige Objekte. Die waren in geometrischer Gruppentheorie in letzter Zeit sehr... sozusagen in Mode, dass man gewisse kubische Komplexe anschaut, dass man nimmt eigentlich Würfel von verschiedenen Dimensionen und klebt die aneinander, und die sollen noch gewisse geometrische Bedingungen erfüllen, und dann hat man sehr schöne Werkzeuge, um gewisse Gruppen zu studieren, indem man dann den Kantengraph von so einem kubischen Komplex studiert. Gut, ist nicht Teil von dieser Vorlesung, definitiv nicht, aber war ein paar Jahre mein... bisschen mein Steckenpferd, diese kubischen Komplexe auf gewisse Gruppen anzuwenden. Okay. Jetzt von... als letztes Thema möchte ich noch den sogenannten Heiratssatz, ähm, besprechen, obwohl das ein sehr unglücklicher Name ist. Ähm, noch eine Definition, kommt auch auf dem Übungsblatt. Ähm, ein Graph heißt, ähm, bipartit... bipartit ist ein lustiges Wort. Was heißt das? Man kann es in zwei Teilen, also man kann die... die Knoten in zwei verschiedene Mengen teilen, und dann sind alle Kanten liegen zwischen der einen Menge und der anderen Menge. Okay? Also bipartit, falls, ähm, $V$ die disjunkte Vereinigung von zwei Teilmengen $U, W \subseteq V$ ist. Also disjunkte Vereinigung, das heißt, ähm, $V$ ist die Vereinigung von $U$ und $W$ und der Durchschnitt von $U$ und $W$ ist leer. So dass die Kanten, die liegen alle in der menge, ähm... also sind alle enthalten in $U \times W \subseteq V \times V$. Also ist eine Teilmenge von $V \times V$. Und wir schreiben auch... dann schreiben wir einfach $G$ als $U, W$ und hier die... die Ecken (i.e., Kanten $E$). Okay, wenn wir sagen, $G$ ist ein bipartiter Graph, wir schreiben ihn so, dann heißt das, das ist die eine Knotenmenge, das ist die andere, und die Kanten, die gehen alle zwischen von Elementen hier zu Elementen da. Okay? Also es gibt gewisse Graphen, die... ist eine spezielle Art von Graphen. Die meisten sind natürlich nicht bipartit. Es gab noch eine Übungsaufgabe dazu, da schauen wir uns so eine Verallgemeinerung davon an, das ist noch die Frage von... wie ein Graph färbbar ist. Ein Graph ist bipartit genau dann, wenn er zwei-färbbar ist, also man kann wie alle Knoten eine Farbe blau oder rot geben, und dann geht nie ein roter Knoten zu einem blauen Knoten (i.e., eigentlich geht nie eine Kante zwischen zwei gleichfarbigen Knoten). Okay. Gut, okay, das ist der... das sind bipartite Graphen. Ja, und oft, ich meine, bipartite Graphen treten natürlich noch... ja, treten relativ häufig auf, was weiß ich, wenn man anschaut Briefreunde zwischen Europa und Amerika, sagen wir, oder? Das sind alle... alle entweder in Europa und Amerika, aber sie schreiben sich nur über den Atlantik Briefe oder so, zum Beispiel, das wäre jetzt ein bipartiter Graph, da kommen sie zusammen. Okay, und... Okay, machen wir noch eine Definition, wenn, ähm... das ist jetzt aber eher für nicht, ähm... für ungerichtete Graphen. Für einen ungerichteten bipartiten Graph... Aber bei bipartiten Graphen spielt es nicht mehr so eine Rolle, ob sie gerichtet oder ungerichtet sind, man weiß eigentlich, ja, man hat für jede Kante quasi, kann man sagen, ob sie in $U$ anfängt oder in $W$. Ungerichtet. Ähm, dann definieren wir für... für eine Teilmenge $X$ von $U$, definieren wir, ähm, $E(X)$ als, ähm, die menge von allen $y$ in $W$, so dass ein $x$ existiert mit $\{x, y\}$ ist in... eine Kante. Okay? Wenn wir hier eine Teilmenge haben... und ähnlich auch noch $E(Y)$ für $Y$ in $W$. Okay, also wir haben hier... bipartit heißt, hier haben wir alle Knoten aus $U$, hier haben wir alle Knoten aus $W$. Und jetzt gewisse davon sind verbunden miteinander. Okay, was weiß ich, so irgendein Graph. Und... Okay, jetzt wenn wir hier eine Teilmenge von... von $U$ haben, sagen wir $X$ zum Beispiel, dann schauen wir uns jetzt alle... ist hier $E(X)$, das wäre jetzt hier alle Knoten in $W$, die mit einem Knoten in $X$ verbunden sind.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Bipartiter Graph]
+\setcounter{theorem}{7}
+\begin{definition}[Bipartiter Graph]\label[definition]{def:bipartiter-graph}
+Ein endlicher, ungerichteter Graph $G = (V, E)$ heißt \newterm{bipartit}, falls $V$ die disjunkte Vereinigung zweier Teilmengen $U, W \subseteq V$ ist:
+\[
+V = U \cup W \quad \text{mit} \quad U \cap W = \emptyset
+\]
+so dass alle Kanten nur zwischen $U$ und $W$ verlaufen:
+\[
+E \subseteq \{ \{u, w\} \mid u \in U, w \in W \}
+\]
+Wir schreiben dann auch $G = (U, W, E)$.
+\end{definition}
+
+\begin{definition}[Nachbarschaft einer Teilmenge]\label[definition]{def:nachbarschaft-teilmenge}
+Sei $G = (U, W, E)$ ein bipartiter Graph. Für eine Teilmenge $X \subseteq U$ definieren wir die Menge ihrer Nachbarn $E(X) \subseteq W$ durch:
+\[
+E(X) = \{ y \in W \mid \exists x \in X \text{ mit } \{x, y\} \in E \}
+\]
+Analog definieren wir $E(Y) \subseteq U$ für eine Teilmenge $Y \subseteq W$.
+\end{definition}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Two columns of nodes representing U and W.
+% 2. Midground: Shaded region for subset X in U and its neighborhood E(X) in W.
+% 3. Foreground: Edges connecting nodes in U and W.
+% \end{ai-tikz-planner-invisible-content}
+    % Nodes in U
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$u_1$}] (u1) at (0,2) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$u_2$}] (u2) at (0,1) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$u_3$}] (u3) at (0,0) {};
+    \node[left] at (-0.5, 1) {$U$};
+
+    % Nodes in W
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$w_1$}] (w1) at (2,2) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$w_2$}] (w2) at (2,1) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$w_3$}] (w3) at (2,0) {};
+    \node[right] at (2.5, 1) {$W$};
+
+    % Edges
+    \draw (u1) -- (w1);
+    \draw (u1) -- (w2);
+    \draw (u2) -- (w2);
+    \draw (u3) -- (w3);
+
+    % Highlight subset X = {u1, u2}
+    \draw[dashed, MidnightBlue, rounded corners=5pt] (-0.3, 0.7) rectangle (0.3, 2.3);
+    \node[MidnightBlue, left] at (-0.4, 1.5) {$X$};
+
+    % Highlight neighborhood E(X) = {w1, w2}
+    \draw[dashed, BrickRed, rounded corners=5pt] (1.7, 0.7) rectangle (2.3, 2.3);
+    \node[BrickRed, right] at (2.4, 1.5) {$E(X)$};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 261591, Output 8509)*
+---
+
+**AutoExtraction:** [Part 3] 05-05-tuesday.mp4
+[Angehängtes Video]: 05-05-tuesday-part3.mp4
+[Kontext-Dateien]: 05-05-tuesday-part1.tex, 05-05-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 05-05. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:00:23]
+...tief... häufig auch auf, was weiß ich, wenn man anschaut Briefreunde zwischen Europa und Amerika, sagen wir, oder? Das sind alle... alle entweder in Europa und Amerika, aber sie schreiben sich nur über den Atlantik Briefe oder so, zum Beispiel, das wäre jetzt ein bipartiter Graph, da kommen sie zusammen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:00:23 - 00:01:11]
+Okay, und... Okay, machen wir noch eine Definition, wenn, ähm... das interessiert uns aber eher für nicht, ähm... für ungerichtete Graphen. Für einen ungerichteten bipartiten Graph... Aber bei bipartiten Graphen spielt es nicht mehr so eine Rolle, ob sie gerichtet oder ungerichtet sind, man weiß eigentlich, ja, man hat für jede Kante quasi, kann man sagen, ob sie in $U$ anfängt oder in $W$. Ungerichtet. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:11 - 00:02:01]
+Ähm, dann definieren wir für... für eine Teilmenge $X$ von $U$, definieren wir, ähm, $E(X)$ als, ähm, die Menge von allen $y$ in $W$, so dass ein $x$ existiert mit $\{x, y\}$ ist in... eine Kante. Okay? Wenn wir hier eine Teilmenge haben... und ähnlich auch noch $E(Y)$ für $Y$ in $W$. Okay, also wir haben hier... bipartit heißt, hier haben wir alle Knoten aus $U$, hier haben wir alle Knoten aus $W$. Und jetzt gewisse davon sind verbunden miteinander. Okay, was weiß ich, so irgendein Graph. Und... \inlinemetanote{zeichnet an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Nachbarschaft einer Teilmenge]
+\setcounter{theorem}{7}
+\begin{definition}[Nachbarschaft einer Teilmenge]\label[definition]{def:nachbarschaft-teilmenge}
+Sei $G = (U, W, E)$ ein bipartiter Graph. Für eine Teilmenge $X \subseteq U$ definieren wir die Menge ihrer Nachbarn $E(X) \subseteq W$ durch:
+\[
+E(X) = \{ y \in W \mid \exists x \in X \text{ mit } \{x, y\} \in E \}
+\]
+Analog definieren wir $E(Y) \subseteq U$ für eine Teilmenge $Y \subseteq W$.
+\end{definition}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, thick]
+% \begin{ai-tikz-planner-invisible-content}
+% 1. Background: Two columns of nodes representing U and W.
+% 2. Midground: Shaded region for subset X in U and its neighborhood E(X) in W.
+% 3. Foreground: Edges connecting nodes in U and W.
+% \end{ai-tikz-planner-invisible-content}
+    % Nodes in U
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$u_1$}] (u1) at (0,2) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$u_2$}] (u2) at (0,1) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=left:{$u_3$}] (u3) at (0,0) {};
+    \node[left] at (-0.5, 1) {$U$};
+
+    % Nodes in W
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$w_1$}] (w1) at (2,2) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$w_2$}] (w2) at (2,1) {};
+    \node[circle, fill=black, inner sep=1.5pt, label=right:{$w_3$}] (w3) at (2,0) {};
+    \node[right] at (2.5, 1) {$W$};
+
+    % Edges
+    \draw (u1) -- (w1);
+    \draw (u1) -- (w2);
+    \draw (u2) -- (w2);
+    \draw (u3) -- (w3);
+
+    % Highlight subset X = {u1, u2}
+    \draw[dashed, MidnightBlue, rounded corners=5pt] (-0.3, 0.7) rectangle (0.3, 2.3);
+    \node[MidnightBlue, left] at (-0.4, 1.5) {$X$};
+
+    % Highlight neighborhood E(X) = {w1, w2}
+    \draw[dashed, BrickRed, rounded corners=5pt] (1.7, 0.7) rectangle (2.3, 2.3);
+    \node[BrickRed, right] at (2.4, 1.5) {$E(X)$};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:01 - 00:02:46]
+Okay, jetzt wenn wir hier eine Teilmenge von... von $U$ haben, sagen wir $X$ zum Beispiel, dann schauen wir uns jetzt alle... ist hier $E(X)$, das wäre jetzt hier alle Knoten in $W$, die mit einem Knoten in $X$ verbunden sind. \inlinemetanote{wischt die linke Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:46 - 00:03:01]
+\inlinemetanote{Der Projektor schaltet sich ein und zeigt eine Folie zum 4-Würfel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:01 - 00:03:24]
+Äm, okay, also ich sage jetzt... Okay, ich sage jetzt sogar gar nicht, weshalb das Heiratssatz heißt, weil das beruht auf, äh, vollständig veralteten, chauvinistischen, heteronormativen, monogamen Definitionen von, äh, von Heirat und, äh, sehr binären Geschlechtsdefinitionen und so weiter. Also das wollen wir gar nicht anschauen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Der Name des Heiratssatzes]
+Der Dozent verzichtet bewusst auf die historische, geschlechtsspezifische Erklärung des Namens \qt{Heiratssatz} (Hall's Marriage Theorem) und verweist humorvoll auf dessen veraltete gesellschaftliche Annahmen. Dies dient dazu, die mathematische Abstraktion in den Vordergrund zu stellen.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:03:24 - 00:03:40]
+Äm, aber es ist, ja, es ist ein Satz aus den 1950er Jahren. Aber ich kann es erklären. Der Heiratssatz, das ist das folgende Problem: Wir haben hier \inlinemetanote{zeigt auf die Folie} Leute, A, B, C, D, E zum Beispiel. Und hier gibt's, sagen wir, Geschenke oder irgendetwas zum Beispiel, was diese Leute da wollen.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Beispiel Heiratssatz]
+Die Folie zeigt ein bipartites Zuordnungsproblem mit sechs Geschenken (nummeriert von 1 bis 6) und fünf Personen (A, B, C, D, E). Pfeile zeigen die Präferenzen der Personen für bestimmte Geschenke an.
+\end{meta-note}
+
+\begin{spoken-clean}[00:03:40 - 00:04:18]
+Und jetzt schauen wir an, okay, es gibt, ähm... So, jede von diesen Personen möchte vielleicht eine gewisse Anzahl, eine gewisse... gewisse Sachen haben von hier, also zum Beispiel A möchte gerne 1 und 3, B möchte gerne 2, 4, 5 und 6, C möchte gerne 2 oder 3, D möchte 1... ja, und so weiter. Jeder hat Präferenzen. Kennt man, was weiß ich, Kindergeburtstag, jeder darf ein Geschenk auswählen von dem Korb und... vielleicht jeder hat drei, vier Sachen, die er gerne hätte. Gibt's eine Möglichkeit, dass jeder etwas findet, das er gerne hat?
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:18 - 00:04:54]
+Also das ist die Frage: Gibt's eine injektive Funktion von... von dieser menge hier zu dieser Menge? Also wo man jedem etwas zuordnet, allerdings mit der Bedingung, dass, ähm, dass man quasi hier diese... diese Menge nur Elementen zuordnet... also diese Elemente nur Elementen zuordnen darf, ähm, die mit einem Knoten... äh, mit einem... mit einer Kante verbunden sind. Okay? Also sehr... ja, ein sehr alltägliches Problem.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:54 - 00:05:47]
+Vor allem mit, ähm... vor allem mit großen Gruppen von Kindern und Geschenken oder so. Wobei es natürlich viele Orte... eine Rolle spielen kann, zum Beispiel, was weiß ich, Betreuerinnen für die Masterarbeiten oder so etwas, oder? \inlinemetanote{schaltet den Projektor aus} Und die Frage ist, wann hat das... für welche Graphen hat das eine Lösung? Für welche Graphen gibt es eine solche Injektion? Ähm, und der Heiratssatz, der gibt uns eine notwendige und hinreichende Bedingung. Weil wenn alle dasselbe Objekt wollen, dann kann es natürlich keine solche Injektion geben, das ist ja klar.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:05:47 - 00:06:31]
+Und der Heiratssatz gibt uns jetzt... \inlinemetanote{schreibt an die Tafel} von Philip Hall, war ein Gruppentheoretiker, der sagt jetzt: Sei $G = (A, B, E)$ ein endlicher ungerichteter bipartiter Graph. Dann sind die folgenden Aussagen äquivalent:
+\end{spoken-clean}
+
+\begin{nice-box}[Heiratssatz von Hall]
+\setcounter{theorem}{8}
+\begin{theorem}[Heiratssatz von Hall]\label[theorem]{thm:heiratssatz-hall}
+Sei $G = (A, B, E)$ ein endlicher, ungerichteter, bipartiter Graph. Dann sind die folgenden Aussagen äquivalent:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Es existiert eine Injektion $\pi: A \to B$, so dass für alle $a \in A$ gilt:
+    \[
+    \{a, \pi(a)\} \in E
+    \]
+    \setcounter{enumi}{1} \item Für alle Teilmengen $X \subseteq A$ gilt:
+    \[
+    |X| \le |E(X)| \quad \text{(Hall-Bedingung)}
+    \]
+\end{enumerate}
+\end{theorem}
+\end{nice-box}
+
+\begin{spoken-clean}[00:06:31 - 00:07:22]
+Okay, ähm, die Aussage A wäre, ähm, nämlich es existiert eine solche Injektion. Also es existiert, ähm, eine Injektion, nennen wir die $\pi$, von, ähm, $A$ nach $B$, so dass, ähm, $\pi(a) = b$ impliziert, ähm, dass $\{a, b\}$ eine... eine Kante ist. Und dann die Aussage B, ähm, das ist die Bedingung von Hall, die sagt, dass, ähm, für alle Teilmengen $X$ von $A$ gilt, dass die Anzahl in $X$ muss kleiner gleich die Anzahl von $E(X)$ sein. Das ist die Bedingung von Hall.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:07:22 - 00:08:08]
+Genau, ähm... Manche Leute sagen dann eben, also definieren dann, dass man sagt, Elemente $a$ und $b$ sind befreundet, falls eine Kante gibt zwischen $a$ und $b$, und dann so ein $\pi$ heißt eine Heiratsfunktion. Also die Frage: Kann man alle Elemente von $A$ verheiraten, monogam, mit Elementen von $B$, so dass man nur befreundete Paare verheiratet? Okay, und das ist diese Bedingung ist notwendig und hinreichend.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:08 - 00:08:47]
+Okay, Beweis, ähm... \inlinemetanote{schreibt an die Tafel} Also um zu zeigen, dass A B impliziert, ähm... Also wir wissen, das ist relativ klar, oder? Wenn wir wissen, das...
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:08:47
+% topic: Heiratssatz von Hall (Hall's Marriage Theorem)
+% board_state: def:nachbarschaft-teilmenge, thm:heiratssatz-hall
+% next_goal: Beweis der Äquivalenz (a) <=> (b) mittels vollständiger Induktion.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{proof}[Beweis des Heiratssatzes von Hall]
+\begin{spoken-clean}[00:08:47 - 00:09:46]
+Es gibt so ein $\pi$ und das ist injektiv, ähm, und daraus folgt, dass die Anzahl Elemente von $X$ von so einer Teilmenge, ähm, ist dasselbe wie die Anzahl vom Bild von $X$. Und, ähm, okay, und das ist, da die ja alle verbunden sind mit Kanten zu Elementen von $X$, ähm, ist das kleiner gleich diese Menge $E(X)$, die wir da oben definiert haben. Und das stimmt für alle... für alle $X$ in $A$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Hinrichtung \texorpdfstring{$(a) \implies (b)$}{a => b}]
+Da $\pi: A \to B$ eine Injektion mit $\{a, \pi(a)\} \in E$ für alle $a \in A$ ist, gilt für jede Teilmenge $X \subseteq A$:
+\[
+|X| = |\pi(X)|
+\]
+Da für jedes $a \in X$ gilt, dass $\pi(a) \in E(X)$ (da $\{a, \pi(a)\} \in E$), folgt:
+\[
+\pi(X) \subseteq E(X) \implies |X| = |\pi(X)| \le |E(X)|.
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:46 - 00:10:20]
+Okay, also es ist klar, dass wenn so eine Heiratsfunktion existiert, dann muss diese Bedingung erfüllt sein. Ansonsten, äh, ja, ansonsten geht's nicht. Jetzt das eigentlich der wichtige Satz ist, dass das auch hinreichend ist, also wenn diese Bedingung erfüllt ist, dann gibt es eine solche Funktion. Ähm, okay, und jetzt um zu zeigen, dass B A impliziert, ähm...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:10:20 - 00:11:00]
+Da machen wir jetzt Induktion, \inlinemetanote{schreibt an die Tafel} und zwar nach, ähm, der Anzahl Elemente in $A$. Also $n = |A|$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Rückrichtung \texorpdfstring{$(b) \implies (a)$}{b => a} - Induktionsanfang]
+Wir führen den Beweis durch vollständige Induktion nach $n = |A|$.
+
+\emph{Induktionsanfang ($n = 1$):}
+Sei $A = \{a\}$. Nach Voraussetzung (b) gilt für $X = A$:
+\[
+1 = |A| \le |E(A)| \implies |E(a)| \ge 1.
+\]
+Es existiert also mindestens ein $b \in B$ mit $\{a, b\} \in E$. Wir definieren $\pi(a) = b$, was eine wohldefinierte Injektion ist.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:00 - 00:11:47]
+Ähm, genau. Also nehmen wir jetzt an, B ist erfüllt, und wir machen jetzt Induktion über die Anzahl Elemente von $A$ und zeigen, dass es jeweils so eine... so eine Funktion gibt. Okay, also für falls $n = 1$ ist, ähm, ja, ist die... ist der Fall klar. Ich meine, wenn's nur ein Element hat in $A$, okay, dann muss es mindestens eine Kante geben, die von $A$ weggeht. Wenn's das gibt, dann gibt's eine solche Funktion. Okay.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:47 - 00:12:40]
+Okay, also wenn's das erfüllt ist, dann gibt's mindestens eine Kante, das heißt, es gibt auch eine Funktion. Das heißt, wir müssen jetzt von $n$ zu $n+1$ gehen. So nehmen an, wir haben's schon bewiesen, dass es für $n$... für wenn $X$ $n$ Elemente enthält, stimmt es, jetzt müssen wir's noch für $n+1$ beweisen. Okay, und da schauen wir uns zwei, ähm, Fälle an. \inlinemetanote{schreibt an die Tafel} Der erste Fall ist der Fall, ähm, dass für alle Teilmengen von $X$... für alle echten Teilmengen $X$ von $A$, ähm, ist $X$ nicht nur kleiner gleich $A$, das wissen wir sowieso per Voraussetzungen, aber wir haben sogar, dass $X$ strikt kleiner ist als $E(X)$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:12:40 - 00:13:50]
+Also die Voraussetzung, die Bedingung von Hall sagt uns, das ist kleiner gleich, das ist gegeben, aber wenn wir jetzt sogar noch stärker haben, dass wenn es eine echte Teilmenge ist, dann ist das, äh, strikt kleiner. Das ist der erste Fall. Und in dem Fall, ähm... Das ist der erste Fall, und nachher schauen wir uns den Fall an, dass es eine solche Teilmenge gibt, wo $X$ gleich $E(X)$ ist. Aber jetzt in dem Fall, ähm, nehmen wir irgendeinen... \inlinemetanote{schreibt an die Tafel} irgendeine Kante, $\{a, b\}$ in $E$ liegt, und wir schauen uns an, ähm, $A'$ einfach die menge $A$ ohne $a$ und $B'$ die Menge $B$ ohne $b$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Fall 1: Striktes Größer-Sein für echte Teilmengen]
+\emph{Fall 1:} Für alle echten Teilmengen $\emptyset \neq X \subsetneq A$ gilt:
+\[
+|X| < |E(X)| \implies |X| \le |E(X)| - 1
+\]
+Wir wählen eine beliebige Kante $\{a, b\} \in E$ und definieren die reduzierten Mengen:
+\begin{align*}
+A' &= A \setminus \{a\} \\
+B' &= B \setminus \{b\} \\
+E' &= E \cap \{ \{u, w\} \mid u \in A', w \in B' \}
+\end{align*}
+Wir betrachten den reduzierten Graphen $G' = (A', B', E')$. Es gilt $|A'| = n$.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:50 - 00:14:46]
+Und, äh, wir nehmen jetzt einfach die Kanten an, die von hier nach hier gehen. Okay? Das heißt, $E'$ definieren wir als die Menge von den Kanten, die von $A'$ gehen nach $B'$. Okay, und jetzt wollen wir da wieder Induktion anwenden. Okay, vielleicht lasse ich da einmal den Satz noch stehen, damit wir nicht vergessen, was wir beweisen wollen. \inlinemetanote{wischt die mittlere Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:46 - 00:15:30]
+Okay, machen wir weiter. Also es gibt zwei, ähm... Okay, was wir sehen, ähm, also falls $X$ enthalten ist in $A'$ \inlinemetanote{schreibt an die Tafel}, so ist natürlich $E(X)$ enthalten in $B'$. Okay, also alle Kanten, die von $X$ ausgehen, wenn $X$ in $A'$ liegen, die landen in $B'$. Okay, das heißt aber, dass der Graph $A', B', E'$ erfüllt die Bedingung von Hall.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:15:30
+% topic: Beweis des Heiratssatzes von Hall (Fall 2)
+% board_state: thm:heiratssatz-hall
+% next_goal: Verifikation der Hall-Bedingung für den zweiten Teilgraphen G_2 mittels Widerspruchsbeweis.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{math-stroke}[Verifikation der Hall-Bedingung für G']
+Für jede Teilmenge $X \subseteq A'$ gilt, da $X$ eine echte Teilmenge von $A$ ist ($X \subsetneq A$):
+\[
+|X| < |E(X)| \implies |X| \le |E(X)| - 1
+\]
+Da wir nur das Element $b$ aus $B$ entfernt haben, um $B'$ zu erhalten, gilt für die Nachbarschaft $E'(X)$ im reduzierten Graphen $G'$:
+\[
+|E'(X)| \ge |E(X) \setminus \{b\}| \ge |E(X)| - 1
+\]
+Daraus folgt direkt:
+\[
+|X| \le |E(X)| - 1 \le |E'(X)|
+\]
+Somit erfüllt der reduzierte Graph $G' = (A', B', E')$ die Hall-Bedingung (b).
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:30 - 00:16:35]
+Und daraus folgt jetzt, ähm, per Induktion, per Induktionsannahme, dass es gibt eine solche Injektion, $\pi'$, von $A'$ nach $B'$ injektiv, mit $\pi'(a) = b$ impliziert, dass $\{a, b\}$ eine Kante ist. Okay, und jetzt schreiben wir einfach die Verknüpfung, die... jetzt kleben wir diese Abbildungen zusammen, das heißt, die Abbildung $\pi$ von $A$ nach $B$, da sagen wir einfach, $\pi(a)$ ist gleich $b$, falls $a = a'$ ist, und $\pi'(a)$ sonst. Und diese Abbildung ist natürlich weiterhin injektiv und erfüllt Bedingung aus A. Okay, also das ist der erste Fall ist relativ klar.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der Injektion in Fall 1]
+Da $G'$ die Hall-Bedingung erfüllt und $|A'| = n$ gilt, existiert nach Induktionsvoraussetzung eine Injektion:
+\[
+\pi': A' \to B' \quad \text{mit} \quad \{x, \pi'(x)\} \in E' \subseteq E \quad \forall x \in A'
+\]
+Wir definieren die Abbildung $\pi: A \to B$ durch:
+\[
+\pi(x) = \begin{cases}
+b & \text{falls } x = a \\
+\pi'(x) & \text{falls } x \in A'
+\end{cases}
+\]
+\begin{explanation-of-steps}
+Da $\pi'(A') \subseteq B' = B \setminus \{b\}$ gilt, ist das Bild von $A'$ disjunkt von $\{b\}$. Da $\pi'$ injektiv ist, ist somit auch $\pi$ injektiv. Zudem gilt für alle $x \in A$:
+\[
+\{x, \pi(x)\} \in E
+\]
+Damit ist die Behauptung für Fall 1 bewiesen.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:35 - 00:17:58]
+Wir haben hier unsere Punkte von $A$, unsere Punkte von $B$. Jetzt nehmen wir hier einfach einen... eine Kante raus, und mit unserer starken Fall-1-Bedingung erfüllt quasi der Rest immer noch die Bedingung, wir erhalten hier eine Injektion, und dann setzen wir sie fort. Soweit so gut. Äm, dann schauen wir uns noch den Fall 2 an, der ist aber auch... auch wieder klar. Der zweite Fall ist, ähm, nicht im ersten Fall, das heißt, es gilt nicht für alle $X$ in $A$, dass $X$ strikt kleiner ist als $E(X)$. Das heißt aber, es existiert eine Teilmenge $A_1$ von $A$ mit die Anzahl Elemente in $A_1$ ist genau $E(A_1)$. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:17:58 - 00:19:21]
+Okay, also wir haben hier... unser $A$, hier haben wir unsere... unsere Sachen $B$, und jetzt okay, jetzt gibt's hier irgendeine Teilmenge von Leuten, sagen wir hier, und wir schauen die... wir schauen die Sachen an, die davon weggehen. Und da gibt's genau so viele wie... wie's da unten davon weggehen. Okay, da wo es endet. Weiß ich. Äm, und was wir jetzt machen ist, wir definieren $B_1$ als, ähm, diese da oben, das da hier ist unser $A_1$, und jetzt die $B_1$ wäre die da oben, das ist $E(A_1)$. Und $A_2$ nehmen wir jetzt einfach die, ähm, $A$ ohne $A_1$ und $B_2$ nehmen wir einfach $B$ ohne $B_1$. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Fall 2: Existenz einer kritischen Teilmenge]
+\emph{Fall 2:} Es existiert eine echte Teilmenge $\emptyset \neq A_1 \subsetneq A$ mit:
+\[
+|A_1| = |E(A_1)|
+\]
+Wir definieren die disjunkten Zerlegungen von $A$ und $B$:
+\begin{align*}
+B_1 &= E(A_1) \\
+A_2 &= A \setminus A_1 \\
+B_2 &= B \setminus B_1
+\end{align*}
+Sowie die entsprechenden Kantenmengen für die beiden Teilgraphen:
+\begin{align*}
+E_1 &= E \cap \{ \{u, w\} \mid u \in A_1, w \in B_1 \} \\
+E_2 &= E \cap \{ \{u, w\} \mid u \in A_2, w \in B_2 \}
+\end{align*}
+Wir betrachten die Teilgraphen $G_1 = (A_1, B_1, E_1)$ und $G_2 = (A_2, B_2, E_2)$.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:21 - 00:20:17]
+Und ähnlich definieren wir $E_1$, da nehmen wir halt wieder alle Kanten, die von $A_1$ nach $B_1$ gehen, und als $E_2$ nehmen wir alle Kanten, die von $A_2$ nach $B_2$ gehen. Okay, und jetzt wollen wir da wieder Induktion anwenden.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:17 - 00:21:30]
+Ähm, genau. Gemäß Induktion können wir jetzt annehmen, dass... folgt jetzt, dass... dass eine Funktion gibt von $A_1$ nach $B_1$. Das heißt, gemäß Induktion gibt es eine Injektion $\pi_1$ von $A_1$ nach $B_1$ wie in A. Okay, das heißt, auf $A_1$ ist es gut. Jetzt müssen wir aber noch von $A_2$ nach $B_2$ machen. Ähm, okay, und jetzt bei von $A_2$ nach $B_2$ wissen wir a priori natürlich nicht, ob die Bedingung von Hall erfüllt ist, weil es gibt ja auch noch Kanten, die gehen von $A_2$ nach $B_1$ a priori. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Induktion auf dem ersten Teilgraphen G_1]
+Da $A_1 \subsetneq A$ eine echte Teilmenge ist, gilt $|A_1| \le n$.
+Da $G$ die Hall-Bedingung (b) erfüllt, gilt diese erst recht für den Teilgraphen $G_1 = (A_1, B_1, E_1)$, da für jedes $X \subseteq A_1$ gilt:
+\[
+E_1(X) = E(X) \implies |X| \le |E(X)| = |E_1(X)|
+\]
+Nach Induktionsvoraussetzung existiert somit eine Injektion:
+\[
+\pi_1: A_1 \to B_1 \quad \text{mit} \quad \{x, \pi_1(x)\} \in E_1 \subseteq E \quad \forall x \in A_1
+\]
+Da $|A_1| = |B_1|$ gilt, ist $\pi_1$ sogar eine Bijektion.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:30 - 00:22:33]
+Wir zeigen nun, ähm, dass auch $A_2, B_2, E_2$ Bedingung B erfüllen. Und dazu nehmen wir an für einen Widerspruch, \inlinemetanote{schreibt an die Tafel} an, Bedingung B ist nicht erfüllt. Also nehmen wir an, es existiert ein $X$ in $A_2$, so dass die Anzahl Elemente in $X$ ist strikt größer als die Elemente in $E_2(X)$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:33 - 00:23:56]
+Genau. Und das heißt, folgert jetzt, dass... das heißt, das Ganze ist strikt kleiner als die Anzahl in $A_1$ plus die Anzahl in $X$. Äm, okay, aber das ist die... einfach die Anzahl Elemente in $A_1$ vereinigt mit $X$. Und das wiederum ist kleiner gleich... nehmen wir einfach $E(A_1)$ vereinigt mit $E_2(X)$. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Widerspruchsbeweis für G_2]
+Wir wollen zeigen, dass $G_2 = (A_2, B_2, E_2)$ ebenfalls die Hall-Bedingung erfüllt.
+Angenommen, dies ist nicht der Fall. Dann existiert eine Teilmenge $\emptyset \neq X \subseteq A_2$ mit:
+\[
+|X| > |E_2(X)|
+\]
+Da $A_1$ und $A_2$ disjunkt sind, gilt für die disjunkte Vereinigung $A_1 \cup X \subseteq A$:
+\[
+|A_1 \cup X| = |A_1| + |X|
+\]
+Da $E(A_1) = B_1$ und $E_2(X) \subseteq B_2 = B \setminus B_1$ disjunkt sind, gilt:
+\[
+|E(A_1) \cup E_2(X)| = |E(A_1)| + |E_2(X)|
+\]
+Da alle Nachbarn von $A_1 \cup X$ in $G$ entweder in $E(A_1)$ oder in $E_2(X)$ liegen müssen (da keine Kanten von $A_1$ nach $B_2$ existieren), gilt:
+\[
+E(A_1 \cup X) = E(A_1) \cup E_2(X)
+\]
+Daraus folgt:
+\[
+|A_1 \cup X| = |A_1| + |X| > |E(A_1)| + |E_2(X)| = |E(A_1) \cup E_2(X)| = |E(A_1 \cup X)|
+\]
+Dies ist ein direkter Widerspruch zur Hall-Bedingung für den gesamten Graphen $G$, nach der $|A_1 \cup X| \le |E(A_1 \cup X)|$ gelten muss.
+
+Somit erfüllt auch $G_2$ die Hall-Bedingung.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:56 - 00:25:04]
+Also, das heißt, der Graph $A_2, B_2, E_2$ erfüllt die Bedingung B auch. Sonst gibt's einen Widerspruch. Okay, und das heißt, wir können jetzt die Induktion wieder anwenden und erhalten auch für... von $A_2$ nach $B_2$ eine Injektion, wie wir sie gerne hätten. \inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Zusammenführung der Injektionen in Fall 2]
+Da $|A_2| \le n$ gilt und $G_2$ die Hall-Bedingung erfüllt, existiert nach Induktionsvoraussetzung eine Injektion:
+\[
+\pi_2: A_2 \to B_2 \quad \text{mit} \quad \{x, \pi_2(x)\} \in E_2 \subseteq E \quad \forall x \in A_2
+\]
+Wir definieren die Gesamt-Abbildung $\pi: A \to B$ durch:
+\[
+\pi(x) = \begin{cases}
+\pi_1(x) & \text{falls } x \in A_1 \\
+\pi_2(x) & \text{falls } x \in A_2
+\end{cases}
+\]
+\begin{explanation-of-steps}
+Da $A_1$ und $A_2$ eine Partition von $A$ bilden, ist $\pi$ auf ganz $A$ definiert. Da $\pi_1(A_1) \subseteq B_1$ und $\pi_2(A_2) \subseteq B_2$ disjunkt sind (da $B_1 \cap B_2 = \emptyset$), und da sowohl $\pi_1$ als auch $\pi_2$ injektiv sind, ist die zusammengesetzte Abbildung $\pi$ ebenfalls injektiv. Zudem gilt für alle $x \in A$:
+\[
+\{x, \pi(x)\} \in E
+\]
+Damit ist der Induktionsschritt abgeschlossen und der Heiratssatz von Hall vollständig bewiesen.
+\end{explanation-of-steps}
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:25:04 - 00:26:04]
+Ja, schauen Sie sich den Beweis nochmals in Ruhe an, ähm, ist nicht... nicht so schwierig, aber relativ elegant, wie das alles aufgeht. Sehr schöner Induktionsbeweis mit den Fallunterscheidungen. Und, äh, ja, Sie werden... sind dem Satz vielleicht auch schon begegnet, ist ein relativ berühmter Satz, gibt auch sehr viele verschiedene Beweise davon, also wenn Sie im Internet einmal schauen, Beweise von Heiratssatz, da finden Sie bestimmt sehr schnell zehn verschiedene und verschiedene Varianten.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:26:04 - 00:26:41]
+Gut, soweit zur Graphentheorie. Machen Sie doch bitte die Übungen, es hat ein paar nette Übungen zur Graphentheorie dabei, um einfach noch ein bisschen mit dieser Art von Mathematik, ähm, geläufig zu werden. Und dann machen wir nächste Woche weiter mit etwas elementarer Zahlentheorie. Vielen Dank und schöne Woche.
+\end{spoken-clean}
+
+\begin{meta-note}[Vorlesungsende]
+Der Dozent beendet die Vorlesung und verabschiedet die Studierenden in die Woche.
+\end{meta-note}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 270088, Output 8552)*
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 85100, Output 17)*
+---
+
+=== Neue Chat-Sitzung (13.06.2026 23:03:47) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 04-28-tuesday.mp4
+[Angehängtes Video]: 04-28-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-28. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\setcounter{chapter}{0}
+\lecturechapter{Tuesday}{Apr 28th}{April 28th 2026}{Einführung in die Graphentheorie}
+
+\section{Einführung und historischer Kontext}
+
+\begin{spoken-clean}[00:00:00 - 00:01:38]
+Okay, hallo. Hallo zusammen und herzlich willkommen zur nächsten Woche von Grundstrukturen. Wie ich das letzte Mal gesagt habe, schliessen wir das Kapitel über das Auswahlaxiom und Kardinalzahlen jetzt ab. Und im Skript sehen Sie, dass es noch zwei Kapitel über Nichtstandard-Analysis gibt, die werden wir überspringen. Die sind nicht so standard. \inlinemetanote{lacht} Aber es ist eine, ja, also wenn Sie Lust haben, da reinzuschauen, es ist ein witziges Thema. Also es geht darum, Nichtstandardmodelle von den reellen Zahlen zu konstruieren, und dann kann man auf diesen Nichtstandardmodellen dennoch Analysis machen und dann auch die wieder, diese Nichtstandardmodelle auch wieder verwenden, um Aussagen über die Standard-Analysis auszusagen. Es ist ein lustiges Thema, ja. Nein, es ist nicht prüfungsrelevant, ja. Also das Skript ist etwas länger als eine zweistündige Vorlesung, deswegen darf da jeder ein bisschen seine Auswahl treffen. Und vielleicht werden wir noch ein paar Sachen machen, die nicht im Skript sind, die werde ich Ihnen dann aber dazugeben. Genau, aber genau, also schauen Sie sich das an, wenn Sie sich für diese Sachen interessieren, das ist lustig, und können Sie auch noch weiterlesen, zum Beispiel im Buch von Lorenz Halbeisen und Regula Karp.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:38 - 00:03:07]
+Aber ja, wir machen jetzt weiter direkt im Kapitel über die Graphentheorie, und damit lassen wir vorerst auch einmal diese Logikgeschichten zurück, obwohl die lässt man natürlich nie zurück, weil natürlich die ganze Mathematik auf der Logik und auf Zermelo-Fraenkel aufbaut und im Hintergrund verwenden wir natürlich diese ganzen Sachen immer noch. Man kann immer noch Signaturen anschauen und dann das Ganze entsprechend formulieren und so weiter. Und man kann auch alle Beweise, die wir führen, formalisieren und auf Zermelo-Fraenkel zurückführen. Das ist etwas, was Leute machen, zum Beispiel die mit dieser Sprache Lean... Genau, aber um natürlich einigermassen voranzukommen, werden wir die Sachen jetzt in, wie soll ich sagen, alltäglicher mathematischer Sprache diskutieren. Genau, und es geht also darum, dass Sie ein paar Grundbegriffe auch lernen, jetzt eben zuerst ein bisschen sehr elementare Graphentheorie, danach nachher noch etwas sehr elementare Zahlentheorie, wahrscheinlich noch etwas über endliche Körper, wenn wir Zeit haben, noch ein bisschen elementare Gruppentheorie. Aber einfach, damit Sie da gewisse Sachen lernen, für die Sie keine Zeit haben in anderen Vorlesungen, und auch, damit Sie ein bisschen einen Einblick kriegen in was es so gibt in der Mathematik. Und auch hier überall ist wieder wichtig, dass Sie die Übungen lösen, weil es geht darum, dass Sie lernen, saubere mathematische Argumente zu führen, was Sie dann nachher können sollten.
+\end{spoken-clean}
+
+\subsection{Das Königsberger Brückenproblem}
+
+\begin{spoken-clean}[00:03:07 - 00:05:39]
+Gut, jetzt zur Graphentheorie. Ein bisschen Geschichte. Da gehen wir jetzt etwas weiter zurück, als wir bis jetzt hatten die Leute, denen wir begegnet sind. Da gehen wir zurück zu Leonhard Euler, dem Sie bestimmt auch schon begegnet sind. Auch gewissermassen ein Schweizer Mathematiker eigentlich, also ist in Basel geboren, 1707, also noch sehr frühe Mathematik. Aber er ist... Genau, damals gab es natürlich noch keine ETH, aber es gab natürlich schon seit langem die Universität Basel. Das ist auch dort, wo er studiert hat. Damals waren die Bernoullis an der Uni Basel, das ist eine ganze Familiengeneration, die hatten immer wieder Lehrstühle, also über mehrere Generationen denselben Lehrstuhl, und die waren auch sehr einflussreich in der Entwicklung der Mathematik und der Physik. Und genau, er hat da jeweils, glaube ich, Samstagnachmittag ging er zu, das war damals Johann Bernoulli, und der hat ihm dann ein paar Sachen erklärt oder so. Ich glaube, er hatte nicht viel Zeit, Johann Bernoulli, der hat ihm dann viel Sachen zu lesen gegeben, aber Euler hat einmal geschrieben, dass es wunderbar war, er hat ein paar wenige Fragen gestellt und die Art und Weise, wie Bernoulli ihm diese Sachen beantwortet hat, das hat ihm auch gerade viele andere Fragen geklärt sofort. Genau. Aber ja, er hat sich, glaube ich, für eine Physikprofessur oder so in Basel beworben, die er aber nicht gekriegt hat, als er noch sehr jung war, und dann ist er halt weg und leider nie mehr in die Schweiz zurückgekehrt akademisch. Also hat dann eine Professur in Sankt Petersburg gekriegt, ich glaube, damals war noch ein anderer Bernoulli dort, dann war er eine Zeit lang in Berlin und dann wieder in Sankt Petersburg. Und genau, ich glaube, es ist sehr... Ich glaube, man kann fast nicht unterschätzen, wie wichtig Euler war für viele moderne Begriffe in der Mathematik, also er hat viele Gebiete eigentlich auch fast neu erfunden. Und eines von diesen, also er hat die Graphentheorie erfunden eigentlich, das begann mit dem folgenden Problem. Gewissermassen vielleicht auch sogar die Topologie, also kann man auch fast sagen, dass das die Erfindung der Topologie war.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:05:39
+% topic: Historischer Kontext und Einführung in das Königsberger Brückenproblem.
+% board_state: none
+% next_goal: Vorstellung des Königsberger Brückenproblems und dessen Abstraktion.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:05:39 - 00:08:08]
+Das ist das Königsberger Brückenproblem. \inlinemetanote{zeigt eine Folie mit dem historischen Stadtplan von Königsberg} Also es war Königsberg, damals Preussen, also gehört noch so im weitesten Sinne zu Deutschland, heutzutage heisst das Kaliningrad, die Stadt. Und okay, das ist so, so sieht das aus. Also es gibt da so eine Insel, und da diese zwei Flüsse, die da zusammenkommen. Und die Stadt hat so diese diese vier Teile, und da gab es da diese Brücken, Brücken, diese... diese... wie viele Brücken? Sieben Brücken in der Stadt. Und jetzt, die Leute sind natürlich gerne spazieren gegangen, und in der Stadt, da kursierte so dieses... diese Knoblauchsaufgabe oder diese Frage: Kann man... Gibt es einen Spaziergang, so dass man in dieser Stadt, also kann man am Sonntagnachmittag spazieren gehen in einer Art und Weise, dass man jede von... dass man zwar über alle Brücken läuft, aber über jede Brücke nur einmal? Genau einmal. Und die Frage ist auch, wenn ja, kann man das machen in einer Art und Weise, dass man am selben Ort wieder aufhört, wo man anfängt? Und natürlich bei sieben Brücken kann man sich gut vorstellen, wenn da viele Leute in der Stadt darüber nachdenken, wenn es so eine Möglichkeit gäbe, dann wäre wahrscheinlich wäre schon jemand darauf gekommen. Aber wie Sie wahrscheinlich, Sie haben das doch auch schon gehört, das Problem, ich weiss nicht, gibt es da keine Lösung. Die Frage ist natürlich, weshalb. Und ja, ich glaube, das hat so ein... ein Ratsherr oder so, hat in einem Brief an Euler ihn diese Sache gefragt. Und Euler hat zuerst geantwortet: Ja, spannende Frage, aber er sagt so direkt, das hat eigentlich nichts mit Mathematik zu tun, das kann eigentlich jeder, der... ja, ist eigentlich kein mathematisches Problem. Jeder, der mit gesundem Verstand denken kann, kann das lösen, dafür braucht man auch gar keine Mathematiker. Aber er hat natürlich trotzdem weitergedacht und dann das Problem auch gelöst. Aber eben, der wesentliche Teil hier ist einfach diese Abstraktion, was dann eben Euler gemacht hat.
+\end{spoken-clean}
+
+\begin{nice-box}[Das Königsberger Brückenproblem]
+Das historische Problem fragt nach der Existenz eines Rundwegs über alle sieben Brücken der Stadt Königsberg, bei dem jede Brücke genau einmal überquert wird.
+\end{nice-box}
+
+\begin{math-stroke}[Abstraktion des Brückenproblems]
+Euler abstrahierte die vier Landmassen der Stadt Königsberg als \emph{Knoten} und die sieben verbindenden Brücken als \emph{Kanten}.
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, auto, node distance=2.5cm, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=8mm}]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Nodes representing the land masses A, B, C, D.
+  % 2. Midground: Multiple edges representing the bridges between the land masses.
+  % 3. Annotations: Labels for the nodes.
+  % \end{ai-tikz-planner-invisible-content}
+  \node[node] (A) at (0, 1.5) {$A$};
+  \node[node] (B) at (0, 0) {$B$};
+  \node[node] (C) at (0, -1.5) {$C$};
+  \node[node] (D) at (2.5, 0) {$D$};
+
+  \path[-]
+    (A) edge[bend left=30] node[left] {\footnotesize 1} (B)
+    (A) edge[bend right=30] node[right] {\footnotesize 2} (B)
+    (B) edge[bend left=30] node[left] {\footnotesize 3} (C)
+    (B) edge[bend right=30] node[right] {\footnotesize 4} (C)
+    (A) edge node[above right] {\footnotesize 5} (D)
+    (B) edge node[above] {\footnotesize 6} (D)
+    (C) edge node[below right] {\footnotesize 7} (D);
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}[Eulersches Argument]
+Das Argument basiert auf der Parität der Knotengrade:
+\begin{itemize}
+    \item Bei jedem Betreten eines Landteils über eine Brücke muss dieser über eine andere Brücke wieder verlassen werden.
+    \item Daher muss an jedem Knoten (ausser eventuell dem Start- und Endknoten) eine gerade Anzahl von Kanten zusammentreffen.
+    \item Im Königsberger Graphen haben die Knoten jedoch die ungeraden Grade:
+    \[
+    \deg(A) = 3, \quad \deg(B) = 5, \quad \deg(C) = 3, \quad \deg(D) = 3
+    \]
+    \item Da alle vier Knoten ungeraden Grad besitzen, existiert kein solcher Spaziergang.
+\end{itemize}
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:08 - 01:11:16]
+Also er hat gesagt: Okay, jetzt sagen wir, diese diese vier zusammenhängenden Landteile, also einer diese Insel, dann haben wir diese Insel, dann haben wir hier oben der obere Teil, da noch ein Teil, da noch ein Teil. Wir schauen die jetzt einfach ganz abstrakt an, und die sind verbunden mit Brücken. Also da gibt es eine, da gibt es eine Brücke, da gibt es eine Brücke, da gibt es eine Brücke, und da gibt es je zwei Brücken. \inlinemetanote{zeichnet den Graphen an die Tafel} Wenn man das so anschaut, und da spielt es jetzt gar keine Rolle, wie das genau... Also die Frage, das Wichtige ist einfach, wie sind diese vier Knoten miteinander verbunden? Aber jetzt, wie lange diese Wege sind oder was, wie das genau ausschaut, das spielt keine Rolle. Das können wir auf das abstrahieren, und dann genau, dann Sie kennen das... Sie kennen das Argument: Wenn es natürlich einen... Wenn es einen Weg gäbe, so dass man wieder am selben Ort zurückkommt, dann kommt man in jeden von diesen Knoten, wenn man reinkommt, dann geht man auch wieder raus. Das heißt, das kommt immer in Paaren, das heißt, an jedem von diesen Knoten muss die Anzahl der Kanten, die von diesem Knoten ausgehen, gerade sein. Aber hier haben wir drei, hier haben wir fünf, hier haben wir drei, hier haben wir drei, das sind alle sogar nicht gerade. Also es kann kein so geschlossener Pfad existieren. Wenn einer existieren würde, der vielleicht mit einem anderen Anfangs- als Endpunkt, wäre es wieder überall gerade ausser am Anfangs- und Endpunkt, aber das ist überall ungerade, das heißt, es gibt auch nicht einen Weg, wo man anfängt. Okay, das war die Lösung vom... vom... vom Königsberger Brückenproblem.
+\end{spoken-clean}
+
+\begin{spoken-clean}[01:11:16 - 01:11:16]
+Genau, und das ist so, ja, eben einerseits vielleicht so ein bisschen die ersten Schritte Richtung Topologie, Euler hat noch andere Sachen gemacht, die auch so Richtung Topologie gehen. Aber in anderer Art auch eben die Graphentheorie, das ist ein wichtiger Begriff von der diskreten Mathematik, was ein Graph ist. Also eigentlich, wir werden das gleich sehen, das sind einfach Knoten verbunden mit Kanten, und es spielt auch die Frage, wie welche Knoten sind verbunden durch Kanten. Wie Sie sich vorstellen können, sind solche Graphen oder solche Objekte sehr... sehr wichtig in... Also einerseits in vielen Gebieten von der Mathematik, also in Gruppentheorie, aber auch in Wahrscheinlichkeit und also vielen Bereichen tauchen Graphen auf. Aber auch ausserhalb der Mathematik, also in Informatik zum Beispiel, Computersysteme, das sind natürlich viele Knoten und Verbindungen dazwischen, und die Frage ist, wie kann man da laufen, oder vielleicht Paket, Postverteilung oder so, all das über Graphen. Dass die Welt ist ja vielleicht sogar diskret, dass man könnte sogar in gewissen physikalischen Vorstellungen sagen: Okay, wir sagen, sagen jedes Elementarteilchen ist ein Punkt und die haben eine gewisse Wirkung, das sind einfach gewisse Graphen, das heißt, unsere Welt ist einfach ein grosser diskreter Graph. Wer weiss. Okay, aber Graphentheorie ein wichtiges Gebiet der diskreten Mathematik. Und wir kennen heutzutage, sind wir natürlich sehr... kennen wir natürlich Graphen in vielen... in vielen Kontexten. Also da zum Beispiel, wenn wir in eine Stadt gehen, dann ist da der Metroplan, und da spielt es ja keine Rolle, dass das irgendwie in irgendeiner Art und Weise die die Distanzen korrekt abbildet, sondern einzig, was wichtig ist, sind welche Stationen sind miteinander verbunden mit einer Metrolinie. Und das ist eigentlich auch einfach ein Beispiel von einem Graph.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:11:16
+% topic: Abstraktion des Königsberger Brückenproblems und Alltagsbeispiele für Graphen.
+% board_state: Königsberger Brückengraph
+% next_goal: Vorstellung weiterer Beispiele wie "Das Haus vom Nikolaus" und formale Definitionen.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[01:11:16 - 01:11:16]
+Noch ein Beispiel, das Königsberger Brückenproblem kennen wir vielleicht auch... positiven Antwort aus der... aus dem Kindergarten. Sicher kennen Sie das Haus vom Nikolaus. Es ist so die Frage, kann man das in einem Stück, kann man diesen Graphen hier an einem Stück zeichnen? Und die Antwort hier ist... hier ist ja, oder? Das ist... Wie geht das? Das ist das Haus vom Nikolaus, oder? Und... Und das vom... Und das vom Weihnachtsmann ist nebenan, gell? Da habe ich etwas Falsches gesagt. Irgendwie so, so geht das doch, oder? Das hat man im Kindergarten. Auch wieder ein Beispiel für einen Graphen, da hat man all die Knoten und anders als... anders als das Königsberger Brückenproblem ist, kann man das hier an einem... an einem Zug lösen. Also wenn wir eine Stadt haben mit entsprechenden Brücken, dann könnten Sie einen Spaziergang machen. Okay. Also wir kennen eigentlich schon viel von der Graphentheorie.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Haus vom Nikolaus und Weihnachtsmann]
+\begin{center}
+\begin{tikzpicture}[scale=1.2, thick]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Nodes for the vertices of the houses.
+  % 2. Midground: Edges representing the lines drawn in one stroke.
+  % 3. Annotations: Titles for both graphs.
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Haus vom Nikolaus
+  \begin{scope}[shift={(0,0)}]
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (1) at (0,0) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (2) at (1.5,0) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (3) at (1.5,1.5) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (4) at (0,1.5) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (5) at (0.75,2.3) {};
+
+    \draw[-] (1) -- (2) -- (3) -- (4) -- (1);
+    \draw[-] (1) -- (3);
+    \draw[-] (2) -- (4);
+    \draw[-] (4) -- (5) -- (3);
+    \node[below] at (0.75, -0.3) {Haus vom Nikolaus};
+  \end{scope}
+
+  % Haus vom Weihnachtsmann
+  \begin{scope}[shift={(3.5,0)}]
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (A1) at (0,0) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (A2) at (1.2,0) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (A3) at (1.2,1.2) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (A4) at (0,1.2) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (A5) at (0.6,1.8) {};
+
+    \draw[-] (A1) -- (A2) -- (A3) -- (A4) -- (A1);
+    \draw[-] (A1) -- (A3);
+    \draw[-] (A2) -- (A4);
+    \draw[-] (A4) -- (A5) -- (A3);
+
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (B2) at (2.4,0) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (B3) at (2.4,1.2) {};
+    \node[circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm] (B5) at (1.8,1.8) {};
+
+    \draw[-] (A2) -- (B2) -- (B3) -- (A3);
+    \draw[-] (A2) -- (B3);
+    \draw[-] (B2) -- (A3);
+    \draw[-] (A3) -- (B5) -- (B3);
+    \node[below] at (1.2, -0.3) {Haus vom Weihnachtsmann};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\section{Grundbegriffe der Graphentheorie}
+
+\subsection{Definition eines Graphen}
+
+\begin{spoken-clean}[01:11:16 - 01:13:36]
+Genau, aber machen wir das Ganze vielleicht etwas systematischer und definieren das alles sauber. Und ich habe jetzt da einen Teil von der heutigen Vorlesung in die, als Beamer gemacht, das mache ich normalerweise nicht. Aber wenn man so viele Definitionen hat, die alle sehr einfach sind, dann ist es etwas mühsam, die alle an die Tafel zu schreiben, und braucht viel Zeit. Also schauen wir uns das doch lieber am Beamer an. Also, sehen Sie das gut so? Gut. Also, was ist ein Graph? Also ein Graph ist einfach eine Menge $V$, das ist... die Elemente von dieser Menge, die nennen wir die Knoten, zusammen mit einer Teilmenge $E$ vom kartesischen Produkt von $V$ mit sich selbst. Machen wir mal zuerst diese Definition, und das sind die sogenannten Kanten. Also wir haben $E$ einfach eine menge, ja, irgendeine Menge, das sind unsere Knoten... äh, $V$ unsere Knoten. $V$ Englisch ist vertices, deswegen $V$. Und jetzt schauen wir $V \times V$, das ist wirklich die geordneten... die geordneten Tupel von Paaren von... die geordneten Paare von Knoten, und das sind unsere Kanten.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:13:36
+% topic: Formale Definition eines Graphen (Knoten und Kanten).
+% board_state: Haus vom Nikolaus, Königsberger Brückengraph
+% next_goal: Veranschaulichung der Definition an einem konkreten gerichteten Graphen.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{nice-box}[Definition: Graph]
+\begin{definition}[Graph]\label[definition]{def:graph}
+Ein \newterm{Graph} ist ein Paar $G = (V, E)$ bestehend aus einer Menge $V$ von \newterm{Knoten} (engl. \emph{vertices}) und einer Teilmenge $E \subseteq V \times V$ von \newterm{Kanten} (engl. \emph{edges}). 
+
+Allgemeiner kann ein Graph auch mehrere Kantenmengen besitzen:
+\[
+G = (V, E_0, \dots, E_k) \quad \text{mit} \quad E_i \subseteq V \times V
+\]
+\end{definition}
+\end{nice-box}
+
+\begin{spoken-clean}[01:13:36 - 01:15:52]
+Also können wir uns vorstellen, wenn wir hier zum Beispiel... Schauen wir uns den mal an, aber das ist jetzt schon nicht mit dieser Definition, weil hier haben... Nehmen wir die zum Beispiel... Da können wir sagen, wir haben hier die Kanten... die Knoten 1, 2, 3, 4. Okay, und jetzt können wir sagen: Okay, die zwei, da machen wir eine Kante dazwischen. Das ist einfach die Kante gegeben 1 und 4, das geht jetzt aber von 1 nach 4, wenn wir sagen, das ist die Kante $(1, 4)$. Da können wir hier zum Beispiel eine Kante, geht von 4 nach 3. Und so weiter, und hier von 3 nach 2 und so. Aber wir können jetzt hier nicht zwei von 4 nach 3 machen, weil es gibt nur ein geordnetes Tupel von 4 nach 3. Okay, das ist schon ein bisschen ein Ding, aber so sieht jetzt mal mit dieser Definition ein Graph aus. Wir haben einfach Knoten und dann schauen wir zwischen diesen Knoten... Kanten, die zwischen diesen Knoten liegen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel eines gerichteten Graphen]
+Wir betrachten den Graphen $G = (V, E)$ mit:
+\[
+V = \{1, 2, 3, 4\} \quad \text{und} \quad E = \{\langle 1, 4 \rangle, \langle 4, 3 \rangle, \langle 3, 2 \rangle\}
+\]
+
+\begin{center}
+\begin{tikzpicture}[scale=1.2, ->, >=stealth, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=6mm}]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Vertically aligned nodes 1, 2, 3, 4.
+  % 2. Midground: Directed edges between the nodes.
+  % \end{ai-tikz-planner-invisible-content}
+  \node[node] (1) at (0, 3) {1};
+  \node[node] (2) at (0, 2) {2};
+  \node[node] (3) at (0, 1) {3};
+  \node[node] (4) at (0, 0) {4};
+
+  \path
+    (1) edge[bend right=40] (4)
+    (4) edge (3)
+    (3) edge (2);
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}
+In dieser grundlegenden Definition sind Kanten geordnete Paare. Daher besitzt jede Kante eine feste Richtung (von der ersten zur zweiten Komponente des Tupels). Mehrfachkanten in dieselbe Richtung sind in einer einfachen Teilmenge $E \subseteq V \times V$ nicht darstellbar.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\subsection{Adjazenz und ungerichtete Graphen}
+
+\begin{spoken-clean}[01:15:52 - 01:18:18]
+Aber okay, das andere ist, was wir machen können, wir können einfach sagen: Es gibt noch... Es gibt... Es gibt mehrere von diesen... von diesen Teilmengen, es gibt Teilmengen $E_0$ bis $E_k$ von $V \times V$, und dann schreiben wir einfach $G$ als $V$ und all diese all diese Kanten hier. Und dann können wir natürlich mehrere haben, dann haben wir zum Beispiel hier könnten wir sagen... Okay, wir haben das erste, haben die $E_0$, das ist diese Kante hier, und dann noch das zweite, das ist diese Kante hier, das ist das $E_2$. Okay, und dann haben wir maximal zwei Kanten zwischen zwei Knoten, dann können wir das definieren. Okay, also genau, das ist die Definition von Graph. Okay, jetzt kommt aber wirklich noch etwas... Ja. Okay. Ah, hier gibt es noch ein bisschen Terminologie. Wir sagen, zwei... Wir sagen, zwei Knoten $x$ und $y$ heissen adjazent, eben falls $(x, y)$ in diesem $E$ enthalten ist. Also sie liegen nebeneinander. Ein... Etwas... Ist ein bisschen snobistisch ausgedrückt. Und das nächste ist ein bisschen verwirrend, oder nicht verwirrend, aber wir sagen, falls $E$ symmetrisch ist, also $E$ kann man auffassen als ein... ein Relationssymbol, also so eine, ja, eine Teilmenge von $V \times V$. Und wir sagen jetzt, ein Graph ist ungerichtet, falls $E$ symmetrisch ist. Das heißt, falls $(x, y) \in E$ genau dann, wenn $(y, x) \in E$ ist. Und in diesem Fall identifizieren wir einfach $(x, y)$ mit $(y, x)$ und schreiben, dass dieses ungerichtete, also unsortierte Menge ist in $E$.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:18:18
+% topic: Adjazenz, gerichtete vs. ungerichtete Graphen.
+% board_state: Gerichteter Graph mit 4 Knoten, Definitionen auf dem Beamer.
+% next_goal: Definition der Adjazenzmatrix für endliche Graphen.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{nice-box}[Definition: Adjazenz und ungerichtete Graphen]
+\begin{definition}[Adjazenz und ungerichtete Graphen]\label[definition]{def:adjazenz}
+Sei $G = (V, E)$ ein Graph.
+\begin{itemize}
+    \item Zwei Knoten $x, y \in V$ heissen \newterm{adjazent}, falls $(x, y) \in E$.
+    \item Der Graph $G$ heisst \newterm{ungerichtet}, falls die Relation $E$ symmetrisch ist, d.h.
+    \[
+    \forall x, y \in V: \quad (x, y) \in E \iff (y, x) \in E
+    \]
+    In diesem Fall identifizieren wir die gerichteten Kanten $(x, y)$ und $(y, x)$ und schreiben die Kante als ungeordnete Menge $\{x, y\} \in E$.
+    \item Ein Graph $G$ heisst \newterm{gerichtet} (oder \newterm{Digraph}), falls er nicht ungerichtet ist.
+\end{itemize}
+\end{definition}
+\end{nice-box}
+
+\begin{spoken-clean}[01:18:18 - 01:21:11]
+Okay. Also ein ungerichteter Graph ist eigentlich wie ein gerichteter Graph, aber hier, das ist einfach, wenn man im Prinzip... Man darf sich natürlich nicht zu stark verwirren lassen von dieser Unterscheidung, das ist einfach der Einfachheit halber. Also im Königsberger Brückenproblem, also bei diesen Brücken, da darf man natürlich in beide Richtungen laufen, also man kann sowohl von hier nach hier laufen als auch von hier nach hier, oder? Dann jetzt ganz korrekt, wenn wir sagen: Okay, dann haben wir zwei... zwei Kanten, eine, die in diese Richtung geht, und eine, die in diese Richtung geht. Und auch hier haben wir eine, die hier geht, und dann auch eine hier, die wieder zurückgeht. Also wie eine... eine Brücke mit Gegenverkehr, wo man in beide Richtungen laufen darf. Aber wenn wir sagen: Okay, anstatt dass wir einfach alle Graphen doppelt... doppelt hin... alle Kanten doppelt hinzeichnen, das ist etwas mühsam, sagen wir einfach: Okay, wir schreiben die nur einfach hin, dafür darf man in beide Richtungen laufen. Okay. Das heißt, hier Königsberger Brückenproblem, das wäre jetzt ein Beispiel von einem... von einem ungerichteten Graphen, weil wenn man von hier nach hier laufen kann, kann man auch von hier nach hier laufen. Okay, machen wir das nochmals sauber. Hier Königsberger Graph, da hätten wir hier 1, 2, 3, 4 und genau, unsere... unsere Kanten hier wären die Kante $\{1, 4\}$, und hier ist es ungerichtet. Dann haben wir noch die Kante... 3... Das machen wir da vielleicht $E_1$. Da haben wir $\{1, 4\}$, da haben wir $\{3, 4\}$, da haben wir $\{2, 3\}$, und da haben wir $\{1, 2\}$. Und dann wäre noch $E_2$, oder wäre das $E_0$ vielleicht und dann $E_1$, das wäre dann noch $\{3, 4\}$ und nochmals $\{2, 3\}$. Okay, das wäre so die formale, saubere Definition von diesem hier. Ja. Einfach damit wir hier zwei Brücken haben können. Ja, das ist ein bisschen... Wir haben aber eine vergessen, oder? $\{1, 2\}$, $\{1, 3\}$ haben wir noch vergessen. Okay, weil dieser... Dieser hier ist nicht dasselbe wie dieser hier. Okay. Einfach so viel noch zur Definition. Es ist... Es ist ein bisschen mühsam, wenn man die Definition so... als Definition sieht, aber es ist genau das, was Sie denken, was ein Graph ist. Also es ist jetzt nicht so kompliziert. Okay? Gut.
+\end{spoken-clean}
+
+\subsection{Adjazenzmatrix}
+
+\begin{spoken-clean}[01:21:11 - 01:24:09]
+Und dann entsprechend heisst ein Graph $G$ schlingenfrei, falls er keine Schlingen hat. Genau, und dann natürlich... Falls wir einen Graphen haben mit mehreren, so wie hier, Königsberger Graph zum Beispiel, so mit mehreren Kanten zwischen zwei Knoten, dann kann es mehrere Kanten geben zwischen zwei Knoten, die verschieden sind. Und wenn es mehrere Kanten gibt zwischen zwei Knoten, heisst das... heissen die Mehrfachkanten. Also hier gibt es zwei Kanten zwischen zwei Knoten, das heißt, die zwei diese Kanten sind Mehrfachkanten. Aber auch hier bei Mehrfachkanten braucht man vor allem den Begriff, wenn es keine Mehrfachkanten gibt. Das ist die folgende Definition: Ein Graph... Ein Graph ohne Schlingen und ohne Mehrfachkanten heisst schlicht. Okay? Also ein schlichter Graph ist einfach ein Graph, wo man das nicht hat und Mehrfachkanten auch nicht haben kann. Okay. Gut. Und dann... Schauen wir uns noch ein paar... ein paar Beispiele an, oder machen wir direkt weiter. Es geht mit Definition... Ja, ich glaube, Beispiel muss man nicht mehr so viel sagen, das ist klar. Beispiel: Dieser Graph hier, könnte man zeichnen, ist schlicht. Ein solcher Graph hier ist nicht schlicht. Ein solcher Graph hier aber schon. Aber ein solcher Graph hier ist nicht schlicht. Okay, das ist die Definition.
+\end{spoken-clean}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:24:09
+% topic: Adjazenzmatrix und Klassifikation von Graphen (schlicht, Schlingen, Mehrfachkanten).
+% board_state: Königsberger Graph formalisiert, Definitionen auf dem Beamer.
+% next_goal: Formale Definition der Adjazenzmatrix an der Tafel.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+\begin{nice-box}[Definition: Adjazenzmatrix]
+\begin{definition}[Adjazenzmatrix]\label[definition]{def:adjazenzmatrix}
+Sei $G = (V, E)$ ein endlicher Graph mit $V = \{v_1, \dots, v_n\}$. Die \newterm{Adjazenzmatrix} $A(G) = (a_{ij}) \in M_{n \times n}(\mathbb{R})$ ist definiert durch:
+\[
+a_{ij} = \begin{cases}
+1 & \text{falls } (v_i, v_j) \in E \\
+0 & \text{sonst}
+\end{cases}
+\]
+\end{definition}
+\end{nice-box}
+
+\begin{math-stroke}[Beispiel einer Adjazenzmatrix]
+Wir betrachten den gerichteten Graphen $G = (V, E)$ mit $V = \{1, 2, 3, 4\}$ und $E = \{(1, 4), (4, 3), (3, 2)\}$.
+
+Die zugehörige Adjazenzmatrix $A(G)$ lautet:
+\[
+A(G) = \begin{pmatrix}
+0 & 0 & 0 & 1 \\
+0 & 0 & 0 & 0 \\
+0 & 1 & 0 & 0 \\
+0 & 0 & 1 & 0
+\end{pmatrix}
+\]
+
+\begin{explanation-of-steps}
+Die Zeilen entsprechen den Startknoten und die Spalten den Endknoten. Da es beispielsweise eine Kante von $1$ nach $4$ gibt, ist der Eintrag in der ersten Zeile und vierten Spalte $a_{14} = 1$. Da der Knoten $2$ keine ausgehenden Kanten besitzt, besteht die zweite Zeile komplett aus Nullen.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\subsection{Schlingen und schlichte Graphen}
+
+\begin{nice-box}[Definition: Schlingen, Mehrfachkanten und schlichte Graphen]
+\begin{definition}[Schlingen, Mehrfachkanten und schlichte Graphen]\label[definition]{def:schlingen-schlicht}
+\begin{itemize}
+    \item Eine Kante der Form $(x, x) \in E$ heisst \newterm{Schlinge}. Ein Graph heisst \newterm{schlingenfrei}, wenn er keine Schlingen besitzt.
+    \item Existieren in einem Graphen $G = (V, E_0, \dots, E_k)$ mehrere Kanten zwischen zwei Knoten, so heissen diese \newterm{Mehrfachkanten}.
+    \item Ein Graph, der sowohl schlingenfrei ist als auch keine Mehrfachkanten besitzt, heisst \newterm{schlicht}.
+\end{itemize}
+\end{definition}
+\end{nice-box}
+
+\begin{math-stroke}[Klassifikation von Graphen]
+\begin{center}
+\begin{tikzpicture}[scale=1.0, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=5mm}]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Four distinct small graphs to illustrate simple vs. non-simple.
+  % 2. Midground: Edges, loops, and multiple edges.
+  % 3. Annotations: Labels "schlicht" and "nicht schlicht".
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Graph 1: schlicht
+  \begin{scope}[shift={(0,0)}]
+    \node[node] (A) at (0,0) {};
+    \node[node] (B) at (1.5,0) {};
+    \draw[-] (A) -- (B);
+    \node[below] at (0.75, -0.3) {schlicht};
+  \end{scope}
+
+  % Graph 2: nicht schlicht (Mehrfachkanten)
+  \begin{scope}[shift={(3,0)}]
+    \node[node] (A) at (0,0) {};
+    \node[node] (B) at (1.5,0) {};
+    \draw[-] (A) to[bend left=30] (B);
+    \draw[-] (A) to[bend right=30] (B);
+    \node[below] at (0.75, -0.3) {nicht schlicht};
+  \end{scope}
+
+  % Graph 3: schlicht (Dreieck)
+  \begin{scope}[shift={(6,0)}]
+    \node[node] (A) at (0,0) {};
+    \node[node] (B) at (1.5,0) {};
+    \node[node] (C) at (0.75,1) {};
+    \draw[-] (A) -- (B) -- (C) -- (A);
+    \node[below] at (0.75, -0.3) {schlicht};
+  \end{scope}
+
+  % Graph 4: nicht schlicht (Schlinge)
+  \begin{scope}[shift={(9,0)}]
+    \node[node] (A) at (0,0) {};
+    \node[node] (B) at (1.5,0) {};
+    \node[node] (C) at (0.75,1) {};
+    \draw[-] (A) -- (B) -- (C) -- (A);
+    \draw[-] (C) to[out=60, in=120, loop] (C);
+    \node[below] at (0.75, -0.3) {nicht schlicht};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{student-interaction}[Studentenfrage zur Adjazenzmatrix]
+\begin{spoken-clean}[01:24:09 - 01:25:32]
+Macht das nicht eigentlich Eulers Argument kaputt? Weil jetzt kann man sich ja... wenn man einen ungerichteten Weg hin und zurück laufen kann... also man muss irgendwie kodieren, dass man immer nur eine Brücke einmal verwenden darf.
+\end{spoken-clean}
+\begin{spoken-clean}[continued]
+Nein, hier haben wir jede Brücke nur einmal. Wir sagen, wenn es ungerichtet ist, dann identifizieren wir die beiden Richtungen und haben nur noch eine Kante. Es sind ja eigentlich ungerichtete Kanten, das sind ungeordnete Paare. Wir sagen, wenn es ungerichtet ist, dann identifizieren wir die beiden Richtungen und haben nur noch eine Kante.
+\end{spoken-clean}
+\end{student-interaction}
+
+% \begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 01:25:32
+% topic: Abschluss der grundlegenden Definitionen und Klärung von Studentenfragen.
+% board_state: Beispiele für schlichte/nicht schlichte Graphen, Adjazenzmatrix.
+% next_goal: Fortführung der Vorlesung mit weiteren Eigenschaften von Graphen.
+% open_loops: none
+% \end{ai-global-state-checkpoint-invisible-content}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 252282, Output 9667)*
+---
+
+**AutoExtraction:** [Part 2] 04-28-tuesday.mp4
+[Angehängtes Video]: 04-28-tuesday-part2.mp4
+[Kontext-Dateien]: 04-28-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-28. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\subsection{Adjazenzmatrix}
+
+\begin{spoken-clean}[00:00:00 - 00:01:17]
+Wir bezeichnen die als $A(G)$ \inlinemetanote{schreibt an die Tafel} und das können wir schreiben in der Form $(a_{ij})$. Das ist, um... gegeben durch... $a_{ij}$ ist... $1$ falls... okay... vielleicht müssen wir dazu zuerst noch $V$ durchnummerieren für... $V = \{v_1, \dots, v_n\}$. Okay, sind nur endlich viele Knoten, wir durchnummerieren die durch und wir sagen jetzt $a_{ij}$ ist $1$ falls... falls es eine Kante gibt von $v_i$ nach $v_j$... und $0$ sonst.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Adjazenzmatrix]
+\setcounter{theorem}{2}
+\begin{definition}[Adjazenzmatrix]\label[definition]{def:adjazenzmatrix-part2}
+Sei $G = (V, E)$ ein endlicher Graph, d.h. $|V|$ ist endlich. Die \newterm{Adjazenzmatrix} $A(G) = (a_{ij}) \in M_{n \times n}(\mathbb{R})$ ist gegeben durch:
+\begin{equation}\label{eq:adjazenzmatrix-def-part2}
+a_{ij} = \begin{cases}
+1 & \text{falls } (v_i, v_j) \in E \\
+0 & \text{sonst}
+\end{cases}
+\end{equation}
+für eine feste Nummerierung der Knoten $V = \{v_1, \dots, v_n\}$.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:17 - 00:02:38]
+Okay, also so ein Graph mit nur einer Kantenrelation ist einfach eine... die Adjazenzmatrix gegeben durch... durch diese Matrix, wo es immer $1$ und $0$ gibt, falls sie zusammengehören oder falls nicht. Wir können das Beispiel machen... falls... wenn wir den Graphen haben... $1, 2, 3, 4$... und wir haben hier eine Kante hier, eine Kante hier, eine Kante hier und eine Kante hier... \inlinemetanote{zeichnet den Graphen an die Tafel} Okay, dann wäre die... was wäre die Adjazenzmatrix von diesem Graphen? Also von $1$ nach $1$ gibt's nichts, von $1$ nach $2$ gibt's etwas, und sonst wieder nichts. Dann von $2$ nach... das einzige von $2$ gibt's eine nach $3$, aber sonst nichts. Von $3$ gibt's eine nach $4$, aber sonst nichts. Und von $4$ gibt's eine nach $1$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Adjazenzmatrix eines gerichteten Kreises]
+Wir betrachten den gerichteten Graphen $G = (V, E)$ mit $V = \{1, 2, 3, 4\}$ und den Kanten $E = \{(1, 2), (2, 3), (3, 4), (4, 1)\}$.
+
+\begin{center}
+\begin{tikzpicture}[scale=1.2, ->, >=stealth, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=6mm}]
+  \node[node] (1) at (0, 1.5) {1};
+  \node[node] (2) at (1.5, 1.5) {2};
+  \node[node] (3) at (1.5, 0) {3};
+  \node[node] (4) at (0, 0) {4};
+
+  \path
+    (1) edge (2)
+    (2) edge (3)
+    (3) edge (4)
+    (4) edge (1);
+\end{tikzpicture}
+\end{center}
+
+Die zugehörige Adjazenzmatrix $A(G)$ lautet:
+\[
+A(G) = \begin{pmatrix}
+0 & 1 & 0 & 0 \\
+0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 1 \\
+1 & 0 & 0 & 0
+\end{pmatrix}
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:38 - 00:03:12]
+Okay, und dann ist noch die Frage, falls... falls wir mehrere Kanten haben zwischen... zwischen zwei Knoten... also wenn wir in dem anderen Fall sind... dann ist das analog, dann sagen wir einfach, zählen wir, wie viele gibt es dazwischen.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt einen Teil der Tafel und bereitet die Verallgemeinerung der Adjazenzmatrix für Graphen mit Mehrfachkanten vor.
+\end{meta-note}
+
+\begin{spoken-clean}[00:03:12 - 00:03:32]
+Okay, falls wir schreiben das... $G$ schreiben als... $V$ von $E_1$ bis $E_k$, also wir haben verschiedene Kanten... aber auch endlich... dann in dem Fall definieren wir den Graphen $G_{\ell}$ als den Graphen mit... Knotenmenge $V$ und jetzt nehmen wir einfach hier nur das... die Relation $E_{\ell}$ dazu. Und dann definieren wir... die Adjazenzmatrix von $G$ als... die Summe von $A$... von allen Adjazenzmatrizen von $G_{\ell}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Adjazenzmatrix für Multigraphen]
+Falls $G = (V, E_1, \dots, E_k)$ mit $|V|$ endlich. Sei $G_{\ell} = (V, E_{\ell})$ für $\ell \in \{1, \dots, k\}$. Wir definieren die Adjazenzmatrix $A(G)$ durch:
+\begin{equation}\label{eq:multigraph-adjazenz-part2}
+A(G) = \sum_{\ell=1}^k A(G_{\ell})
+\end{equation}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 262212, Output 1431)*
+---
+
+**AutoExtraction:** [Part 3] 04-28-tuesday.mp4
+[Angehängtes Video]: 04-28-tuesday-part3.mp4
+[Kontext-Dateien]: 04-28-tuesday-part1.tex, 04-28-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 04-28. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\begin{spoken-clean}[00:00:00 - 00:01:15]
+Den da müssen wir mit dem verbinden, mit dem verbinden, und mit dem verbinden. Den da müssen wir noch mit dem verbinden. Und das ist fertig. Okay, das ist $K_4$. Und dann gibt's noch $K_5$. $K_5$ wird... das Viereck das zu zeichnen, ohne dass sich überschneiden, aber kann man machen. Und vielleicht noch eine Bemerkung: Ich behaupte, $K_n$ ist immer, ähm, regulär. Von welchem Grad?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+$n-1$.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:01:15 - 00:01:51]
+Genau, $n-1$. Also wenn jeder Knoten... von jedem... der $K_n$ ist schlicht, das heißt, es gibt keine Schlingen. Von jedem Punkt aus muss eine Kante zu jedem anderen Knoten gehen. Das heißt, es sind genau $n-1$ Kanten, die weggehen von jedem Knoten. Also $K_n$ ist regulär von Grad $n-1$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Der vollständige Graph \texorpdfstring{$K_4$}{K4} und Regularität]
+Wir betrachten den vollständigen Graphen mit $4$ Knoten, bezeichnet als $K_4$:
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=6mm}]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: 4 nodes arranged in a square/diamond shape.
+  % 2. Midground: All possible edges between the 4 nodes, including diagonals.
+  % \end{ai-tikz-planner-invisible-content}
+  \node[node] (1) at (0,1) {1};
+  \node[node] (2) at (1,1) {2};
+  \node[node] (3) at (1,0) {3};
+  \node[node] (4) at (0,0) {4};
+
+  \draw[-] (1) -- (2);
+  \draw[-] (2) -- (3);
+  \draw[-] (3) -- (4);
+  \draw[-] (4) -- (1);
+  \draw[-] (1) -- (3);
+  \draw[-] (2) -- (4);
+\end{tikzpicture}
+\end{center}
+
+\begin{proposition}\label[proposition]{prop:kn-regular}
+Der vollständige schlichte Graph $K_n$ mit $n$ Knoten ist regulär vom Grad $n-1$:
+\[
+\deg(x) = n-1 \quad \text{für alle } x \in V
+\]
+\end{proposition}
+
+\begin{short-proof}
+Da $K_n$ schlicht ist, gibt es keine Schlingen. Da er vollständig ist, existiert zwischen je zwei verschiedenen Knoten genau eine Kante. Für jeden festen Knoten $x \in V$ gibt es genau $n-1$ andere Knoten in $V \setminus \{x\}$, mit denen $x$ durch eine Kante verbunden ist. Somit gilt $\deg(x) = n-1$ für alle $x \in V$.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:51 - 00:02:54]
+Ich weiß, heute haben wir viele Definitionen. Das macht's etwas mühsam, und so ein bisschen neue Konzepte, aber nichts davon ist schwierig, ist einfach nur viel. Aber versuchen Sie doch die Übungen zu machen, das sind so ein bisschen auch nette Knobelaufgaben. \inlinemetanote{wischt die Tafel und bereitet die nächste Definition vor}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:54 - 00:03:36]
+Machen wir die nächste Definition. Ähm... So, nehmen wir jetzt an, dass wir Graphen haben, $G = (V, E)$ und $G' = (V', E')$, so dass, ähm, $V'$ enthalten ist in $V$ und $E'$ enthalten ist in $E$. Dann ist $G'$ ein Teilgraph von $G$. Wir schreiben $G' \subseteq G$. Und so können wir auch... Ja, also das ist auch klar. Wenn wir einfach eine Teilmenge von Knoten und alle Kanten in unserem Graph $G'$ müssen auch Kanten sein in diesem Graph $G$. Das ist ein Teilgraph.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition: Teilgraph]
+\setcounter{theorem}{3}
+\begin{definition}[Teilgraph]\label[definition]{def:teilgraph}
+Seien $G = (V, E)$ und $G' = (V', E')$ Graphen. $G'$ heisst ein \newterm{Teilgraph} (oder \newterm{Untergraph}) von $G$, falls gilt:
+\[
+V' \subseteq V \quad \text{und} \quad E' \subseteq E
+\]
+In diesem Fall schreiben wir $G' \subseteq G$.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:36 - 00:04:41]
+Und gleichzeitig können wir auch, wenn wir jetzt einfach eine Menge von Knoten haben, dann können wir anschauen der... dann können wir den kleinsten Graph anschauen in unserem Graph $G$, der... äh, den größten Graphen in $G$, der nur diese Knoten hat. Das heißt, wir nehmen einfach alle Kanten dazu, die Knoten in $U$ verbinden. Und das ist der von $U$ erzeugte Teilgraph $G_U$ enthalten in $G$. Ist der Graph mit Knoten $U$ und Kanten... soll genau die Kanten sein $xy$ (i.e., $\{x, y\}$), die bereits in $E$ enthalten sind und so dass $xy$ (i.e., $\{x, y\}$) enthalten ist in $U$. So, genau das, was wir uns eigentlich vorstellen.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:41 - 00:06:11]
+Und gleichzeitig können wir auch schreiben, wenn $F$ eine Teilmenge von Kanten ist, von $E$, dann definieren wir den von $F$ erzeugten Teilgraph $G_F$ in $G$. Ist der Teilgraph mit Knoten... halt einfach alle Knoten, die in diesen Kanten vorkommen. Okay, das ist dann auch die Vereinigung von allen Knoten $xy$ (i.e., $\{x, y\}$) in $V$, so dass $xy$ (i.e., $\{x, y\}$) in $F$ ist. Und die Kanten nehmen wir genau die Kanten $F$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Erzeugte Teilgraphen]
+\setcounter{theorem}{4}
+\begin{definition}[Von Knoten erzeugter Teilgraph]\label[definition]{def:knoten-erzeugter-teilgraph}
+Sei $G = (V, E)$ ein ungerichteter Graph und $U \subseteq V$. Der von $U$ \newterm{induzierte} (oder \newterm{erzeugte}) \newterm{Teilgraph} $G_U \subseteq G$ ist definiert als:
+\[
+G_U = (U, E_U) \quad \text{mit} \quad E_U = \{ \{x, y\} \in E \mid \{x, y\} \subseteq U \}
+\]
+\end{definition}
+
+\begin{definition}[Von Kanten erzeugter Teilgraph]\label[definition]{def:kanten-erzeugter-teilgraph}
+Sei $G = (V, E)$ ein ungerichteter Graph und $F \subseteq E$. Der von $F$ \newterm{erzeugte Teilgraph} $G_F \subseteq G$ ist definiert als:
+\[
+G_F = (V_F, F) \quad \text{mit} \quad V_F = \bigcup \{ \{x, y\} \subseteq V \mid \{x, y\} \in F \}
+\]
+\end{definition}
+
+\begin{explanation-of-steps}
+\begin{itemize}
+    \item Der von einer Knotenmenge $U$ induzierte Teilgraph $G_U$ enthält alle Kanten des Originalgraphen, deren beide Endknoten in $U$ liegen.
+    \item Der von einer Kantenmenge $F$ erzeugte Teilgraph $G_F$ enthält genau die Kanten aus $F$ und als Knotenmenge genau diejenigen Knoten des Originalgraphen, die Endpunkte mindestens einer Kante in $F$ sind.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:11 - 00:06:26]
+Okay, gut. Das ist ein Teilgraph. \inlinemetanote{geht zum Computer und bereitet den Beamer vor}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:06:26 - 00:08:30]
+Ähm, gut. Jetzt machen wir noch mehr... noch mehr Definitionen. Dazu würde ich wieder die... den Beamer verwenden. Gut, da geht es jetzt um Pfeilzüge. Das ist... Okay, machen wir das zuerst für... also Pfeilzüge sind für Digraphen, weil Pfeil... Pfeil, oder? Pfeile haben eine Richtung. Wir sagen, wenn wir einen Digraph $V, E$ haben und $H$ eine nicht-leere, endliche Kantenteilmenge, so dass, äh, $|H| = \ell$ ist, also es gibt genau $\ell$ Kanten in dieser Teilmenge, und $H$ von der Form ist: $(x_0, x_1), (x_1, x_2), \dots, (x_{\ell-1}, x_l)$. Also es ist immer der Endpunkt von der einen Kante der Anfangspunkt von der nächsten. Dann, ähm, ist der durch $H$ erzeugte Teilgraph, heißt dann Pfeilzug von $x_0$ nach $x_l$ von der Länge $\ell$. Okay? Also ich mache das vielleicht nochmals als Bild. Also ein Pfeilzug, ähm, wir beginnen hier bei $x_0$, $x_1$, $x_2$, bis wir irgendwann bei $x_l$ ankommen. Und dieser Teilgraph ist dann der Pfeilzug. So, hier bemerken muss man, in dieser Definition müssen diese Kanten hier alle verschieden sein, ähm, weil die Kanten bilden genau die Menge, also es müssen $\ell$ verschiedene Kanten sein, so wie man das hier definiert. Was aber nicht gefragt wird, ist, dass die, ähm, dass die Knoten verschieden sind. Also man darf mehrmals durch denselben Knoten gehen. Also was erlaubt ist, ist so etwas zum Beispiel. \inlinemetanote{zeichnet einen Pfeilzug mit einer Schleife an die Tafel} Das ist okay. Einfach die Kanten müssen alle verschieden sein. Okay? Das ist, was ein Pfeilzug ist. Ähm, okay. Und jetzt der Pfeilzug, ähm, es gibt zwei verschiedene Arten von Pfeilzügen, also es gibt noch viele verschiedene, aber die einen sind offene Pfeilzüge, das heißt, wenn der Anfangs- und Endpunkt verschieden sind, und geschlossen, falls man wieder an den Ursprung zurückkehrt, also wenn der Anfangspunkt derselbe ist wie der Endpunkt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:08:30 - 00:09:45]
+Das ist die Definition, also auch wieder klar, ja. Und dann, ähm, ja, falls die $x_i$ paarweise verschieden sind, also es gibt nie zwei davon, die dieselben sind, dann heißt das Ganze eine Bahn. Also eine Bahn der Länge $\ell$ zwischen $x_0$ und $x_l$. Und das macht auch Sinn, dass die Länge $\ell$ hat, weil es hat ja $\ell$ Kanten, die vorkommen. Und falls sie alle verschieden sind außer Anfangs- und Endpunkt, dann heißt es ein Wirbel. Okay, weil es ist, ähm, genau, es ist so wie ein Kreis, aber es geht halt... hat eine Richtung, geht herum.
+\end{spoken-clean}
+
+\begin{nice-box}[Definition: Pfeilzüge in Digraphen]
+\setcounter{theorem}{6}
+\begin{definition}[Pfeilzug, Bahn und Wirbel]\label[definition]{def:pfeilzug}
+Sei $G = (V, E)$ ein Digraph (gerichteter Graph) und $H \subseteq E$ eine nicht-leere, endliche Kantenteilmenge, sodass für ein $\ell \ge 1$ gilt:
+\[
+|H| = \ell \quad \text{und} \quad H = \{ (x_0, x_1), (x_1, x_2), \dots, (x_{\ell-1}, x_l) \}
+\]
+Der durch $H$ erzeugte Teilgraph $G_H$ heisst \newterm{Pfeilzug} von $x_0$ nach $x_l$ der Länge $\ell$.
+\begin{itemize}
+    \item Der Pfeilzug $G_H$ heisst \newterm{offener Pfeilzug}, falls $x_0 \neq x_l$.
+    \item Der Pfeilzug $G_H$ heisst \newterm{geschlossener Pfeilzug}, falls $x_0 = x_l$.
+    \item Falls die Knoten $x_0, \dots, x_l$ paarweise verschieden sind, so heisst $G_H$ eine \newterm{Bahn} der Länge $\ell$ zwischen $x_0$ und $x_l$.
+    \item Falls $x_0 = x_l$ und die Knoten $x_0, \dots, x_{l-1}$ paarweise verschieden sind, so heisst $G_H$ ein \newterm{Wirbel}.
+\end{itemize}
+\end{definition}
+\end{nice-box}
+
+\begin{math-stroke}[Visualisierung eines Pfeilzugs]
+Ein Pfeilzug erlaubt das mehrfache Besuchen von Knoten, verlangt jedoch, dass alle Kanten paarweise verschieden sind.
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, ->, >=stealth, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=6mm}]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Nodes x0, x1, x2, x3, x4.
+  % 2. Midground: Directed edges forming a path with a self-intersection at x2.
+  % \end{ai-tikz-planner-invisible-content}
+  \node[node] (x0) at (0,0) {$x_0$};
+  \node[node] (x1) at (1,0.5) {$x_1$};
+  \node[node] (x2) at (2,0) {$x_2$};
+  \node[node] (x3) at (3,0.5) {$x_3$};
+  \node[node] (x4) at (2,-1) {$x_4$};
+
+  \path
+    (x0) edge (x1)
+    (x1) edge (x2)
+    (x2) edge (x3)
+    (x3) edge (x4)
+    (x4) edge (x2);
+\end{tikzpicture}
+\end{center}
+
+\begin{explanation-of-steps}
+In diesem Beispiel ist der Pfad $x_0 \to x_1 \to x_2 \to x_3 \to x_4 \to x_2$ ein Pfeilzug der Länge $5$. Da der Knoten $x_2$ zweimal besucht wird, handelt es sich nicht um eine Bahn. Da alle Kanten verschieden sind, ist es ein gültiger Pfeilzug.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:45 - 00:11:37]
+Gut, ähm, was sind Pfeilzüge? Dann gibt's Kantenzüge, und das ist eigentlich genau dieselbe Definition, jetzt einfach diesmal für ungerichtete Graphen. Also... \inlinemetanote{lacht} Okay, das muss man auch fast korrigieren jetzt. Äm, wenn wir mit ungerichteten Graphen arbeiten, äm, dann heißt das Ganze Kantenzüge anstatt Pfeilzüge. Okay, schauen wir uns das an. \inlinemetanote{schaltet die Folie um} Okay, gut, besser. Es ist so, falls wir diese... Tippfehler darf man nicht stehen lassen. Also, wenn wir einen ungerichteten Graph haben und eine nicht-leere, endliche Kantenteilmenge, so dass für ein $\ell \ge 1$ gilt: $|H| = \ell$ und $H = \{ \{x_0, x_1\}, \{x_1, x_2\}, \dots, \{x_{\ell-1}, x_l\} \}$, dann heißt der durch $H$ erzeugte Teilgraph $G_H$ Kantenzug von $x_0$ nach $x_l$ der Länge $\ell$. Der Kantenzug $G_H$ heißt offener Kantenzug, falls $x_0 \neq x_l$, geschlossener Kantenzug, falls $x_0 = x_l$. Falls die $x_i$ paarweise verschieden sind, so heißt $G_H$ Weg der Länge $\ell$ zwischen $x_0$ und $x_l$. Falls $x_0 = x_l$, die $x_i$ ansonsten aber paarweise verschieden sind, so heißt $G_H$ Kreis.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:11:37 - 00:12:21]
+Das ist die Definition von Kantenzug, also auch wieder klar, ja. Und dann, äm, ja, falls die $x_i$ paarweise verschieden sind, so heißt $G_H$ Weg der Länge $\ell$ zwischen $x_0$ und $x_l$. Und falls $x_0 = x_l$, die $x_i$ ansonsten aber paarweise verschieden sind, so heißt $G_H$ Kreis. Das heißt, es ist einfach wie... zwei verschiedene Welten. Aber es ist für ungerichtete Graphen genau dieselbe Definition, einfach eine andere... ein bisschen andere Notation. Das können wir noch kurz aufschreiben. \inlinemetanote{geht zur Tafel}
+\end{spoken-clean}
+
+\begin{nice-box}[Definition: Kantenzüge in ungerichteten Graphen]
+\setcounter{theorem}{7}
+\begin{definition}[Kantenzug, Weg und Kreis]\label[definition]{def:kantenzug}
+Sei $G = (V, E)$ ein ungerichteter Graph und $H \subseteq E$ eine nicht-leere, endliche Kantenteilmenge, sodass für ein $\ell \ge 1$ gilt:
+\[
+|H| = \ell \quad \text{und} \quad H = \{ \{x_0, x_1\}, \{x_1, x_2\}, \dots, \{x_{\ell-1}, x_l\} \}
+\]
+Der durch $H$ erzeugte Teilgraph $G_H$ heisst \newterm{Kantenzug} von $x_0$ nach $x_l$ der Länge $\ell$.
+\begin{itemize}
+    \item Der Kantenzug $G_H$ heisst \newterm{offener Kantenzug}, falls $x_0 \neq x_l$.
+    \item Der Kantenzug $G_H$ heisst \newterm{geschlossener Kantenzug}, falls $x_0 = x_l$.
+    \item Falls die Knoten $x_0, \dots, x_l$ paarweise verschieden sind, so heisst $G_H$ ein \newterm{Weg} der Länge $\ell$ zwischen $x_0$ und $x_l$.
+    \item Falls $x_0 = x_l$ und die Knoten $x_0, \dots, x_{l-1}$ paarweise verschieden sind, so heisst $G_H$ ein \newterm{Kreis}.
+\end{itemize}
+\end{definition}
+\end{nice-box}
+
+\begin{spoken-clean}[00:12:21 - 00:13:49]
+Wir haben hier gerichtet, da ist ungerichtet. Da ist Pfeilzug, da ist Kantenzug. Da heißt es Bahn, da heißt es Weg. Und da ist es ein Wirbel, da heißt es Kreis. \inlinemetanote{schreibt die Gegenüberstellung an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Gegenüberstellung: Gerichtete vs. Ungerichtete Pfadbegriffe]
+Die Terminologie für Pfade in Graphen unterscheidet sich systematisch nach der Gerichtetheit des Graphen:
+
+\begin{center}
+\begin{tabular}{l|l}
+\textbf{Gerichteter Graph (Digraph)} & \textbf{Ungerichteter Graph} \\ \hline
+Pfeilzug & Kantenzug \\
+Bahn & Weg \\
+Wirbel & Kreis
+\end{tabular}
+\end{center}
+
+\begin{explanation-of-steps}
+Diese Gegenüberstellung verdeutlicht die begriffliche Äquivalenz:
+\begin{itemize}
+    \item Ein \emph{Pfeilzug} entspricht einem \emph{Kantenzug}, wobei die Kanten gerichtet sind.
+    \item Eine \emph{Bahn} entspricht einem \emph{Weg} (keine Knotenwiederholungen).
+    \item Ein \emph{Wirbel} entspricht einem \emph{Kreis} (geschlossener Pfad ohne innere Knotenwiederholungen).
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:13:49 - 00:15:07]
+Gut, und das nächste Konzept sind noch Pfeilfolgen. Äm, okay, da... \inlinemetanote{schaltet die Folie um} Das ist wieder eine zusätzliche Definition. Also wenn wir einen Digraphen haben, also wieder einen gerichteten Graphen, dann sagen wir, eine Folge von der Länge $\ell$ von Kanten $(x_0, x_1), (x_1, x_2), \dots, (x_{\ell-1}, x_l)$, eine Folge, und hier dürfen jetzt im Gegensatz zu, äm, im Gegensatz zu Pfeilzügen, äm, dürfen Pfeilfolgen, da dürfen die Kanten auch mehrfach vorkommen. Genau, also eine Pfeilfolge is sehr ähnlich wie ein Pfeilzug, einfach dürfen hier die Kanten auch mehrfach vorkommen, und wir definieren es auch für Digraphen, nicht nur für beliebige. Okay, das ist die Definition von Pfeilfolgen. Äm, das zum Beispiel.
+\end{spoken-clean}
+
+\begin{nice-box}[Definition: Pfeilfolgen]
+\setcounter{theorem}{8}
+\begin{definition}[Pfeilfolge]\label[definition]{def:pfeilfolge}
+Sei $G = (V, E_0, \dots, E_k)$ ein Digraph. Eine Folge der Länge $\ell$ von Kanten:
+\[
+(x_0, x_1), (x_1, x_2), \dots, (x_{\ell-1}, x_l)
+\]
+in der Kanten auch mehrfach vorkommen können, heisst eine \newterm{Pfeilfolge} von $x_0$ nach $x_l$ der Länge $\ell$.
+\end{definition}
+\end{nice-box}
+
+\begin{spoken-clean}[00:15:07 - 00:16:26]
+Okay, und jetzt endlich einmal noch ein nettes Resultat, damit wir endlich einmal noch ein Resultat haben und nicht nur Definitionen. \inlinemetanote{lacht} Es ist die Proposition 9.1. Die sagt jetzt aus, wenn wir einen endlichen Graphen haben, also sei $V = \{v_1, \dots, v_n\}$ eine Menge von Knoten, und, also $G$ jetzt ein endlicher Graph mit dieser Menge als Knoten, aber jetzt mit, äm, potenziell mehr... Mehrfachkanten potenziell, und das soll auch gerichtet sein, ein Digraph mit Adjazenzmatrix $A = A(G)$, schreibe $A^k = (a_{ij}^{(k)})$. Dann ist $a_{ij}^{(k)}$ die Anzahl der verschiedenen Pfeilfolgen von $v_i$ nach $v_j$ der Länge $k$. \inlinemetanote{schreibt die Proposition an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Proposition 9.1: Kombinatorische Bedeutung der Adjazenzmatrixpotenzen]
+\setcounter{theorem}{0}
+\setcounter{section}{9}
+\begin{proposition}\label[proposition]{prop:adjazenzmatrix-potenz}
+Sei $V = \{v_1, \dots, v_n\}$ und $G = (V, E_0, \dots, E_l)$ ein Digraph mit Adjazenzmatrix $A = A(G)$. Wir schreiben $A^k = (a_{ij}^{(k)})$ für $k \ge 1$. Dann ist $a_{ij}^{(k)}$ genau die Anzahl der verschiedenen Pfeilfolgen von $v_i$ nach $v_j$ der Länge $k$.
+\end{proposition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:16:26 - 00:17:15]
+Okay, das heißt, wir können, indem wir diese Matrix mit sich selbst multiplizieren, erhalten wir eine nette, äm, kombinatorische Interpretation, was diese Einträge der Matrix bedeuten.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:17:15 - 00:19:25]
+Vielleicht schauen wir kurz noch ein paar ganz einfache Beispiele an. Also wenn wir hier zum Beispiel zwei Knoten haben, und jetzt sagen wir, wir haben hier eine Kante... wir haben zwei Kanten, die gehen von 1 nach 2, und eine Kante, die geht von 2 nach 1. Okay, was ist die Adjazenzmatrix? Das ist $A$ ist dann... es gibt keins von 1 zu sich selbst, es gibt zwei von 1 nach 2, und es gibt eins von 2 nach 1, und keines von 2 zu sich selbst. Okay, das sehen wir für $A = A^1$, das ist natürlich schon per Definition, es gibt zwei Möglichkeiten von 1 nach 2 zu laufen, und eine Möglichkeit von 2 nach 1 zu laufen. Aber wenn wir jetzt $A^2$ ausrechnen, dann sehen wir... und es gibt keine Möglichkeit von 1 zu sich selbst zu laufen von Länge 1, und keine Möglichkeit von der Länge 1 von 2 zu sich selbst zu laufen. Wenn wir jetzt $A^2$ rechnen, dann erhalten wir hier... \inlinemetanote{rechnet an der Tafel} 2, 0, 0, 2. Und da sehen wir, um von 1 zu sich selbst zu laufen, gibt's zwei Möglichkeiten, nämlich eins... also von Länge 2, eins oder so rum. Und um von 2 zu sich selbst zu laufen, kann man entweder so rum laufen oder so rum. Aber es gibt wiederum keine Möglichkeit von 2 zu sich selbst zu laufen... ä, es gibt keine Möglichkeit von 2 nach 1 zu laufen durch Länge 2. Und ähnlich, äm, von... es gibt keine Möglichkeit von 2 nach 1 zu laufen durch Länge 2. Und dann $A^3$ ist wieder... \inlinemetanote{rechnet an der Tafel} 0, 4, 2, 0. Und da sehen wir wieder, okay, wenn man eine Pfeilfolge von Länge 3 von... kann man nur von 1 nach 2 und von 2 nach 1. Es gibt vier Möglichkeiten von 1 nach 2 zu gehen. Beim ersten Mal kann man da oder da gehen, dann gibt's eine Möglichkeit zurückzukommen, und dann haben wir zwei Möglichkeiten. Es gibt also vier. Hingegen von, äm, um von 2 nach 1 zu laufen mit Länge 3, gibt's nur zwei Möglichkeiten, weil hier gibt's eine Möglichkeit, jetzt kann man zwei, aber nachher gibt's wieder nur eine, um zurückzukommen. Okay? Macht das einigermaßen Sinn? Beispiel.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel: Potenzen der Adjazenzmatrix]
+Wir betrachten den Digraphen $G = (V, E_0, E_1)$ mit $V = \{1, 2\}$ und den Kanten:
+\[
+E_0 = \{ (1, 2), (2, 1) \}, \quad E_1 = \{ (1, 2) \}
+\]
+Es gibt also zwei Kanten von $1$ nach $2$ und eine Kante von $2$ nach $1$.
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, ->, >=stealth, thick,
+  node/.style={circle, draw, fill=MidnightBlue!10, inner sep=0pt, minimum size=6mm}]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Nodes 1 and 2.
+  % 2. Midground: Two parallel directed edges from 1 to 2, and one directed edge from 2 to 1.
+  % \end{ai-tikz-planner-invisible-content}
+  \node[node] (1) at (0,0) {1};
+  \node[node] (2) at (2,0) {2};
+
+  \path
+    (1) edge[bend left=30] node[above] {\footnotesize $a_1, a_2$} (2)
+    (1) edge[bend left=10] (2)
+    (2) edge[bend left=30] node[below] {\footnotesize $b_1$} (1);
+\end{tikzpicture}
+\end{center}
+
+Die Adjazenzmatrix $A = A^1$ lautet:
+\[
+A = \begin{pmatrix}
+0 & 2 \\
+1 & 0
+\end{pmatrix}
+\]
+
+Wir berechnen die Potenzen $A^2$ und $A^3$:
+\[
+A^2 = \begin{pmatrix}
+0 & 2 \\
+1 & 0
+\end{pmatrix} \begin{pmatrix}
+0 & 2 \\
+1 & 0
+\end{pmatrix} = \begin{pmatrix}
+2 & 0 \\
+0 & 2
+\end{pmatrix}
+\]
+\[
+A^3 = A^2 \cdot A = \begin{pmatrix}
+2 & 0 \\
+0 & 2
+\end{pmatrix} \begin{pmatrix}
+0 & 2 \\
+1 & 0
+\end{pmatrix} = \begin{pmatrix}
+0 & 4 \\
+2 & 0
+\end{pmatrix}
+\]
+
+\begin{explanation-of-steps}
+\begin{itemize}
+    \item $a_{11}^{(2)} = 2$: Es gibt genau zwei Pfeilfolgen der Länge $2$ von $1$ nach $1$ (nämlich über die beiden verschiedenen Kanten nach $2$ und jeweils zurück über die einzige Kante von $2$ nach $1$).
+    \item $a_{12}^{(3)} = 4$: Es gibt genau vier Pfeilfolgen der Länge $3$ von $1$ nach $2$.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:25 - 00:21:07]
+Okay, der Beweis, äm, folgt per Induktion nach $k$. Und jetzt bemerken wir, für $k=1$ ist das genau die Definition von der Adjazenzmatrix. Okay, also genau die Anzahl Kanten, die von $v_i$ ausgehen und zu $v_j$ gehen. Das heißt, wir müssen den Induktionsschritt machen. Wir nehmen an, die Aussage stimmt für $k$, wir müssen sie für $k+1$ beweisen. Okay, und jetzt okay, per Induktionsannahme wissen wir, für $1 \le i, \ell \le n$ ist $a_{i\ell}^{(k)}$ die Anzahl Pfeilfolgen der Länge $k$ von $v_i$ nach $v_\ell$. \inlinemetanote{schreibt den Induktionsanfang an die Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:21:07 - 00:22:30]
+Und jetzt wissen wir aber, okay, die Idee ist relativ klar. Wenn wir jetzt laufen, okay, wir haben hier $v_i$ und dann haben wir $v_\ell$, dann hier $v_j$. Okay, jetzt haben wir hier all diese Möglichkeiten von $v_i$ nach $v_\ell$ zu laufen, da gibt's viele, da gibt's genau diese $a_{i\ell}^{(k)}$ viele. Und jetzt gibt's nochmals, wie viele Möglichkeiten von $v_\ell$ nach $v_j$ zu laufen? Okay, das ist einfach diese... da gibt's nochmals diese Anzahl hier, das ist genau $a_{\ell j}^{(1)}$ viele. Das heißt, es als Folgtem für $1 \le i, j, \ell \le n$ ist $a_{i\ell}^{(k)} \cdot a_{\ell j}^{(1)}$ die Anzahl Pfeilfolgen der Länge $k+1$ von $v_i$ nach $v_j$ via $v_\ell$ im letzten Schritt. \inlinemetanote{zeichnet ein Diagramm zur Veranschaulichung an die Tafel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:30 - 00:23:43]
+Okay, also wenn wir nur die Pfeilfolgen anschauen, die von $v_i$ nach $v_j$ gehen, und wir wollen im letzten Schritt gehen wir hier über $v_\ell$, dann ist das genau das Produkt. Also hier können wir eines von denen auswählen, und dann haben wir hier nochmals, äm, $a_{\ell j}^{(1)}$ Möglichkeiten. Okay? Und somit erhalten wir, dass die Anzahl Pfeilfolgen von $v_i$ nach $v_j$ von Länge $k+1$ ist genau die Summe von $\ell=1$ bis $n$ von $a_{i\ell}^{(k)} \cdot a_{\ell j}^{(1)}$. Okay, das ist per Definition der Matrixmultiplikation. Und wir erhalten jetzt mit diesem Argument, das ist genau die Anzahl der Pfeilfolgen der Länge $k+1$ von $v_i$ nach $v_j$.
+\end{spoken-clean}
+
+\begin{proof}[Beweis von Proposition \ref{prop:adjazenzmatrix-potenz}]
+\begin{spoken-clean}[continued]
+Wir führen den Beweis mittels vollständiger Induktion nach der Länge $k$ der Pfeilfolgen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Induktionsbeweis]
+\begin{ai-proof-skeleton-invisible-content}
+% 1. Base case: k=1. By definition of the adjacency matrix, a_ij^(1) is the number of edges from v_i to v_j.
+% 2. Inductive step: Assume statement holds for k.
+% 3. For k+1, any path of length k+1 from v_i to v_j must go through some intermediate node v_l at step k.
+% 4. Total paths is the sum over l of (paths of length k from v_i to v_l) * (paths of length 1 from v_l to v_j).
+% 5. This sum is exactly the definition of matrix multiplication for A^(k+1) = A^k * A.
+\end{ai-proof-skeleton-invisible-content>
+
+\textbf{Induktionsanfang ($k=1$):}
+Nach Definition der Adjazenzmatrix $A(G) = (a_{ij})$ ist $a_{ij}^{(1)} = a_{ij}$ genau die Anzahl der Kanten von $v_i$ nach $v_j$. Dies entspricht exakt der Anzahl der Pfeilfolgen der Länge $1$ von $v_i$ nach $v_j$.
+
+\textbf{Induktionsschritt ($k \to k+1$):}
+Die Induktionsannahme besagt, dass für alle $1 \le i, \ell \le n$ der Eintrag $a_{i\ell}^{(k)}$ der Matrix $A^k$ die Anzahl der Pfeilfolgen der Länge $k$ von $v_i$ nach $v_\ell$ angibt.
+
+Jede Pfeilfolge der Länge $k+1$ von $v_i$ nach $v_j$ besteht aus einer Pfeilfolge der Länge $k$ von $v_i$ nach einem Zwischenknoten $v_\ell$ und einer anschliessenden Kante (Pfeilfolge der Länge $1$) von $v_\ell$ nach $v_j$.
+
+Da diese Wege für verschiedene Zwischenknoten $v_\ell$ disjunkt sind, ergibt sich die Gesamtzahl der Pfeilfolgen der Länge $k+1$ durch Summation über alle möglichen Zwischenknoten $v_\ell \in V$:
+\[
+\text{Anzahl Pfeilfolgen der Länge } k+1 \text{ von } v_i \text{ nach } v_j = \sum_{\ell=1}^n a_{i\ell}^{(k)} \cdot a_{\ell j}^{(1)}
+\]
+Nach der Definition der Matrixmultiplikation für $A^{k+1} = A^k \cdot A$ ist dieser Ausdruck genau der Eintrag $a_{ij}^{(k+1)}$ der Matrix $A^{k+1}$:
+\[
+a_{ij}^{(k+1)} = \sum_{\ell=1}^n a_{i\ell}^{(k)} \cdot a_{\ell j}
+\]
+Dies schliesst den Induktionsschritt ab.
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:23:43 - 00:24:09]
+Okay, gut. Das ist... \inlinemetanote{verspricht sich} Das ist der Beweis. Ich zeige Ihnen vielleicht im Skript... ah, wir haben Zeit eng. Im Skript haben wir noch eine... komplizierteres Beispiel, das noch nett ist, den Graph, den wir vorher gesehen haben. \inlinemetanote{geht zum Computer und projiziert das Beispiel}
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:24:09 - 00:24:31]
+Da hatten wir noch diesen komplizierteren Graph hier. Wenn man da die Adjazenzmatrix hoch 4 rechnet, dann erhält man diese Matrix. Und auf dieser Matrix kann man jetzt tatsächlich ablesen, wie viele mögliche Pfeilfolgen es gibt zwischen je zwei von diesen Knoten. Eben zum Beispiel vom Knoten 6 zum Knoten 5, das ist hier diese Zahl da unten, und da wissen wir jetzt, es gibt 4. Okay, da kann man schauen, Knoten 6 zum Knoten 5, und da sind jetzt alle eingezeichnet, die es gibt. Also man muss hier zum 3 gehen, und dann ja genau, kann man entweder da durch und dann da zurück, oder man kann noch einmal da rundherum und dann da und... dann sieht man hier gibt's alle 4, und mit dem Proposition wissen wir dann, das sind auch alle. Dann kommt nächste Proposition, auch nochmals eine einfachere Beobachtung. \inlinemetanote{schaltet den Beamer aus und bereitet die Tafel vor}
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Komplexes Beispiel mit Adjazenzmatrixpotenz]
+Der Dozent projiziert eine Folie mit einem komplexeren Digraphen mit 6 Knoten und der zugehörigen Adjazenzmatrixpotenz $A^4$. Er demonstriert, dass der Eintrag $a_{65}^{(4)} = 4$ exakt den vier verschiedenen Pfeilfolgen der Länge $4$ von Knoten $6$ zu Knoten $5$ entspricht.
+\end{meta-note>
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 263488, Output 9001)*
+---

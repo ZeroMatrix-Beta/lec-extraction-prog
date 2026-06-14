@@ -847,6 +847,7 @@ public class AiStudioAutoExtractionSession {
 
     prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
     prompt += "\n\nWhen in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
+    prompt += "\n\nAfter transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.";
 
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
     if (!uploadSuccess || !attachmentParts.Any()) return (false, null, new List<Part>());
@@ -859,7 +860,7 @@ public class AiStudioAutoExtractionSession {
 
     if (previousTexFiles.Any()) {
       Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
-      string contextText = "Here are the context files from the previous parts of the lecture:\n\n";
+      string contextText = "Here are the context files from the previous parts of the lecture. Please note that these files might contain compilation errors from previous, incomplete, or flawed extractions. Treat them as contextual reference material, but do not assume perfect LaTeX syntax or content validity.\n\n";
       foreach (var texFile in previousTexFiles) {
         Console.WriteLine($"    - {Path.GetFileName(texFile)}");
         string content = await System.IO.File.ReadAllTextAsync(texFile);
