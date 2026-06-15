@@ -72,9 +72,10 @@ public class AiStudioAutoExtractionSession {
     }
 
     string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+    string filenamePatternRegex = @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$";
     foreach (var f in filesToProcess) {
       string fileName = Path.GetFileName(f).ToLowerInvariant();
-      if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)\.[a-z0-9]+$")) {
+      if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, filenamePatternRegex)) {
         Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
         Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
       }
@@ -628,10 +629,20 @@ public class AiStudioAutoExtractionSession {
           Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
           cachedParts.Sort();
 
-          string speedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
-          double speedVideoDuration = await toolkit.GetVideoDurationAsync(speedVideoPath);
-          double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
+          // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
+          double speedVideoDuration;
+          bool wasInputFilePreCompressedWhenCached = System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file).ToLowerInvariant(), @"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
+          if (wasInputFilePreCompressedWhenCached) {
+            // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
+            speedVideoDuration = await toolkit.GetVideoDurationAsync(file);
+          }
+          else {
+            // Otherwise, it was the output of ProcessGeneralVideoAsync that was cached.
+            string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
+            speedVideoDuration = await toolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
+          }
+          double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
           var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
           for (int i = 0; i < cachedParts.Count; i++) {
             double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - 180) : 0;
@@ -643,23 +654,36 @@ public class AiStudioAutoExtractionSession {
           continue;
         }
 
-        Console.WriteLine($"\n[FFmpeg Producer] Starte Konvertierung für {Path.GetFileName(file)}...");
-        string? speedVideo = await toolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, overwrite: true);
-        if (speedVideo == null) continue;
+        // Determine if the file is already in a "compressed" format
+        bool isPreCompressed = System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file).ToLowerInvariant(), @"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-        var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(speedVideo, tmpFolderForFile, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true, overwrite: true);
-        if (rawPartsWithTimes.Count == 0) continue;
-
-        List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
-        for (int i = 0; i < rawPartsWithTimes.Count; i++) {
-          string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
-          if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
-          System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
-          safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
+        string? videoToSplit;
+        if (isPreCompressed) {
+          Console.WriteLine($"\n[FFmpeg Producer] {Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...");
+          videoToSplit = file; // Use the original file directly for splitting
+        }
+        else {
+          Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
+          videoToSplit = await toolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true);
+          if (videoToSplit == null) {
+            Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
+            continue;
+          }
         }
 
-        Console.WriteLine($"[FFmpeg Producer] {Path.GetFileName(file)} erfolgreich konvertiert! Lege es aufs Fließband für Gemini...");
-        await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
+        Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in 3 Teile (180s Overlap)...");
+        var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true, overwrite: true);
+
+        if (rawPartsWithTimes.Any()) {
+          List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
+          for (int i = 0; i < rawPartsWithTimes.Count; i++) {
+            string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
+            if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
+            System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
+            safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
+          }
+          await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
+        }
       }
       channel.Writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
     });

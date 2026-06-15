@@ -84,6 +84,15 @@ public class VertexAutoExtractionSession {
       return;
     }
 
+    string filenamePatternRegex = @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$";
+    foreach (var f in filesToProcess) {
+      string fileName = Path.GetFileName(f).ToLowerInvariant();
+      if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, filenamePatternRegex)) {
+        Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
+        Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
+      }
+    }
+
     filesToProcess = filesToProcess.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
 
     _sessionLogger.InitializeSession();
