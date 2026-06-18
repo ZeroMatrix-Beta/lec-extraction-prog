@@ -33,9 +33,11 @@ public class AiStudioAutoExtractionConfig {
   };
   public string LogFolder { get; set; } = @"D:\gemini-logs";
   // [AI Context] Default model selection for developer-tier batch processing.
-  public string Model { get; set; } = "gemini-3-flash-preview";
+  public float Temperature { get; set; } = 0.1f; // 1.0f is default.5  
+  public float TopP { get; set; } = 0.95f;
+  public int TopK { get; set; } = 40;
+  public int MaxOutputTokens { get; set; } = 65535; // Hardcoded for maximum output length
+  public string Model { get; set; } = "gemini-3.5-flash";
   public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
   public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
-  // [AI Context] The core prompt template dynamically appended to every video chunk.
-  public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 }

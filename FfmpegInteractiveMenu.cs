@@ -174,7 +174,7 @@ public class FfmpegInteractiveSession {
         await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.0, fps: 1, downmixToMono: true); break;
       case "5":
       case "11":
-        await _toolkit.ProcessSplitVideoAsync(inputFile, destFolder, downmixToMono: true); break;
+        await _toolkit.ProcessSplitVideoAsync(inputFile, destFolder, downmixToMono: true, cacheFileNamePrefix: Path.GetFileNameWithoutExtension(inputFile)); break;
       case "6":
       case "12":
         await _toolkit.ProcessCustomVideoAsync(inputFile, destFolder, customTemplate, customExt); break;

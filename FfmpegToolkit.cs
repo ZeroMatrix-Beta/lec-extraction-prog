@@ -20,7 +20,7 @@ public class FfmpegToolkit {
   /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
   /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
   /// </summary>
-  public async Task<List<(string FilePath, double StartTime)>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false) {
+  public async Task<List<(string FilePath, double StartTime)>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false, string? cacheFileNamePrefix = null) {
     var generatedFiles = new List<(string FilePath, double StartTime)>();
 
     if (!File.Exists(inputFile)) {
@@ -59,7 +59,8 @@ public class FfmpegToolkit {
       double end = start + segmentLength;
       if (end > duration) end = duration;
 
-      string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}_part{i + 1}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}_part{i + 1}-compressed", ".mp4");
+      string outputBaseName = cacheFileNamePrefix ?? fileName; // Use explicit prefix if provided, else use original filename
+      string outputFile = overwrite ? Path.Combine(destFolder, $"{outputBaseName}-part{i + 1}.mp4") : GetUniqueFilePath(destFolder, $"{outputBaseName}-part{i + 1}", ".mp4");
       string ffmpegArgs = streamCopy ? $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-ss {start:F2} -to {end:F2} -i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset slow -crf 28 -tune stillimage -g 120 {audioArgs} -r 1 \"{outputFile}\"";
 
       Console.WriteLine($"\n  [FFmpegToolkit] Part {i + 1}/{parts}: Start={start:F2}s, End={end:F2}s");

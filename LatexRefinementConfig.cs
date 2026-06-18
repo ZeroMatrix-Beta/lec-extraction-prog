@@ -5,12 +5,12 @@ namespace Config;
 /// <summary>
 /// [AI Context] Configuration specifically for the post-processing phase. TargetFolder specifies where the compiled, polished .tex/.pdf will be dropped.
 /// </summary>
-public class LatexRefinementConfig
-{
+public class LatexRefinementConfig {
   public string GeminiMdPath { get; set; } = @"C:\Users\miche\latex\prompt-engineering\transcription\latex-part-merge-instruction.md";
   public string Model { get; set; } = AppConfig.RefinementModel;
   public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
   public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
   public string TargetFolder { get; set; } = AppConfig.LatexRefinementTargetFolder;
   public string SourceFolder { get; set; } = AppConfig.LatexRefinementSourceFolder;
+  public bool Enabled { get; set; } = false; // New property to enable/disable refinement
 }

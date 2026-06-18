@@ -398,7 +398,18 @@ public class VertexAutoExtractionSession {
       if (fileProcessingSuccess) {
         // Write the raw (unoffsetted) combined .tex file
         string uniqueTargetFilePath = GetUniqueTexPath(Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + ".tex")); // Fix: Use fileSpecificOutputFolder
-        string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n% ==========================================\n\n";
+        string header = $"% ==========================================\n" +
+                        $"% AutoExtraction Source: {Path.GetFileName(file)}\n" +
+                        $"% Model: {_config.Model}\n" +
+                        $"% Temperature: {_config.Temperature}\n" +
+                        $"% TopP: {_config.TopP}\n" +
+                        $"% TopK: {_config.TopK}\n" +
+                        $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
+                        (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
+                        (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
+                        $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                        $"% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n" +
+                        $"% ==========================================\n\n";
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
         Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {uniqueTargetFilePath}");
 
@@ -407,10 +418,20 @@ public class VertexAutoExtractionSession {
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
         Console.WriteLine($"  [Erfolg] Offset-korrigiertes Dokument gespeichert unter: {uniqueTargetFilePathOffset}"); // Corrected to use the unique path
 
-        // New: Trigger LatexRefinementSession immediately for the generated offset file
-        Console.WriteLine("\n[AutoExtraction] Starte automatischen Refinement-Prozess für die offset-korrigierte Datei...");
-        var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(_aiStudioClientForRefinement, _latexRefinementConfig, uniqueTargetFilePathOffset);
-        await refinementSession.StartAsync();
+        // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
+        // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
+        string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+        Client aiStudioClientForRefinement = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
+
+        if (_latexRefinementConfig.Enabled) {
+          Console.WriteLine("\n[AutoExtraction] Starte automatischen Refinement-Prozess für die offset-korrigierte Datei...");
+          // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
+          var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(aiStudioClientForRefinement, _latexRefinementConfig, uniqueTargetFilePathOffset);
+          await refinementSession.StartAsync();
+        }
+        else {
+          Console.WriteLine("\n[AutoExtraction] LaTeX Refinement ist in der Konfiguration deaktiviert. Überspringe Refinement.");
+        }
       }
 
       return fileProcessingSuccess;
@@ -450,16 +471,23 @@ public class VertexAutoExtractionSession {
 
   private async Task<List<(string FilePath, double StartTime)>> PrepareVideoPartsAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, double fullOriginalVideoDuration) {
     string baseName = Path.GetFileNameWithoutExtension(file);
-    string dateStr = DateTime.Now.ToString("yyyy-MM-dd");
-    var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-{dateStr}-part*.mp4").ToList();
+    var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-part*.mp4").ToList();
     bool useCache = false;
 
-    bool isCacheRecent = cachedParts.Count > 0 && (DateTime.Now - new FileInfo(cachedParts[0]).LastWriteTime).TotalHours <= 2;
+    TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
+
+    bool isCacheRecent = false;
+    if (cachedParts.Any()) {
+      var fileInfo = new FileInfo(cachedParts[0]);
+      if ((DateTime.Now - fileInfo.LastWriteTime) <= cacheDuration) {
+        isCacheRecent = true;
+      }
+    }
 
     if (isCacheRecent && cachedParts.Count >= 3) {
       useCache = true;
     }
-    else if (isCacheRecent) {
+    else if (isCacheRecent) { // Only log this warning if cache was found but incomplete
       Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für {baseName} ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
       foreach (var f in cachedParts) {
         try { System.IO.File.Delete(f); }
@@ -474,7 +502,7 @@ public class VertexAutoExtractionSession {
     List<(string FilePath, double StartTime)> videoParts = new List<(string, double)>();
 
     // Need to get the duration of the processed video to calculate start times for cached parts
-    string processedVideoPath = Path.Combine(tmpFolder, $"{baseName}-speed-{_config.SpeedMultiplier.ToString(CultureInfo.InvariantCulture)}-compressed.mp4");
+    string processedVideoPath = Path.Combine(tmpFolder, $"{baseName}-speed-{_config.SpeedMultiplier.ToString(CultureInfo.InvariantCulture)}-compressed.mp4"); // Keep this name for potential processed video caching
     double processedVideoDuration = await toolkit.GetVideoDurationAsync(processedVideoPath);
     double segmentLengthForCached = (processedVideoDuration > 0) ? (processedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
 
@@ -502,8 +530,8 @@ public class VertexAutoExtractionSession {
         return videoParts;
       }
 
-      for (int i = 0; i < rawPartsWithTimes.Count; i++) {
-        string safePartPath = Path.Combine(tmpFolder, $"{baseName}-{dateStr}-part{i + 1}.mp4");
+      for (int i = 0; i < rawPartsWithTimes.Count; i++) { // Corrected: Remove dateStr from saved filename
+        string safePartPath = Path.Combine(tmpFolder, $"{baseName}-part{i + 1}.mp4");
         if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
         System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
         videoParts.Add((safePartPath, rawPartsWithTimes[i].StartTime));

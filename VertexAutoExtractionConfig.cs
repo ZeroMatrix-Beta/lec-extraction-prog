@@ -20,6 +20,10 @@ public class VertexAutoExtractionConfig {
   public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
   public string LogFolder { get; set; } = AppConfig.LogFolder;
   public string Model { get; set; } = "gemini-3-flash-preview";
+  public float Temperature { get; set; } = 0.65f; // Similar to AiStudioAutoExtractionConfig
+  public float TopP { get; set; } = AppConfig.DefaultTopP;
+  public int TopK { get; set; } = AppConfig.DefaultTopK;
+  public int MaxOutputTokens { get; set; } = 65535; // Similar to AiStudioAutoExtractionConfig
   public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
   public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";

@@ -311,8 +311,10 @@ public class AiStudioAutoExtractionSession {
     _debugChatHistory.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = input } } });
 
     var requestConfig = new GenerateContentConfig {
-      Temperature = 0.7f,
-      MaxOutputTokens = 65535
+      Temperature = _config.Temperature,
+      TopP = _config.TopP,
+      TopK = _config.TopK,
+      MaxOutputTokens = _config.MaxOutputTokens
     };
 
     // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
@@ -456,7 +458,12 @@ public class AiStudioAutoExtractionSession {
 
     _sessionPreamble.Add(userContent);
 
-    var requestConfig = new GenerateContentConfig { Temperature = 0.0f, MaxOutputTokens = 1024 };
+    var requestConfig = new GenerateContentConfig {
+      Temperature = _config.Temperature, // Use config value, or hardcode 0.0 for initial acknowledgment? Let's use config.
+      TopP = _config.TopP,
+      TopK = _config.TopK,
+      MaxOutputTokens = _config.MaxOutputTokens // Use config value, or hardcode a smaller value for acknowledgment? Let's use config.
+    };
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
     }
@@ -606,12 +613,12 @@ public class AiStudioAutoExtractionSession {
         var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
 
         double fullOriginalVideoDuration = await toolkit.GetVideoDurationAsync(file); // Get original video duration
-
+        TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
         bool useCache = false;
 
         if (cachedParts.Count > 0) {
           var fileInfo = new FileInfo(cachedParts[0]);
-          if ((DateTime.Now - fileInfo.LastWriteTime).TotalHours <= 2) {
+          if ((DateTime.Now - fileInfo.LastWriteTime) <= cacheDuration) {
             // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs.
             // We expect exactly 3 parts. If fewer are found, the cache is corrupted or incomplete.
             // [Human] Wenn ein alter Lauf abgebrochen ist, liegen vielleicht nur 1-2 Teile im Cache. Das wird hier verhindert!
@@ -805,7 +812,18 @@ public class AiStudioAutoExtractionSession {
         string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}-offset.tex");
 
         string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
-        string header = $"% ==========================================\n% AutoExtraction Source: {Path.GetFileName(file)}\n% Model: {_config.Model}\n% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n% ==========================================\n\n";
+        string header = $"% ==========================================\n" +
+                        $"% AutoExtraction Source: {Path.GetFileName(file)}\n" +
+                        $"% Model: {_config.Model}\n" +
+                        $"% Temperature: {_config.Temperature}\n" +
+                        $"% TopP: {_config.TopP}\n" +
+                        $"% TopK: {_config.TopK}\n" +
+                        $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
+                        (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
+                        (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
+                        $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                        $"% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n" +
+                        $"% ==========================================\n\n";
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
         Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
 
@@ -816,14 +834,20 @@ public class AiStudioAutoExtractionSession {
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
         Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
 
-        // New: Trigger LatexRefinementSession immediately for the generated offset file
-        Console.WriteLine("\n[AutoExtraction] Starte automatischen Refinement-Prozess für die offset-korrigierte Datei...");
+        // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
         // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
         string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
         Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
-        var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(refinementClient, _latexRefinementConfig, uniqueTargetFilePathOffset);
-        await refinementSession.StartAsync();
+        if (_latexRefinementConfig.Enabled) {
+          Console.WriteLine("\n[AutoExtraction] Starte automatischen Refinement-Prozess für die offset-korrigierte Datei...");
+          // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
+          var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(refinementClient, _latexRefinementConfig, uniqueTargetFilePathOffset);
+          await refinementSession.StartAsync();
+        }
+        else {
+          Console.WriteLine("\n[AutoExtraction] LaTeX Refinement ist in der Konfiguration deaktiviert. Überspringe Refinement.");
+        }
       }
     }
 
@@ -860,7 +884,7 @@ public class AiStudioAutoExtractionSession {
 
   private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
     var dateInfo = VideoDateParser.Parse(originalFileName);
-    string prompt = _config.Prompt;
+    string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
     prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
 
     prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture.";
@@ -904,8 +928,6 @@ public class AiStudioAutoExtractionSession {
     history.Add(new Content { Role = "user", Parts = userPromptParts });
 
     var requestConfig = new GenerateContentConfig {
-      Temperature = 0.0f,
-      MaxOutputTokens = 65535
     };
 
     if (!string.IsNullOrWhiteSpace(_systemInstructionText)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
