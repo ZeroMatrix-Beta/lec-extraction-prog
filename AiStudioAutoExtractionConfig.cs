@@ -33,9 +33,9 @@ public class AiStudioAutoExtractionConfig {
   };
   public string LogFolder { get; set; } = @"D:\gemini-logs";
   // [AI Context] Default model selection for developer-tier batch processing.
-  public float Temperature { get; set; } = 0.1f; // 1.0f is default.5  
-  public float TopP { get; set; } = 0.95f;
-  public int TopK { get; set; } = 40;
+  public float Temperature { get; set; } = 0.35f; // 1.0f is default.5  
+  public float TopP { get; set; } = 0.8f;
+  public int TopK { get; set; } = 10;
   public int MaxOutputTokens { get; set; } = 65535; // Hardcoded for maximum output length
   public string Model { get; set; } = "gemini-3.5-flash";
   public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
