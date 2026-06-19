@@ -56,7 +56,7 @@ public class DirectAiChatSessionVertex {
 
   public async Task StartAsync() {
     while (true) {
-      string selectedModel = await SelectModelAsync();
+      string selectedModel = SelectModel();
       if (selectedModel == "__EXIT__") return;
 
       WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
@@ -67,7 +67,7 @@ public class DirectAiChatSessionVertex {
       _sessionLogger.InitializeSession();
 
       bool loadedSysPrompt = false;
-      string sysPromptChoice = await PromptWithCommandsAsync($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+      string sysPromptChoice = PromptWithCommands($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
       if (sysPromptChoice == "__EXIT__") return;
 
       if (sysPromptChoice.Trim().ToLower() == "j") {
@@ -84,7 +84,7 @@ public class DirectAiChatSessionVertex {
         WriteLine("  [INFO] System Instruction wird ignoriert.");
       }
 
-      string? initialInput = await GetInitialHistoryCommandAsync(selectedModel);
+      string? initialInput = GetInitialHistoryCommand(selectedModel);
       if (initialInput == "__EXIT__") return;
 
       bool loadedHistory = initialInput != null;
@@ -103,7 +103,7 @@ public class DirectAiChatSessionVertex {
   /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
   /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
   /// </summary>
-  private async Task<string> SelectModelAsync() {
+  private string SelectModel() {
     WriteLine("\n=== Model Selection (Vertex AI) ===");
     WriteLine("Wähle ein Modell:");
     WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
@@ -125,7 +125,7 @@ public class DirectAiChatSessionVertex {
     WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
     WriteLine("12) gemini-3.5-flash"); // Added Gemini 3.5 Flash
 
-    string choice = await PromptWithCommandsAsync("Auswahl (1-12) [Standard: 4]: ");
+    string choice = PromptWithCommands("Auswahl (1-12) [Standard: 4]: ");
     if (choice == "__EXIT__") return choice;
 
     return choice switch {
@@ -208,7 +208,7 @@ public class DirectAiChatSessionVertex {
     await ForcePurgeGcsBucketAsync();
   }
 
-  private async Task<string> PromptWithCommandsAsync(string promptMessage) {
+  private string PromptWithCommands(string promptMessage) {
     while (true) {
       Write(promptMessage);
       string? input = ReadLine()?.Trim();
@@ -434,7 +434,7 @@ public class DirectAiChatSessionVertex {
     }
   }
 
-  private async Task<string?> GetInitialHistoryCommandAsync(string selectedModel) {
+  private string? GetInitialHistoryCommand(string selectedModel) {
     if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
       return null;
     }
@@ -475,7 +475,7 @@ public class DirectAiChatSessionVertex {
       WriteLine($"  - {file}");
     }
 
-    string historyChoice = await PromptWithCommandsAsync("Sollen diese Dateien als History geladen werden? (j/n): ");
+    string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
     if (historyChoice == "__EXIT__") return historyChoice;
 
     bool loadHistory = historyChoice.Trim().ToLower() == "j";

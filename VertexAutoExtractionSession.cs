@@ -63,7 +63,7 @@ public class VertexAutoExtractionSession {
 
     await CleanupBucketAsync(); // Clean up before starting
 
-    _config.Model = await SelectModelAsync();
+    _config.Model = SelectModel();
 
     Console.WriteLine("\nVerarbeitungsmodus wählen:");
     Console.WriteLine(" 1) Ein einzelnes Video interaktiv auswählen");
@@ -280,7 +280,7 @@ public class VertexAutoExtractionSession {
     }
   }
 
-  private async Task<string> SelectModelAsync() {
+  private string SelectModel() {
     Console.WriteLine("\n=== Model Selection (Vertex AI Enterprise) ===");
     Console.WriteLine("Wähle ein Modell für die Batch-Extraktion:");
     Console.WriteLine(" 1) gemini-3.1-flash-lite-preview || (Most cost-efficient)");
@@ -316,6 +316,13 @@ public class VertexAutoExtractionSession {
     return selected;
   }
 
+  /// <summary>
+  /// [AI Context] Orchestrates the end-to-end extraction pipeline for a single video file using Google Cloud Vertex AI.
+  /// Handles FFmpeg video preparation (chunking/audio extraction), GCS bucket uploads, API generation requests, 
+  /// result aggregation, timestamp offsetting, and mandatory GCS cleanup to prevent billing runaway.
+  /// [Human] Verarbeitet ein einzelnes Vorlesungsvideo von Anfang (FFmpeg) bis Ende (LaTeX) über Vertex AI.
+  /// Es beinhaltet auch die automatische Löschung der Video-Chunks aus der Cloud, um Kosten zu sparen.
+  /// </summary>
   private async Task<bool> ProcessSingleFileAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, List<Content> sessionPreamble, string systemInstruction) // Fix: Removed tmpFolder parameter
   {
     string targetFilePath = Path.Combine(_config.TargetFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
@@ -338,6 +345,8 @@ public class VertexAutoExtractionSession {
       Directory.CreateDirectory(tmpFolderForFile);
     }
 
+    // Audio extraction moved to background task after first upload
+
     try {
       Console.WriteLine($"\n[Verarbeite] {Path.GetFileName(file)}...");
       List<string> generatedTexFiles = new List<string>();
@@ -345,7 +354,16 @@ public class VertexAutoExtractionSession {
       int fileTotalOutputTokens = 0; // To track total tokens for this video
       List<(string FilePath, double StartTime)> videoParts = await PrepareVideoPartsAsync(file, toolkit, tmpFolderForFile, fullOriginalVideoDuration);
 
-
+      Task audioExtractionTask = null;
+      Action startAudioTask = () => {
+        if (_config.GenerateAudioFile && audioExtractionTask == null) {
+          audioExtractionTask = Task.Run(async () => {
+            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
+            await toolkit.ExtractAudioAsMp3Async(file, fileSpecificOutputFolder);
+            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
+          });
+        }
+      };
       for (int i = 0; i < videoParts.Count; i++) {
         string partFile = videoParts[i].FilePath;
         double partStartTimeSeconds = videoParts[i].StartTime;
@@ -354,10 +372,13 @@ public class VertexAutoExtractionSession {
 
         if (System.IO.File.Exists(targetPartPath)) {
           Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
+          startAudioTask();
           string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
           generatedTexFiles.Add(targetPartPath);
           fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + DocumentUtilities.LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
-          fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(DocumentUtilities.LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
+          if (_config.GenerateOffsetFiles) {
+            fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(DocumentUtilities.LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
+          }
         }
 
         if (i > 0) {
@@ -365,7 +386,7 @@ public class VertexAutoExtractionSession {
           await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
         }
 
-        var (cleanTex, partInputTokens, partOutputTokens) = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction, partStartTimeSeconds); // Fix: Pass partStartTimeSeconds
+        var (cleanTex, partInputTokens, partOutputTokens) = await ProcessVideoPartAsync(partFile, i, videoParts.Count, file, sessionPreamble, generatedTexFiles, systemInstruction, partStartTimeSeconds, toolkit, startAudioTask);
         if (string.IsNullOrEmpty(cleanTex)) {
           Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
           fileProcessingSuccess = false;
@@ -376,19 +397,23 @@ public class VertexAutoExtractionSession {
         fileTotalOutputTokens += partOutputTokens;
 
         fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input {partInputTokens}, Output {partOutputTokens}) ---\n" + cleanTex; // For raw output
-        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input {partInputTokens}, Output {partOutputTokens}) ---\n" + DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // For offsetted output
+        if (_config.GenerateOffsetFiles) {
+          fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input {partInputTokens}, Output {partOutputTokens}) ---\n" + DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // For offsetted output
+        }
 
         string partHeader = $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n";
         string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
         await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
         generatedTexFiles.Add(uniqueTargetPartPath);
 
-        // NEW: Save the offsetted version of this individual part
-        string offsettedPartContent = DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
-        string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
-        string uniqueTargetPartPathOffset = GetUniqueTexPath(targetPartPathOffset);
-        await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
-        Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
+        if (_config.GenerateOffsetFiles) {
+          // NEW: Save the offsetted version of this individual part
+          string offsettedPartContent = DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+          string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
+          string uniqueTargetPartPathOffset = GetUniqueTexPath(targetPartPathOffset);
+          await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
+          Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
+        }
 
         // [AI Context] Cost Mitigation Strategy:
         // Vertex requires actual files residing in a GCS Bucket. Frequent cleanups prevent runaway cloud storage billing.
@@ -413,10 +438,16 @@ public class VertexAutoExtractionSession {
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
         Console.WriteLine($"  [Erfolg] Komplettes Dokument gespeichert unter: {uniqueTargetFilePath}");
 
-        // Write the offsetted combined .tex fileameWithoutExtension(file)}-offset.tex");
-        string uniqueTargetFilePathOffset = GetUniqueTexPath(Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}-offset.tex"));
-        await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
-        Console.WriteLine($"  [Erfolg] Offset-korrigiertes Dokument gespeichert unter: {uniqueTargetFilePathOffset}"); // Corrected to use the unique path
+        string refinementTargetFile = uniqueTargetFilePath;
+
+        if (_config.GenerateOffsetFiles) {
+          // Write the offsetted combined .tex file
+          string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}-offset.tex");
+          string uniqueTargetFilePathOffset = GetUniqueTexPath(targetFilePathOffset);
+          await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
+          Console.WriteLine($"  [Erfolg] Offset-korrigiertes Dokument gespeichert unter: {uniqueTargetFilePathOffset}");
+          refinementTargetFile = uniqueTargetFilePathOffset;
+        }
 
         // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
         // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
@@ -424,14 +455,19 @@ public class VertexAutoExtractionSession {
         Client aiStudioClientForRefinement = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
         if (_latexRefinementConfig.Enabled) {
-          Console.WriteLine("\n[AutoExtraction] Starte automatischen Refinement-Prozess für die offset-korrigierte Datei...");
+          Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
           // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
-          var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(aiStudioClientForRefinement, _latexRefinementConfig, uniqueTargetFilePathOffset);
+          var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(aiStudioClientForRefinement, _latexRefinementConfig, refinementTargetFile);
           await refinementSession.StartAsync();
         }
         else {
           Console.WriteLine("\n[AutoExtraction] LaTeX Refinement ist in der Konfiguration deaktiviert. Überspringe Refinement.");
         }
+      }
+
+      if (audioExtractionTask != null) {
+        Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}...");
+        await audioExtractionTask;
       }
 
       return fileProcessingSuccess;
@@ -485,7 +521,20 @@ public class VertexAutoExtractionSession {
     }
 
     if (isCacheRecent && cachedParts.Count >= 3) {
-      useCache = true;
+      bool allFilesValid = true;
+      foreach (var cp in cachedParts) {
+        if (new FileInfo(cp).Length < 1024) { // less than 1KB is definitely invalid for a video
+          allFilesValid = false;
+          break;
+        }
+      }
+
+      if (allFilesValid) {
+        useCache = true;
+      }
+      else {
+        isCacheRecent = true; // Force cleanup logic below
+      }
     }
     else if (isCacheRecent) { // Only log this warning if cache was found but incomplete
       Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen Cache für {baseName} ({cachedParts.Count} Teil(e) gefunden, erwartet: 3). FFmpeg wird neu gestartet...");
@@ -548,18 +597,22 @@ public class VertexAutoExtractionSession {
     return videoParts;
   }
 
-  private async Task<(string texOutput, int inputTokens, int outputTokens)> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction, double partStartTimeSeconds) // Fix: Added partStartTimeSeconds
+  private async Task<(string texOutput, int inputTokens, int outputTokens)> ProcessVideoPartAsync(string partFile, int partIndex, int totalParts, string originalFile, List<Content> sessionPreamble, List<string> generatedTexFiles, string systemInstruction, double partStartTimeSeconds, FfmpegUtilities.FfmpegToolkit toolkit, Action onUploadComplete = null) // Fix: Added partStartTimeSeconds, toolkit and onUploadComplete
   {
     string prompt = _config.Prompt;
     var dateInfo = VideoDateParser.Parse(originalFile);
 
-    prompt += $"\n\nAs a reminder: You are currently transcribing Part {partIndex + 1} of {totalParts} from this lecture.";
+    double partDurationSeconds = await toolkit.GetVideoDurationAsync(partFile);
+    TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
+    string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
+
+    prompt += $"\n\nAs a reminder: You are currently transcribing Part {partIndex + 1} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.";
 
     if (partIndex > 0) {
       prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
     }
 
-    prompt += "\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
+    prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
     prompt += "\n\nTranscribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing script will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
@@ -567,6 +620,8 @@ public class VertexAutoExtractionSession {
       Console.WriteLine($"\n  [Fehler] Upload fehlgeschlagen für Teil {partIndex + 1}. Überspringe.");
       return (string.Empty, 0, 0);
     }
+
+    onUploadComplete?.Invoke();
 
     var userPromptParts = new List<Part>();
 

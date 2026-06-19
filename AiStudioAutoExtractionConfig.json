@@ -1,13 +1,26 @@
 {
-  "SourceFolder": "D:\\lecture-videos\\analysis2",
-  "TargetFolder": "D:\\lecture-videos\\analysis2\\destination2",
+  "ActiveApiProfile": 0,
+  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
+  "TargetFolder": "",
   "SystemInstructionPaths": [
-    "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
-    "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini-big-examples.md"
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\hard-specs.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples2.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples3.md"
   ],
   "HistoryPreloadPaths": [
-    "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini-chat-history"
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Model": "gemini-3-flash-preview"
+  "Temperature": 0.35,
+  "TopP": 0.8,
+  "TopK": 10,
+  "MaxOutputTokens": 65535,
+  "Model": "gemini-3.5-flash",
+  "ThinkingBudget": null,
+  "ThinkingLevel": null,
+  "GenerateOffsetFiles": true,
+  "GenerateAudioFile": true
 }

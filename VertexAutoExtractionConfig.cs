@@ -28,4 +28,13 @@ public class VertexAutoExtractionConfig {
   public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
   public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
   public double SpeedMultiplier { get; set; } = 1.2;
+  
+  // [AI Context] If true, generates parallel '-offset.tex' files where timestamps in the extracted LaTeX 
+  // are adjusted by the video chunk's start time to represent absolute global time in the lecture.
+  // [Human] Wenn aktiviert, werden zusätzliche '.tex'-Dateien erstellt, bei denen die Zeitstempel im Text auf die tatsächliche Videolänge korrigiert sind.
+  public bool GenerateOffsetFiles { get; set; } = true;
+  
+  // [AI Context] If true, commands FFmpeg to extract an MP3 of the entire lecture video before chunking.
+  // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette MP3-Audiospur der Vorlesung extrahiert.
+  public bool GenerateAudioFile { get; set; } = false;
 }

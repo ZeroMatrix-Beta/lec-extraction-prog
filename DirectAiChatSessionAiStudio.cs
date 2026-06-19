@@ -87,7 +87,7 @@ public class DirectAiChatSessionAiStudio
   {
     while (true)
     {
-      string selectedModel = await SelectModelAsync();
+      string selectedModel = SelectModel();
       if (selectedModel == "__EXIT__") return;
       if (selectedModel == "__CHANGED_KEY__") continue;
 
@@ -101,7 +101,7 @@ public class DirectAiChatSessionAiStudio
 
       // [AI Context] Load System Instructions (Persona & Rules) into memory.
       bool loadedSysPrompt = false;
-      string sysPromptChoice = await PromptWithCommandsAsync($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+      string sysPromptChoice = PromptWithCommands($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
       if (sysPromptChoice == "__EXIT__") return;
       if (sysPromptChoice == "__CHANGED_KEY__") continue;
 
@@ -123,7 +123,7 @@ public class DirectAiChatSessionAiStudio
         WriteLine("  [INFO] System Instruction wird ignoriert.");
       }
 
-      string? initialInput = await GetInitialHistoryCommandAsync(selectedModel);
+      string? initialInput = GetInitialHistoryCommand(selectedModel);
       if (initialInput == "__EXIT__") return;
       if (initialInput == "__CHANGED_KEY__") continue;
 
@@ -144,7 +144,7 @@ public class DirectAiChatSessionAiStudio
   /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
   /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
   /// </summary>
-  private async Task<string> SelectModelAsync()
+  private string SelectModel()
   {
     WriteLine($"\n=== Model Selection (AI Studio) ===");
     WriteLine("Wähle ein Modell:");
@@ -160,7 +160,7 @@ public class DirectAiChatSessionAiStudio
     WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
     WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
 
-    string choice = await PromptWithCommandsAsync("Auswahl (1-11) [Standard: 4]: ");
+    string choice = PromptWithCommands("Auswahl (1-11) [Standard: 4]: ");
     if (choice == "__EXIT__" || choice == "__CHANGED_KEY__") return choice;
 
     return choice switch
@@ -275,7 +275,7 @@ public class DirectAiChatSessionAiStudio
     await CleanupGcsBucketAsync();
   }
 
-  private async Task<string> PromptWithCommandsAsync(string promptMessage)
+  private string PromptWithCommands(string promptMessage)
   {
     while (true)
     {
@@ -582,7 +582,7 @@ public class DirectAiChatSessionAiStudio
   /// Fragt den Nutzer, ob eine bestehende History geladen werden soll, 
   /// und baut den entsprechenden /attach Befehl zusammen.
   /// </summary>
-  private async Task<string?> GetInitialHistoryCommandAsync(string selectedModel)
+  private string? GetInitialHistoryCommand(string selectedModel)
   {
     if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0)
     {
@@ -637,7 +637,7 @@ public class DirectAiChatSessionAiStudio
       WriteLine($"  - {file}");
     }
 
-    string historyChoice = await PromptWithCommandsAsync("Sollen diese Dateien als History geladen werden? (j/n): ");
+    string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
     if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;
 
     bool loadHistory = historyChoice.Trim().ToLower() == "j";

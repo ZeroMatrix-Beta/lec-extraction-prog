@@ -188,7 +188,9 @@ public class FfmpegToolkit {
   }
 
   /// <summary>
-  /// Extracts only the audio track as an MP3, useful for purely audio-based AI models (e.g., standard Whisper).
+  /// [AI Context] Extracts only the audio track as a highly compressed MP3. Useful for purely audio-based AI models 
+  //  (e.g., standard Whisper) or to provide the user with a standalone podcast version of the lecture.
+  /// [Human] Extrahiert die reine Tonspur als MP3. Perfekt, wenn man sich die Vorlesung nur anhören möchte (Podcast-Style) oder reine Audio-KIs nutzt.
   /// </summary>
   public async Task<bool> ExtractAudioAsMp3Async(string inputFile, string destFolder) {
     if (!File.Exists(inputFile)) {
