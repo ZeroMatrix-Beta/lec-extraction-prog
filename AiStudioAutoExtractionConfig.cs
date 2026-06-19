@@ -52,4 +52,7 @@ public class AiStudioAutoExtractionConfig {
     // [AI Context] If true, commands FFmpeg to extract an MP3 of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette MP3-Audiospur der Vorlesung extrahiert.
     public bool GenerateAudioFile { get; set; } = true;
+
+    // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
+    public bool GoIntoLatexRefinement { get; set; } = true;
 }

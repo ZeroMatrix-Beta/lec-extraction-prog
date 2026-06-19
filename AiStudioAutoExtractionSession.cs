@@ -891,15 +891,18 @@ public class AiStudioAutoExtractionSession {
                 string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
-                if (_latexRefinementConfig.Enabled) {
-                    Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
-                    // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
-                    var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(refinementClient, _latexRefinementConfig, refinementTargetFile);
-                    await refinementSession.StartAsync();
-                }
-                else {
-                    Console.WriteLine("\n[AutoExtraction] LaTeX Refinement ist in der Konfiguration deaktiviert. Überspringe Refinement.");
-                }
+                string audioFilePath = Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + ".mp3");
+
+                Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
+                // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
+                var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
+                    refinementClient, 
+                    _latexRefinementConfig, 
+                    refinementTargetFile, 
+                    _config, 
+                    audioFilePath);
+                
+                await refinementSession.StartAsync();
             }
 
             if (audioExtractionTask != null) {

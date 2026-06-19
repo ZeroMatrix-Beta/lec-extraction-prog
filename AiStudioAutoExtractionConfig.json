@@ -22,5 +22,6 @@
   "ThinkingBudget": null,
   "ThinkingLevel": null,
   "GenerateOffsetFiles": true,
-  "GenerateAudioFile": true
+  "GenerateAudioFile": true,
+  "GoIntoLatexRefinement": true
 }
