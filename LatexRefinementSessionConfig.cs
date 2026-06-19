@@ -1,0 +1,33 @@
+using System;
+
+namespace Config;
+
+public class RefinementStepConfig {
+    public bool Enabled { get; set; } = true;
+    public float Temperature { get; set; } = 0.0f;
+    public float TopP { get; set; } = 0.8f;
+    public int TopK { get; set; } = 10;
+    public int MaxOutputTokens { get; set; } = 65535;
+    public string Model { get; set; } = "gemini-3.5-flash";
+    public string[] SystemInstructionPaths { get; set; } = Array.Empty<string>();
+    public string[] HistoryPreloadPaths { get; set; } = Array.Empty<string>();
+}
+
+public class LatexRefinementSessionConfig {
+    public bool Enabled { get; set; } = false;
+    public string ApiKeyEnvName { get; set; } = "API_KEY-latex-refinement";
+    public string TargetFolder { get; set; } = "";
+    public string SourceFolder { get; set; } = "";
+    
+    public RefinementStepConfig Step1MergeAndTimestamp { get; set; } = new RefinementStepConfig {
+        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\transcription\merge_instructions.md" }
+    };
+
+    public RefinementStepConfig Step2SpeechRefinement { get; set; } = new RefinementStepConfig {
+        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\transcription\speech_refinement_instructions.md" }
+    };
+
+    public RefinementStepConfig Step3LastRefinement { get; set; } = new RefinementStepConfig {
+        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\transcription\last_refinement_instructions.md" }
+    };
+}

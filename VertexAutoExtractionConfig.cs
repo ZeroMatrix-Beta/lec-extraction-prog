@@ -34,7 +34,7 @@ public class VertexAutoExtractionConfig {
   // [Human] Wenn aktiviert, werden zusätzliche '.tex'-Dateien erstellt, bei denen die Zeitstempel im Text auf die tatsächliche Videolänge korrigiert sind.
   public bool GenerateOffsetFiles { get; set; } = true;
   
-  // [AI Context] If true, commands FFmpeg to extract an MP3 of the entire lecture video before chunking.
-  // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette MP3-Audiospur der Vorlesung extrahiert.
+  // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
+  // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
   public bool GenerateAudioFile { get; set; } = false;
 }

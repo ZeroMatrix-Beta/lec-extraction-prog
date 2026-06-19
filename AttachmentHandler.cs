@@ -148,6 +148,7 @@ public class AttachmentHandler {
       ".webp" => "image/webp",
       ".pdf" => "application/pdf",
       ".mp3" => "audio/mpeg",
+      ".aac" => "audio/aac",
       ".wav" => "audio/wav",
       ".mp4" => "video/mp4",
       _ => null

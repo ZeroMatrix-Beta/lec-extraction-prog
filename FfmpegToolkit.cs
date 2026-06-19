@@ -188,21 +188,21 @@ public class FfmpegToolkit {
   }
 
   /// <summary>
-  /// [AI Context] Extracts only the audio track as a highly compressed MP3. Useful for purely audio-based AI models 
+  /// [AI Context] Extracts only the audio track as a highly compressed AAC. Useful for purely audio-based AI models 
   //  (e.g., standard Whisper) or to provide the user with a standalone podcast version of the lecture.
-  /// [Human] Extrahiert die reine Tonspur als MP3. Perfekt, wenn man sich die Vorlesung nur anhören möchte (Podcast-Style) oder reine Audio-KIs nutzt.
+  /// [Human] Extrahiert die reine Tonspur als AAC. Perfekt, wenn man sich die Vorlesung nur anhören möchte (Podcast-Style) oder reine Audio-KIs nutzt.
   /// </summary>
-  public async Task<bool> ExtractAudioAsMp3Async(string inputFile, string destFolder) {
+  public async Task<bool> ExtractAudioAsAacAsync(string inputFile, string destFolder) {
     if (!File.Exists(inputFile)) {
       Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
       return false;
     }
 
     string fileName = Path.GetFileNameWithoutExtension(inputFile);
-    string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_audio", ".mp3");
-    string arguments = $"-y -i \"{inputFile}\" -vn -acodec libmp3lame -q:a 2 -ar 48000 \"{outputFile}\"";
+    string outputFile = GetUniqueFilePath(destFolder, $"{fileName}_audio", ".aac");
+    string arguments = $"-y -i \"{inputFile}\" -vn -c:a aac -b:a 96k -ac 1 -ar 48000 \"{outputFile}\"";
 
-    Console.WriteLine($"\n  [FFmpegToolkit] Extracting MP3: {Path.GetFileName(inputFile)}...");
+    Console.WriteLine($"\n  [FFmpegToolkit] Extracting AAC: {Path.GetFileName(inputFile)}...");
 
     if (await RunFfmpegAsync(arguments)) {
       Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");

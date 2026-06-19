@@ -23,9 +23,9 @@ namespace AutoExtraction;
 public class AiStudioAutoExtractionSession {
     private Client _client;
     private readonly AiStudioAutoExtractionConfig _config;
-    private readonly LatexRefinementConfig _latexRefinementConfig; // Added
     private readonly AttachmentHandler _attachmentHandler;
     private readonly SessionLogger _sessionLogger;
+    private readonly LatexRefinementSessionConfig _latexRefinementConfig;
     private double _speed = 1.0;
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
@@ -38,7 +38,7 @@ public class AiStudioAutoExtractionSession {
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
 
-    public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementConfig latexRefinementConfig) {
+    public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
         _client = client;
         _config = config;
         _attachmentHandler = attachmentHandler;
@@ -638,7 +638,7 @@ public class AiStudioAutoExtractionSession {
                             }
                         }
 
-                        if (cachedParts.Count >= 3 && allFilesValid) {
+                        if (cachedParts.Count >= _config.NumberOfParts && allFilesValid) {
                             useCache = true;
                         }
                         else {
@@ -649,7 +649,7 @@ public class AiStudioAutoExtractionSession {
                 }
 
                 if (useCache) {
-                    Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
+                    Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 48h):");
                     cachedParts.Sort();
 
                     // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
@@ -665,10 +665,10 @@ public class AiStudioAutoExtractionSession {
                         string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
                         speedVideoDuration = await toolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                     }
-                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
+                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0; 
                     var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
                     for (int i = 0; i < cachedParts.Count; i++) {
-                        double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - 180) : 0;
+                        double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - _config.OverlapSeconds) : 0;
                         Console.WriteLine($"  - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
                         cachedPartsWithTimes.Add((cachedParts[i], startTime));
                     }
@@ -694,8 +694,8 @@ public class AiStudioAutoExtractionSession {
                     }
                 }
 
-                Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in 3 Teile (180s Overlap)...");
-                var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: 3, overlapSeconds: 180, downmixToMono: false, streamCopy: true, overwrite: true);
+                Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
+                var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
 
                 if (rawPartsWithTimes.Any()) {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
@@ -751,7 +751,7 @@ public class AiStudioAutoExtractionSession {
                     if (_config.GenerateAudioFile && audioExtractionTask == null) {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsMp3Async(file, fileSpecificOutputFolder);
+                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
                             Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
                         });
                     }
@@ -785,7 +785,7 @@ public class AiStudioAutoExtractionSession {
                     if (_config.GenerateAudioFile && audioExtractionTask == null) {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsMp3Async(file, fileSpecificOutputFolder);
+                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
                             Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
                         });
                     }
@@ -803,7 +803,7 @@ public class AiStudioAutoExtractionSession {
                     if (_config.GenerateAudioFile && audioExtractionTask == null) {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsMp3Async(file, fileSpecificOutputFolder);
+                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
                             Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
                         });
                     }
@@ -888,10 +888,10 @@ public class AiStudioAutoExtractionSession {
 
                 // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
-                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(_latexRefinementConfig?.ApiKeyEnvName ?? "API_KEY-latex-refinement") ?? "no-key";
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
-                string audioFilePath = Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + ".mp3");
+                string audioFilePath = Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this

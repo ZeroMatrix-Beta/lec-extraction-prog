@@ -1,4 +1,4 @@
-﻿﻿using System;
+using System;
 using System.Threading.Tasks;
 using DirectChatAiInteraction;
 using DirectChatAiInteraction.AiStudio;
@@ -126,10 +126,10 @@ partial class Program {
       Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
       var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, false, config.GcsBucketName);
       var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
+      var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
       // Refinement session triggered from Vertex needs its own AI Studio client and config
-      string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+      string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName(latexRefinementConfig.ApiKeyEnvName) ?? "no-key";
       Client aiStudioClientForRefinement = GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
-      var latexRefinementConfig = ConfigLoader<LatexRefinementConfig>.Load();
       var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger, aiStudioClientForRefinement, latexRefinementConfig);
       await session.StartAsync();
     }
@@ -145,18 +145,18 @@ partial class Program {
       Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
       var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, new[] { config.SourceFolder }, true, "");
       var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
-      var latexRefinementConfig = ConfigLoader<LatexRefinementConfig>.Load(); // Load config for refinement
+      var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load(); // Load config for refinement
       var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
       await session.StartAsync();
     }
   }
 
   private static async Task RunLatexRefinementAsync() {
+    var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
     // Lade den exklusiven Key für das Refinement
-    string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+    string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(config.ApiKeyEnvName) ?? "no-key";
     Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-    var config = ConfigLoader<LatexRefinementConfig>.Load();
-    var session = new LatexRefinementSession(client, config);
+    var session = new DirectChatAiInteraction.LatexRefinementSession(client, config);
     await session.StartAsync();
   }
 }

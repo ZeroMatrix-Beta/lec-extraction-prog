@@ -49,10 +49,18 @@ public class AiStudioAutoExtractionConfig {
     // [Human] Wenn aktiviert, werden zusätzliche '.tex'-Dateien erstellt, bei denen die Zeitstempel im Text auf die tatsächliche Videolänge korrigiert sind.
     public bool GenerateOffsetFiles { get; set; } = true;
 
-    // [AI Context] If true, commands FFmpeg to extract an MP3 of the entire lecture video before chunking.
-    // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette MP3-Audiospur der Vorlesung extrahiert.
+    // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
+    // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
     public bool GenerateAudioFile { get; set; } = true;
 
     // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
     public bool GoIntoLatexRefinement { get; set; } = true;
+
+    // [AI Context] Number of overlapping parts to split the video into for processing to circumvent AI Studio context limits.
+    // [Human] Anzahl der überlappenden Video-Teile, in die die Vorlesung geschnitten wird. Standard: 3.
+    public int NumberOfParts { get; set; } = 3;
+
+    // [AI Context] Overlap duration in seconds between adjacent video parts to ensure context is not lost during transitions.
+    // [Human] Überlappung in Sekunden zwischen den geschnittenen Video-Teilen. Standard: 180 (3 Minuten).
+    public int OverlapSeconds { get; set; } = 180;
 }

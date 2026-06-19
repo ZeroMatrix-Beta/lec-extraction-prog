@@ -1655,3 +1655,952 @@ Wir haben $F_2$ gemacht, gut, jetzt kommt noch $F_3$, wenn $\varphi$ und $\psi$ 
 
 *(Tokens: Input 279311, Output 6897)*
 ---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 102029, Output 28)*
+---
+
+=== Neue Chat-Sitzung (19.06.2026 23:32:15) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\contrast_guidelines_en.pdf", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 102029, Output 28)*
+---
+
+=== Neue Chat-Sitzung (19.06.2026 23:49:42) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-17-tuesday.mp4
+[Angehängtes Video]: 03-17-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-17. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture. This specific video segment is exactly 30 minutes and 00 seconds long.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 30 minutes and 00 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** I am currently transcribing Part 1 of 3 of the Tuesday lecture on Zermelo-Fraenkel Set Theory. The output is a single, complete, and compile-ready LaTeX document.
+
+```latex
+% End of the video: 00:30:00
+
+\lecturechapter{Dienstag}{17. Mär}{17. März}{Zermelo-Fraenkel-Mengenlehre (ZF)}
+
+\begin{nice-box}[Kontext der Vorlesung]
+In dieser Vorlesung steigen wir tief in die axiomatische Mengenlehre nach Zermelo und Fraenkel (ZF) ein. Nach einer kurzen Wiederholung und Besprechung einer Clicker-Frage zur Vollständigkeit und Konsistenz von $\mathcal{L}$-Theorien, widmen wir uns der formalen Konstruktion des mathematischen Universums. Wir behandeln die ersten fundamentalen Axiome der Mengenlehre, definieren geordnete Paare, das Konzept der Nachfolgerfunktion zur Konstruktion natürlicher Zahlen und führen das Unendlichkeits- sowie das Aussonderungsaxiom ein.
+\end{nice-box}
+
+\section{Wiederholung: Clicker-Frage zur Modelltheorie}
+
+\begin{spoken-clean}[00:00:00 - 00:01:20]
+Ich dachte, wir hatten bis jetzt auch nicht viel Zeit für Fragen. Die ist jetzt ein bisschen noch eine Repetitionsfrage zu dem, was wir, ähm, die letzten Wochen gemacht haben. Die kommt aus einer alten Prüfung, glaube ich, war diese Frage mehr oder weniger. Versuchen Sie noch einmal, diese Frage zu beantworten. Äm, ist gut noch mal ein paar Gelegenheiten, noch mal ein paar Begriffe nachzuschauen. Und, ähm, ja, zögern Sie auch nicht zu diskutieren oder schnell Ihre Nachbarin, Ihren Nachbarn zu fragen, wenn Sie etwas... ein Symbol vergessen haben, was das bedeutet oder so.
+\end{spoken-clean}
+
+\begin{meta-note}[Interaktion im Hörsaal]
+Der Dozent wartet, während die Studierenden über das mobile Abstimmsystem (EduApp) abstimmen und sich gegenseitig beraten.
+\end{meta-note>
+
+\begin{spoken-clean}[00:01:20 - 00:02:28]
+Der Rücklauf ist noch etwas mager, aber wir werden das jetzt trotzdem beenden. Also wählen Sie gerne schnell. Okay, es ist ein bisschen eine... eine gemischte... eine gemischte Antwort. Vielleicht machen wir noch eine zweite Runde. Fragen Sie mal noch schnell Ihre Nachbarin, Ihren Nachbarn, wie sie abgestimmt haben und vielleicht, äh, ändern Sie noch Ihre Meinung, bitte. Und dann machen wir das auch nochmals, aber etwas schneller, ja? Auf EduApp. Ist das das erste Mal, dass Sie eine Clicker-Frage haben in einer Vorlesung, oder? Ach so! Entschuldigung! \inlinemetanote{lacht} Gehen Sie auf EduApp und da können Sie... ich dachte, Sie kennen das schon in- und auswendig nach einem Semester ETH. Sie können auf EduApp gehen und da können Sie abstimmen.
+\end{spoken-clean}
+
+\begin{meta-note}[Erklärung der EduApp]
+Einige Studierende kannten das Abstimmungssystem noch nicht im Detail, weshalb der Dozent kurz den Zugang über die App erläutert.
+\end{meta-note>
+
+\begin{spoken-clean}[00:02:28 - 00:03:50]
+Das ist Stufe 1 von interaktiver Vorlesung geben. Eigentlich sollten das die meisten Dozierenden hier hin und wieder eine Clicker-Frage geben. Okay, äh, stimmen Sie bitte ab. Jetzt. Gut. Okay, der zweite... zweite Runde ist ja noch schlechter als die erste. \inlinemetanote{lacht} Weil, natürlich, nur die Guten haben am Anfang schon herausgefunden, dass man da abstimmen kann. \inlinemetanote{lacht} Nur die Cleveren. Das hat einen gewissen Bias dabei oder so.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentische Diskussion über Abstimmung]
+Ein Student fragt nach der Auflösung der einzelnen Optionen.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:03:50 - 00:05:30]
+Vielleicht kurz durchgehen. Also das... das Erste. Okay, beim Ersten sind die meisten... haben das Gefühl, dass das nicht stimmt. Weshalb stimmt das nicht? Kann das kurz jemand sagen? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Antwort eines Studenten]
+Man kann zum Beispiel die Gruppentheorie nehmen und für $\sigma$ die Kommutativität. Weder die Kommutativität noch ihr Gegenteil lässt sich aus den Gruppenaxiomen beweisen, aber die Theorie ist konsistent.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:05:30 - 00:06:50]
+Genau! Gutes Beispiel: Gruppentheorie und Kommutativität. Es ist genau so: Nur weil man etwas nicht beweisen kann und das Gegenteil nicht beweisen kann, heißt das nicht, dass es inkonsistent ist. Ganz im Gegenteil! Wenn Sie eine Theorie haben und einen Satz, den Sie nicht beweisen können, dann wissen Sie, dass die Theorie konsistent sein muss, weil ansonsten könnte man ja alles beweisen. Eine inkonsistente Theorie kann alles beweisen. Das heißt, wenn so etwas existiert, dann ist $T$ konsistent. Also ist das Erste falsch.
+
+Okay, und beim Zweiten? Weshalb ist das Zweite richtig? Genau, das ist eigentlich mehr oder weniger der Vollständigkeitssatz, wie wir ihn gesehen haben. Der Gödelsche Vollständigkeitssatz sagt: Wenn ein Satz nicht bewiesen werden kann in einer Theorie, dann gibt es auch ein Modell, sodass dieser Satz nicht wahr ist in diesem Modell. Weil andernfalls, wenn er in jedem Modell wahr wäre, dann könnte man ihn auch beweisen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Zusammenhang von Konsistenz und Modellen]
+Der Dozent hebt hervor, dass die Nicht-Beweisbarkeit einer Formel $\sigma$ aus einer Theorie $T$ (formal $T \not\vdash \sigma$) die Konsistenz von $T \cup \{\neg\sigma\}$ impliziert. Nach dem Gödelsche Vollständigkeitssatz besitzt diese konsistente Erweiterung ein Modell, was die Existenz eines Modells von $T$ garantiert, welches $\sigma$ falsifiziert.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:06:50 - 00:08:15]
+Gut. Und das Dritte? Weshalb ist das wahr? Genau. Genau. Wenn eine Theorie inkonsistent ist, dann gibt es kein Modell. Weil sonst hätten wir ein Modell, in dem eine Aussage und ihre Verneinung beide richtig sind, und das geht nicht. Okay, so viel ein bisschen noch zur Repetition. Einfach zu sehen, wo wir... was wir die letzten paar Male gemacht haben, und auch einmal, um zu sehen, welche Art von Prüfungsfragen, okay, jetzt im Multiple-Choice-Bereich, Sie zu erwarten haben. Das sind jetzt keine tiefen, kniffligen Modelltheoriefragen.
+\end{spoken-clean}
+
+\begin{student-interaction}[Frage zur Mengenlehre]
+Ein Student stellt eine Frage bezüglich Modellen der Mengenlehre und ob man die Existenz eines Modells für die Peano-Arithmetik oder die Mengenlehre innerhalb der Theorie selbst beweisen kann.
+\end{student-interaction}
+
+\begin{spoken-clean}[00:08:15 - 00:09:40]
+Ja, das ist korrekt, ja. Also man kann eigentlich... sogar von... genau, von Mengenlehre, ganze Zahlen kann man nicht zeigen, dass es ein Modell gibt aus der Theorie heraus. Also es ist... wie soll ich sagen... Sie können natürlich in einem anderen Setting schauen, und innerhalb von dem ist es natürlich dann konsistent, aber man hat immer etwas Größeres, wovon man nicht weiß, ob es konsistent ist. Aber wenn wir von den natürlichen Zahlen, nehmen wir die naive, platonische Existenz von den ganzen Zahlen, so wie wir sie denken, und wir denken, die existieren als solches — das ist nicht formal — aber wenn wir sagen, das gibt es, dann ist das ein Modell von Peano-Arithmetik. Und insofern ist es gut. Wenn wir davon ausgehen, dass es die natürlichen Zahlen gibt in einem platonischen Sinn, dann hätten wir ein Modell für die Peano-Arithmetik. Und dann wüssten wir auch, dass die konsistent ist, aber das ist natürlich kein Beweis innerhalb der Peano-Arithmetik. Genau, wir können nicht in der Theorie selbst zeigen, dass sie konsistent ist. Ja. Aber man kann natürlich in einer Metatheorie arbeiten.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent geht an die Tafel, um mit der systematischen Einführung der Zermelo-Fraenkel-Axiome zu beginnen.
+\end{meta-note>
+
+\section{Die Zermelo-Fraenkel-Axiome der Mengenlehre (ZF)}
+
+\begin{spoken-clean}[00:09:40 - 00:11:15]
+Gut, jetzt was wir weitermachen, haben wir letzte Woche kurz angefangen: Das sind die Zermelo-Fraenkel-Axiome der Mengenlehre. Genau, also das ist die Mengenlehre, und das ist so die ultimative Theorie gewissermaßen. Da sagen wir, wir definieren nicht, was eine Menge ist. Das macht insofern auch logisch keinen Sinn, sondern wir sagen einfach: Mengen erfüllen diese Axiome, die erfüllt sein müssen. Mengen, ähm, erfüllen das, und dann arbeiten wir mit diesen Eigenschaften. Wir müssen ja gar nicht genau sagen, was eine Menge ist. Vielleicht ein bisschen Geschichte: Dass diese ganze Axiomatik, die Idee der Axiomatik, absolut genial ist und weit in die Antike zurückgeht. Und das erste große Werk ist eigentlich das Buch von Euklid, die Elemente, wo er wirklich so das ganze... die ganze Geometrie versucht, auf solide Füße zu stellen. Und da macht er einfach Axiome: Eine Gerade... zwei Geraden schneiden sich immer, außer sie sind parallel, und macht wirklich so eine Liste von Axiomen, und daraus beweist er dann die ganzen Eigenschaften der euklidischen Geometrie.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die euklidische Methode der Axiomatik]
+Der Dozent zieht eine Parallele zur antiken Geometrie. Wie Euklid Punkte und Geraden als undefinierte Grundbegriffe einführt, die rein durch ihre Beziehungen untereinander (die Axiome) charakterisiert werden, so definiert auch die moderne Mengenlehre den Begriff der "Menge" nicht explizit, sondern implizit über die ZF-Axiome in der Signatur $\mathcal{L}_{\text{Set}} = \{\in\}$.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:11:15 - 00:12:50]
+Das ist ein großartiges Werk, und vor allem konzeptionell diese ganze Idee von dem Beweisen. Und okay, Euklid hat natürlich schon die Idee von Geraden und so weiter, die geometrische Intuition gehabt. Er hat auch dann versucht, eine Gerade zu definieren, geschrieben: "Eine Gerade ist breitenlose Länge", was natürlich intuitiv schon sehr viel Sinn macht, oder "Ein Punkt ist, was keine Teile hat". Schöne Formulierungen! Das macht schon Sinn insofern, aber eigentlich von der Axiomatik her, kann man einfach die Axiome hinschreiben: Wir haben Geraden, wir haben Punkte, und da muss man das gar nicht weiter definieren. Hilbert hat das dann auch wieder aufgegriffen, er hat dann die Axiome von Euklid noch präzisiert — klar, es gab einige Fehler, das ist sehr verzeihbar dafür, dass das so grundlegend neu war. Und Hilbert hat quasi eine schöne, saubere Liste von Axiomen für die euklidische Geometrie aufgeschrieben und daraus dann alles sauber bewiesen. Und Hilbert hat das so erklärt: Man muss nicht sagen, was eine Gerade ist, man muss einfach diese Axiome definieren. Wenn man noch versucht, neue Worte einzuführen, um eine Gerade zu definieren, hilft das auch nicht. Denn wenn man sagt: "Es ist breitenlose Länge" — okay, was ist Länge und was ist Breite? Dann kann man versuchen zu erklären, was Breite und was Länge ist, aber man kommt immer wieder auf neue, nicht definierte Begriffe zurück. Das heißt, irgendwo muss man aufhören, und wie das auch Hilbert gesagt hat: "Man kann genauso gut anstatt von Punkten, Geraden und Ebenen von Tischen, Stühlen und Bierseideln sprechen", solange die Axiome erfüllt sind. Man kann alle Sätze genauso beweisen. Und genauso ist es auch mit der Mengenlehre eigentlich.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelanschrieb]
+Der Dozent schreibt die Signatur und die ersten Axiome der Mengenlehre an die Tafel.
+\end{meta-note>
+
+\begin{math-stroke}[Signatur und grundlegende Axiome der Mengenlehre]
+Wir definieren die formale Sprache der Mengenlehre über der Signatur:
+\[
+\mathcal{L}_{\text{Set}} := \{ \in \}
+\]
+wobei $\in$ ein zweistelliges Relationssymbol darstellt.
+
+\begin{enumerate}
+    \item[\textbf{0. Axiom der leeren Menge:}] Es existiert eine Menge, die keine Elemente enthält.
+    \begin{equation}\label{eq:empty-set-axiom}
+    \exists x \forall z \, \neg(z \in x)
+    \end{equation}
+
+    \item[\textbf{1. Extensionalitätsaxiom:}] Zwei Mengen sind genau dann gleich, wenn sie dieselben Elemente enthalten.
+    \begin{equation}\label{eq:extensionality-axiom}
+    \forall x \forall y \, \bigl( \forall z \, (z \in x \leftrightarrow z \in y) \implies x = y \bigr)
+    \end{equation}
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:50 - 00:14:15]
+Aber eben, hier machen wir jetzt saubere Mengenlehre. Also wir hatten das Axiom der leeren Menge. Wisst ihr noch, was das ausgesagt hat? Genau, es gibt eine leere Menge. Dann hatten wir das Extensionalitätsaxiom. Was hat das ausgesagt? Genau. Zwei Mengen, die dieselben Elemente enthalten, sind gleich.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom der Paarmenge und geordnete Paare]
+\begin{enumerate}
+    \item[\textbf{2. Paarmengenaxiom:}] Zu je zwei Mengen existiert eine Menge, die genau diese beiden Mengen als Elemente enthält.
+    \begin{equation}\label{eq:pair-set-axiom}
+    \forall x \forall y \exists u \forall z \, \bigl( z \in u \leftrightarrow (z = x \vee z = y) \bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Aus dem Paarmengenaxiom folgt unmittelbar die Existenz der unvollständigen Menge $\{x, y\}$ für beliebige Mengen $x$ und $y$. Sind $x$ und $y$ identisch, so liefert das Axiom die Einermenge $\{x, x\} = \{x\}$. Mit Hilfe dieser Konstruktion lassen sich nun auch geordnete Paare im Sinne von Kuratowski rein mengentheoretisch definieren.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:15 - 00:15:55]
+Dann hatten wir das Paarmengenaxiom. Was war das? Genau. Für alle Mengen $x, y$ existiert eine Menge $u$, sodass $x$ und $y$ Elemente von $u$ sind. Genau, dass man aus zwei Mengen eine Menge bilden kann, die genau aus diesen zwei Mengen besteht. Und daraus haben wir dann gesehen, da kann man auch geordnete Paare definieren von Elementen. Okay, jetzt machen wir weiter. Da kommt das dritte Axiom: das Vereinigungsaxiom. Das sagt uns, dass, grob gesagt, wir können Mengen wieder vereinigen und erhalten eine neue Menge. Also für alle $x$ existiert ein $u$, sodass für alle $z$ gilt: $z$ ist in $u$ genau dann, wenn es existiert ein $w$, sodass $w$ in $x$ ist und $z$ in $w$. Also Vereinigungen von Mengen ist eine Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Axiom der Vereinigung]
+\begin{enumerate}
+    \item[\textbf{3. Vereinigungsaxiom:}] Zu jeder Menge existiert eine Menge, deren Elemente genau die Elemente der Elemente der Ausgangsmenge sind.
+    \begin{equation}\label{eq:union-axiom}
+    \forall x \exists u \forall z \, \Bigl( z \in u \leftrightarrow \exists w \, (w \in x \wedge z \in w) \Bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Das Vereinigungsaxiom erlaubt es uns, die Elemente einer Familie von Mengen aufzuschmelzen. Die dadurch eindeutig bestimmte Menge nennen wir die Vereinigung von $x$ (geschrieben $\bigcup x$).
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:55 - 00:17:40]
+Hier nehmen wir die Vereinigung von allen Mengen, die in der Menge $x$ enthalten sind, okay? Wir haben hier, $x$ ist eine Menge von Mengen, und jetzt wissen wir, es gibt eine Menge $u$, die genau aus den Elementen besteht, die in Elementen von $x$ enthalten sind. Genau, dann können wir die Vereinigungsfunktion definieren. Also wir sagen, da... das nennen wir die Vereinigung von $x$. $x$ ist eine Menge. Und die nennen wir $u$, und die definieren wir durch genau dieses $u$, das existiert gemäß diesem Axiom. Das hier existiert natürlich. Das hier ist eindeutig, deswegen können wir es so schreiben, auch wieder mit dem Extensionalitätsaxiom.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Vereinigungsfunktion]
+Unter Verwendung des Extensionalitätsaxioms definieren wir die Vereinigungsoperation für eine Menge $x$:
+\[
+\bigcup x := u \iff \forall z \, \Bigl( z \in u \leftrightarrow \exists w \, (w \in x \wedge z \in w) \Bigr)
+\]
+
+\textbf{Beispiel:} Sei $x = \{a, b\}$. Dann gilt:
+\[
+\bigcup x = \bigcup \{a, b\} = a \cup b
+\]
+
+Wir definieren zudem die binäre Vereinigungsfunktion zweier Mengen $x$ und $y$:
+\[
+x \cup y := \bigcup \{x, y\}
+\]
+wobei die Paarmenge $\{x, y\}$ nach Axiom 2 existiert.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:40 - 00:19:10]
+Und wir können jetzt auch noch die binäre Vereinigungsfunktion definieren. Und wir sagen, $x$ vereinigt $y$. Wir nehmen einfach zwei Mengen und sagen: $x$ vereinigt mit $y$. Wie schreiben wir das mit dem da? Genau, wir nehmen die Paarmenge von $x$ und $y$. Die, wissen wir, existiert. Nehmen wir die Vereinigung, haben wir das. Auch da oben haben wir... diese wissen wir ja, die existiert, das ist die Paarmenge von $x$ und $x$.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Eindeutigkeit durch Extensionalität]
+Der Dozent weist darauf hin, dass Ausdrücke wie $\bigcup x$ oder $x \cup y$ erst durch das Extensionalitätsaxiom wohldefiniert sind. Da das Axiom der Vereinigung lediglich die *Existenz* einer solchen Menge sichert, garantiert das Extensionalitätsaxiom, dass es *genau eine* solche Menge gibt. Dies rechtfertigt die Verwendung des Gleichheitszeichens und der Funktionsnotation.
+\end{didactic-insight}
+
+\section{Die Konstruktion der natürlichen Zahlen}
+
+\begin{spoken-clean}[00:19:10 - 00:20:45]
+Ja, das müssen wir uns immer ein bisschen... diese Sachen macht... diese Formeln hinschreiben, wir müssen überlegen, was man da genau macht. Und wir können jetzt auch noch die... Was wir jetzt mal machen, ist, wir wollen... würden gerne die ganzen Zahlen definieren. Oder so etwas, was sich herausstellt, ist dann ein Modell für die Peano-Arithmetik. Und dazu definieren wir, wenn wir eine Menge $x$ haben, dann definieren wir die Menge $x + 1$ als die Menge, die besteht aus $x$ Vereinigung der Menge, die nur die Menge $x$ enthält, okay? Also wir nehmen die Menge $x$ zusammen mit der Menge, die nur ein Element enthält, nämlich die Menge $x$. Das gibt uns eine neue Menge, und diese Menge bezeichnen wir mit $x+1$. Okay, das dürfen wir machen. Und jetzt können wir die ganzen Zahlen definieren und sagen wir, $0$ ist einfach die leere Menge. Dann sagen wir, $1$ ist $0+1$, das heißt, das wäre $0$ Vereinigung die Menge $0$, das heißt... das heißt, ja, $0$ ist ja die leere Menge, das heißt, das is immer noch die Menge, die nur aus $0$ besteht. Dann haben wir $2$, das ist die Menge $1+1$, wenig überraschend. \inlinemetanote{lacht} Das wäre $1$ Vereinigung die Menge $1$, das heißt, das ist die Menge, die besteht aus der Menge $1$, das heißt, Menge $0$ und $1$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die von Neumannsche Konstruktion der Ordinalzahlen]
+Wir definieren die Nachfolgerfunktion (Successor) einer Menge $x$:
+\[
+x + 1 := x \cup \{x\}
+\]
+Basierend darauf definieren wir die natürlichen Zahlen induktiv:
+\begin{align*}
+0 &:= \emptyset \\
+1 &:= 0 + 1 = \emptyset \cup \{\emptyset\} = \{\emptyset\} = \{0\} \\
+2 &:= 1 + 1 = \{0\} \cup \{1\} = \{0, 1\} \\
+3 &:= 2 + 1 = \{0, 1\} \cup \{2\} = \{0, 1, 2\} \\
+&\;\;\vdots \\
+n &:= (n-1) + 1 = \{0, 1, \dots, n-1\}
+\end{align*}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:20:45 - 00:22:20]
+Und so weiter. $3$ ist $2$ Vereinigung $\{2\}$, das heißt $\{0, 1, 2\}$. Und, ja, allgemein sagen wir, $n$ ist $n-1$ vereinigt mit der Menge $\{n-1\}$, und das wäre dann einfach $0$ bis $n-1$. Gut, das ist eine Möglichkeit, um aus einer Menge wieder eine neue Menge zu machen, und eine Menge heißt induktiv, falls das eben das immer auch wieder enthalten ist. Also induktive Mengen sind sehr groß.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Struktur von von-Neumann-Zahlen]
+In dieser eleganten Konstruktion von John von Neumann ist jede natürliche Zahl $n$ exakt die Menge aller kleineren natürlichen Zahlen:
+\[
+n = \{0, 1, 2, \dots, n-1\}
+\]
+Insbesondere gilt für zwei natürliche Zahlen $a$ und $b$ die fundamentale Gleichwertigkeit von Elementbeziehung und Ordnung:
+\[
+a < b \iff a \in b
+\]
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:22:20 - 00:24:00]
+Wir können das auch durch eine Formel, induktiv zu sein, kann man durch eine Formel ausdrücken. Wir definieren ein einstelliges Relationssymbol durch... Okay, ein einstelliges, meistens wenn man an Relationssymbole denkt, denkt man an etwas Zwei- oder Mehrstelliges, die in Relation stehen, aber man kann einfach nur ein einstelliges Relationssymbol nehmen. Das ist einfach etwas, das ist erfüllt oder es ist nicht erfüllt für ein Element. Und wir sagen jetzt einfach, wir schreiben $\text{ind}(x)$, falls... genau, falls das erfüllt ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Formale Definition induktiver Mengen]
+\begin{definition}[Induktive Menge]\label[definition]{def:inductive-set}
+Eine Menge $X$ heißt \newterm{induktiv}, wenn sie die leere Menge enthält und abgeschlossen unter der Nachfolgeroperation ist.
+Formal definieren wir das einstellige Prädikat $\text{ind}(X)$ in der prädikatenlogischen Sprache erster Stufe:
+\begin{equation}\label{eq:ind-definition}
+\text{ind}(x) :\equiv \exists z \, \bigl( \forall y \, \neg(y \in z) \wedge z \in x \bigr) \wedge \forall y \, \Bigl( y \in x \implies y \cup \{y\} \in x \Bigr)
+\end{equation}
+oder voll ausformuliert ohne Abkürzungen:
+\begin{equation}\label{eq:ind-full}
+\text{ind}(x) \equiv \exists z \, \bigl( \forall y \, \neg(y \in z) \wedge z \in x \bigr) \wedge \forall y \, \Bigl( y \in x \implies \forall u \, \bigl( \forall w \, (w \in u \leftrightarrow w \in y \vee w = y) \implies u \in x \bigr) \Bigr)
+\end{equation}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:00 - 00:25:35]
+Das ist so gemacht. Das ist eine Definition eigentlich, um diese ganzen Zahlen... ja, um damit zu arbeiten. Also man kann wieder... Genau, das ist eine Möglichkeit, um aus einer Menge wieder eine neue Menge zu machen, und eine Menge heißt induktiv, falls das eben das immer auch wieder enthalten ist. Also induktive Mengen sind sehr groß. Können wir ein Beispiel von einer induktiven Menge bereits? Ja? Die leere Menge? Nein, die leere Menge ist nicht induktiv, weil sie enthält ja nicht die leere Menge als Element. Aber sonst haben wir gar nicht so viele Mengen gesehen aufgrund von diesen Axiomen. Das heißt, von diesen Axiomen $0$ bis $3$ können wir jetzt nicht induktive Mengen konstruieren. Wir können nicht sagen, ob es nicht-leere induktive Mengen gibt.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Das Problem der Unendlichkeit]
+Der Dozent demonstriert ein fundamentales Limit der bisherigen Axiome (0 bis 3). Mit ihnen lassen sich zwar beliebig große endliche Mengen konstruieren (wie $0, 1, 2, 3 \dots$), aber die Existenz der *Gesamtheit* aller dieser Zahlen — der ersten unendlichen Menge $\omega$ — lässt sich nicht beweisen. Jede mit den Axiomen 0-3 konstruierbare Menge ist endlich. Wir benötigen ein neues Axiom, das die Existenz einer unendlichen (induktiven) Menge schlicht postuliert.
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:25:35 - 00:27:00]
+Und das ist dann genau das Axiom $4$. Das ist das Unendlichkeitsaxiom. Das Unendlichkeitsaxiom, das sagt einfach, es gibt eine nicht-leere induktive Menge. Und die ist dann auch, ja, die ist dann auch, also in unserer Vorstellung, auch unendlich, weil es ist immer, wenn ein Element drin ist, dann ist auch dieses nächstgrößere Element drin gewissermaßen. Unendlichkeitsaxiom sagt, es existiert eine Menge $I$, die leere Menge ist enthalten in $I$, und $I$ ist induktiv. Also es gibt insbesondere eine nicht-leere induktive Menge.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Unendlichkeitsaxiom]
+\begin{enumerate}
+    \item[\textbf{4. Unendlichkeitsaxiom:}] Es existiert eine induktive Menge.
+    \begin{equation}\label{eq:infinity-axiom}
+    \exists x \, \text{ind}(x)
+    \end{equation}
+\end{enumerate}
+
+\textbf{Beispiel:} Die Menge der natürlichen Zahlen, meist mit $\omega$ bezeichnet, ist die kleinste induktive Menge. Ihre Existenz wird durch dieses Axiom garantiert.
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:00 - 00:28:45]
+Dann haben wir das Axiom $5$. Das ist ein... also alle wichtigen... das ist wichtig insofern: das Aussonderungsaxiom. Das sagt uns, dass wir von einer gegebenen Menge, wenn wir eine Formel haben, die Teilmenge... also die Elemente in der Menge, die diese Formel erfüllen, das ist eine Teilmenge. Das machen wir so. Für jede Formel $\Phi(z)$ mit der einzigen freien Variablen $z$ gilt... Okay, und das Axiom sagt jetzt für alle $x$ existiert ein $y$, sodass für alle $z$ gilt: $z$ ist in $y$ genau dann, wenn $z$ in $x$ ist und $\Phi(z)$ gilt. Das sehen wir, das ist ein Axiomenschema. Das heißt, für jede Formel mit einer freien Variablen gibt es ein Axiom.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Aussonderungsaxiom]
+\begin{enumerate}
+    \item[\textbf{5. Aussonderungsaxiom (Axiomenschema):}] Für jede Formel $\varphi(z)$, in der die Variable $y$ nicht frei vorkommt, ist die Aussonderung über einer Menge $x$ wieder eine Menge.
+    \begin{equation}\label{eq:specification-axiom}
+    \forall x \exists y \forall z \, \Bigl( z \in y \leftrightarrow \bigl( z \in x \wedge \varphi(z) \bigr) \Bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Da dies für *jede* zulässige mathematische Formel $\varphi(z)$ gilt, handelt es sich nicht um ein einzelnes Axiom, sondern um ein unendliches \newterm{Axiomenschema}. Die dadurch eindeutig bestimmte Teilmenge schreiben wir in der gewohnten Notation als:
+\[
+y = \{ z \in x \mid \varphi(z) \}
+\]
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:28:45 - 00:30:00]
+Okay, also auch jetzt wieder, was das Axiom sagt, ist für jede Menge $x$ und jede Formel $\Phi$ ist... Jetzt schreiben wir wieder, ja, das ist die Art, wie wir das schreiben: die Menge aller $z$ in $x$, sodass gilt $\Phi(z)$. Und wir wollen, dass das ist eine Menge. Und das löst jetzt ein bisschen unsere Probleme. Also wir sehen hier, was wichtig ist, ist: Wir gehen von einer Menge $x$ aus und jetzt schauen wir alle Elemente in $x$ an, die diese Formel erfüllen. Und das Aussonderungsaxiom sagt nun, das ist eine Menge. Was wir nicht machen dürfen, ist, von allen Elementen... also ohne diese Menge zu spezifizieren...
+\end{spoken-clean}
+
+\begin{meta-note}[Zusammenfassung]
+Der Dozent fasst die Bedeutung des Aussonderungsaxioms zusammen, welches die berühmten Antinomien (wie die Russellsche Antinomie) verhindert, indem es verbietet, unbeschränkte Mengen der Form $\{z \mid \varphi(z)\}$ zu bilden. Jede Aussonderung muss innerhalb einer bereits als existierend bewiesenen Menge $x$ stattfinden.
+\end{meta-note>
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:30:00
+% topic: Einführung der ersten Axiome von ZF (Axiome 0 bis 5)
+% board_state: Axiom der leeren Menge, Extensionalität, Paarmenge, Vereinigung, Unendlichkeit, Aussonderung. Konstruktion der natürlichen Zahlen nach von Neumann. Prädikat ind(x).
+% next_goal: Genauere Besprechung des Aussonderungsaxioms und Vermeidung von Russell's Paradoxon.
+% open_loops: Erklärung der unbeschränkten Aussonderung und Russell's Antinomie im Detail in Part 2.
+\end{ai-global-state-checkpoint-invisible-content>
+
+% [SYSTEM] Video complete.
+```eof
+
+*(Tokens: Input 266100, Output 7633)*
+---
+
+**AutoExtraction:** [Part 2] 03-17-tuesday.mp4
+[Angehängtes Video]: 03-17-tuesday-part2.mp4
+[Kontext-Dateien]: 03-17-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-17. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture. This specific video segment is exactly 30 minutes and 01 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 30 minutes and 01 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** ```latex
+\section{Das Aussonderungsaxiom und die Vermeidung von Paradoxien}
+
+\begin{spoken-clean}[00:00:00 - 00:01:43]
+Äh, das sind alle wichtigen... Das ist wichtig insofern, ähm, das Aussonderungsaxiom. Das sagt uns, dass wir von einer gegebenen Menge, ähm, wenn wir eine Formel haben, die Teilmenge, ähm, also die Elemente in der Menge, die diese Formel erfüllen, das ist eine Teilmenge. Das machen wir so: Für jede Formel $\varphi(z)$ mit der einzigen freien Variablen $z$ gilt...
+\end{spoken-clean}
+
+\begin{math-stroke}[5. Aussonderungsaxiom (Axiomenschema)]
+\begin{enumerate}
+    \setcounter{enumi}{4} \item[\textbf{5. Aussonderungsaxiom (Axiomenschema):}] Für jede Formel $\varphi(z)$ mit der einzigen freien Variablen $z$, in der die Variable $y$ nicht frei vorkommt, gilt:
+    \begin{equation}\label{eq:aussonderung-axiom-schema}
+    \forall x \exists y \forall z \, \bigl( z \in y \leftrightarrow (z \in x \wedge \varphi(z)) \bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Das Aussonderungsaxiom erlaubt es, aus einer bereits existierenden Menge $x$ unter Verwendung einer Eigenschaft $\varphi(z)$ eine Teilmenge $y$ abzusondern. Da dies für jede mathematisch wohldefinierte Formel $\varphi(z)$ möglich ist, handelt es sich um ein unendliches Axiomenschema. Wir schreiben für diese Teilmenge:
+\[
+y = \{ z \in x \mid \varphi(z) \}
+\]
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:43 - 00:03:55]
+Das sagt uns, das Axiom sagt jetzt für alle $x$ existiert ein $y$, sodass für alle $z$ gilt: $z$ ist in $y$ genau dann, wenn $z$ in $x$ ist und $\varphi(z)$ gilt. Das sehen wir, das ist ein Axiomenschema. Das heißt, für jede Formel mit einer freien Variablen gibt es ein Axiom. Okay, also auch jetzt wieder, was das Axiom sagt, ist für jede Menge $x$ und jede Formel $\varphi$ ist... Jetzt schreiben wir wieder, ja, das ist die Art, wie wir das schreiben: die Menge aller $z$ in $x$, sodass gilt $\varphi(z)$. Und wir wollen, dass das eine Menge ist. Und das löst jetzt ein bisschen unsere Probleme. Also wir sehen hier, was wichtig ist, ist: Wir gehen von einer Menge $x$ aus und jetzt schauen wir alle Elemente in $x$ an, die diese Formel erfüllen. Und das Aussonderungsaxiom sagt nun, das ist eine Menge. Was wir nicht machen dürfen, ist, von allen Elementen... also ohne diese Menge zu spezifizieren, einfach zu sagen: die Menge aller $z$, sodass gilt $\varphi(z)$. Das ist im Allgemeinen keine Menge.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Russells Paradoxon und der Barbier-Widerspruch]
+Der Dozent verweist auf das Russellsche Paradoxon, welches zeigt, dass der naive Mengenbegriff (die uneingeschränkte Klassenbildung $\{z \mid \varphi(z)\}$) zu logischen Widersprüchen führt. Am Beispiel der Eigenschaft $\varphi(z) \equiv z \notin z$ zeigt sich: Würde die Menge $R = \{z \mid z \notin z\}$ existieren, stünde man vor dem unlösbaren Widerspruch $R \in R \iff R \notin R$. Das ZF-Aussonderungsaxiom löst dies, indem es fordert, dass die Aussonderung stets innerhalb einer bereits existierenden Menge $x$ stattfinden muss.
+\end{didactic-insight}
+
+\begin{math-stroke}[Beispiel: Das Russellsche Paradoxon]
+\begin{example}\label[example]{ex:russell-paradox}
+Die uneingeschränkte Kollektion aller Mengen, die sich selbst nicht als Element enthalten, ist keine Menge:
+\[
+K_{\text{Russell}} := \{ z \mid z \notin z \} \quad \text{ist keine Menge.}
+\]
+\end{example}
+\begin{short-proof}
+Angenommen, $K_{\text{Russell}}$ wäre eine Menge. Dann müsste für dieses Objekt $K_{\text{Russell}}$ entweder $K_{\text{Russell}} \in K_{\text{Russell}}$ oder $K_{\text{Russell}} \notin K_{\text{Russell}}$ gelten:
+\begin{itemize}
+    \item \textbf{Fall 1:} $K_{\text{Russell}} \in K_{\text{Russell}} \implies K_{\text{Russell}} \notin K_{\text{Russell}}$ (Widerspruch).
+    \item \textbf{Fall 2:} $K_{\text{Russell}} \notin K_{\text{Russell}} \implies K_{\text{Russell}} \in K_{\text{Russell}}$ (Widerspruch).
+\end{itemize}
+In beiden Fällen ergibt sich ein logischer Widerspruch. Daher kann die Kollektion $K_{\text{Russell}}$ keine Menge sein.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:55 - 00:05:46]
+Das haben wir wieder das Problem mit... der Coiffeur frisiert alle Leute, die sich nicht selbst frisieren. Äh, dann haben wir ein Problem, weil frisiert sich der Coiffeur selbst oder nicht? Es gibt einen Widerspruch. Äh, das ist das berühmte, der berühmte... der Russellsche, ähm, Paradoxon. Aber da ist es jetzt kein Problem, wenn wir sagen, okay, der Coiffeur frisiert alle Leute im Kreis 7, die sich nicht selbst frisieren. Ist das kein Problem, weil dann können wir beweisen, okay, der Coiffeur wohnt offensichtlich nicht im Kreis 7, ansonsten gäbe es einen Widerspruch. Aber okay, kein Problem, wir wissen einfach, der Coiffeur wohnt nicht im Kreis 7, das ist besser als einen Widerspruch zu haben.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelreinigung und Übergang]
+Der Dozent wischt einen Teil der Tafel und bereitet die Konstruktion von Durchschnitt und Komplement mithilfe des Aussonderungsaxioms vor.
+\end{meta-note>
+
+\begin{spoken-clean}[00:05:46 - 00:08:55]
+Also, es ist so, ähm, die Bemerkung: Die Kollektion, okay, das ist jetzt Kollektion, ist vielleicht etwas, was keine Menge ist, ähm, $z$ sodass $\varphi(z)$ ist im Allgemeinen keine Menge. Ähm, weil das Beispiel ist hier, wenn $\varphi(z)$ ist... wenn wir das, die Formel nehmen, ähm, $z$ ist nicht enthalten in $z$, dann ist, äh, $z$ sodass $\varphi(z)$ keine Menge. Genau, das kann... das können wir beweisen, das können Sie jetzt beweisen, einfach dass das keine Menge ist, weil wenn das eine menge wäre, dann gäbe es ein Widerspruch, also kann es keine menge sein, hm? Aber für eine gegebene Menge $x$ ist die menge von allen $z$ in $x$, sodass $\varphi(z)$, dann ist das tatsächlich eine Menge. Okay, sehr gut. Damit ist jetzt unsere... ja, unser Kummer mit dem ganzen Logik von Frege und der Paradoxon von Russell vom Tisch. Okay, und jetzt können wir das wieder... Durchschnitt definieren, damit. Dass wir definieren binäre Funktionssymbol Durchschnitt durch...
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:07:00
+% topic: Aussonderungsaxiom und Russell's Paradoxon gelöst, Einführung von Mengenoperationen (Durchschnitt, Komplement)
+% board_state: Axiom 5 (Aussonderung), Definition von Komplement und Durchschnitt
+% next_goal: Formale Definition von Durchschnitt und Komplement unter Nutzung des Aussonderungsaxioms
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{math-stroke}[Mengentheoretische Konstruktionen: Durchschnitt und Differenzmenge]
+Mithilfe des Aussonderungsaxioms lassen sich Durchschnitt und Differenzmenge zweier Mengen formal definieren.
+
+\begin{definition}[Durchschnitt und Differenzmenge]\label[definition]{def:schnitt-differenz}
+Seien $x$ und $y$ Mengen.
+\begin{itemize}
+    \item \newterm{Durchschnitt}: Der Schnitt zweier Mengen $x \cap y$ ist die Teilmenge von $y$, deren Elemente auch in $x$ liegen:
+    \[
+    x \cap y := \{ z \in y \mid z \in x \}
+    $]
+    \item \newterm{Differenzmenge (Komplement)}: Die Differenzmenge $x \setminus y$ ist die Teilmenge von $x$, deren Elemente nicht in $y$ liegen:
+    \[
+    x \setminus y := \{ z \in x \mid z \notin y \}
+    \]
+\end{itemize}
+\end{definition}
+
+\begin{explanation-of-steps}
+Da wir hier explizit aus bereits als existierend vorausgesetzten Mengen (nämlich $y$ bzw. $x$) absondern, garantiert das Aussonderungsaxiom die Existenz dieser Mengen im ZF-Universum.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:08:55 - 00:10:03]
+Wir definieren binäre Funktionssymbol Durchschnitt durch $x \cap y$ ist gleich $y$. Also wir sagen, wir definieren diese Menge hier durch $y$ besteht aus allen $z$ in $x$ sodass, ähm, $\varphi(z)$ gilt, wobei, ähm, wir nehmen geschickterweise $z$ in $x_1$ hier. Was nehmen wir als $\varphi(z)$? Genau, $z$ Element von $x_0$. Also wir nehmen alle Elemente in $x_1$, die auch Elemente von $x_0$ sind. Das ist eine Formel. Gemäß Aussonderungsaxiom ist das eine Menge. Also $x_0$ ist quasi ein Parameter von dieser Formel. Und vielleicht noch ein paar, ähm, Definitionen, um unser Leben leichter zu machen: Also wir sagen, es existiert ein $x$ in $W$, sodass $\varphi(x)$, als, ähm, es existiert ein $x$, $x$ in $W$ und $\varphi(x)$. Okay, das ist ein bisschen einfacher zu schreiben. Und ebenso für alle $x$ in $W$ gilt $\varphi(x)$, das definieren wir als für alle $x$, $x$ in $W$ impliziert $\varphi(x)$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:10:03 - 00:11:40]
+Und auch noch definieren können ist für $\varphi(z)$... wenn wir die Formel $z$ ist nicht enthalten in $y$ und damit definieren wir $x$ ohne $y$, also das Komplement, als die Menge $u$ gegeben durch... alle $z$ in $x$, sodass $z$ nicht in $y$ ist. Gut, mit dem Aussonderungsaxiom wissen wir, dass das jetzt alles Mengen sind. Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage zum Durchschnitt über eine Familie]
+Ein Student fragt: "Und zwar, als Sie das... als Sie den Durchschnitt definiert haben, weshalb ist das keine Implikation, sondern ein Und-Zeichen? Und wie verhält sich das, wenn man den Durchschnitt über eine leere Menge nimmt? Ist der Durchschnitt der leeren Menge dann nicht definiert?"
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Äh... Nein, das ist die Aussage, dass für alle $x$... für alle $x$ das gilt. Macht das Sinn? Ja. Und jetzt fragen Sie zum Durchschnitt? Ja, genau... Wenn jetzt $x$ eine leere Menge... Ja, genau... Also ich würde sagen, der Durchschnitt von der leeren Menge... Also der Durchschnitt über alle Mengen, die in der leeren Menge enthalten sind, die man mit dem Durchschnitt bildet, und das ist ja... da ist keine Menge drin enthalten, das heißt, da ist auch kein Element, das in allen Mengen enthalten ist...
+\end{spoken-clean}
+
+\begin{math-stroke}[Der Durchschnitt über eine Familie von Mengen]
+Sei $M$ eine nicht-leere Menge von Mengen. Wir definieren den Durchschnitt über die Familie $M$:
+\[
+\bigcap M := \{ z \in \bigcup M \mid \forall x \, (x \in M \implies z \in x) \}
+\]
+
+\begin{explanation-of-steps}
+Ist $M = \emptyset$, so wird der Ausdruck $\bigcap \emptyset$ im standardmäßigen ZF-System nicht definiert. Formal müsste gelten:
+\[
+\bigcap \emptyset = \{ z \mid \forall x \, (x \in \emptyset \implies z \in x) \}
+\]
+Da die Prämisse $x \in \emptyset$ stets falsch ist, ist die Implikation für jedes denkbare Objekt $z$ im Universum wahr. Dies würde bedeuten, dass $\bigcap \emptyset$ die Klasse aller Mengen ist. Da das Universum aller Mengen nach dem Satz von Cantor keine Menge sein kann, existiert dieser Durchschnitt im ZF-Universum nicht als Menge.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:40 - 00:14:17]
+Äh, verstehe... also ich würde sagen, der Durchschnitt von der leeren Menge... Also der Durchschnitt über alle Mengen, die in der leeren Menge enthalten sind, die man mit dem Durchschnitt bildet, und das ist ja... da ist keine Menge drin enthalten, das heißt, da ist auch kein Element, das in allen Mengen enthalten ist. Was machen wir da? Na ja, wir nehmen den Durchschnitt über alle $x$ in der leeren Menge. Aber das ist ja die leere Menge selbst, oder? Also da hat man wieder etwas Flexibilität. Aber es ist für... was Sie hier meinen, ist für... Sie nehmen den Durchschnitt über alle Dinge, es gibt kein Ganzes hier oder so davon. Ja, danke. Gut.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:14:30
+% topic: Historische Einordnung der ZF-Mengenlehre (XKCD Cartoon, Ernst Zermelo, Abraham Fraenkel)
+% board_state: Definition von Durchschnitt und Komplement, Erläuterung zum Durchschnitt der leeren Familie
+% next_goal: Einführung von Axiom 6 (Potenzmengenaxiom) und Definition der Potenzmenge
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{meta-note}[Projizierter Inhalt: XKCD Cartoon "Fields arranged by purity"]
+Der Dozent zeigt einen XKCD-Cartoon auf der Leinwand. Der Cartoon veranschaulicht humorvoll die Hierarchie der Reinheit der Wissenschaften: Soziologie ist angewandte Psychologie, Psychologie ist angewandte Biologie, Biologie ist angewandte Chemie, Chemie ist angewandte Physik, und ganz rechts steht der Mathematiker, der meilenweit entfernt steht und sagt: "Oh, hey, I didn't see you guys all the way over there."
+\end{meta-note>
+
+\begin{spoken-clean}[00:14:17 - 00:16:32]
+Noch ein kleiner XKCD Cartoon... das soll zeigen eben das ist so die Frage... Gut, Sie kennen... kennt Ihre Generation noch XKCD? Schaut man das noch, oder? Okay, gut. Nicht mehr ganz so. Ich werde langsam älter, bin nicht mehr ganz sicher, was die Gen Z noch kennt oder so. \inlinemetanote{lacht} Okay, so... Gut, ist immer noch... ein bisschen mehrdeutig bei XKCD, weil er auch gerne sarkastisch ist. Aber das ist immer noch so eben so Mathematik und dann da ganz... ganz reine Wissenschaft. Aber jetzt, was, wo wir uns bewegen im Moment, ist noch... noch weiter hier. Also wenn Sie hier irgendjemanden auf dem Gang antreffen, der... ähm, Forschung macht in Mathematik, und das ist nicht gerade Lorenz Halbeisen oder vielleicht noch David Löffler oder so, dann werden die nicht fähig sein, ihre Forschung auf die Zermelo-Fraenkel-Axiome zurückzuführen. Ich glaube, schon wenn man etwas Einfacheres nimmt, das... nehmen Sie irgendeinen Lieblingssatz aus der Linearen Algebra, ich glaube, das wird sehr, sehr anstrengend, den mit den Zermelo-Fraenkel-Axiomen zu beweisen. Also wir sind irgendwo hier und dann hat man nachher noch die... die Philosophie vielleicht.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Die Axiomatische Basis als Fundament]
+Der Dozent verdeutlicht, dass obwohl die ZF-Mengenlehre das theoretische Fundament der gesamten modernen Mathematik bildet, die mathematische Praxis im Alltag auf einer viel höheren, abstrakteren Ebene stattfindet. Die direkte Reduktion komplexer mathematischer Beweise (wie z.B. in der algebraischen Geometrie) auf die ZF-Axiome ist zwar theoretisch garantiert, in der Praxis jedoch von unermesslicher Komplexität.
+\end{didactic-insight}
+
+\begin{meta-note}[Projizierter Inhalt: Ernst Zermelo und Abraham Fraenkel]
+Der Dozent wechselt die Folie auf dem Projektor und zeigt Porträts von Ernst Zermelo (1871–1953) und Abraham Fraenkel (1891–1965).
+\end{meta-note>
+
+\begin{spoken-clean}[00:16:32 - 00:17:40]
+Dann wollte ich noch ein Bild zeigen von Ernst Zermelo. Der hat eben diese... die Axiome, die wir jetzt besprechen, das sind alle von Zermelo. Und dann die letzten zwei, die wir ganz am Ende besprechen, die sind noch ziemlich technischer Natur, die hat Abraham Fraenkel hinzugefügt. Noch etwas so weit zur Geschichte. Gut, weiter zu unseren Axiomen. Genau, hier tatsächlich hier hab ich... hier war noch ein... tatsächlich noch ein Typo. Hier ist ein impliziert und nicht ein und-Zeichen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Korrektur: Definition des Prädikats für induktive Mengen]
+Der Dozent korrigiert das Prädikat $\text{ind}(x)$ auf der linken Tafel, indem er das fälschlicherweise geschriebene Und-Zeichen ($\wedge$) durch das korrekte Implikationszeichen ($\implies$) ersetzt:
+\begin{equation}\label{eq:ind-korrigiert}
+\text{ind}(x) \equiv \exists z \, \bigl( \forall y \, \neg(y \in z) \wedge z \in x \bigr) \wedge \forall y \, \Bigl( y \in x \implies y \cup \{y\} \in x \Bigr)
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:40 - 00:19:58]
+Gut, das nächste Axiom ist das Potenzmengenaxiom. Okay, das sagt uns nun einfach, dass die Potenzmenge von einer menge existiert. Also für alle $x$ existiert ein $z$, sodass für alle $y$ gilt: $y$ ist in $z$ genau dann, wenn $y$ eine Teilmenge ist von $x$. Teilmengensymbol haben wir letzte Woche definiert. Und, okay, das heißt, die Menge aller Teilmengen einer Menge $x$ existiert, und wir nennen diese die Potenzmenge. Und wir nennen diese, ähm, $\mathcal{P}(x)$. Genau, also die ist eindeutig wegen dem Extensionalitätsaxiom, okay? Also es gibt nur eine Potenzmenge für eine Menge $x$. Und das Axiom sagt uns, diese existiert.
+\end{spoken-clean>
+
+\begin{math-stroke}[6. Potenzmengenaxiom und Definition der Potenzmenge]
+\begin{enumerate}
+    \setcounter{enumi}{5} \item[\textbf{6. Potenzmengenaxiom:}] Zu jeder Menge existiert eine Menge, deren Elemente genau die Teilmengen der Ausgangsmenge sind.
+    \begin{equation}\label{eq:potenzmenge-axiom}
+    \forall x \exists z \forall y \, \bigl( y \in z \leftrightarrow y \subseteq x \bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{definition}[Potenzmenge]\label[definition]{def:potenzmenge}
+Sei $x$ eine Menge. Die \newterm{Potenzmenge} von $x$ (geschrieben $\mathcal{P}(x)$) ist die durch das Potenzmengen- und Extensionalitätsaxiom eindeutig bestimmte Menge:
+\[
+\mathcal{P}(x) := \{ y \mid y \subseteq x \}
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:58 - 00:22:15]
+Das ist wichtig, also die Menge aller Mengen existiert nicht, das wissen wir wegen dem Coiffeur. Aber die Menge aller Teilmengen von einer gegebenen Menge, die existiert gemäß diesem Axiom. Gut, ähm... Okay, so weit zu den Axiomen 0 bis 6. Die Axiome von Zermelo. Und jetzt machen wir einmal, bevor wir noch die zwei letzten, die eher technischer Natur sind, aufschreiben, machen wir doch schon einmal ein paar Definitionen und Konstruktionen aus den Axiomen, die wir haben.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:21:30
+% topic: Potenzmengenaxiom (Axiom 6), Definition der Potenzmenge, Konstruktion der Menge \omega
+% board_state: Axiom 6, Definition der Potenzmenge, Durchschnitt induktiver Teilmengen
+% next_goal: Konstruktion von \omega und Beweis, dass der Durchschnitt induktiver Mengen wieder induktiv ist
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:22:15 - 00:24:55]
+Das Erste wäre jetzt eben diese Sache mit den ganzen Zahlen. Und dazu definieren wir diese Menge $\omega$. Und hier ist unser Ziel, ähm, eigentlich ein Modell für die Peano-Arithmetik, das am liebsten, ähm, unsere ganzen Zahlen... unsere natürlichen Zahlen sind, wie wir sie gerne hätten. Und die Idee ist... wir nehmen $\omega$. Okay, wir wissen jetzt, es gibt eine induktive Menge, die die leere Menge enthält. Wir haben ja da unsere ganzen Zahlen so definiert über die leere Menge und dann nehmen wir die menge, die aus der leeren Menge besteht, und dann die Menge, die besteht aus der Menge, die die leere Menge enthält, und der Menge... und so weiter. Und da haben wir gesehen, okay, es gibt tatsächlich irgendeine induktive Menge, die die leere Menge enthält. Und jetzt wollen wir die kleinste induktive Menge nehmen, die die leere Menge enthält.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der Menge \texorpdfstring{$\omega$}{omega}]
+Wir konstruieren die Menge aller natürlichen Zahlen $\omega$ als die kleinste induktive Menge.
+
+Nach dem Unendlichkeitsaxiom (Axiom 4) existiert eine induktive Menge $I$. Wir definieren $\omega$ durch Aussonderung über der Potenzmenge $\mathcal{P}(I)$:
+\begin{equation}\label{eq:omega-definition}
+\omega := \bigcap \{ X \in \mathcal{P}(I) \mid \text{ind}(X) \}
+\end{equation}
+
+\begin{explanation-of-steps}
+Diese Konstruktion ist unabhängig von der Wahl der induktiven Menge $I$: Ist $I'$ eine andere induktive Menge, so ist $I \cap I'$ ebenfalls induktiv. Der Schnitt über alle induktiven Teilmengen liefert stets dieselbe minimale Menge $\omega$.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:24:55 - 00:27:00]
+Also $\omega$ soll die kleinste induktive Menge sein, die die leere Menge enthält. Okay, wir wissen, es gibt eine solche Menge $I_0$ gemäß dem Axiom 4, existiert eine induktive Menge $I_0$. Wir wissen, es gibt die Potenzmenge, gemäß dem Potenzmengenaxiom. Das heißt, wir können jetzt alle Teilmengen davon anschauen. Jetzt schauen wir alle Teilmengen von dieser Menge $I_0$ an, die die leere Menge enthalten und die induktiv sind. Okay, das haben wir jetzt schon einiges verwendet. Da haben wir verwendet die Existenz von $I_0$, die Existenz der Potenzmenge, die... das Aussonderungsaxiom, und dann auch nochmals das Aussonderungsaxiom, um den Durchschnitt zu nehmen. Aber okay, das ist genau das, was wir uns eigentlich... und wir haben natürlich noch die Existenz der leeren Menge, also haben wir fast alles verwendet, was wir bis jetzt definiert haben.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:26:00
+% topic: Durchschnitt induktiver Mengen, Definition des kartesischen Produkts
+% board_state: Beweis, dass der Durchschnitt induktiver Mengen induktiv ist, Definition des kartesischen Produkts A \times B
+% next_goal: Formale Darstellung des kartesischen Produkts im ZF-System und Definition von Funktionen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{math-stroke}[Durchschnitt von induktiven Mengen]
+\begin{proposition}\label[proposition]{prop:durchschnitt-induktiv}
+Sei $\mathcal{F}$ eine nicht-leere Familie von induktiven Mengen. Dann ist der Durchschnitt $\bigcap \mathcal{F}$ ebenfalls induktiv.
+\end{proposition}
+\begin{short-proof}
+Wir verifizieren die Bedingungen für ein induktives Prädikat:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Nicht-Trivialität}: Da jedes $X \in \mathcal{F}$ induktiv ist, gilt $\emptyset \in X$ für alle $X \in \mathcal{F}$. Folglich gilt $\emptyset \in \bigcap \mathcal{F}$.
+    \setcounter{enumi}{1} \item \textbf{Nachfolger-Abgeschlossenheit}: Sei $y \in \bigcap \mathcal{F}$. Dann gilt $y \in X$ für alle $X \in \mathcal{F}$. Da jedes $X \in \mathcal{F}$ induktiv ist, gilt $y \cup \{y\} \in X$ für alle $X \in \mathcal{F}$. Daraus folgt unmittelbar $y \cup \{y\} \in \bigcap \mathcal{F}$.
+\end{enumerate}
+Somit ist $\bigcap \mathcal{F}$ eine induktive Menge.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:00 - 00:28:45]
+Und da können wir ein bisschen... das ist eine Bemerkung, man kann zeigen... das ist eine kleine Übung für Sie... dass der Durchschnitt von induktiven Mengen... ein Durchschnitt von induktiven Mengen ist wieder induktiv. Also es ist nicht schwierig, es folgt fast direkt aus der Definition. Das heißt, $\omega$ ist tatsächlich induktiv und enthält die leere Menge. Und genau, es ist insofern natürlich die kleinste solche Menge, weil, ähm, wir nehmen den Durchschnitt über alle solchen. Und da können wir uns auf dem Übungsblatt drauf freuen, das diese Woche auf dem Übungsblatt drauf ist, dass diese Menge $\omega$ tatsächlich der Bereich eines Modells der Peano-Arithmetik ist. Also wir haben natürliche Zahlen, wir können natürliche Zahlen definieren.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:28:45 - 00:30:01]
+Gut, dann können wir noch kartesische Produkte definieren. Also wenn $A$ und $B$ Mengen sind, wir definieren ein binäres Funktionssymbol kartesisches Produkt durch $A \times B$. Und das ist einfach die Menge von allen geordneten Paaren $(x, y)$, sodass $x$ in $A$ und $y$ in $B$ ist. Und das sehen wir, das kartesische Produkt... Geordnetes Paarsymbol haben wir letzte Woche definiert. Und, okay, das heißt, die Menge $A \times B$ ist eine Teilmenge von der Potenzmenge von der Potenzmenge von $A$ vereinigt $B$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Kartesisches Produkt und Funktionsmengen]
+Unter Verwendung der Kuratowski-Definition für geordnete Paare, $(x, y) := \{ \{x\}, \{x, y\} \}$, können wir das kartesische Produkt zweier Mengen $A$ und $B$ formal definieren:
+\begin{equation}\label{eq:cartesian-product}
+A \times B := \{ p \in \mathcal{P}(\mathcal{P}(A \cup B)) \mid \exists x \in A \exists y \in B \, (p = (x, y)) \}
+\end{equation}
+
+\begin{explanation-of-steps}
+Da für $x \in A$ und $y \in B$ stets $\{x\} \subseteq A \cup B$ und $\{x, y\} \subseteq A \cup B$ gilt, sind die Mengen $\{x\}$ und $\{x, y\}$ Elemente der Potenzmenge $\mathcal{P}(A \cup B)$. Somit ist das Paar $(x, y) = \{ \{x\}, \{x, y\} \}$ eine Teilmenge von $\mathcal{P}(A \cup B)$, folglich ein Element von $\mathcal{P}(\mathcal{P}(A \cup B))$. Die Existenz des kartesischen Produkts folgt daher direkt aus den Axiomen der Vereinigung, der Paarmenge, der Potenzmenge und der Aussonderung.
+\end{explanation-of-steps}
+
+Darauf aufbauend definieren wir die Menge aller Funktionen $B^A$ von $A$ nach $B$:
+\begin{equation}\label{eq:function-set}
+B^A := \{ f \in \mathcal{P}(A \times B) \mid \forall x \in A \exists! y \in B \, ((x, y) \in f) \}
+\end{equation}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 273936, Output 7106)*
+---
+
+**AutoExtraction:** [Part 3] 03-17-tuesday.mp4
+[Angehängtes Video]: 03-17-tuesday-part3.mp4
+[Kontext-Dateien]: 03-17-tuesday-part1.tex, 03-17-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from tuesday, 03-17. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture. This specific video segment is exactly 29 minutes and 58 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 29 minutes and 58 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+**gemini-3.5-flash:** % End of the video: 00:29:58
+
+\section{Kartesische Produkte, Funktionen und Relationen}
+
+\begin{spoken-clean}[00:00:00 - 00:01:10]
+...durch $A$ kreuz $B$, und das ist einfach die Menge von allen, allen... von allen geordneten Paaren $x$ und $y$, so dass $x$ in $A$ und $y$ in $B$ ist. Und das nennen wir das kartesische Produkt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das kartesische Produkt]
+Für zwei Mengen $A$ und $B$ definieren wir das kartesische Produkt $A \times B$ formal über das Paarmengen-, Vereinigungs-, Potenzmengen- und Aussonderungsaxiom:
+\begin{equation}\label{eq:kartesisches-produkt-def}
+A \times B := \bigl\{ z \in \mathcal{P}(\mathcal{P}(A \cup B)) \;\middle|\; \exists x \in A \exists y \in B \, (z = \langle x, y \rangle) \bigr\}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:10 - 00:01:58]
+Ich mache noch mal schnell... Ja, vielleicht noch das, wie man das... was macht man hier ganz formal. Also wir haben das geordnete Produkt... Oder was war das geordnete Produkt? Wissen Sie noch, wie wir das definiert hatten? Ja? \inlinemetanote{Ein Student antwortet} Genau. Genau, das war das. Das war die Menge, die $\{x\}$ enthält und die Menge, die $\{x, y\}$ enthält, das ist die Paarmenge.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort zum geordneten Paar]
+Ein Student ruft die formale Definition des geordneten Paares nach Kuratowski in Erinnerung:
+\[
+\langle x, y \rangle := \{ \{x\}, \{x, y\} \}
+\]
+\end{student-interaction}
+
+\begin{math-stroke}[Kuratowski-Definition des geordneten Paares]
+Wir rufen die Definition des geordneten Paares nach Kuratowski in Erinnerung:
+\begin{equation}\label{eq:kuratowski-paar}
+\langle x, y \rangle := \bigl\{ \{x\}, \{x, y\} \bigr\}
+\end{equation}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:58 - 00:03:10]
+Okay, das heißt... Wo lebt dieses $A \times B$? Also $A \times B$ ist, so wie es ist, eine Teilmenge von der Potenzmenge von der Potenzmenge von $A \cup B$. Gut, und wenn wir das kartesische Produkt haben, dann können wir auch definieren, was Funktionen sind. Das sind jetzt einige einfache Definitionen. Die Frage ist einfach, wie können wir verschiedene Sachen, die wir gerne hätten, definieren mit Hilfe von diesen reinen, ähm, mengentheoretischen Axiomen und Begriffen. Und jetzt können wir sagen, was Funktionen sind, nicht nur Funktionssymbole.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang und Anschrieb]
+Der Dozent wischt einen Teil der Tafel und bereitet die Definition von Funktionen auf Basis von Graphen vor.
+\end{meta-note>
+
+\begin{spoken-clean}[00:03:10 - 00:04:45]
+Und zwar Funktionen... Das sind einfach Teilmengen von dem kartesischen Produkt mit gewissen Eigenschaften. Also die Menge aller Funktionen von einer Menge $A$ zu einer Menge $B$, aller Funktionen... Und wir schreiben aber für die Elemente darin $f: A \to B$, das ist einfach ein Symbol für ein Element darin. Und das ist gegeben als alle Teilmengen $f$ von $A \times B$, so dass... Okay, jetzt kommt wieder eine Formel: für alle $x$ in $A$ existiert ein eindeutiges $y$ in $B$, so dass $\langle x, y \rangle$ in $f$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Menge der Funktionen]
+\begin{definition}[Menge der Funktionen]\label[definition]{def:funktionsmenge}
+Seien $A$ and $B$ Mengen. Die \newterm{Funktionsmenge} (die Menge aller Funktionen von $A$ nach $B$) wird mit $B^A$ bezeichnet und ist wie folgt definiert:
+\begin{equation}\label{eq:funktionsmenge-def}
+B^A := \bigl\{ f \in \mathcal{P}(A \times B) \;\middle|\; \forall x \in A \exists! y \in B \, (\langle x, y \rangle \in f) \bigr\}
+\end{equation}
+Wir verwenden die Notation $f: A \to B$ als Abkürzung für $f \in B^A$. Für ein Paar $\langle x, y \rangle \in f$ schreiben wir in der vertrauten Funktionswertschreibweise:
+\begin{equation}\label{eq:funktionswert-notation}
+f(x) = y
+\end{equation}
+\end{definition}
+
+\begin{explanation-of-steps}
+Das Prädikat der eindeutigen Existenz $\exists!$ ist als prädikatenlogische Abkürzung definiert:
+\begin{equation}\label{eq:eindeutige-existenz-def}
+\exists! y \, \Psi(y) \iff \exists y \, \Psi(y) \wedge \forall u \forall z \, \bigl( \Psi(u) \wedge \Psi(z) \implies u = z \bigr)
+\end{equation}
+Damit stellen wir sicher, dass jedem Element des Definitionsbereichs $A$ genau ein Element des Codomains $B$ zugewiesen wird.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:45 - 00:05:55]
+Also wir definieren Funktionen eigentlich immer als Graphen. Was ist denn der Graph von einer Funktion? Das ist eine Teilmenge von $A \times B$, und wir wollen, dass wenn wir ein $x$ in $A$ haben, dann existiert ein eindeutiges $y$ in $B$, so dass... Das sind jetzt geordnete Teilmengen, aber eben... für dieses $x$ existiert ein eindeutiges $y$ in $B$. Das heißt, wir identifizieren Funktionen über ihre Graphen. Genau, und jetzt schreiben wir für $f \in B^A$, schreiben wir $f: A \to B$, und für $\langle x, y \rangle \in f$ schreiben wir $f(x) = y$. Und dann, falls $A$ selbst schon ein kartesisches Produkt ist, dann ist $f: A \to B$ eine zweistellige Funktion.
+\end{spoken-clean}
+
+\begin{math-stroke}[Zweistellige Funktionen]
+\begin{definition}[Zweistellige Funktion]\label[definition]{def:zweistellige-funktion}
+Falls der Definitionsbereich $A$ selbst ein kartesisches Produkt zweier Mengen $C_1$ und $C_2$ ist (d.h. $A = C_1 \times C_2$), so nennen wir eine Funktion $f: C_1 \times C_2 \to B$ eine \newterm{zweistellige Funktion}.
+\end{definition}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:05:55
+% topic: Definition von Funktionen und Funktionsmengen in ZF
+% board_state: eq:kartesisches-produkt-def, eq:kuratowski-paar, def:funktionsmenge
+% next_goal: Definition von Injektivität, Surjektivität und Bijektivität
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:05:55 - 00:07:35]
+Okay, jetzt können wir auch sagen, was es heißt, injektiv zu sein. Wir definieren $f$, eine Funktion von $A$ nach $B$, ist injektiv, falls gilt, dass... kommt wieder eine Formel: für alle $x, x'$ in $A$, und für alle $y$ in $B$, haben wir, dass $\langle x, y \rangle$ ist in $f$ und $\langle x', y \rangle$ ist in $f$ impliziert $x = x'$. Das ist die Sache mit dem ein bisschen mühsam hinzuschreiben und abzufragen. Am besten überlegen Sie sich selbst, wie man das definiert. Eine kleine Übung für Sie ist, dasselbe noch für surjektiv und bijektiv zu machen. Definiere Surjektivität und Bijektivität.
+\end{spoken-clean}
+
+\begin{math-stroke}[Injektivität, Surjektivität und Bijektivität]
+\begin{definition}[Injektivität]\label[definition]{def:injektiv}
+Eine Funktion $f: A \to B$ heißt \newterm{injektiv}, falls gilt:
+\begin{equation}\label{eq:injektiv-def}
+\forall x, x' \in A \forall y \in B \, \bigl( \langle x, y \rangle \in f \wedge \langle x', y \rangle \in f \implies x = x' \bigr)
+\end{equation}
+\end{definition}
+
+\textbf{Kleine Übung:} Formuliere die Definitionen für Surjektivität und Bijektivität einer Funktion $f: A \to B$ formal in der Sprache der Mengenlehre.
+\end{math-stroke}
+
+\begin{meta-note}[Tafelübergang und Diskussion]
+Der Dozent wischt die Tafel und wirft eine Frage zur formalen Definition der Endlichkeit von Mengen im aktuellen Axiomensystem auf.
+\end{meta-note>
+
+\begin{spoken-clean}[00:07:35 - 00:09:15]
+Ja, das darfst du dir schnell überlegen, wie man das definieren kann, während ich die Tafel wische. Und die Frage: Wie könnte man definieren, dass eine menge endlich ist? Also mit der Endlichkeit ist es ein bisschen ein Problem. Wie könnte man nahe daran kommen, endlich gut zu definieren, oder mit unseren Annahmen auch tatsächlich Definitionen von Endlichkeit zu haben? Jemand eine Idee? Ja? \inlinemetanote{Ein Student antwortet} Genau! Also wenn es eine... also ein Element... wenn es ein Element in unserem $\omega$ gibt, und eine bijektive Funktion von diesem Element zu unserer Menge, dann ist es endlich.
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort zur Endlichkeit]
+Ein Student schlägt vor:
+Eine Menge $A$ ist endlich, falls eine natürliche Zahl $n \in \omega$ (welche nach von Neumann selbst als die Menge aller kleineren natürlichen Zahlen $\{0, 1, \dots, n-1\}$ konstruiert ist) existiert, so dass eine Bijektion zwischen $n$ und $A$ existiert.
+\end{student-interaction}
+
+\begin{math-stroke}[Endliche und unendliche Mengen]
+\begin{definition}[Endlichkeit]\label[definition]{def:endliche-menge}
+Eine Menge $A$ heißt \newterm{endlich}, falls eine Bijektion $f: n \to A$ für ein $n \in \omega$ existiert.
+\end{definition}
+
+\begin{explanation-of-steps}
+In dieser Definition nutzen wir die zuvor konstruierte Menge aller natürlichen Zahlen $\omega$. Da jede von Neumannsche natürliche Zahl $n$ der Menge ihrer Vorgänger entspricht (d.h. $n = \{0, 1, \dots, n-1\}$), besitzt die Menge $n$ im naiven Sinne genau $n$ Elemente. Eine Bijektion zu $n$ formalisiert somit das Konzept, genau $n$ Elemente zu besitzen.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:15 - 00:11:10]
+Aber ja, das ist das Problem mit dem $\omega$, okay. Wenn wir jetzt wirklich davon ausgehen, dass das sind genau die ganzen Zahlen, dann ist das genau die Endlichkeit, wie wir sie gerne hätten. Wenn es das nicht ist, dann haben wir halt Probleme, aber... Genau. Dann können wir noch sagen, eine menge $A$ heißt abzählbar, falls es eine Surjektion gibt von $\omega$ zu $A$. Und ansonsten heißt $A$ überabzählbar.
+\end{spoken-clean}
+
+\begin{math-stroke}[Abzählbarkeit]
+\begin{definition}[Abzählbarkeit]\label[definition]{def:abzaehlbar}
+Eine Menge $A$ heißt \newterm{abzählbar}, falls eine Surjektion $f: \omega \to A$ existiert. Andernfalls heißt $A$ \newterm{überabzählbar}.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:11:10 - 00:12:35]
+Okay, aber dazu werden wir später noch mehr sehen von diesen Kardinalitäten, wenn wir die Kardinalzahlen anschauen. Da sehen wir, da gibt es noch viele, ganz viele Kardinalitäten... Also es gibt ganz viele Arten, wie man unendlich sein kann. Das haben Sie vielleicht schon gesehen. Man kann unendlich sein, dass man alles zählen kann, und dann gibt es die reellen Zahlen, die kann man nicht mehr zählen. Aber das hört dann nicht auf, da gibt es Sachen, die sind noch viel... viel schlimmer als die reellen Zahlen, und immer größer, größer, größer. Aber dazu später mehr, nach Ostern dann.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:12:35
+% topic: Definition von Endlichkeit, Abzählbarkeit und n-stelligen Relationen
+% board_state: def:endliche-menge, def:abzaehlbar, def:n-stellige-relation
+% next_goal: Definition von linearen Ordnungen und Wohlordnungen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Relationen und Wohlordnungen}
+
+\begin{spoken-clean}[00:12:35 - 00:14:00]
+Okay, dann können wir noch Relationen definieren. Wir definieren $A$ kreuz $A$ $n$-mal, also das $n$-fache kartesische Produkt von $A$, und das... okay, das ist vielleicht ein bisschen problematisch wieder zu definieren, weil man kann sagen: Okay, man nimmt jetzt einfach das kartesische Produkt, wie wir das definiert haben, machen das $n$-mal, aber... Okay, eine $n$-stellige Relation $R$... ist einfach eine Teilmenge $R$ von $A^n$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Relationen auf Mengen]
+Wir definieren das $n$-fache kartesische Produkt einer Menge $A$ induktiv als:
+\begin{align*}
+A^1 &:= A \\
+A^{n} &:= A^{n-1} \times A \quad \text{für } n \ge 2
+\end{align*}
+
+\begin{definition}[Relation]\label[definition]{def:relation}
+Eine \newterm{$n$-stellige Relation} $R$ auf einer Menge $A$ ist eine Teilmenge des $n$-fachen kartesischen Produkts:
+\begin{equation}\label{eq:n-stellige-relation-def}
+R \subseteq A^n
+\end{equation}
+Für den Fall $n = 2$ sprechen wir von einer \newterm{binären Relation} (oder zweistelligen Relation) auf $A$:
+\begin{equation}\label{eq:binaere-relation-def}
+R \subseteq A \times A = A^2
+\end{equation}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:14:00 - 00:15:55]
+Wir haben noch Beispiele: Eine binäre Relation... ist klar, das ist einfach eine zweistellige Relation, sorry. Eine binäre Relation heißt linear... ist eine lineare Ordnung, falls... Eine binäre Relation $R$ auf $A$ ist linear, also eine Ordnung, falls $R$ transitiv ist und für alle $x, y$ in $A$ gilt, dass entweder $x$ in Relation zu $y$ steht, $x$ gleich $y$ ist, oder $y$ in Relation zu $x$ steht. Das ist eben die Trichotomie.
+\end{spoken-clean}
+
+\begin{math-stroke}[Lineare Ordnungen und Trichotomie]
+\begin{definition}[Lineare Ordnung]\label[definition]{def:lineare-ordnung}
+Eine binäre Relation $R$ auf einer Menge $A$ heißt eine \newterm{lineare Ordnung} (oder totale Ordnung) auf $A$, falls $R$ transitiv ist:
+\begin{equation}\label{eq:transitivitaet-ordnung}
+\forall x, y, z \in A \, \bigl( \langle x, y \rangle \in R \wedge \langle y, z \rangle \in R \implies \langle x, z \rangle \in R \bigr)
+\end{equation}
+und die Eigenschaft der \newterm{Trichotomie} erfüllt ist:
+\begin{equation}\label{eq:trichotomie-eigenschaft}
+\forall x, y \in A \, \bigl( \langle x, y \rangle \in R \vee x = y \vee \langle y, x \rangle \in R \bigr)
+\end{equation}
+Wir schreiben oft abkürzend $x R y$ oder $x <_R y$ anstelle von $\langle x, y \rangle \in R$.
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:55 - 00:17:38]
+Und dann kommen wir noch zu dem Begriff einer Wohlordnung. Das ist ein relativ wichtiger Begriff, den finden Sie hin und wieder in verschiedenen Gebieten der Mathematik, treffen Sie den an. Hat jemand schon gehört, was eine Wohlordnung ist? Sonst hat jemand eine... Ja? \inlinemetanote{Ein Student antwortet} Genau! Jede Teilmenge ein kleinstes Element hat, dann ist die Menge, ist das eine Wohlordnung. Das ist ein wichtiges...
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort zur Wohlordnung]
+Ein Student definiert eine Wohlordnung:
+Eine Wohlordnung ist eine lineare Ordnung, bei der jede nicht-leere Teilmenge ein kleinstes (minimales) Element besitzt.
+\end{student-interaction}
+
+\begin{math-stroke}[Definition einer Wohlordnung]
+\begin{definition}[Wohlordnung]\label[definition]{def:wohlordnung}
+Eine lineare Ordnung $R$ auf einer Menge $A$ heißt eine \newterm{Wohlordnung}, falls jede nicht-leere Teilmenge $S \subseteq A$ ein minimales (kleinstes) Element besitzt:
+\begin{equation}\label{eq:wohlordnung-def}
+\forall S \subseteq A \, \Bigl( S \neq \emptyset \implies \exists x_0 \in S \forall y \in S \, \bigl( y \neq x_0 \implies \neg \langle y, x_0 \rangle \in R \bigr) \Bigr)
+\end{equation}
+\end{definition}
+
+\begin{explanation-of-steps}
+Das bedeutet formal: In jeder nicht-leeren Teilmenge $S$ existiert ein Element $x_0 \in S$, so dass für jedes andere Element $y \in S$ gilt: $y$ ist nicht kleiner als $x_0$ bezüglich der Relation $R$ (d.h. $\neg (y R x_0)$).
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:38 - 00:19:35]
+Okay, das werden wir später noch genauer anschauen. Also zum Beispiel... ein Beispiel: Die ganzen Zahlen zusammen... nein, sorry, die natürlichen Zahlen zusammen mit der Relation "größer gleich"... nein, "kleiner gleich", mit der üblichen Ordnung... ist eine Wohlordnung. Weil jede nicht-leere Teilmenge von den natürlichen Zahlen, da hat jedes... gibt es immer ein minimales Element, wenn die Menge nicht leer ist. Einfach das Kleinste. Aber bei den reellen Zahlen existiert das natürlich nicht mehr mit der üblichen Ordnung. Aber was wir sehen werden, ähm, vielleicht in zwei Wochen wahrscheinlich, ist, dass man mit dem sogenannten Auswahlaxiom, das wir noch diskutieren werden, kann man zeigen, dass tatsächlich jede Menge eine Wohlordnung hat. Also Sie können immer eine Wohlordnung definieren auf egal welcher Menge. Das ist noch ein erstaunliches Resultat, vielleicht auch eines... einer der Gründe, weshalb gewisse Leute dem Auswahlaxiom etwas skeptisch gegenüberstehen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Das Auswahlaxiom und der Wohlordnungssatz]
+Der Wohlordnungssatz von Zermelo besagt, dass jede beliebige Menge wohlgeordnet werden kann. Dieses fundamentale Resultat ist mathematisch äquivalent zum Auswahlaxiom (AC). Während auf den natürlichen Zahlen ($\omega$) die Standardordnung eine Wohlordnung ist, ist die Existenz einer Wohlordnung auf den reellen Zahlen ($\mathbb{R}$) hochgradig unanschaulich und nicht-konstruktiv. Dies erklärt die historische Skepsis vieler Mathematiker gegenüber dem Auswahlaxiom.
+\end{didactic-insight}
+
+\section{Die Fraenkelschen Axiome (Ersetzungs- und Fundierungsaxiom)}
+
+\begin{spoken-clean}[00:19:35 - 00:21:45]
+Okay, so viel einmal zu dem... Einfach, das sind noch ein paar ein paar Beispiele, wie man so mit der Mengenlehre gewisse Begriffe definieren kann, und definiert, und das funktioniert dann alles gut. Jetzt möchte ich gerne heute diese Zermelo-Fraenkel-Geschichte abschließen, deswegen noch die zwei Axiome von Fraenkel, das sind Axiome 7 und 8. Zermelo hat so schon die meisten Axiome, oder so die Hauptarbeit geleistet, dann Fraenkel hat gemerkt: Okay, das ist vielleicht noch nicht ganz alles, und hat diese zwei vorgeschlagen. Das Erste ist das Ersetzungsaxiom. Ich werde jetzt diese Axiome nicht im Detail diskutieren, ja, weil wir nur zwei Lektionen haben für die ganze Geschichte.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:21:00
+% topic: Einführung des Ersetzungsaxioms (Axiom 7)
+% board_state: def:lineare-ordnung, def:wohlordnung, thm:ersetzungsaxiom
+% next_goal: Beispiel für Ersetzungsaxiom und Einführung des Fundierungsaxioms (Axiom 8)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{math-stroke}[7. Ersetzungsaxiom (Axiomenschema)]
+\begin{enumerate}
+    \setcounter{enumi}{6} \item[\textbf{7. Ersetzungsaxiom (Axiomenschema):}] Sei $\varphi(x, y)$ eine Formel in der Sprache der Mengenlehre mit freien Variablen $x$ und $y$, in der die Variablen $z, A, B$ nicht frei vorkommen. Falls die Formel funktional ist, d.h.:
+    \begin{equation}\label{eq:funktionalitaet-phi}
+    \forall x \exists! y \, \varphi(x, y)
+    \end{equation}
+    dann gilt für jede Menge $A$, dass das Bild von $A$ unter dieser Zuordnung ebenfalls eine Menge ist:
+    \begin{equation}\label{eq:ersetzungsaxiom-schema}
+    \exists B \forall y \, \Bigl( y \in B \leftrightarrow \exists x \in A \, \varphi(x, y) \Bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Das Ersetzungsaxiom besagt informell: Wenn wir eine funktionale Zuordnung haben (eine sogenannte \newterm{Klassenfunktion} $f(x) = y \iff \varphi(x, y)$) und diese auf die Elemente einer bereits existierenden Menge $A$ anwenden, dann bildet die Kollektion der Bildpunkte wieder eine echte Menge $f[A]$:
+\[
+f[A] := \{ f(x) \mid x \in A \} = \{ y \mid \exists x \in A \, \varphi(x, y) \}
+\]
+Dies ist ein unendliches Axiomenschema, da es für jede funktionsdefinierende Formel $\varphi(x, y)$ gilt.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:45 - 00:23:55]
+Das ist jetzt nicht ganz präzise ausgedrückt, das kann man auch noch mit... das kann man auch noch natürlich sauberer durch Formeln ausdrücken, aber machen wir jetzt nicht mehr. Im Wesentlichen wollen wir sagen, dass Bilder von Funktionen sind wieder... sind wieder Mengen. Man darf sich davon nicht verwirren lassen. Also das hier, das Funktionssymbol $f$, das so eine Klassenfunktion, das ist nicht eine... das ist nicht eine Funktion, wie wir sie vorher definiert hatten als eine Teilmenge vom kartesischen Produkt. Weil das geht ja hier nicht von einer... also eine Klassenfunktion ist einfach gegeben durch eine Formel mit bestimmten Eigenschaften, und das ist nicht eine Funktion a priori, die von einer bestimmten menge zu einer anderen menge geht. Also für diese Art von Funktionen gibt es kein Problem, da haben wir immer, dass Bilder von Funktionen wieder Funktionen sind. Aber hier diese Art von Funktionen, also wo wir einfach beschreiben können durch eine Formel, können wir einem Element ein anderes zuordnen, dann haben wir immer, dass Bilder von Mengen wieder Mengen sind. Das ist ein wichtiges Axiom, das braucht man, um gewisse wichtige Sachen zu zeigen, dass es Mengen sind.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel zur Bildmengenkonstruktion]
+\begin{example}\label[example]{ex:bildmenge-ersetzung}
+Mithilfe des Ersetzungsaxioms lässt sich zeigen, dass für jede Menge $M$ die Kollektion ihrer Potenzmengen eine wohlgeformte Menge ist:
+\begin{equation}\label{eq:beispiel-ersetzung}
+\bigl\{ \mathcal{P}(x) \;\middle|\; x \in \mathcal{P}(\omega) \bigr\} \quad \text{ist eine Menge.}
+\end{equation}
+\end{example}
+
+\begin{short-proof}
+Wir definieren die funktionale Klassenfunktion über die Formel $\varphi(x, y) \equiv y = \mathcal{P}(x)$. Da die Potenzmenge jeder Menge nach dem Potenzmengenaxiom existiert und eindeutig ist, gilt $\forall x \exists! y \, \varphi(x, y)$. Setzen wir $A := \mathcal{P}(\omega)$ als Definitionsbereich ein, garantiert das Ersetzungsaxiom die Existenz der Bildmenge $f[A] = \{ \mathcal{P}(x) \mid x \in \mathcal{P}(\omega) \}$.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:55 - 00:26:00]
+Zum Beispiel... machen wir noch ein ganz kurzes Beispiel. Einfach, wenn wir die menge von allen Potenzmengen nehmen, wobei $x$ ein Element ist von der Potenzmenge von $\omega$. Da können wir zeigen, das ist wieder eine Menge mit Hilfe von diesem Axiom 7. Hier ist einfach unsere menge $A$ ist unsere Potenzmenge von $\omega$, und $f(x)$ ist die Potenzmenge nehmen, wie bei Funktionen, und mit dem Ersetzungsaxiom können wir sagen, dass das das ist. Geben Sie mir noch eine Minute, um das Fundierungsaxiom zu... zu erklären, und das ist wirklich nur... ich glaube... Das wird dann, ja, wenn man jetzt wirklich mit Mengentheorie Sachen beweisen möchte, merkt man, dass man solche Sachen braucht.
+\end{spoken-clean}
+
+\begin{math-stroke}[8. Fundierungsaxiom]
+\begin{enumerate}
+    \setcounter{enumi}{7} \item[\textbf{8. Fundierungsaxiom (Regularitätsaxiom):}] Jede nicht-leere Menge $x$ enthält ein Element $y$, das disjunkt zu $x$ ist.
+    \begin{equation}\label{eq:fundierungsaxiom}
+    \forall x \, \bigl( x \neq \emptyset \implies \exists y \, (y \in x \wedge y \cap x = \emptyset) \bigr)
+    \end{equation}
+\end{enumerate}
+
+\begin{explanation-of-steps}
+Das Fundierungsaxiom (auch Regularitätsaxiom genannt) stellt sicher, dass das mathematische Universum wohlfundiert strukturiert ist, indem es zirkuläre Elementbeziehungen ausschließt.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:26:00 - 00:29:58]
+Also das heißt in anderen Worten: Jede Menge $x$, die nicht die leere Menge ist, enthält ein Element $y$, so dass kein Element von $y$ auch Element von $x$ ist. Und da braucht man einfach, um... Beispiele: Wir wollen... Es gibt... Damit kann man zeigen, es gibt keine unendlichen Sequenzen von der Form $x_0 \ni x_1 \ni x_2 \ni x_3 \dots$, wo $x_1$ ein Element ist von $x_0$, $x_2$ ein Element von $x_1$, $x_3$ ein Element von $x_2$ und so weiter. Das muss irgendwann aufhören. Und es gibt auch keine... keine Zyklen von der Form $x_0$ in $x_1$ ... in $x_n$ und das ist wieder $x_0$. Also mit dem Fundierungsaxiom kann man zeigen, dass solche Sachen nicht existieren und das, ja... Ich meine, muss man ein paar Jahre mit Mengentheorie arbeiten... Zermelo hat seine Axiome publiziert, dann eben 8 Jahre später hat Fraenkel gesagt: Okay, ich glaube wir brauchen noch, und hat diese zwei vorgeschlagen. Und inzwischen sind das dann alle... also das sind die Zermelo-Fraenkel-Axiome. In der Regel verwendet man auch noch das Auswahlaxiom, das werden wir in zwei Wochen diskutieren. Vielen Dank fürs Kommen und gute Woche! \inlinemetanote{Die Vorlesung schließt unter Beifall der Studierenden}
+\end{spoken-clean}
+
+\begin{math-stroke}[Konsequenzen des Fundierungsaxioms]
+\begin{example}\label[example]{ex:fundierung-konsequenzen}
+Das Fundierungsaxiom schließt im Zermelo-Fraenkel-Universum folgende pathologische Konstrukte aus:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Ausschluss von Selbstreferenz:} Es existiert keine Menge $x$ mit $x \in x$.
+    \setcounter{enumi}{1} \item \textbf{Ausschluss unendlicher Abstiegsketten:} Unendliche Ketten der Form:
+    \begin{equation}\label{eq:abstiegskette}
+    x_0 \ni x_1 \ni x_2 \ni x_3 \ni \dots
+    \end{equation}
+    sind unmöglich.
+    \setcounter{enumi}{2} \item \textbf{Ausschluss zyklischer Elementbeziehungen:} Es gibt keine zyklischen Elementketten:
+    \begin{equation}\label{eq:zyklen-eigenschaft}
+    x_0 \in x_1 \in \dots \in x_n \in x_0
+    \end{equation}
+\end{enumerate}
+\end{example}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+
+*(Tokens: Input 280901, Output 7452)*
+---

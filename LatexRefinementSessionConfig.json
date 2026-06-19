@@ -1,0 +1,41 @@
+{
+  "Enabled": true,
+  "ApiKeyEnvName": "API_KEY-latex-refinement",
+  "TargetFolder": "",
+  "Step1MergeAndTimestamp": {
+    "Enabled": true,
+    "Temperature": 0.35,
+    "TopP": 0.8,
+    "TopK": 10,
+    "MaxOutputTokens": 65535,
+    "Model": "gemini-3.5-flash",
+    "SystemInstructionPaths": [
+      "C:\\Users\\miche\\latex\\prompt-engineering\\lecture-merging\\latex-part-merge-instruction.md"
+    ],
+    "HistoryPreloadPaths": []
+  },
+  "Step2SpeechRefinement": {
+    "Enabled": true,
+    "Temperature": 0.7,
+    "TopP": 0.9,
+    "TopK": 30,
+    "MaxOutputTokens": 65535,
+    "Model": "gemini-3.5-flash",
+    "SystemInstructionPaths": [
+      "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
+    ],
+    "HistoryPreloadPaths": []
+  },
+  "Step3LastRefinement": {
+    "Enabled": true,
+    "Temperature": 0.7,
+    "TopP": 0.9,
+    "TopK": 30,
+    "MaxOutputTokens": 65535,
+    "Model": "gemini-3.5-flash",
+    "SystemInstructionPaths": [
+      "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
+    ],
+    "HistoryPreloadPaths": []
+  }
+}

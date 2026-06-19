@@ -9,7 +9,7 @@ using Infrastructure;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
-using Config; // Added for LatexRefinementConfig
+using Config; // Added for LatexRefinementSessionConfig
 using DirectChatAiInteraction; // For LatexRefinementSession
 
 namespace AutoExtraction;
@@ -23,20 +23,20 @@ public class VertexAutoExtractionSession {
   private readonly Client _client;
   private readonly VertexAutoExtractionConfig _config;
   private readonly Client _aiStudioClientForRefinement; // New: Client for AI Studio for RefinementSession
-  private readonly LatexRefinementConfig _latexRefinementConfig; // New: Config for RefinementSession
+  private readonly LatexRefinementSessionConfig _latexRefinementConfig; // New: Config for RefinementSession
   private readonly AttachmentHandler _attachmentHandler;
   private readonly SessionLogger _sessionLogger;
   private int _sessionTotalInputTokens = 0;
   private int _sessionTotalOutputTokens = 0;
   // [AI Context] Enterprise session state. Note the absence of the REPL loop, as this is intended for unattended bulk operations.
 
-  public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, Client aiStudioClientForRefinement, LatexRefinementConfig latexRefinementConfig) {
+  public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, Client aiStudioClientForRefinement, LatexRefinementSessionConfig LatexRefinementSessionConfig) {
     _client = client;
     _config = config;
     _attachmentHandler = attachmentHandler;
     _sessionLogger = sessionLogger;
     _aiStudioClientForRefinement = aiStudioClientForRefinement; // Initialize
-    _latexRefinementConfig = latexRefinementConfig; // Initialize
+    _latexRefinementConfig = LatexRefinementSessionConfig; // Initialize
   }
 
   /// <summary>
@@ -359,7 +359,7 @@ public class VertexAutoExtractionSession {
         if (_config.GenerateAudioFile && audioExtractionTask == null) {
           audioExtractionTask = Task.Run(async () => {
             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-            await toolkit.ExtractAudioAsMp3Async(file, fileSpecificOutputFolder);
+            await toolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
             Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
           });
         }
@@ -451,7 +451,7 @@ public class VertexAutoExtractionSession {
 
         // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
         // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
-        string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-latex-refinement") ?? "no-key";
+        string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(_latexRefinementConfig?.ApiKeyEnvName ?? "API_KEY-latex-refinement") ?? "no-key";
         Client aiStudioClientForRefinement = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
         if (_latexRefinementConfig.Enabled) {
@@ -556,7 +556,7 @@ public class VertexAutoExtractionSession {
     double segmentLengthForCached = (processedVideoDuration > 0) ? (processedVideoDuration + (3 - 1) * 180) / 3 : 0; // Assuming parts=3, overlap=180
 
     if (useCache) {
-      Console.WriteLine($"  [Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 2h):");
+      Console.WriteLine($"  [Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 48h):");
       cachedParts.Sort();
       for (int i = 0; i < cachedParts.Count; i++) {
         double startTime = (segmentLengthForCached > 0) ? i * (segmentLengthForCached - 180) : 0;

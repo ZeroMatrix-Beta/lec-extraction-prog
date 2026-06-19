@@ -23,5 +23,7 @@
   "ThinkingLevel": null,
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
-  "GoIntoLatexRefinement": true
+  "GoIntoLatexRefinement": true,
+  "NumberOfParts": 3,
+  "OverlapSeconds": 180
 }
