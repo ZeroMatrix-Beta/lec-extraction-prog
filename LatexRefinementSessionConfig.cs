@@ -5,7 +5,7 @@ namespace Config;
 public class RefinementStepConfig {
     public bool Enabled { get; set; } = true;
     public float Temperature { get; set; } = 0.0f;
-    public float TopP { get; set; } = 0.8f;
+    public float TopP { get; set; } = 1.0f;
     public int TopK { get; set; } = 10;
     public int MaxOutputTokens { get; set; } = 65535;
     public string Model { get; set; } = "gemini-3.5-flash";
@@ -18,9 +18,11 @@ public class RefinementStepConfig {
 public class LatexRefinementSessionConfig {
     public bool Enabled { get; set; } = false;
     public string ApiKeyEnvName { get; set; } = "API_KEY-latex-refinement";
+    public int ActiveApiProfile { get; set; } = 3; // 0 = Dedicated (ApiKeyEnvName), 1-3 = General Keys
+    public string Model { get; set; } = "gemini-3.5-flash"; // Fallback/Global override model
     public string TargetFolder { get; set; } = "";
     public string SourceFolder { get; set; } = "";
-    
+
     public RefinementStepConfig Step1MergeAndTimestamp { get; set; } = new RefinementStepConfig {
         SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\merge-instructions\latex-part-merge-instruction.md" }
     };

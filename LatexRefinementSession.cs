@@ -38,7 +38,7 @@ public class LatexRefinementSession {
     _audioFilePath = null;
   }
 
-  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, AiStudioAutoExtractionConfig extractionConfig, string audioFilePath) {
+  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, AiStudioAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
     _client = client;
     _config = config;
     _singleFilePathToProcess = singleFilePathToProcess;
@@ -47,7 +47,7 @@ public class LatexRefinementSession {
     _audioFilePath = audioFilePath;
   }
 
-  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, AiStudioAutoExtractionConfig extractionConfig, string audioFilePath) {
+  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, AiStudioAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
     _client = client;
     _config = config;
     _singleFilePathToProcess = null;
@@ -75,8 +75,7 @@ public class LatexRefinementSession {
       }
 
       if (_audioFilePath == null || !System.IO.File.Exists(_audioFilePath)) {
-        Console.WriteLine($"\n[WARNUNG] LaTeX Refinement übersprungen. Die Audio-Datei fehlt: {_audioFilePath ?? "null"}");
-        return;
+        Console.WriteLine($"\n[INFO] LaTeX Refinement wird ohne Audio-Datei ausgeführt (Pfad: {_audioFilePath ?? "null"}).");
       }
     }
 
@@ -167,7 +166,10 @@ public class LatexRefinementSession {
       
       var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, true, "");
       var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
-      if (success) parts.AddRange(attached);
+      if (success) {
+          parts.AddRange(attached);
+          Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+      }
     }
 
     string promptText = $"Here is the generated audio file alongside with the combined file with all the offset parts together. " +
@@ -178,6 +180,7 @@ public class LatexRefinementSession {
     parts.Add(new Part { Text = promptText });
 
     foreach (var file in inputFiles) {
+       Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
        string content = await System.IO.File.ReadAllTextAsync(file);
        parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
     }
@@ -197,11 +200,15 @@ public class LatexRefinementSession {
     if (audioFilePath != null && System.IO.File.Exists(audioFilePath)) {
       var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, true, "");
       var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
-      if (success) parts.AddRange(attached);
+      if (success) {
+          parts.AddRange(attached);
+          Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+      }
     }
 
     parts.Add(new Part { Text = "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps." });
     
+    Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {inputFile}");
     string content = await System.IO.File.ReadAllTextAsync(inputFile);
     parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
@@ -213,6 +220,7 @@ public class LatexRefinementSession {
     var parts = new List<Part>();
     parts.Add(new Part { Text = "Perform the final refinement and formatting pass on this document according to the system instructions." });
     
+    Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {inputFile}");
     string content = await System.IO.File.ReadAllTextAsync(inputFile);
     parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 

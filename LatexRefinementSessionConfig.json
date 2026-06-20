@@ -12,7 +12,7 @@
     "ThinkingBudget": 65535,
     "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\lecture-merging\\latex-part-merge-instruction.md"
+      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
     "HistoryPreloadPaths": []
   },
@@ -32,7 +32,7 @@
   },
   "Step3LastRefinement": {
     "Enabled": true,
-    "Temperature": 1.0,
+    "Temperature": 0.9,
     "TopP": 0.95,
     "TopK": 40,
     "MaxOutputTokens": 65535,

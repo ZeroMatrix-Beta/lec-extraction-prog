@@ -153,10 +153,7 @@ partial class Program {
 
   private static async Task RunLatexRefinementAsync() {
     var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
-    // Lade den exklusiven Key für das Refinement
-    string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(config.ApiKeyEnvName) ?? "no-key";
-    Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-    var session = new DirectChatAiInteraction.LatexRefinementSession(client, config);
-    await session.StartAsync();
+    var extractionConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
+    await AutoExtraction.RefinementUiHelper.StartInteractiveRefinementAsync(config, extractionConfig);
   }
 }

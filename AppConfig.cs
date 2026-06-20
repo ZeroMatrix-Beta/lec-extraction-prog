@@ -38,6 +38,18 @@ public static class ConfigLoader<T> where T : class, new() {
 
     return config;
   }
+
+  public static void Save(T config, string? sectionName = null) {
+    var basePath = AppDomain.CurrentDomain.BaseDirectory;
+    string filePath = Path.Combine(basePath, $"{typeof(T).Name}.json");
+
+    var options = new System.Text.Json.JsonSerializerOptions {
+        WriteIndented = true
+    };
+    
+    string jsonString = System.Text.Json.JsonSerializer.Serialize(config, options);
+    File.WriteAllText(filePath, jsonString);
+  }
 }
 
 

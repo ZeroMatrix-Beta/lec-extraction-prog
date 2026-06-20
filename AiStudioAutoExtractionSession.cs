@@ -125,18 +125,27 @@ public class AiStudioAutoExtractionSession {
                 foreach (var file in distinctFiles) {
                     Console.WriteLine($"  - {file}");
                 }
-                Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
+                if (_config.LoadHistoryIntoSystemInstruction) {
+                    Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
+                } else {
+                    Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
+                }
+                
                 if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                    Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+                    if (_config.LoadHistoryIntoSystemInstruction) {
+                        Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
+                    } else {
+                        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+                    }
                     string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
                     var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
                     if (success && attachmentParts.Any()) {
                         _historyParts.AddRange(attachmentParts);
                         _historyWasLoaded = true;
-                        Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
                         if (_config.LoadHistoryIntoSystemInstruction) {
-                            Console.WriteLine("  [INFO] History-Dateien werden in System Instruction eingebunden (Acknowledge wird übersprungen).");
+                            Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
                         } else {
+                            Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
                             if (!await AcknowledgeHistoryAsync(fileList)) return;
                         }
                     }
@@ -168,6 +177,7 @@ public class AiStudioAutoExtractionSession {
         Console.WriteLine("  5) Beenden (exit/quit)");
         Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
         Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
+        Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
 
@@ -191,6 +201,7 @@ public class AiStudioAutoExtractionSession {
                 Console.WriteLine("  5) Beenden (exit/quit)");
                 Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
                 Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
+                Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
                 Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
                 Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
             }
@@ -255,7 +266,8 @@ public class AiStudioAutoExtractionSession {
                         _client = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
                         _attachmentHandler.UpdateClient(_client);
                         _config.ActiveApiProfile = newProfile;
-                        Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt!");
+                        ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+                        Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt und in Konfiguration gespeichert!");
                     }
                 }
                 else {
@@ -264,7 +276,11 @@ public class AiStudioAutoExtractionSession {
             }
             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
                 _config.Model = SelectModel();
-                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt.");
+                ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt und in Konfiguration gespeichert.");
+            }
+            else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
+                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
             }
             else {
                 await DebugChatAsync(input); // Chat erhält den originalen Input
