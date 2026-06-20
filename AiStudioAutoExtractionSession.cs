@@ -134,7 +134,11 @@ public class AiStudioAutoExtractionSession {
                         _historyParts.AddRange(attachmentParts);
                         _historyWasLoaded = true;
                         Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-                        if (!await AcknowledgeHistoryAsync(fileList)) return;
+                        if (_config.LoadHistoryIntoSystemInstruction) {
+                            Console.WriteLine("  [INFO] History-Dateien werden in System Instruction eingebunden (Acknowledge wird übersprungen).");
+                        } else {
+                            if (!await AcknowledgeHistoryAsync(fileList)) return;
+                        }
                     }
                     else {
                         Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
@@ -468,8 +472,11 @@ public class AiStudioAutoExtractionSession {
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens // Use config value, or hardcode a smaller value for acknowledgment? Let's use config.
         };
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
-            requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+            var sysParts = new List<Part>();
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -884,8 +891,8 @@ public class AiStudioAutoExtractionSession {
             }
 
             if (fileProcessingSuccess) {
-                string targetFilePath = Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + ".tex");
-                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}-offset.tex");
+                string targetFilePath = Path.Combine(fileSpecificOutputFolder, baseName + ".tex");
+                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-offset.tex");
 
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
                 string header = $"% ==========================================\n" +
@@ -1036,7 +1043,12 @@ public class AiStudioAutoExtractionSession {
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+                var sysParts = new List<Part>();
+                if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
+                if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+                requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+            }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();

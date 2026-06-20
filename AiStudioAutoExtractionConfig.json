@@ -21,6 +21,7 @@
   "Model": "gemini-3.5-flash",
   "ThinkingBudget": 65536,
   "ThinkingLevel": "HIGH",
+  "LoadHistoryIntoSystemInstruction": true,
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,

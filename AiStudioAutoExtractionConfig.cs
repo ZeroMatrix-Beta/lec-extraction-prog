@@ -49,6 +49,9 @@ public class AiStudioAutoExtractionConfig {
     // [Human] Wenn aktiviert, werden zusätzliche '.tex'-Dateien erstellt, bei denen die Zeitstempel im Text auf die tatsächliche Videolänge korrigiert sind.
     public bool GenerateOffsetFiles { get; set; } = true;
 
+    // [AI Context] If true, loaded history files are added to SystemInstruction instead of History, skipping the explicit handshake.
+    public bool LoadHistoryIntoSystemInstruction { get; set; } = false;
+
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
     public bool GenerateAudioFile { get; set; } = true;

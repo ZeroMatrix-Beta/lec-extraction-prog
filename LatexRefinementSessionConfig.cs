@@ -22,14 +22,14 @@ public class LatexRefinementSessionConfig {
     public string SourceFolder { get; set; } = "";
     
     public RefinementStepConfig Step1MergeAndTimestamp { get; set; } = new RefinementStepConfig {
-        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\transcription\merge_instructions.md" }
+        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\merge-instructions\latex-part-merge-instruction.md" }
     };
 
     public RefinementStepConfig Step2SpeechRefinement { get; set; } = new RefinementStepConfig {
-        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\transcription\speech_refinement_instructions.md" }
+        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\speech-refinement\speech-refinement.md" }
     };
 
     public RefinementStepConfig Step3LastRefinement { get; set; } = new RefinementStepConfig {
-        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\transcription\last_refinement_instructions.md" }
+        SystemInstructionPaths = new[] { @"C:\Users\miche\latex\prompt-engineering\last-refinement\last-refinement.md" }
     };
 }
