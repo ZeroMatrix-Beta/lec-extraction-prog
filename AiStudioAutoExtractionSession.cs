@@ -318,11 +318,14 @@ public class AiStudioAutoExtractionSession {
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-        // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-        // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-        if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-            if (_config.ThinkingBudget.HasValue) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+        if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig();
+                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+                } else if (_config.ThinkingBudget.HasValue) {
+                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+                }
             }
         }
 
@@ -468,11 +471,14 @@ public class AiStudioAutoExtractionSession {
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
         }
-        // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-        // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-        if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-            if (_config.ThinkingBudget.HasValue) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+        if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig();
+                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+                } else if (_config.ThinkingBudget.HasValue) {
+                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+                }
             }
         }
 
@@ -604,6 +610,8 @@ public class AiStudioAutoExtractionSession {
         var producerTask = Task.Run(async () => {
             foreach (var file in files) {
                 string baseName = Path.GetFileNameWithoutExtension(file);
+                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                 // Create a file-specific output folder within the main target folder
                 string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
                 if (!Directory.Exists(fileSpecificOutputFolder)) {
@@ -701,8 +709,12 @@ public class AiStudioAutoExtractionSession {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
                     for (int i = 0; i < rawPartsWithTimes.Count; i++) {
                         string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
-                        if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
-                        System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
+                        
+                        if (!string.Equals(rawPartsWithTimes[i].FilePath, safePartPath, StringComparison.OrdinalIgnoreCase)) {
+                            if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
+                            System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
+                        }
+                        
                         safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
                     }
                     await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
@@ -725,6 +737,8 @@ public class AiStudioAutoExtractionSession {
             Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
             List<string> generatedTexFiles = new List<string>();
             string baseName = Path.GetFileNameWithoutExtension(file);
+            baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;
@@ -732,6 +746,27 @@ public class AiStudioAutoExtractionSession {
             bool fileProcessingSuccess = true;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
             Task audioExtractionTask = null;
+            Action startAudioTask = () => {
+                if (_config.GenerateAudioFile && audioExtractionTask == null) {
+                    string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
+                    bool useCachedAudio = false;
+                    if (System.IO.File.Exists(expectedAudioPath)) {
+                        TimeSpan audioCacheDuration = TimeSpan.FromHours(48);
+                        if ((DateTime.Now - System.IO.File.GetLastWriteTime(expectedAudioPath)) <= audioCacheDuration) {
+                            useCachedAudio = true;
+                        }
+                    }
+                    if (useCachedAudio) {
+                        Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei (jünger als 48h) gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
+                    } else {
+                        audioExtractionTask = Task.Run(async () => {
+                            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
+                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
+                            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
+                        });
+                    }
+                }
+            };
 
             for (int i = 0; i < partsWithTimes.Count; i++) {
                 string safePartPath = partsWithTimes[i].FilePath;
@@ -748,13 +783,7 @@ public class AiStudioAutoExtractionSession {
                     if (_config.GenerateOffsetFiles) {
                         fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.AdjustTimestamps(LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
                     }
-                    if (_config.GenerateAudioFile && audioExtractionTask == null) {
-                        audioExtractionTask = Task.Run(async () => {
-                            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
-                            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
-                        });
-                    }
+                    startAudioTask();
                     continue;
                 }
 
@@ -782,13 +811,7 @@ public class AiStudioAutoExtractionSession {
 
                     result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
 
-                    if (_config.GenerateAudioFile && audioExtractionTask == null) {
-                        audioExtractionTask = Task.Run(async () => {
-                            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
-                            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
-                        });
-                    }
+                    startAudioTask();
                 }
                 else {
                     // For the first part, no delay is needed, just upload and process.
@@ -800,13 +823,7 @@ public class AiStudioAutoExtractionSession {
                         break;
                     }
 
-                    if (_config.GenerateAudioFile && audioExtractionTask == null) {
-                        audioExtractionTask = Task.Run(async () => {
-                            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
-                            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
-                        });
-                    }
+                    startAudioTask();
 
                     result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
                 }
@@ -824,7 +841,19 @@ public class AiStudioAutoExtractionSession {
                     }
 
                     // Prepend the start time to the individual part .tex file
-                    string partHeader = $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n";
+                    string partHeader = $"% ==========================================\n" +
+                                        $"% AutoExtraction Source Part: {Path.GetFileName(safePartPath)}\n" +
+                                        $"% Model: {_config.Model}\n" +
+                                        $"% Temperature: {_config.Temperature}\n" +
+                                        $"% TopP: {_config.TopP}\n" +
+                                        $"% TopK: {_config.TopK}\n" +
+                                        $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
+                                        (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
+                                        (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
+                                        $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                                        $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
+                                        $"% Tokens (Input: {result.partInputTokens}, Output: {result.partOutputTokens})\n" +
+                                        $"% ==========================================\n\n";
                     string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
@@ -887,11 +916,22 @@ public class AiStudioAutoExtractionSession {
                 }
 
                 // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
+                // Warten, bis das Audio fertig ist, bevor das Refinement startet,
+                // da das Refinement die Audiodatei für die API benötigt!
+                if (audioExtractionTask != null) {
+                    Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...");
+                    await audioExtractionTask;
+                }
+
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
                 string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(_latexRefinementConfig?.ApiKeyEnvName ?? "API_KEY-latex-refinement") ?? "no-key";
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
-                string audioFilePath = Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
+                // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
+                // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
+                var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
+                string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault() 
+                                       ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
@@ -903,11 +943,6 @@ public class AiStudioAutoExtractionSession {
                     audioFilePath);
                 
                 await refinementSession.StartAsync();
-            }
-
-            if (audioExtractionTask != null) {
-                Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}...");
-                await audioExtractionTask;
             }
         }
 
@@ -953,13 +988,16 @@ public class AiStudioAutoExtractionSession {
 
         prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.";
 
-        if (partNumber > 1) {
+        if (partNumber == 1) {
+            prompt += "\n\nNote: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.";
+        } else {
             prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
         }
 
         prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
         prompt += "\n\nWhen in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
         prompt += "\n\nAfter transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.";
+        prompt += "\n\nCRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || !attachmentParts.Any()) return (false, null, new List<Part>());
@@ -992,13 +1030,22 @@ public class AiStudioAutoExtractionSession {
         history.Add(new Content { Role = "user", Parts = userPromptParts });
 
         var requestConfig = new GenerateContentConfig {
+            Temperature = _config.Temperature,
+            TopP = _config.TopP,
+            TopK = _config.TopK,
+            MaxOutputTokens = _config.MaxOutputTokens
         };
 
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
-        // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-        // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-        if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-            if (_config.ThinkingBudget.HasValue) requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+        if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig();
+                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+                } else if (_config.ThinkingBudget.HasValue) {
+                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+                }
+            }
         }
 
         string fullResponse = "";

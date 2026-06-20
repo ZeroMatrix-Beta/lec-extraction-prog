@@ -4,11 +4,13 @@
   "TargetFolder": "",
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "Temperature": 0.35,
-    "TopP": 0.8,
-    "TopK": 10,
+    "Temperature": 1.0,
+    "TopP": 0.95,
+    "TopK": 40,
     "MaxOutputTokens": 65535,
     "Model": "gemini-3.5-flash",
+    "ThinkingBudget": 65535,
+    "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\lecture-merging\\latex-part-merge-instruction.md"
     ],
@@ -16,11 +18,13 @@
   },
   "Step2SpeechRefinement": {
     "Enabled": true,
-    "Temperature": 0.7,
-    "TopP": 0.9,
-    "TopK": 30,
+    "Temperature": 1.0,
+    "TopP": 0.95,
+    "TopK": 40,
     "MaxOutputTokens": 65535,
     "Model": "gemini-3.5-flash",
+    "ThinkingBudget": 65535,
+    "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
@@ -28,11 +32,13 @@
   },
   "Step3LastRefinement": {
     "Enabled": true,
-    "Temperature": 0.7,
-    "TopP": 0.9,
-    "TopK": 30,
+    "Temperature": 1.0,
+    "TopP": 0.95,
+    "TopK": 40,
     "MaxOutputTokens": 65535,
     "Model": "gemini-3.5-flash",
+    "ThinkingBudget": 65535,
+    "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
     ],

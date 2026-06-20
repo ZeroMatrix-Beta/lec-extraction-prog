@@ -225,7 +225,12 @@ public class LatexRefinementSession {
     if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Any()) {
         var resolved = ExtractionHelpers.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
         foreach (var path in resolved) {
-             systemInstructionText += await System.IO.File.ReadAllTextAsync(path) + "\n\n";
+             if (System.IO.File.Exists(path)) {
+                 Console.WriteLine($"  [INFO] Lade System-Instruktion: {path}");
+                 systemInstructionText += await System.IO.File.ReadAllTextAsync(path) + "\n\n";
+             } else {
+                 Console.WriteLine($"  [WARNUNG] System-Instruktion nicht gefunden und übersprungen: {path}");
+             }
         }
     }
 
@@ -239,29 +244,118 @@ public class LatexRefinementSession {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstructionText } } };
     }
 
-    var history = new List<Content> { new Content { Role = "user", Parts = userPromptParts } };
+    if (stepConfig.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || stepConfig.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (stepConfig.ThinkingBudget.HasValue || !string.IsNullOrEmpty(stepConfig.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig();
+        if (!string.IsNullOrEmpty(stepConfig.ThinkingLevel)) {
+          requestConfig.ThinkingConfig.ThinkingLevel = stepConfig.ThinkingLevel;
+        } else if (stepConfig.ThinkingBudget.HasValue) {
+            requestConfig.ThinkingConfig.ThinkingBudget = stepConfig.ThinkingBudget;
+        }
+      }
+    }
 
-    Console.WriteLine($"\nSende Anfrage an Gemini ({stepConfig.Model})...");
+    // Inject completion marker constraint
+    var finalPromptParts = new List<Part>(userPromptParts);
+    finalPromptParts.Add(new Part { Text = "\n\nCRITICAL INSTRUCTION: When you have completely finished writing your response and there is nothing left to output, you MUST append the exact text '% [SYSTEM] Refinement complete' on a new line at the very end of your response. This is mandatory for the system to know you are done." });
 
-    string? fullText = await ApiResilience.ExecuteWithRetryAsync(
-        apiCall: async () => {
-          string responseText = "";
-          var responseStream = _client.Models.GenerateContentStreamAsync(stepConfig.Model, history, requestConfig);
-          await foreach (var chunk in responseStream) {
+    var history = new List<Content> { new Content { Role = "user", Parts = finalPromptParts } };
+
+    string fullResponseText = "";
+    int currentRequest = 1;
+    int maxRequests = 5;
+
+    using var cts = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+    Console.CancelKeyPress += cancelHandler;
+
+    while (true) {
+      Console.WriteLine($"\n  [API] Sende Anfrage an Gemini ({stepConfig.Model}) (Request {currentRequest}/{maxRequests})...");
+      string chunkResp = "";
+      bool callSuccess = false;
+
+      try {
+        callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+          streamFactory: () => _client.Models.GenerateContentStreamAsync(stepConfig.Model, history, requestConfig),
+          onChunkReceived: async (chunk) => {
             string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+            
+            if (string.IsNullOrEmpty(text) && chunk.Candidates != null && chunk.Candidates.Count > 0) {
+              Console.WriteLine($"\n[DEBUG] Empty text in chunk. FinishReason: {chunk.Candidates[0].FinishReason}");
+            }
+            
             Console.Write(text);
-            responseText += text;
-          }
-          return responseText;
-        },
-        maxRetries: 5,
-        retryContext: outputFileName
-    );
+            chunkResp += text;
+            await Task.CompletedTask;
+          },
+          cancellationToken: cts.Token,
+          retryContext: outputFileName
+        );
+      }
+      catch (Exception ex) {
+        Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+        Console.WriteLine($"Finaler Fehler: {ex.Message}");
+        break;
+      }
 
-    if (!string.IsNullOrEmpty(fullText)) {
+      if (!callSuccess) {
+        Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
+        break;
+      }
+
+      fullResponseText += chunkResp;
+
+      // Check for completion using the explicit marker we requested
+      bool isComplete = chunkResp.Contains("% [SYSTEM] Refinement complete", StringComparison.OrdinalIgnoreCase);
+      
+      if (isComplete) {
+          break;
+      }
+
+      if (currentRequest >= maxRequests) {
+        Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequests}) für dieses Refinement erreicht. Breche ab.");
+        break;
+      }
+
+      string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
+          $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp)}\n```\n\n" +
+          "Please \"continue\" exactly where you left off. Do not repeat what you already wrote.";
+
+      Console.WriteLine("\n  [Refinement] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
+      Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
+
+      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
+      history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+
+      Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+      if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
+          Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
+          break;
+      }
+
+      currentRequest++;
+    }
+
+    Console.CancelKeyPress -= cancelHandler;
+
+    if (!string.IsNullOrEmpty(fullResponseText)) {
       if (!Directory.Exists(targetOutputFolder)) Directory.CreateDirectory(targetOutputFolder);
       string outPath = Path.Combine(targetOutputFolder, outputFileName);
-      await System.IO.File.WriteAllTextAsync(outPath, fullText);
+      string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
+      
+      string fileHeader = $"% ==========================================\n" +
+                          $"% LatexRefinement Step Output: {outputFileName}\n" +
+                          $"% Model: {stepConfig.Model}\n" +
+                          $"% Temperature: {stepConfig.Temperature}\n" +
+                          $"% TopP: {stepConfig.TopP}\n" +
+                          $"% TopK: {stepConfig.TopK}\n" +
+                          $"% MaxOutputTokens: {stepConfig.MaxOutputTokens}\n" +
+                          (stepConfig.ThinkingBudget.HasValue ? $"% ThinkingBudget: {stepConfig.ThinkingBudget.Value}\n" : "") +
+                          (!string.IsNullOrEmpty(stepConfig.ThinkingLevel) ? $"% ThinkingLevel: {stepConfig.ThinkingLevel}\n" : "") +
+                          $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                          $"% ==========================================\n\n";
+
+      await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
       Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
       return outPath;
     }

@@ -9,6 +9,8 @@ public class RefinementStepConfig {
     public int TopK { get; set; } = 10;
     public int MaxOutputTokens { get; set; } = 65535;
     public string Model { get; set; } = "gemini-3.5-flash";
+    public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
+    public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
     public string[] SystemInstructionPaths { get; set; } = Array.Empty<string>();
     public string[] HistoryPreloadPaths { get; set; } = Array.Empty<string>();
 }

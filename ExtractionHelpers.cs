@@ -39,8 +39,17 @@ public static class ExtractionHelpers
   public static string CleanLatexResponse(string rawResponse)
   {
     string cleanTex = rawResponse;
-    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```latex\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-    cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+
+    // Extract content inside ```latex ... ``` if present, ignoring conversational text outside
+    var match = System.Text.RegularExpressions.Regex.Match(cleanTex, @"```(?:latex|tex)?\s*\n(.*?)\n```", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Singleline);
+    if (match.Success) {
+      cleanTex = match.Groups[1].Value;
+    } else {
+      // Fallback: just strip the markers if the regex fails to capture a clean block
+      cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```(?:latex|tex)?\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+      cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+    }
+
     // Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
     cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_|%)*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
     return cleanTex.Trim();

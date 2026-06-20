@@ -141,11 +141,14 @@ public class VertexAutoExtractionSession {
       if (!string.IsNullOrWhiteSpace(systemInstruction)) {
         requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
       }
-      // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-      // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-      if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-        if (_config.ThinkingBudget.HasValue) {
-          requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+      if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+          requestConfig.ThinkingConfig = new ThinkingConfig();
+          if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+              requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+          } else if (_config.ThinkingBudget.HasValue) {
+              requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+          }
         }
       }
 
@@ -329,6 +332,8 @@ public class VertexAutoExtractionSession {
     bool fileProcessingSuccess = true;
 
     string baseName = Path.GetFileNameWithoutExtension(file);
+    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     double fullOriginalVideoDuration = await toolkit.GetVideoDurationAsync(file); // Get original video duration for offset calculation
 
     string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
@@ -357,11 +362,23 @@ public class VertexAutoExtractionSession {
       Task audioExtractionTask = null;
       Action startAudioTask = () => {
         if (_config.GenerateAudioFile && audioExtractionTask == null) {
-          audioExtractionTask = Task.Run(async () => {
-            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-            await toolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
-            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
-          });
+          string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
+          bool useCachedAudio = false;
+          if (System.IO.File.Exists(expectedAudioPath)) {
+            TimeSpan audioCacheDuration = TimeSpan.FromHours(48);
+            if ((DateTime.Now - System.IO.File.GetLastWriteTime(expectedAudioPath)) <= audioCacheDuration) {
+              useCachedAudio = true;
+            }
+          }
+          if (useCachedAudio) {
+            Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei (jünger als 48h) gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
+          } else {
+            audioExtractionTask = Task.Run(async () => {
+              Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
+              await toolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
+              Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
+            });
+          }
         }
       };
       for (int i = 0; i < videoParts.Count; i++) {
@@ -401,7 +418,19 @@ public class VertexAutoExtractionSession {
           fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input {partInputTokens}, Output {partOutputTokens}) ---\n" + DocumentUtilities.LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // For offsetted output
         }
 
-        string partHeader = $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n";
+        string partHeader = $"% ==========================================\n" +
+                            $"% AutoExtraction Source Part: {Path.GetFileName(partFile)}\n" +
+                            $"% Model: {_config.Model}\n" +
+                            $"% Temperature: {_config.Temperature}\n" +
+                            $"% TopP: {_config.TopP}\n" +
+                            $"% TopK: {_config.TopK}\n" +
+                            $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
+                            (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
+                            (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
+                            $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                            $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
+                            $"% Tokens (Input: {partInputTokens}, Output: {partOutputTokens})\n" +
+                            $"% ==========================================\n\n";
         string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
         await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
         generatedTexFiles.Add(uniqueTargetPartPath);
@@ -507,6 +536,8 @@ public class VertexAutoExtractionSession {
 
   private async Task<List<(string FilePath, double StartTime)>> PrepareVideoPartsAsync(string file, FfmpegUtilities.FfmpegToolkit toolkit, string tmpFolder, double fullOriginalVideoDuration) {
     string baseName = Path.GetFileNameWithoutExtension(file);
+    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     var cachedParts = Directory.GetFiles(tmpFolder, $"{baseName}-part*.mp4").ToList();
     bool useCache = false;
 
@@ -608,12 +639,15 @@ public class VertexAutoExtractionSession {
 
     prompt += $"\n\nAs a reminder: You are currently transcribing Part {partIndex + 1} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.";
 
-    if (partIndex > 0) {
+    if (partIndex == 0) {
+        prompt += "\n\nNote: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.";
+    } else {
       prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
     }
 
     prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
     prompt += "\n\nTranscribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing script will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
+    prompt += "\n\nCRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.";
 
     var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
     if (!uploadSuccess || !attachmentParts.Any()) {
@@ -644,16 +678,21 @@ public class VertexAutoExtractionSession {
     contents.Add(new Content { Role = "user", Parts = userPromptParts });
 
     var requestConfig = new GenerateContentConfig {
-      Temperature = 0.0f,
-      MaxOutputTokens = 65535
+      Temperature = _config.Temperature,
+      TopP = _config.TopP,
+      TopK = _config.TopK,
+      MaxOutputTokens = _config.MaxOutputTokens
     };
 
     if (!string.IsNullOrWhiteSpace(systemInstruction)) requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstruction } } };
-    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-    if (_config.Model.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      if (_config.ThinkingBudget.HasValue) {
-        requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+    if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+        requestConfig.ThinkingConfig = new ThinkingConfig();
+        if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+            requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+        } else if (_config.ThinkingBudget.HasValue) {
+            requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+        }
       }
     }
 
