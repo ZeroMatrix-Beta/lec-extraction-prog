@@ -64,6 +64,36 @@ The pipeline supports both environments, but they handle payloads very different
 
 ---
 
+## 4.5 Authentication Setup
+
+Depending on which environment you are targeting, the application requires different authentication setups.
+
+### Google AI Studio (API Keys)
+The application dynamically resolves API keys from Windows Environment Variables. To set your keys permanently, run the following commands in PowerShell or Command Prompt:
+
+```powershell
+# Set your primary API key for the general sessions
+setx API_KEY-ai-studio-test-project-1 "YOUR_GEMINI_API_KEY"
+
+# Set a dedicated API key specifically for the LatexRefinementSession
+setx API_KEY_LatexRefinement "YOUR_GEMINI_API_KEY"
+```
+*(Note: You must restart your terminal and any open IDEs for `setx` changes to take effect.)*
+
+### Google Cloud Vertex AI (IAM Authentication)
+Vertex AI uses Google Cloud IAM (Identity and Access Management) instead of static API keys. You must have the Google Cloud SDK (`gcloud` CLI) installed.
+
+1. **Login and set your default application credentials:**
+   ```powershell
+   gcloud auth application-default login
+   ```
+2. **Set your active project** (Must match the `VertexProjectId` in your config):
+   ```powershell
+   gcloud config set project your-vertex-project-id
+   ```
+
+---
+
 ## 5. Pipeline Mechanics: FFmpeg & Overlapping Segments
 
 To transcribe a 90-minute lecture, sending the entire video at once often leads to context-window exhaustion or skipped details. The pipeline solves this via:
