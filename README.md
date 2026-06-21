@@ -21,6 +21,17 @@ It bridges the gap between local video preprocessing (FFmpeg) and cloud-based AI
 
 ---
 
+### 🎯 Target Use-Cases & Market Potential (AI generated)
+
+This pipeline solves a notoriously difficult problem that traditional closed-captioning systems fail at: converting highly technical, math-heavy video lectures into structured text. 
+
+- **Accessibility for Deaf and Hard of Hearing (DHH) Students:** Standard auto-captions fail at STEM subjects (e.g., calculus, physics). This tool parses visual blackboard formulas and audio simultaneously to output perfectly formatted LaTeX, helping universities comply with strict accessibility obligations.
+- **University "Lecture Capture" Integrations:** Easily runs alongside existing platforms (like Panopto or Echo360) to automatically process recorded lectures overnight, attaching beautifully formatted LaTeX PDFs to the video player by morning.
+- **Study Material Platforms (B2C):** A backend engine for consumer-facing apps where STEM students can paste a YouTube link (e.g., MIT OpenCourseWare) and receive a `.tex` file and compiled PDF.
+- **Textbook Publishers & EdTech:** Allows platforms with massive back-catalogs of educational video content to automatically generate high-quality textbook companions, study guides, or supplementary reading materials.
+
+---
+
 ### 🧠 Codebase Philosophy: Dual-Commenting
 
 This project is built for human-AI collaboration. To ensure long-term maintainability, the codebase utilizes a strict dual-commenting paradigm:
@@ -90,6 +101,17 @@ Es schlägt die Brücke zwischen lokaler Videovorverarbeitung (FFmpeg) und cloud
 - **FFmpeg Token-Optimierung:** Komprimiert Videos auf 1 FPS (ideal für Tafeln) und mischt Audio zu Mono ab, was API-Tokens, Cloud-Speicherkosten und Upload-Zeit spart.
 - **Flexible Extraktions-Optionen:** Aktiviere `GenerateOffsetFiles` für automatisch zeitkorrigierte LaTeX-Stücke, oder nutze `GenerateAudioFile`, um vor der Verarbeitung eine komplette AAC der Vorlesung zu exportieren.
 - **Interaktive REPL:** Chatte direkt mit den Modellen. Nutze den Befehl `/attach`, um Code, PDFs oder große Videos direkt in den Kontext des Modells zu laden.
+
+---
+
+### 🎯 Zielgruppen & Marktpotenzial
+
+Diese Pipeline löst ein notorisch schwieriges Problem, an dem traditionelle Untertitelsysteme scheitern: die Umwandlung hochtechnischer, mathematiklastiger Vorlesungsvideos in strukturierten Text.
+
+- **Barrierefreiheit für gehörlose und schwerhörige (DHH) Studierende:** Standard-Untertitel versagen bei MINT-Fächern (z. B. Analysis, Physik). Dieses Tool analysiert visuelle Tafelbilder und Audio gleichzeitig, um perfekt formatiertes LaTeX auszugeben, was Universitäten hilft, ihre strengen Verpflichtungen zur Barrierefreiheit zu erfüllen.
+- **Integration in universitäre "Lecture Capture"-Systeme:** Kann problemlos parallel zu bestehenden Plattformen (wie Panopto oder Echo360) betrieben werden, um aufgezeichnete Vorlesungen über Nacht automatisch zu verarbeiten und bis zum nächsten Morgen formatierte LaTeX-PDFs an den Videoplayer anzuhängen.
+- **Plattformen für Lernmaterialien (B2C):** Eine Backend-Engine für kundenorientierte Apps, bei denen MINT-Studierende einen YouTube-Link (z. B. MIT OpenCourseWare) einfügen können und eine `.tex`-Datei sowie ein kompiliertes PDF erhalten.
+- **Schulbuchverlage & EdTech:** Ermöglicht es Plattformen mit massiven Archiven an Video-Lerninhalten, automatisch hochwertige Lehrbuchbegleiter, Studienführer oder ergänzende Lesematerialien zu generieren.
 
 ---
 

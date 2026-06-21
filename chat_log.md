@@ -3503,3 +3503,682 @@ Ohne diese Einschränkung könnte man falsche Schlüsse ziehen: Angenommen $\Phi
 
 *(Tokens: Input 280514, Output 7751)*
 ---
+
+**AutoExtraction:** [Part 2] 02-24-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 02-24-tuesday-part2.mp4
+[Kontext-Dateien]: 02-24-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from , 02-24-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture. This specific video segment is exactly 32 minutes and 08 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 32 minutes and 08 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+CRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.
+
+**gemini-3.5-flash:** % ==========================================
+% AutoExtraction Source Part: 02-24-tuesday-part2.mp4
+% Model: gemini-3.5-flash
+% ThinkingLevel: HIGH
+% Processed on: 2026-06-21 21:27:00
+% PART_START_SECONDS: 0.00
+% ==========================================
+
+% End of the video: 00:32:08
+
+\section{Einführung in die formale Beweisführung (Fortsetzung)}
+\subsection{Formale Beweise und Notation}
+
+\begin{spoken-clean}[00:00:00 - 00:01:31]
+...beweisbar ist. Und eine solche, äh, Folge von Formeln heisst ein Beweis. 
+
+Also, die... die Sequenz $\varphi_0$ bis $\varphi_n$ ist ein formaler Beweis von $\psi$ aus $\Phi$.
+
+Okay, jetzt, die Sorge ist, $\Phi$, das darf auch leer sein. Also, da haben wir nicht gesagt, dass da Formeln drin sein müssen. Also, es darf durchaus leer sein. Und wenn das leer ist, dann schreiben wir es auch gar nicht hin. Also, falls $\Phi$ leer ist, schreiben wir, ähm, einfach nichts auf der linken Seite und, äh, da schreiben wir $\vdash \psi$ hin, anstatt $\emptyset \vdash \psi$.
+
+Okay, und falls es keinen formalen Beweis von $\psi$ aus $\Phi$ gibt, so schreiben wir, ja, man kann $\psi$ nicht aus $\Phi$ beweisen (i.e., $\Phi \not\vdash \psi$).
+\end{spoken-clean}
+
+\begin{math-stroke}
+Die Sequenz $\varphi_0, \dots, \varphi_n$ ist ein \newterm{formaler Beweis} von $\psi$ aus $\Phi$.
+
+Falls $\Phi = \emptyset$ (leer) ist, schreiben wir:
+\[
+\vdash \psi \quad \text{anstatt} \quad \emptyset \vdash \psi
+\]
+
+Falls es keinen formalen Beweis von $\psi$ aus $\Phi$ gibt, so schreiben wir:
+\[
+\Phi \not\vdash \psi
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:31 - 00:03:43]
+Gut, das ist ein formaler Beweis. 
+
+Jetzt muss man sich die Sache ein bisschen wieder überlegen. Es ist ein bisschen... es wirkt vielleicht ein bisschen problematisch a priori, weil wir haben da vielleicht, ähm, wir verwenden da schon, okay, es gibt da eine Sequenz, also eine endliche Sequenz, $n$ ist irgendeine ganze Zahl, wir sagen, es gibt eine solche Sequenz. Äh, wir sagen da schon, das eine ist kleiner, wir verwenden, \qt{es gibt keine} und so weiter. Das sind alles eigentlich schon logische Begriffe, die wir verwenden, und die formalisieren wir ja genau hier.
+
+Aber man kann halt nicht endlos... man kann nicht endlos formalisieren. Irgendwann beisst sich die Schlange in den Schwanz. Deswegen, wir haben hier eine gewisse, ja, naive, ähm, naive Begriffe davon, die wir gar nicht definieren. Eine naive Idee davon, was eine Menge ist, ein naiver, ähm, Begriff davon, was eine endliche Zahl ist, und halt auch unser Denken. Also, das sind so wie... diese gewissen Argumente — wir werden dann noch weitere haben — sind sogenannte metamathematische Argumente, also so wie Metaphysik. Das hier ist Meta... Metamathematik. Also, wir schauen, wie... wir gehen einen Schritt zurück, und jetzt schauen wir von aussen auf die Mathematik. Aber dieses einen Schritt zurückgehen, ähm, müssen wir machen, um dann halt die korrekte Formalität aufzubauen.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Metamathematik und der unendliche Regress]
+Der Dozent spricht ein fundamentales erkenntnistheoretisches Problem der mathematischen Logik an: Um ein formales System (die Objektsprache) rigoros zu definieren, benötigt man bereits eine Sprache und logische Prinzipien (die Metasprache). Da man nicht unendlich viele Meta-Ebenen einführen kann, ohne in einen unendlichen Regress zu geraten (\qt{die Schlange beisst sich in den Schwanz}), müssen wir auf der Meta-Ebene bestimmte intuitive, naive Begriffe (wie endliche Sequenzen, Mengen und logische Schlüsse) als gegeben voraussetzen.
+\end{didactic-insight>
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:03:43
+% topic: Definition der formalen Beweisbarkeit und metamathematische Konzepte
+% board_state: Definition des formalen Beweises und der Symbole \vdash und \not\vdash
+% next_goal: Erstes Beispiel eines formalen Beweises (\varphi \to \varphi)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Ein erstes Beweisbeispiel}
+
+\begin{spoken-clean}[00:03:43 - 00:04:59]
+Gut. Machen wir doch ein Beispiel von so einem, ähm, von so einem formalen Beweis. Und da sehen wir schon, das ist eine sehr mühselige Sache, um auch schon nur einfache Sachen zu beweisen.
+
+Also, sei, ähm, $\varphi$ eine Formel. Und die Formel, die wir jetzt beweisen wollen, ist, ähm, $\varphi \to \varphi$.
+
+Okay, das war keine... das war keines unserer Axiome, oder? Ähm, das heisst, das müssen wir beweisen, wenn wir das verwenden wollen.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Die logischen Axiome]
+Der Dozent projiziert die Folie mit den logischen Axiomen $L_0$ bis $L_9$ an die Wand, um die Axiome für den Beweis von $\varphi \to \varphi$ nachzuschlagen.
+\end{meta-note}
+
+\begin{spoken-clean}[00:04:59 - 00:07:02]
+Und das heisst jetzt, um das zu beweisen, müssen wir so eine endliche Sequenz von, ähm, Formeln finden.
+
+Okay, und da beginnen wir mit, ähm, $\varphi_0$. Da nehmen wir jetzt eine Instanziierung vom Axiom, ähm, Axiomenschema L1. Schauen wir uns das nochmals kurz an. Es wäre gut, da nebenan so eine Liste zu haben mit allen Axiomen.
+
+Also, wir hatten, ähm... wir hatten L1, das wissen wir, das ist $\varphi \to (\psi \to \varphi)$, wobei $\varphi$ und $\psi$ beliebige Formeln sind. Und was wir jetzt tun, ist, wir nehmen, ähm... ah, nein, wir wollen... das kommt erst nachher, äh, das ist schon das Eins. Wir wollen zuerst das... Instanziierung von L2. L2 ist auch kompliziert, da haben wir, ähm... da haben wir $(\psi \to (\varphi_1 \to \varphi_2)) \to ((\psi \to \varphi_1) \to (\psi \to \varphi_2))$. Okay, und da nehmen wir jetzt einfach für alle Formeln nehmen wir $\varphi$.
+
+Also, da schreiben wir jetzt hin, ähm, $(\varphi \to ((\varphi \to \varphi) \to \varphi)) \to ((\varphi \to (\varphi \to \varphi)) \to (\varphi \to \varphi))$ (i.e., wobei wir $\psi \equiv \varphi$, $\varphi_1 \equiv \varphi \to \varphi$ und $\varphi_2 \equiv \varphi$ in $L_2$ gesetzt haben). Und... ähm, die Klammern, äh, richtig... richtig setzen... impliziert, ähm, $\varphi \to \varphi$. Okay, das ist eine Instanziierung von L2.
+\end{spoken-clean}
+
+\begin{student-interaction}[Frage eines Studenten zur Beweisfindung]
+Wie kommt man denn überhaupt darauf, dass man das so ansetzt?
+\end{student-interaction}
+
+\begin{spoken-clean}[00:07:02 - 00:07:58]
+Ah, nein, das... das muss man... da muss man sich hinsetzen, konzentrieren, ausprobieren. Ich glaube nicht, dass es da gute... also, ich glaube, da gibt's keine guten Rezepte, um das zu machen.
+
+Genau, also für $\varphi_1$ haben wir $\varphi$ impliziert $\varphi$ genommen, und für $\psi$ haben wir $\varphi$ genommen, für $\varphi_2$ haben wir $\varphi$ genommen. Dann ist das... Habe ich das richtig hingeschrieben oder habe ich etwas vergessen? Kurz... Ja.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:07:58 - 00:11:12]
+Gut. Jetzt, $\varphi_1$, habe ich schon vorher genannt, da nehmen wir jetzt eine Instanz von, ähm, L1. Da nehmen wir einfach $\varphi \to ((\varphi \to \varphi) \to \varphi)$. Okay, das ist eine Instanziierung von L1.
+
+Okay, auch da wieder haben wir für $\psi$ (i.e., in der Formel $L_1$) genommen, ähm, $\varphi \to \varphi$. Und, äh, für $\psi$ haben wir $\varphi$ genommen, für $\varphi_2$ haben wir $\varphi$ genommen, dann ist das... Habe ich das richtig hingeschrieben oder habe ich etwas vergessen? Kurz... Ja.
+
+\inlinemetanote{schreibt an die Tafel}
+
+Gut, das ist... das folgt aus $\varphi_0$ und $\varphi_1$ durch Modus Ponens. Okay, und jetzt nehmen wir, ähm, $\varphi_3$, nehmen wir nochmals $\varphi \to (\varphi \to \varphi)$. Das ist nochmals eine Instanz von L1, diesmal einfach alles mit $\varphi$.
+
+Okay, und jetzt können wir, ähm... genau, jetzt sehen wir, können wir wieder den Modus Ponens anwenden, also nehmen wir das hier, und wir wissen, dass das das impliziert, das heisst, wir haben jetzt $\varphi_4$ ist, ähm, $\varphi \to \varphi$. Und das folgt, ähm, aus $\varphi_2$ und $\varphi_3$ durch Modus Ponens.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis der Identität \texorpdfstring{$\varphi \to \varphi$}{phi -> phi}]
+Wir beweisen die Formel $\varphi \to \varphi$ ohne Voraussetzungen, d.h. $\vdash \varphi \to \varphi$.
+
+Der formale Beweis besteht aus der folgenden Sequenz $\varphi_0, \varphi_1, \varphi_2, \varphi_3, \varphi_4$:
+\begin{align}
+\varphi_0 &\equiv \bigl(\varphi \to ((\varphi \to \varphi) \to \varphi)\bigr) \to \Bigl(\bigl(\varphi \to (\varphi \to \varphi)\bigr) \to (\varphi \to \varphi)\Bigr) \label{eq:id_proof_step0} \\
+& \quad && \text{(Instanziierung von } L_2 \text{ mit } \psi \equiv \varphi, \varphi_1 \equiv \varphi \to \varphi, \varphi_2 \equiv \varphi) \nonumber \\
+\varphi_1 &\equiv \varphi \to ((\varphi \to \varphi) \to \varphi) \label{eq:id_proof_step1} \\
+& \quad && \text{(Instanziierung von } L_1 \text{ mit } \psi \equiv \varphi \to \varphi) \nonumber \\
+\varphi_2 &\equiv \bigl(\varphi \to (\varphi \to \varphi)\bigr) \to (\varphi \to \varphi) \label{eq:id_proof_step2} \\
+& \quad && \text{(folgt aus } \varphi_0 \text{ und } \varphi_1 \text{ durch Modus Ponens)} \nonumber \\
+\varphi_3 &\equiv \varphi \to (\varphi \to \varphi) \label{eq:id_proof_step3} \\
+& \quad && \text{(Instanziierung von } L_1 \text{ mit } \psi \equiv \varphi) \nonumber \\
+\varphi_4 &\equiv \varphi \to \varphi \label{eq:id_proof_step4} \\
+& \quad && \text{(folgt aus } \varphi_2 \text{ und } \varphi_3 \text{ durch Modus Ponens)} \nonumber
+\end{align}
+
+\begin{explanation-of-steps}
+Diese Sequenz zeigt, wie selbst die trivialste Aussage $\varphi \to \varphi$ im formalen System der Prädikatenlogik erster Stufe explizit hergeleitet werden muss. Jede Zeile ist entweder eine Instanziierung eines logischen Axioms oder folgt aus vorherigen Zeilen mittels der Schlussregel Modus Ponens. Am Ende steht die gewünschte Formel $\varphi_4 \equiv \varphi \to \varphi$.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:11:12
+% topic: Durchführung des formalen Beweises von \varphi \to \varphi
+% board_state: Der komplette 5-Schritt-Beweis an der Tafel
+% next_goal: Vorstellung der fachdidaktischen Studie (Cornelia Busch)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:11:12 - 00:12:24]
+Gut, und das ist natürlich sehr... also ist in der Praxis natürlich sehr mühsam, um zu zeigen, dass selbst so einfache Sachen bewiesen werden können, weil es ist manchmal ein bisschen mühsam wirklich einen Beweis zu konstruieren, einen expliziten. Und es ist viel einfacher, wenn man, ähm, andere Sätze hat, die einem helfen.
+
+Schauen wir uns ein paar Beispiele an diesbezüglich... Ah, nein, jetzt machen wir erst die Pause, und wir haben heute einen Gast hier.
+\end{spoken-clean}
+
+\section{Gastvortrag: Fachdidaktische Studie zum Übergang von der Schule zur Hochschule}
+
+\begin{spoken-clean}[00:12:24 - 00:14:06]
+Also, hallo allerseits. Vielleicht erinnern sich einige an den letzten Herbst, da war ich in Ihrer Vorlesung Analysis 1, und jetzt komme ich mal hierhin, weil ich suche noch Mathematiker für meine Studie. Und ich dachte, dieses hier ist der beste Rahmen dafür, um Werbung zu machen und um gezielt Mathematik... Mathematikstudierende anzusprechen.
+
+Und erstmal, wer bin ich, für die, die mich damals nicht gesehen haben: Mein Name ist Cornelia Busch. Ich arbeite hier am Mathematikdepartement in der Administration und in der Lehre. Und ich bin aber auch Studentin. Also, ich habe Mathematik mal hier studiert, genau in diesem Hörsaal auch, und da waren so ungefähr so viele Studenten, wie Sie heute sind, vielleicht noch ein kleines Paar mehr, aber mit den Physikern zusammen. So ist die Anzahl der Studierenden gewachsen.
+
+Also, ich habe Mathematik an der ETH studiert hier, und auch hier promoviert, und mich dann an der Katholischen Universität Eichstätt-Ingolstadt in Bayern habilitiert. Und jetzt mache ich aus Interesse, wie sind die Schwierigkeiten beim Mathematiklernen, mache ich ein Masterstudium in Fachdidaktik Mathematik an der Pädagogischen Hochschule Zürich, und das ist ein Joint Master mit der ETH zusammen, weil die Pädagogische Hochschule kann nicht alleine ein Masterstudiengang anbieten. Und jetzt bin ich im... im Stadium angekommen, wo ich fast mit dem Studium fertig bin, ich muss also nur noch meine Masterarbeit schreiben.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Thema der Studie]
+Auf den Folien wird das Thema der Studie vorgestellt: \qt{Schulmathematik $\neq$ Hochschulmathematik — Wie ist der Übergang?}.
+\end{meta-note}
+
+\begin{spoken-clean}[00:14:06 - 00:15:25]
+Und dafür mache ich eine Studie, die zum Übergang von der Schule zur Hochschule ist. Und ich möchte wissen, wie Sie den Übergang empfinden und wo die Studierenden, die im ersten beziehungsweise jetzt im zweiten Semester sind, Schwierigkeiten haben.
+
+Und was habe ich vor? Also, ich mache Interviews von sechs bis acht Studentinnen und Studenten, und ich habe bereits fünf Interviews geführt, das heisst, mir fehlen noch ein paar. Und die Länge der Interviews is circa 30 bis 45 Minuten, das heisst, ich habe jetzt gemerkt, dass es eher in Richtung 40 Minuten geht.
+
+Und ich mache Tonaufnahmen, und ich verwende dafür auch noch meinen Tablet-Computer. Das heisst, das Bild, was auf dem Tablet geschrieben wird — also Sie schreiben dann eventuell was auf dem Tablet oder ich auch während des Interviews, das heisst, wenn man was notieren will — wird das auf dem Tablet geschriebene direkt gefilmt. Das hat den Vorteil, dass man keine Gesichter sieht. Also, man sieht Sie gar nicht auf diesen Aufnahmen. Und Ihre Lehrpersonen erfahren auch nicht, wer was gesagt hat. Weder Lob noch Tadel, sie erfahren es nicht.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Nutzen und Zielgruppe der Studie]
+Die Folien zeigen den Nutzen der Studie (Weiterentwicklung der Lehre, kleine Belohnung) sowie die gesuchten Teilnehmer (6-8 Mathematik- oder Physikstudierende im 1. bzw. 2. Semester; aktuell fehlen vor allem Mathematiker).
+\end{meta-note}
+
+\begin{spoken-clean}[00:15:25 - 00:16:36]
+Und was ist der Nutzen? Sie helfen dabei, die Lehre weiterzuentwickeln. Also, wir möchten natürlich den Übergang von der Schule an die ETH oder an eine Universität möglichst reibungslos gestalten. Und es gibt auch eine kleine Belohnung.
+
+Und wen suche ich? Also, insgesamt sechs bis acht Mathematik- oder Physikstudierende. Bis jetzt habe ich einige Physikstudierende interviewt, im ersten beziehungsweise jetzt im zweiten Semester, und aktuell fehlen mir noch mindestens drei Mathematikstudierende. Aber wenn Sie noch Physikerkollegen haben, die gerne teilnehmen möchten, können Sie ihnen das auch sagen.
+\end{spoken-clean}
+
+\begin{meta-note}[Projizierter Inhalt: Kontaktinformationen]
+Die Folie zeigt die Kontakt-E-Mail-Adressen (cornelia.busch@stud.phzh.ch oder cornelia.busch@math.ethz.ch) sowie das Büro (HG G 34.2).
+\end{meta-note}
+
+\begin{spoken-clean}[00:16:36 - 00:17:48]
+Und wie können Sie teilnehmen? Sie melden sich jetzt bei mir, und wahrscheinlich am besten unter meiner Mathematikdepartement-Adresse, also cornelia.busch@math.ethz.ch. Ich habe auch ein Büro, das ist das HG G 34.2, das ist in der Richtung, da Seite, äh, Unispital.
+
+Also, Sie können sich per Mail bei mir melden, oder sich jetzt auch in die Liste eintragen. Und ich würde Sie dann kontaktieren. Wann sind die Interviews? In der... wahrscheinlich in zwei Wochen, so dass ich Sie dann kontaktiere, die Interviews plane, um sie dann in zwei Wochen durchzuführen.
+
+Also, ich wäre froh, wenn sich ein paar Mutige melden. Es braucht keinen Mut, also es kann nichts schiefgehen bei den Interviews. Ich möchte einfach wissen, wo Sie Schwierigkeiten haben, und stelle Ihnen dazu ein paar Fragen.
+
+Okay, dann mal danke für die Aufmerksamkeit, und wer sich melden möchte, jetzt in der Pause kann das gerne, oder auch per Mail.
+\end{spoken-clean}
+
+\begin{meta-note}[Publikumsreaktion und Pause]
+Das Publikum applaudiert. Es folgt eine kurze Pause, in der sich Studierende für die Studie eintragen können.
+\end{meta-note}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:17:48
+% topic: Vorstellung der fachdidaktischen Studie durch Cornelia Busch
+% board_state: Der komplette Beweis von \varphi \to \varphi ist noch an der Tafel
+% next_goal: Fortführung der Vorlesung mit dem Deduktionstheorem (DT)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:17:48 - 00:18:40]
+Genau, also melden Sie sich einfach noch bei Cornelia Busch per E-Mail, wenn Sie da gerne mitmachen wollen. Es ist manchmal nicht schlecht mit jemandem zu reden über die Erfahrungen mit formalen Beweisen. Und eben, es ist anonym, Sie dürfen gerne sagen, dass das ein Schmarrn ist, was wir in dieser Vorlesung machen, und ich werde das nicht... nicht erfahren.
+
+Gut, aber jetzt zum... weiter zu den formalen Beweisen.
+\end{spoken-clean}
+
+\section{Das Deduktionstheorem (DT)}
+
+\begin{spoken-clean}[00:18:40 - 00:22:33]
+Sie sehen schon, sehr einfache... schon sehr einfache Statements können sehr mühsam sein zu beweisen mit diesen formalen Dingen, aber es ist gut, das einmal zu tun.
+
+Gut, wir... ich möchte jetzt noch ein... kurz über das Deduktionstheorem, ähm, erwähnen, weil das nützlich ist, das dürfen Sie auch verwenden. Wir schreiben oft einfach DT. Okay, das ist eine... folgliche Schreibweise von Lorenzens Schreibweisen, die verwendet er auch in seinem Buch mit, ähm, Regler-Kraft.
+
+Das ist jetzt alles in Grossbuchstaben, das ist ein sogenanntes metamathematisches Theorem. Also, das ist jetzt kein... kein Satz mit einem formalen Beweis im Sinn vom formalen Beweis, wie wir es jetzt gemacht haben, sondern es ist ein Satz über das formale Beweisen. Okay? Also, das heisst, es ist wieder... hier nehmen wir einen Schritt zurück und beweisen etwas über das Beweisen.
+
+Und das sagt das Folgende aus: Sei Gross-$\Phi$ eine menge von Formeln. Und falls jetzt gilt, dass... jetzt machen wir $\Phi + \{\psi\}$, also das ist einfach die Menge, wo wir $\Phi$ nehmen, wo wir noch $\psi$ dazunehmen (i.e., wir schreiben kurz $\Phi, \psi$). Okay, und wenn jetzt man daraus beweisen kann, dass eine, ähm, andere Formel $\varphi$ beweisbar ist (i.e., $\Phi, \psi \vdash \varphi$), so gilt auch, dass man aus Gross-$\Phi$ beweisen kann, dass $\psi \to \varphi$ gilt (i.e., $\Phi \vdash \psi \to \varphi$).
+
+Okay, das ist relativ... ist relativ einleuchtend, oder? Wenn man mit $\Phi$ und $\psi$ zusammen $\varphi$ beweisen kann, dann kann man mit $\Phi$ beweisen, dass aus $\psi$ die Formel $\varphi$ folgt.
+
+Und umgekehrt, ähm, gilt auch: Falls man aus $\Phi$ beweisen kann, dass $\psi \to \varphi$ gilt, so gilt auch, dass $\Phi$ zusammen mit $\psi$ die Formel $\varphi$ beweist.
+\end{spoken-clean}
+
+\begin{nice-box}[Das Deduktionstheorem]
+\begin{theorem}[Deduktionstheorem -- DT]\label[theorem]{thm:deduktionstheorem}
+Sei $\mathcal{L}$ eine Signatur, $\Phi$ eine Menge von $\mathcal{L}$-Formeln und seien $\psi, \varphi$ beliebige $\mathcal{L}$-Formeln. Dann gilt:
+\begin{equation}
+\label{eq:deduktionstheorem}
+\Phi, \psi \vdash \varphi \iff \Phi \vdash \psi \to \varphi
+\end{equation}
+\end{theorem}
+
+\begin{explanation-of-steps}
+Das Deduktionstheorem ist ein \newterm{metamathematisches Theorem} (daher in Grossbuchstaben an der Tafel geschrieben). Es ist kein formaler Beweis innerhalb des Kalküls, sondern ein Satz \emph{über} den Kalkül. Es erlaubt uns, eine Prämisse $\psi$ auf die rechte Seite des Ableitungsoperators als Implikation $\psi \to \varphi$ zu verschieben und umgekehrt, was formale Beweise in der Praxis drastisch vereinfacht.
+\end{explanation-of-steps}
+\end{nice-box}
+
+\begin{spoken-clean}[00:22:33 - 00:24:43]
+Gut, und der, ähm, Beweis davon ist nicht so schwierig, aber ich möchte nicht, ähm, zu viel Zeit der Vorlesung mit diesen... mit diesen Fragen verwenden. Deswegen verweise ich einfach auf das Skript, dürfen Sie gerne nachlesen, ist aber nicht obligatorisch.
+
+Das ist wirklich so, wie man es denkt. Es ist auch kein irgendwie ausgeklügelter Beweis. Da macht man wirklich so, ja, man schreibt einfach direkt: Wenn man einen solchen Beweis hat (i.e., für $\Phi, \psi \vdash \varphi$), dann kann man aus diesem Beweis einen solchen Beweis (i.e., für $\Phi \vdash \psi \to \varphi$), ähm, konstruieren. Und umgekehrt: Wenn man einen solchen Beweis hat, dann kann man daraus einen solchen Beweis konstruieren. Weil das ein direktes Rezept ist, das heisst, es ist keine logisch problematische Sache dahinter.
+
+\inlinemetanote{schreibt an die Tafel}
+
+Okay, jetzt verwenden wir dann das Deduktionstheorem, um noch weitere Sachen zu beweisen. Das Nächste, was wir noch als Beispiel, ähm, anschauen, ist noch Relationen.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:24:43
+% topic: Metatheorie und Bedeutung des Deduktionstheorems
+% board_state: Deduktionstheorem (DT) vollständig an der Tafel
+% next_goal: Einführung von Äquivalenzrelationen am Beispiel des Gleichheitszeichens
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\section{Äquivalenzrelationen und Gleichheit}
+\subsection{Definition einer Äquivalenzrelation}
+
+\begin{spoken-clean}[00:24:43 - 00:28:35]
+Also, sei nun, ähm, $R$ eine binäre Relation, also eine zweistellige Relation. Und, ähm, wir sagen jetzt, $R$ ist eine \newterm{Äquivalenzrelation}. Ich hoffe, das haben Sie schon in anderen Vorlesungen gesehen, aber es ist gut, das oft zu sehen, weil das ein wichtiges Konzept ist in der Mathematik.
+
+Äm, falls gilt... Okay, was sind die Axiome für eine Äquivalenzrelation? Ja?
+\end{spoken-clean}
+
+\begin{student-interaction}[Antwort eines Studenten]
+Reflexivität, Symmetrie und Transitivität.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, also für alle $x$ haben wir $x$, also $x$ steht in Relation zu sich selbst (i.e., $x R x$). Genau, es ist reflexiv.
+
+Das zweite ist, ja? Symmetrie, genau. Also, wir haben für alle $x$, für alle $y$, wenn $x R y$ gilt, impliziert das $y R x$. Es ist symmetrisch.
+
+Und das dritte wäre noch, ja? Transitivität, genau. Das ist... oft das schwierigste zu beweisen. Also, das ist: für alle $x$, für alle $y$, für alle $z$ folgt aus $x R y$ und $y R z$, dass $x R z$ steht. Genau.
+
+Das sind diese drei Bedingungen in Formelsprache. Genau. Und es ist, ja, Sie sind dann schon sehr geläufig mit dieser Art von Formeln zu lesen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition einer Äquivalenzrelation]
+Sei $R$ ein zweistelliges (binäres) Relationssymbol. $R$ ist eine \newterm{Äquivalenzrelation}, falls die folgenden drei Eigenschaften bewiesen werden können:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \textbf{Reflexivität:}
+    \[
+    \forall x \, (x R x)
+    \]
+    \setcounter{enumi}{1} \item \textbf{Symmetrie:}
+    \[
+    \forall x \, \forall y \, (x R y \to y R x)
+    \]
+    \setcounter{enumi}{2} \item \textbf{Transitivität:}
+    \[
+    \forall x \, \forall y \, \forall z \, \bigl((x R y \land y R z) \to x R z\bigr)
+    \]
+\end{enumerate}
+\end{math-stroke}
+
+\subsection{Beweis der Eigenschaften der Gleichheitsrelation}
+
+\begin{spoken-clean}[00:28:35 - 00:32:08]
+\inlinemetanote{Ein Student zeigt auf die Tafel}
+\end{spoken-clean}
+
+\begin{student-interaction}[Frage eines Studenten zum Transitivitäts-Axiom]
+Ist das ein \qt{und} oder ein \qt{impliziert}?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ah, ja, danke, danke, danke. Und, und... Genau.
+
+\inlinemetanote{korrigiert das Symbol an der Tafel zu $\land$}
+
+Genau. Okay, was wir jetzt zeigen wollen, ist... wir wollen jetzt gerne zeigen, dass die Gleichheit, also das logische Gleichheitszeichen \qt{=}, eine Äquivalenzrelation ist.
+
+Wir zeigen zuerst: \qt{=} ist reflexiv.
+
+Okay, das ist jetzt wieder... das ist jetzt relativ einfach. Also, reflexiv kann man relativ direkt zeigen. Also, wir wissen, $\varphi_0$ ist $x = x$, oder? Das haben wir gesehen in den Axiomen. Also, das ist eine Instanziierung von, ähm, L14 oder so, das ist relativ... Und jetzt ist das aber noch nicht, was wir zeigen wollen. Wir wollen zeigen, dass für alle $x$ gilt $x = x$. Okay, aber das können wir daraus jetzt einfach ableiten durch Verallgemeinerung, genau. Als $\varphi_1$, da haben wir jetzt für alle $x$ ist $x = x$. Das folgt aus $\varphi_0$ durch Verallgemeinerung.
+
+Gut. Jetzt wollen wir aber, was etwas mühsamer ist, ist jetzt zu zeigen, dass es symmetrisch ist. Und dazu zeigen wir zuerst, dass aus $x = y$ — aus dieser Formel, aus dieser Menge von Formeln — kann man zeigen, $y = x$ (i.e., $\{x = y\} \vdash y = x$). Und dann nachher verwenden wir das Deduktionstheorem, um daraus zu schliessen, dass $x = y \to y = x$ (i.e., $\vdash x = y \to y = x$) und dann durch Verallgemeinerung wieder für alle $x, y$ folgt das. Okay, aber auch schon so etwas Harmloses ist ein bisschen eine mühsame Geschichte.
+
+Gut. Was wir jetzt nehmen, ist, wir nehmen $\varphi_0$. Da nehmen wir jetzt eine Instanziierung diesmal von L15. Da schreiben wir jetzt $(x = y \land x = x) \to (x = x \to y = x)$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis der Reflexivität von \texorpdfstring{$=$}{=}]
+Wir zeigen: $\vdash \forall x \, (x = x)$.
+
+Der formale Beweis besteht aus der folgenden Sequenz $\varphi_0, \varphi_1$:
+\begin{align}
+\varphi_0 &\equiv x = x \label{eq:eq_refl_step0} \\
+& \quad && \text{(Instanziierung von } L_{14} \text{ mit } \tau \equiv x) \nonumber \\
+\varphi_1 &\equiv \forall x \, (x = x) \label{eq:eq_refl_step1} \\
+& \quad && \text{(folgt aus } \varphi_0 \text{ durch Verallgemeinerung (V))} \nonumber
+\end{align}
+\end{math-stroke}
+
+\begin{math-stroke}[Anfang des Beweises der Symmetrie von \texorpdfstring{$=$}{=}]
+Wir wollen zeigen: $\{x = y\} \vdash y = x$.
+
+Als ersten Schritt wählen wir die folgende Instanziierung von $L_{15}$ für das zweistellige Relationssymbol $=$:
+\begin{equation}
+\label{eq:eq_sym_step0}
+\varphi_0 \equiv (x = y \land x = x) \to (x = x \to y = x)
+\end{equation}
+
+\begin{explanation-of-steps}
+Hierbei wird $L_{15}$ angewendet mit der Relation $R(a,b) \equiv a = b$ und den Termen:
+\begin{align*}
+\tau_1 &\equiv x, \quad \tau_1' \equiv y \\
+\tau_2 &\equiv x, \quad \tau_2' \equiv x
+\end{align*}
+Dies ergibt genau die Formel $(x = y \land x = x) \to (x = x \to y = x)$, welche als Axiominstanz in die Beweissequenz aufgenommen wird.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:32:08
+% topic: Beginn des Beweises der Symmetrie der Gleichheitsrelation
+% board_state: Beweis der Reflexivität abgeschlossen, erster Schritt für Symmetrie (L15-Instanziierung) steht an der Tafel
+% next_goal: Vervollständigung des Symmetriebeweises mittels Deduktionstheorem
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+% [SYSTEM] Video complete.
+
+*(Tokens: Input 288566, Output 7890)*
+---
+
+**AutoExtraction:** [Part 3] 02-24-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 02-24-tuesday-part3.mp4
+[Kontext-Dateien]: 02-24-tuesday-part1.tex, 02-24-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from , 02-24-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture. This specific video segment is exactly 32 minutes and 04 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 32 minutes and 04 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+CRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.
+
+**gemini-3.5-flash:** ```latex
+% End of the video: 00:32:08
+
+\subsection{Beweis der Symmetrie der Gleichheitsrelation (Fortsetzung)}
+
+\begin{spoken-clean}[00:00:00 - 00:00:22]
+... das, ähm, $x = x$ impliziert, ähm, $y = x$. \inlinemetanote{zeigt auf die Formel $\varphi_0$ an der Tafel} Schreiben wir mal schnell, was $L_{15}$ sagt zur Sicherheit noch.
+\end{spoken-clean}
+
+\begin{meta-note}[Wechsel zum Projektor]
+Der Dozent schaltet kurz auf den Projektor, um die logischen Axiome an der Leinwand anzuzeigen. Dabei beantwortet er eine Frage aus der Pause.
+\end{meta-note>
+
+\begin{spoken-clean}[00:00:22 - 00:01:58]
+Also eine Bemerkung, jemand hat gefragt in der Pause, ob man die, die logischen Axiome auswendig kennen muss. Und das müssen Sie nicht, als wirklich nicht. Ich kenne die auch nicht auswendig. Und, äh, das müssen Sie wirklich nicht. Es geht darum zu verstehen, wie man sie anwendet, und sie als Werkzeuge zu benutzen.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent kehrt zur Tafel zurück und schreibt den formalen Beweis für die Symmetrie der Gleichheitsrelation fertig.
+\end{meta-note>
+
+\begin{spoken-clean}[00:01:58 - 00:04:03]
+Also, genau, $L_{15}$ sagt jetzt... wir schreiben weiter... Gut, jetzt machen wir, ähm, weiter. Es kommt $\varphi_1$. Da schreiben wir jetzt einfach, ähm, $x = x$. Das ist eine Instanziierung von, ähm, $L_{14}$. Das ist diese, einfach, dass jedes Element ist gleich zu sich selbst. Das ist gut.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:04:03 - 00:07:02]
+$\varphi_2$, nehmen wir, ähm, $x = y$. Okay, da nehmen wir einfach, dass diese Formel ist enthalten in dieser Menge, das ist gut. So, $x = y$ ist enthalten in der Menge $\{x = y\}$, das ist gut. Also hier, das ist ein bisschen ein problematisches Symbol, das wir eigentlich nicht verwenden, machen wir trotzdem. Ähm, okay, dann nehmen wir jetzt wieder eine Instanziierung diesmal von $L_5$. Da schreiben wir jetzt $x = x$ impliziert $x = y$ impliziert $x = y$ und $x = x$. Ist eine Instanziierung von $L_5$. Wollen wir noch schnell $L_5$ anschauen, oder... Schauen wir uns noch $L_5$ an, damit wir das wirklich gründlich machen. \inlinemetanote{blättert in seinen Unterlagen} Okay, ja, $L_5$ sagt genau: $\varphi \to (\psi \to (\varphi \land \psi))$. Hier nehmen wir für $\varphi$ genau $x = x$ und für $\psi$ nehmen wir $x = y$. Okay, und dann erhalten wir genau das da.
+
+Okay, das ist gut. Dann nehmen wir, ähm, $\varphi_4$. Das ist jetzt, äh... da nehmen wir jetzt den... da sehen wir, da und da, da haben wir $x = x$ gilt, und hier haben wir $x = x$ impliziert das da. Nehmen wir den Modus Ponens und können sagen, dass das da gilt. Okay, $\varphi_4$ ist, sagt jetzt, dass, ähm, $x = y$ impliziert $x = y$ und $x = x$. Das ist, ähm, folgt aus $\varphi_3$ und $\varphi_1$ mit Modus Ponens.
+
+Und jetzt können wir $\varphi_2$ und $\varphi_4$... Okay, da wissen wir jetzt auch wieder, $x = y$ gilt, das heisst, da können wir jetzt wieder Modus Ponens anwenden und erhalten, ähm, $x = y$ und $x = x$. Das ist, folgt aus $\varphi_2$ und $\varphi_4$ mit Modus Ponens.
+
+Genau, und jetzt sehen wir, da haben wir $\varphi_0$ und $\varphi_5$. Da haben wir $x = y$ und $x = x$ impliziert das da, und wir wissen, dass das gilt, also folgt, dass das gilt. Also $\varphi_6$ sagt jetzt, dass $x = x$ impliziert $y = x$, und das folgt aus $\varphi_0$ und $\varphi_5$ mit Modus Ponens.
+
+Und schliesslich $\varphi_7$ folgt aus $\varphi_6$ und $\varphi_1$ mit Modus Ponens.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis der Symmetrie der Gleichheit]
+Wir beweisen: $\{x = y\} \vdash y = x$.
+
+Die vollständige Beweissequenz $\varphi_0, \dots, \varphi_7$ lautet:
+\begin{align}
+\varphi_0 &\equiv (x = y \land x = x) \to (x = x \to y = x) \label{eq:sym_proof_step0} \\
+& \quad && \text{(Instanziierung von } L_{15} \text{ mit } R(a,b) \equiv a = b, \tau_1 \equiv x, \tau_1' \equiv y, \tau_2 \equiv x, \tau_2' \equiv x) \nonumber \\
+\varphi_1 &\equiv x = x \label{eq:sym_proof_step1} \\
+& \quad && \text{(Instanziierung von } L_{14} \text{ mit } \tau \equiv x) \nonumber \\
+\varphi_2 &\equiv x = y \label{eq:sym_step_premise} \\
+& \quad && \text{(Prämisse aus der Menge } \{x = y\}) \nonumber \\
+\varphi_3 &\equiv x = x \to \bigl(x = y \to (x = y \land x = x)\bigr) \label{eq:sym_proof_step3} \\
+& \quad && \text{(Instanziierung von } L_5 \text{ mit } \varphi \equiv x = x, \psi \equiv x = y) \nonumber \\
+\varphi_4 &\equiv x = y \to (x = y \land x = x) \label{eq:sym_proof_step4} \\
+& \quad && \text{(folgt aus } \varphi_1 \text{ und } \varphi_3 \text{ durch Modus Ponens)} \nonumber \\
+\varphi_5 &\equiv x = y \land x = x \label{eq:sym_proof_step5} \\
+& \quad && \text{(folgt aus } \varphi_2 \text{ und } \varphi_4 \text{ durch Modus Ponens)} \nonumber \\
+\varphi_6 &\equiv x = x \to y = x \label{eq:sym_proof_step6} \\
+& \quad && \text{(folgt aus } \varphi_5 \text{ und } \varphi_0 \text{ durch Modus Ponens)} \nonumber \\
+\varphi_7 &\equiv y = x \label{eq:sym_proof_step7} \\
+& \quad && \text{(folgt aus } \varphi_6 \text{ und } \varphi_1 \text{ durch Modus Ponens)} \nonumber
+\end{align}
+
+\begin{explanation-of-steps}
+Durch diese formale Kette von Ableitungen ist die Prämisse $x = y$ rein syntaktisch in die Konklusion $y = x$ überführt worden. Jeder Schritt stützt sich ausschliesslich auf die logischen Axiome oder die Schlussregel Modus Ponens.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:06:50
+% topic: Beweis der Symmetrie der Gleichheit (Schritt 1: {x=y} \vdash y=x)
+% board_state: Beweissequenz \varphi_0 bis \varphi_7 steht vollständig an der Tafel
+% next_goal: Anwendung des Deduktionstheorems und Verallgemeinerung zur vollständigen Symmetrie-Aussage
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:07:02 - 00:09:36]
+Gut, okay. Das heisst jetzt, wir wissen, aus $x = y$ folgt $y = x$. Jetzt machen wir... Jetzt machen wir weiter. Mit dem Deduktionstheorem folgt nun, dass man beweisen kann, dass $x = y$ impliziert $y = x$. Und mit Verallgemeinerung folgt dann, dass für alle $x$, für alle $y$ gilt $x = y$ impliziert $y = x$. Das heisst, wir haben gezeigt, dass die Gleichheit symmetrisch ist. Und dann muss man noch zeigen, dass es transitiv ist. Das ist eine Übungsaufgabe diese Woche.
+\end{spoken-clean>
+
+\begin{math-stroke}[Symmetrie und Transitivität der Gleichheit]
+Aus der bewiesenen Relation $\{x = y\} \vdash y = x$ erhalten wir die allgemeine Symmetrie-Eigenschaft der Gleichheit:
+\begin{align}
+\vdash x = y \to y = x \label{eq:sym_dt} \\
+& \quad && \text{(folgt aus } \{x = y\} \vdash y = x \text{ durch das Deduktionstheorem (DT))} \nonumber \\
+\vdash \forall y \, (x = y \to y = x) \label{eq:sym_gen1} \\
+& \quad && \text{(folgt aus } \eqref{eq:sym_dt} \text{ durch Verallgemeinerung (V) bzgl. } y) \nonumber \\
+\vdash \forall x \, \forall y \, (x = y \to y = x) \label{eq:sym_final} \\
+& \quad && \text{(folgt aus } \eqref{eq:sym_gen1} \text{ durch Verallgemeinerung (V) bzgl. } x) \nonumber
+\end{align}
+
+\begin{remark}[Transitivität der Gleichheit]
+Der Beweis für die Transitivität:
+\[
+\vdash \forall x \, \forall y \, \forall z \, \bigl((x = y \land y = z) \to x = z\bigr)
+\]
+wird im Rahmen des aktuellen Übungsblattes als eigenständige Aufgabe durchgeführt.
+\end{remark}
+\end{math-stroke}
+
+\subsection{Logische Äquivalenz}
+
+\begin{spoken-clean}[00:09:36 - 00:11:00]
+Gut. Dann kommt noch ein kleiner Abschnitt ist über logische Äquivalenz. Nochmals ein Begriff, aber macht Sinn. Und zwar: Es gibt noch eine Zusatznotation, die braucht man eigentlich nicht, aber sie ist bequem. Wir schreiben $\varphi$ Äquivalenzpfeil $\psi$, also $\varphi \leftrightarrow \psi$, für $\varphi$ impliziert $\psi$ und $\psi$ impliziert $\varphi$. Und zwei Formeln $\varphi$ und $\psi$ sind logisch äquivalent, und wir schreiben $\varphi \Leftrightarrow \psi$, falls gilt, dass man beweisen kann $\varphi \leftrightarrow \psi$. Also wenn man das beweisen kann, dann kann man sowohl das beweisen als auch das beweisen. Ist auch sehr klar, aber natürlich muss man zuerst noch ein paar Axiome anwenden, um aus dem da zu schliessen, dass das gilt und das gilt. Okay. Braucht man $L_3$ und Modus Ponens, kann man sich hinschreiben. Und umgekehrt, falls man zeigen kann, dass $\varphi \to \psi$ und man auch beweisen kann, dass $\psi \to \varphi$, so gilt, dass man auch das beweisen kann. Das kann man auch wieder... Ja, ich glaube, das sehen Sie in den Übungen, kann man das zeigen. Also es ist alles wirklich genau so, wie man denkt, dass es ist. Nur, die Beweise sind möglicherweise ätzend, wobei man... Ja, ich glaube, man muss das sportlich angehen. Es ist eine nette Knobelaufgabe, und um das geht es ja in der Mathematik unter anderem.
+\end{spoken-clean>
+
+\begin{math-stroke}[Logische Äquivalenz]
+\textbf{Zusatznotation:} \\
+Für beliebige Formeln $\varphi, \psi$ definieren wir den zweiseitigen Pfeil in der Objektsprache:
+\[
+\varphi \leftrightarrow \psi \;\equiv\; (\varphi \to \psi) \land (\psi \to \varphi)
+\]
+
+\begin{definition}[Logische Äquivalenz]\label[definition]{def:logical_equivalence}
+Zwei Formeln $\varphi$ und $\psi$ heissen \newterm{logisch äquivalent} (geschrieben $\varphi \Leftrightarrow \psi$), falls gilt:
+\[
+\vdash \varphi \leftrightarrow \psi
+\]
+\end{definition}
+
+Es gelten die folgenden grundlegenden Eigenschaften:
+\begin{align}
+\varphi \Leftrightarrow \psi &\implies \vdash \varphi \to \psi \quad \text{und} \quad \vdash \psi \to \varphi \label{eq:equiv_prop1} \\
+\bigl(\vdash \varphi \to \psi \quad \text{und} \quad \vdash \psi \to \varphi\bigr) &\implies \varphi \Leftrightarrow \psi \label{eq:equiv_prop2}
+\end{align}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:12:00
+% topic: Logische Äquivalenz und Überleitung zu Kapitel 1: Axiomensysteme
+% board_state: Definition der logischen Äquivalenz an der Tafel, Ankündigung Kapitel 1
+% next_goal: Definition einer formalen Theorie und nicht-logischer Axiome
+% open_loops: none
+\begin{ai-global-state-checkpoint-invisible-content}
+
+\section{Axiomensysteme}
+\subsection{Theorien und nicht-logische Axiome}
+
+\begin{spoken-clean}[00:11:00 - 00:13:35]
+Gut. Dann nach dem Kapitel 0: Syntax kommt das Kapitel 1: Axiomensysteme. Eine Theorie $T$ mit Signatur $\mathcal{L}$ besteht aus einer Menge von $\mathcal{L}$-Formeln, den nicht-logischen Axiomen der Theorie. Und dann nimmt man diese Menge von Formeln, also man nimmt diese Theorie, und dann nimmt man immer diese Menge von Formeln als das System $\Phi$. Und dann darf man diese Axiome nehmen, um daraus Sachen zu beweisen. Wir geben Beispiele. Und es sind Beispiele, die Sie auch schon kennen zum grossen Teil. Das erste, was wir machen, ist die Gruppentheorie, GT.
+\end{spoken-clean}
+
+\begin{math-stroke}[Theorien und Axiomensysteme]
+\begin{definition}[Theorie und nicht-logische Axiome]\label[definition]{def:theory_and_non_logical_axioms}
+Eine \newterm{Theorie} $T$ mit Signatur $\mathcal{L}$ ist eine Menge von $\mathcal{L}$-Formeln. Die Elemente von $T$ heissen \newterm{nicht-logische Axiome} der Theorie.
+\end{definition}
+
+In formalen Beweisen innerhalb einer Theorie $T$ nimmt die Theorie die Rolle der Prämissemengen $\Phi$ ein, sodass Beweisbarkeitsaussagen die Gestalt
+\[
+T \vdash \psi
+\]
+haben.
+\end{math-stroke}
+
+\subsection{Beispiel: Gruppentheorie (GT)}
+
+\begin{spoken-clean}[00:13:35 - 00:18:42]
+Was ist die Signatur der Gruppentheorie? Wir machen jetzt da durch... wir sagen, es gibt ein Konstantensymbol, das nennen wir $e$, das ist das neutrale Element. Und dann gibt's ein Funktionssymbol, das machen wir mit so einem kleinen Kringel, das ist ein zweistelliges Funktionssymbol, das ist die... kann man sich vorstellen als die Verknüpfung. Also $e$ ist ein Konstantensymbol, und dieser Kringel ist ein zweistelliges Funktionssymbol. Okay, und jetzt sagen wir die Axiome von der Gruppentheorie, das sind drei Stück: $GT_0$ sagt, dass für alle $x$, für alle $y$, für alle $z$ gilt $x$ verknüpft mit $y$ verknüpft mit $z$ ist gleich $x$ verknüpft mit $y$ verknüpft mit $z$. Also was wir uns vorstellen hier ist, dass diese Verknüpfung ist assoziativ. $GT_1$ sagt, dass für alle $x$ gilt $e$ verknüpft mit $x$ ist gleich $x$. Das ist linksneutral. Und $GT_2$ sagt, dass für alle $x$ existiert $y$ verknüpft mit $x$ ist gleich $e$. Das heisst, jedes Element hat ein Linksinverses. Aber das ist wirklich sehr informell hier, weil wir haben ja gar keine Elemente, wir haben nur Formeln. Und das sind die Axiome der Gruppentheorie. Heisst, sie haben vielleicht ein bisschen andere Axiome gesehen in Analysis, Lineare Algebra hatten Sie bestimmt schon Gruppen Definition gesehen. Wahrscheinlich haben Sie gefordert, dass $e$ auch noch rechtsneutral ist, dass $x$ verknüpft mit $e$ gleich $x$ ist, oder? Und wahrscheinlich haben Sie auch gefordert, dass $y$ verknüpft mit $x$ ist auch noch $e$ ist. Aber es stellt sich heraus, dass diese zwei Bedingungen reichen, und mit diesen zwei Bedingungen kann man beweisen, dass auch $x$ verknüpft mit $e$ gleich $x$ ist, und dass auch $x$ verknüpft mit $y$ gleich $e$ ist. Und dann dass all diese Sachen eindeutig sind und so weiter. Also diese Sachen kann man... das reicht, um das zu beweisen, das reicht für Gruppen als Gruppenaxiome. Okay, also das ist ein Beispiel von einer Theorie, Gruppentheorie, und auf der rein syntaktischen Ebene sind das diese drei Axiome, und dann kann man jetzt aus... indem man $GT$ nimmt, also diese drei, diese drei Formeln, und damit kann man dann jetzt viele neue Sachen, viele neue Sachen beweisen.
+\end{spoken-clean}
+
+\begin{nice-box}[Die Axiome der Gruppentheorie (GT)]
+Die Signatur der Gruppentheorie ist:
+\[
+\mathcal{L}_{\text{GT}} := \{e, \circ\}
+\]
+wobei $e$ ein Konstantensymbol (neutrales Element) und $\circ$ ein zweistelliges Funktionssymbol (Verknüpfung) ist.
+
+Die Theorie der Gruppen $T_{\text{GT}}$ wird durch die folgenden drei Axiome gebildet:
+\begin{align}
+GT_0: & \quad \forall x \, \forall y \, \forall z \, \bigl((x \circ y) \circ z = x \circ (y \circ z)\bigr) && \text{(Assoziativität von } \circ) \label{eq:gt_assoc} \\
+GT_1: & \quad \forall x \, (e \circ x = x) && \text{(linksneutrales Element)} \label{eq:gt_neutral} \\
+GT_2: & \quad \forall x \, \exists y \, (y \circ x = e) && \text{(Existenz von Linksinversen)} \label{eq:gt_inverse}
+\end{align}
+\end{nice-box}
+
+\begin{math-stroke}[Mathematische Redundanz im Axiomensystem]
+\begin{explanation-of-steps}
+Obwohl in vielen algebraischen Lehrbüchern zweiseitige neutrale und inverse Elemente gefordert werden, zeigt die metatheoretische Analyse, dass die rechtsseitigen Eigenschaften bereits prädikatenlogisch aus den linksseitigen Axiomen $GT_1$ und $GT_2$ ableitbar sind:
+\[
+T_{\text{GT}} \vdash \forall x \, (x \circ e = x) \quad \text{und} \quad T_{\text{GT}} \vdash \forall x \, \forall y \, (y \circ x = e \to x \circ y = e)
+\]
+Das minimale System $T_{\text{GT}}$ ist daher mathematisch vollkommen äquivalent zur klassischen Definition einer Gruppe.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:18:00
+% topic: Axiomensystem der Gruppentheorie (GT) und deren minimale Axiomatisierung
+% board_state: Signatur L_GT und Axiome GT_0, GT_1, GT_2 an der Tafel
+% next_goal: Vorstellung des "Single Postulate for Groups" (Michael Slater) als Fun Fact
+% open_loops: none
+\begin{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:18:42 - 00:25:30]
+Das ist noch ein Fun Fact, den ich Ihnen zeigen wollte. Also okay, hier haben wir drei Axiome, oder, die man aufschreiben muss. In der Regel hat man noch... also oft verwendet man noch mehrere, wenn man auch noch fordert, dass $x$ verknüpft mit $e$ gleich $x$ ist, oder eben, dass $x$ verknüpft mit $y$ gleich $e$ ist, dann braucht man mehr Axiome. Die Frage ist immer so: Was ist die minimale Anzahl von Axiomen, die man verwendet? Und ich glaube, es gab so Mitte letztes Jahrhundert gab's einen Sport daraus, zu versuchen, das mit minimaler Anzahl Axiome zu schreiben. Ich habe tatsächlich ein Paper gefunden, wo jemand die Gruppentheorie mit einem einzigen Axiom beschreibt. Es ist ein ganz... also man kann nicht damit arbeiten fast. Also okay, hier ist nicht in logischer Form, es ist jetzt normal, also nicht in dieser Sprache geschrieben, aber er sagt, okay: Es gibt eine Verknüpfung, die schreiben sie $a \cdot b$ einfach, und dann gibt's auch eine Abbildung von $G$ auf sich selbst, das ist einfach eine, ja, eine Abbildung, eine Abbildung, das nennt man $a'$, aber da gibt's keine Bedingungen dran. Und die Forderung ist jetzt, dass für alle $a, b, c, d, f$ in $G$ muss gelten, dass $(ab)c = (ad)f$ impliziert $b = d(fc')$. Und wenn das erfüllt ist, dann folgen alle anderen Gruppenaxiome. Ja, bitte \inlinemetanote{lacht}. Okay, aber das nur ein kleiner Fun Fact, das ist komplett unwichtig, aber eben, man kann's mit einer... ich glaube bei Ringen ist es ihnen unklar, ob man's mit einem... mit einem geht oder nicht. Genau, sie sagen hier: \qt{the structure of English grammar and the definition of the operator} so, aber ja. Okay, aber das nächste wäre noch die Ringtheorie. Definition von einem Ring haben Sie auch gesehen. Da haben wir sieben Axiome...
+\end{spoken-clean>
+
+\begin{didactic-insight}[Die Suche nach minimalen Axiomensystemen]
+Die Suche nach minimalen Axiomensystemen war im 20. Jahrhundert eine populäre mathematische Disziplin. Michael Slater zeigte in seiner Arbeit \emph{\qt{A Single Postulate for Groups}} (1964), dass die gesamte Struktur einer Gruppe auf eine einzige, hochgradig verschachtelte Implikation reduziert werden kann, sofern man eine binäre Operation und eine unäre Inversionsoperation voraussetzt. Solche Systeme sind zwar theoretisch elegant, für die praktische mathematische Arbeit jedoch aufgrund ihrer extremen Unleserlichkeit nahezu unbrauchbar.
+\end{didactic-insight>
+
+\begin{nice-box}[A Single Postulate for Groups (Michael Slater)]
+Sei $G$ eine nichtleere Menge mit einer binären Multiplikation und einer unären Inversion $a \mapsto a'$. Wir schreiben $ab$ für das Produkt von $a$ und $b$.
+
+\textbf{Theorem (Slater, 1964):} \\
+Falls für alle $a, b, c, d, f \in G$ gilt:
+\[
+(ab)c = (ad)f \implies b = d(fc')
+\]
+dann ist $G$ eine Gruppe bezüglich der definierten Operationen.
+\end{nice-box}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:24:00
+% topic: Minimale Gruppenaxiomatisierung und Überleitung zu Ringtheorie (RT)
+% board_state: Projizierte Folie zu Michael Slater, Übergang zur Ringtheorie auf den Folien
+% next_goal: Auflistung der Axiome der Ringtheorie
+% open_loops: none
+\begin{ai-global-state-checkpoint-invisible-content}
+
+\subsection{Beispiel: Ringtheorie (RT)}
+
+\begin{spoken-clean}[00:25:30 - 00:32:04]
+Die Axiome der Ringtheorie sind... also es ist eine abelsche Gruppe bezüglich Addition, und dann hat man eben noch die Multiplikation, und die is noch distributiv. Und hier sind noch die Axiome für die Körpertheorie, da haben wir neun. Aber die kennen Sie auch alle, oder? Ich vermute mal, Sie sind geläufig mit den Axiomen der Ring- und der Körpertheorie. Gut. Besten Dank fürs Kommen, ich bin noch da, falls Sie Fragen oder Verwirrungen haben, und ansonsten sehen wir uns nächste Woche. \inlinemetanote{Das Publikum applaudiert lautstark, der Dozent packt seine Unterlagen zusammen}
+\end{spoken-clean>
+
+\begin{nice-box}[Axiomensystem der Ringtheorie (RT)]
+Die Signatur der Ringtheorie (für Ringe mit $1$) ist gegeben durch:
+\[
+\mathcal{L}_{\text{Ring}} := \{0, 1, +, \cdot, -\}
+\]
+wobei $0$ und $1$ Konstantensymbole sind, $-$ ein einstelliges (unäres) Funktionssymbol und $+, \cdot$ zwei zweistellige (binäre) Funktionssymbole sind.
+
+Die Theorie der Ringe $T_{\text{RT}}$ besteht aus den folgenden acht nicht-logischen Axiomen:
+\begin{align}
+RT_0: & \quad \forall x \, \forall y \, \forall z \, \bigl(x + (y + z) = (x + y) + z\bigr) && \text{(Assoziativität von } +) \label{eq:rt_add_assoc} \\
+RT_1: & \quad \forall x \, \forall y \, \bigl(x + y = y + x\bigr) && \text{(Kommutativität von } +) \label{eq:rt_add_comm} \\
+RT_2: & \quad \forall x \, (0 + x = x) && \text{(neutrales Element von } +) \label{eq:rt_add_neutral} \\
+RT_3: & \quad \forall x \, \bigl(x + (-x) = 0\bigr) && \text{(inverses Element bzgl. } +) \label{eq:rt_add_inverse} \\
+RT_4: & \quad \forall x \, \forall y \, \forall z \, \bigl(x \cdot (y \cdot z) = (x \cdot y) \cdot z\bigr) && \text{(Assoziativität von } \cdot) \label{eq:rt_mult_assoc} \\
+RT_5: & \quad \forall x \, (1 \cdot x = x \land x \cdot 1 = x) && \text{(neutrales Element von } \cdot) \label{eq:rt_mult_neutral} \\
+RT_6: & \quad \forall x \, \forall y \, \forall z \, \bigl(x \cdot (y + z) = (x \cdot y) + (x \cdot z)\bigr) && \text{(links-distributiv)} \label{eq:rt_dist_left} \\
+RT_7: & \quad \forall x \, \forall y \, \forall z \, \bigl((x + y) \cdot z = (x \cdot z) + (y \cdot z)\bigr) && \text{(rechts-distributiv)} \label{eq:rt_dist_right}
+\end{align}
+\end{nice-box}
+
+\subsection{Axiomensystem: Körpertheorie (KT)}
+
+\begin{nice-box}[Axiomensystem: Körpertheorie (KT)]
+Die Signatur der Körpertheorie ist identisch mit der Ring-Signatur:
+\[
+\mathcal{L}_{\text{Körper}} := \{0, 1, +, \cdot, -\}
+\]
+Die Theorie der Körper $T_{\text{KT}}$ umfasst die folgenden zehn nicht-logischen Axiome:
+\begin{align}
+KT_0: & \quad \forall x \, \forall y \, \forall z \, \bigl(x + (y + z) = (x + y) + z\bigr) && \text{(Assoziativität von } +) \label{eq:kt_add_assoc} \\
+KT_1: & \quad \forall x \, \forall y \, \bigl(x + y = y + x\bigr) && \text{(Kommutativität von } +) \label{eq:kt_add_comm} \\
+KT_2: & \quad \forall x \, (0 + x = x) && \text{(links-neutral bzgl. } +) \label{eq:kt_add_neutral} \\
+KT_3: & \quad \forall x \, \exists y \, (y + x = 0) && \text{(links-Inverse bzgl. } +) \label{eq:kt_add_inverse} \\
+KT_4: & \quad \forall x \, \forall y \, \forall z \, \bigl(x \cdot (y \cdot z) = (x \cdot y) \cdot z\bigr) && \text{(Assoziativität von } \cdot) \label{eq:kt_mult_assoc} \\
+KT_5: & \quad \forall x \, (1 \cdot x = x) && \text{(links-neutral bzgl. } \cdot) \label{eq:kt_mult_neutral} \\
+KT_6: & \quad \forall x \, \bigl(x \neq 0 \to \exists y \, (y \cdot x = 1)\bigr) && \text{(Existenz von Multiplikationsinversen)} \label{eq:kt_mult_inverse} \\
+KT_7: & \quad \forall x \, \forall y \, \forall z \, \bigl(x \cdot (y + z) = (x \cdot y) + (x \cdot z)\bigr) && \text{(links-distributiv)} \label{eq:kt_dist_left} \\
+KT_8: & \quad \forall x \, \forall y \, \bigl(x \cdot y = y \cdot x\bigr) && \text{(Kommutativität von } \cdot) \label{eq:kt_mult_comm} \\
+KT_9: & \quad 0 \neq 1 && \text{(Nicht-Trivialität)} \label{eq:kt_non_trivial}
+\end{align}
+\end{nice-box}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:30:30
+% topic: Axiomensysteme der Ringtheorie und Körpertheorie
+% board_state: Projizierte Folien zu Ring- und Körperaxiomen, Vorlesungsende
+% next_goal: Beendigung der Vorlesungseinheit
+% open_loops: none
+\begin{ai-global-state-checkpoint-invisible-content}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 296383, Output 7394)*
+---

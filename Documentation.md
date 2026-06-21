@@ -1,4 +1,8 @@
-# 📚 Detailed System Documentation
+# 📚 Detailed System Documentation / Detail-Dokumentation
+
+*(See below for the German version / Deutsche Version unten)*
+
+## 🇬🇧 English
 
 This document provides a deep dive into the architecture, configuration quirks, and API constraints of the AI Lecture Extraction & Processing Pipeline. It is intended for developers and advanced users who want to understand the inner workings of the system.
 
@@ -170,3 +174,180 @@ The `ApiResilience` class wraps all calls to the Google API and handles transien
 - **High Demand (HTTP 503):** If the server is overloaded ("high demand"), the application initiates a hard 3-minute backoff.
 - **Linear Backoff:** For general 500 errors, the application uses a linear backoff (e.g., 45s, 75s, 105s) up to 8 times.
 - **Interactive Skip:** During any waiting period, the user can press `Enter` to force an immediate retry, or `Ctrl+C` to cancel the delay. Canceling the delay aborts the current video chunk and safely moves the batch processor to the next file without crashing the application.
+
+<br>
+
+---
+
+## 🇩🇪 Deutsch
+
+Dieses Dokument bietet einen tiefen Einblick in die Architektur, Konfigurations-Besonderheiten und API-Einschränkungen der AI Lecture Extraction & Processing Pipeline. Es richtet sich an Entwickler und fortgeschrittene Benutzer, die die inneren Abläufe des Systems verstehen möchten.
+
+---
+
+## 1. Konfigurations-Hierarchie & das "Array Merge" Problem
+
+Die Anwendung nutzt den `Microsoft.Extensions.Configuration` Binder, um Einstellungen aus mehreren Quellen zu laden. Die Hierarchie ist wie folgt (die zuletzt geladene überschreibt vorherige):
+1. `AppConfig.cs` (Fest codierte C#-Standardwerte)
+2. `appsettings.json` (Globale Überschreibungen)
+3. Spezifische Session-Configs (z. B. `VertexAutoExtractionConfig.json`)
+
+### Die Array-Merging Falle
+Ein kritisches Verhalten des .NET Configuration Binders ist der Umgang mit Arrays (wie `HistoryPreloadPaths` oder `SystemInstructionPaths`).
+Wenn die Basiskonfiguration (`appsettings.json`) ein Array mit 2 Elementen definiert und die spezifische Session-Config ein Array mit 1 Element, **ersetzt der Binder das Array nicht; er führt sie nach Index zusammen**.
+- Index 0 aus der Basis-Config wird durch Index 0 aus der Session-Config überschrieben.
+- Index 1 aus der Basis-Config bleibt erhalten und wird in das endgültige Array geladen.
+
+**Lösung:** Um zu verhindern, dass unerwünschte Dateien geladen werden, stellen wir sicher, dass Basis-Arrays in `AppConfig.cs` und `appsettings.json` strikt leer sind (`[]`). Du musst alle erforderlichen Pfade explizit in deiner spezifischen Session-`.json`-Datei definieren.
+
+---
+
+## 2. Gemini API: Modelle & Tokenisierung
+
+### Tokenisierung von PDFs und Bildern
+Wenn ein PDF (z. B. ein akademisches Skript) an den Kontext angehängt wird, behandelt Gemini **jede Seite als Bild**. Die Token-Kosten können je nach Modellversion drastisch variieren:
+- **gemini-3.5-flash / gemini-1.5-flash:** Hochgradig auf Effizienz optimiert. Eine einzelne PDF-Seite kostet möglicherweise nur einen Basis-Token-Betrag (z. B. ~258 Token).
+- **gemini-2.5-pro:** Ausgerichtet auf tiefes logisches Denken und hohe Genauigkeit (insbesondere bei mathematischen Formeln). Es verarbeitet Bilder und PDF-Seiten oft in viel höherer Auflösung und zerlegt eine einzelne Seite in mehrere Kacheln (z. B. 2 bis 4 Kacheln). Folglich kann eine einzelne Seite 516 bis 1000+ Token kosten.
+*Hinweis: Aus diesem Grund kann der Upload eines 400-seitigen PDFs bei Flash ~114k Token kosten, bei Pro jedoch ~228k Token.*
+
+---
+
+## 3. Erweitertes logisches Denken (Advanced Reasoning): Thinking Budgets & Levels
+
+Googles Gemini-Modelle unterstützen ein erweitertes internes Nachdenken ("Thinking"), bevor sie eine Ausgabe generieren. Dies wird strikt über das `ThinkingConfig`-Objekt im API-Payload gesteuert.
+
+### Thinking Budget
+Das `ThinkingBudget` bestimmt die maximale Anzahl von Ausgabe-Token, die das Modell intern zum "Nachdenken" ausgeben darf, bevor die endgültige Antwort generiert wird.
+- **Vertex AI Einschränkungen:** Stand Mitte 2026 erzwingt der Vertex AI-Endpunkt ein striktes Integer-Limit für das Thinking Budget. Unterstützte Werte liegen zwischen **128 und 32768 Token**.
+- **Code-Implementierung:** Die Anwendung fängt jedes Budget über 32768 ab und klemmt es strikt auf `32768` fest, kurz bevor die Anfrage an Vertex AI gesendet wird, um `ClientError: thinking_budget is out of range` Ausnahmen zu vermeiden.
+
+### Thinking Level
+Das `ThinkingLevel` ist ein `enum` (`MINIMAL`, `LOW`, `MEDIUM`, `HIGH`), das die Tiefe des Nachdenkens vorschreibt.
+- **Modell-Kompatibilität:** `ThinkingLevel` wird von den neueren **Gemini 3.x** Frontier-Modellen voll unterstützt. Modelle wie **Gemini 2.5 Pro** unterstützen den Parameter `thinkingLevel` jedoch nicht und lehnen die Anfrage ab, wenn er enthalten ist.
+- **Code-Implementierung:** Der `requestConfig` Builder prüft den Modellnamen (`_config.Model`). Wenn das Modell eine `gemini-3`-Variante ist, werden sowohl `ThinkingLevel` als auch `ThinkingBudget` angewendet. Wenn das Modell eine `gemini-2.5`-Variante ist, entfernt die Anwendung stillschweigend das `ThinkingLevel` und verlässt sich vollständig auf das `ThinkingBudget`, um `thinking_level is not supported` Fehler zu vermeiden.
+
+---
+
+## 4. Google AI Studio vs. Google Cloud Vertex AI
+
+Die Pipeline unterstützt beide Umgebungen, aber sie behandeln Payloads intern sehr unterschiedlich:
+
+### Google AI Studio (Developer Tier)
+- Nutzt die **Google File API**.
+- Bei der Verarbeitung von Videodateien oder PDFs werden Dateien direkt in den generativen AI-Dateispeicher hochgeladen.
+- Ratenlimits (RPM/TPM) sind für Free-Tier-Nutzer in der Regel strenger, aber es eignet sich hervorragend für schnelles Prototyping.
+
+### Google Cloud Vertex AI (Enterprise Tier)
+- Nutzt **Google Cloud Storage (GCS) Buckets**.
+- Die Anwendung lädt lokale Dateien automatisch in deinen angegebenen `GcsBucketName` hoch und hängt die `gs://...` URI an den Gemini-Prompt an.
+- **Speicherkosten-Management:** Da die Verarbeitung von hunderten überlappenden Video-Chunks die Speicherkosten in die Höhe treiben kann, nutzt die Anwendung eine `CleanupBucketAsync()`-Routine. Nachdem ein Chunk erfolgreich verarbeitet wurde (oder wenn eine Ausnahme auftritt), löscht die Anwendung die temporären Dateien aggressiv aus dem GCS-Bucket.
+*Hinweis: Nicht gelöschte Dateien in einem Bucket verbrauchen bei zukünftigen Anfragen keine Prompt-Token, da die API nur die exakten `gs://`-URIs verarbeitet, die im jeweiligen Request-Payload gesendet werden.*
+
+---
+
+## 4.5 Authentifizierungs-Setup
+
+Je nachdem, welche Umgebung du anvisierst, erfordert die Anwendung unterschiedliche Authentifizierungs-Setups.
+
+### Google AI Studio (API Keys)
+Die Anwendung löst API-Keys dynamisch aus Windows-Umgebungsvariablen auf. Um deine Keys dauerhaft zu setzen, führe die folgenden Befehle in PowerShell oder der Eingabeaufforderung aus:
+
+```powershell
+# Setze deinen primären API-Key für die allgemeinen Sessions
+setx API_KEY-ai-studio-test-project-1 "DEIN_GEMINI_API_KEY"
+
+# Setze einen dedizierten API-Key speziell für die LatexRefinementSession
+setx API_KEY_LatexRefinement "DEIN_GEMINI_API_KEY"
+```
+*(Hinweis: Du musst dein Terminal und geöffnete IDEs neu starten, damit `setx`-Änderungen wirksam werden.)*
+
+### Google Cloud Vertex AI (IAM Authentifizierung)
+Vertex AI verwendet Google Cloud IAM (Identity and Access Management) anstelle von statischen API-Keys. Du musst das Google Cloud SDK (`gcloud` CLI) installiert haben.
+
+1. **Login und Standard-Anmeldeinformationen der Anwendung setzen:**
+   ```powershell
+   gcloud auth application-default login
+   ```
+2. **Dein aktives Projekt setzen** (Muss mit der `VertexProjectId` in deiner Config übereinstimmen):
+   ```powershell
+   gcloud config set project deine-vertex-projekt-id
+   ```
+
+---
+
+## 5. Pipeline-Mechanik: FFmpeg & Überlappende Segmente
+
+Um eine 90-minütige Vorlesung zu transkribieren, führt das Senden des gesamten Videos auf einmal oft zur Erschöpfung des Kontextfensters oder zu übersprungenen Details. Die Pipeline löst dies durch:
+
+1. **FFmpeg Slicing:** Das Video wird in streng definierte Chunks (z. B. jeweils 3 Minuten) mit einer Überlappung (z. B. 180 Sekunden, d.h. die letzten X Sekunden von Chunk 1 sind die ersten X Sekunden von Chunk 2) zerschnitten.
+2. **Token-Optimierung:** Die Video-Framerate wird auf `1 FPS` dezimiert. Da sich Tafeln und Folien selten im Sub-Sekunden-Bereich ändern, bleibt die visuelle Information erhalten, während der Token-Payload drastisch reduziert wird.
+3. **Audio-Downmixing:** Audio wird komprimiert und auf Mono heruntergemischt (`-ac 1`).
+4. **Latex Refinement:** Aufgrund der Überlappungen enthalten die extrahierten LaTeX-Chunks duplizierte Sätze oder Formeln an den Rändern. Die `LatexRefinementSession` übergibt diese Chunks an eine deterministische KI (Temperature 0.0) mit der Anweisung, sie nahtlos zu einem einzigen, kontinuierlichen LaTeX-Dokument zusammenzuführen.
+
+---
+
+## 6. Architektur-Übersicht: Namespaces & Kernklassen
+
+Das Projekt ist stark modularisiert, um Konfiguration, KI-Interaktionen, lokale Videoverarbeitung und Datei-Infrastruktur zu trennen. Im Folgenden findest du eine umfassende Übersicht der Namespaces und ihrer wichtigsten Klassen.
+
+### ⚙️ Namespace: `AutoExtraction`
+Verantwortlich für die vollautomatisierte Batch-Verarbeitungs-Pipeline. Orchestriert FFmpeg-Verarbeitung und KI-Inferenz sequenziell oder nebenläufig.
+- **`AiStudioAutoExtractionSession`**: Verwaltet die Extraktions-Pipeline über die Google AI Studio File API. Nutzt ein **Producer-Consumer-Muster** (via `System.Threading.Channels`), was es FFmpeg ermöglicht, den nächsten Chunk zu verarbeiten, während Gemini den aktuellen analysiert.
+- **`VertexAutoExtractionSession`**: Das Enterprise-Äquivalent. Lädt Dateien in den Google Cloud Storage (GCS) hoch und löscht sie nach Abschluss der Inferenz strikt (`CleanupBucketAsync`), um explodierende Speicherkosten zu verhindern.
+- **`ExtractionHelpers`**: Hilfsmethoden speziell für die Extraktions-Schleife (z. B. Fortschritt drucken, verbleibende Zeit schätzen).
+- **`RefinementUiHelper`**: Konsolen-UI-Elemente speziell zur Visualisierung des Extraktionsfortschritts.
+- **`VideoDateParser`**: Hilfsprogramm, um Datums-Metadaten aus Dateinamen von Vorlesungsvideos zu extrahieren.
+
+### 💬 Namespace: `DirectChatAiInteraction`
+Verarbeitet die interaktive REPL (Read-Eval-Print Loop) für manuelles Debugging sowie deterministisches Post-Processing, das sich wie eine Chat-Session verhält.
+- **`LatexRefinementSession`**: Die Post-Processing-Engine. Füttert die überlappenden `.tex`-Chunks, die von der `AutoExtraction` generiert wurden, in Gemini ein und weist es an, Duplikate aufzulösen und sie zu einem kontinuierlichen Dokument zusammenzuführen.
+- **`DirectAiChatSessionVertex` / `DirectAiChatSessionAiStudio`**: Die primären REPL-Klassen. Verarbeiten Benutzereingaben im Terminal, erlauben dynamische Parameteränderungen (z.B. `/set temp 0.5`), verarbeiten `/attach`-Befehle und pflegen den Gesprächsverlauf.
+
+### 🔧 Namespace: `Config`
+Zentralisiertes Konfigurations-Management.
+- **`ConfigLoader<T>`**: Ein generischer Loader, der den `Microsoft.Extensions.Configuration` Binder implementiert. Führt Standards aus `AppConfig.cs`, globale Überschreibungen aus `appsettings.json` und spezifische Einstellungen aus `{Session}Config.json` zusammen.
+- **`AppConfig`**: Die einzige Quelle der Wahrheit (Single Source of Truth) für globale, fest codierte Fallback-Parameter (z. B. Fallback-Pfade, `DefaultThinkingBudget`, `VertexProjectId`).
+
+### 🎬 Namespace: `FfmpegUtilities`
+Wickelt die lokale `ffmpeg.exe` Binary ab, um Medien vorzuverarbeiten, bevor sie in die Cloud gesendet werden.
+- **`FfmpegToolkit`**: Ein Headless-Befehls-Builder. Enthält Logik wie `ProcessSplitVideoAsync` (Zerschneiden von Videos in 3-Minuten-Chunks mit 3 Minuten Überlappung), Dezimieren der Framerate auf 1 FPS (`-vf fps=1`) und Heruntermischen von Audio auf Mono (`-ac 1`).
+- **`FfmpegInteractiveMenu`**: Eine konsolenbasierte Benutzeroberfläche für Benutzer, um FFmpeg-Kompressionen manuell auszulösen, ohne die KI-Pipeline auszuführen.
+- **`ConsoleUiHelper`**: Helfer für das Rendern von Fortschrittsbalken und Terminal-UI-Elementen während der Videoverarbeitung.
+
+### 🏗️ Namespace: `Infrastructure`
+Querschnittsbelange wie Dateiverwaltung, Logging und Robustheit.
+- **`SessionLogger`**: Erstellt automatisch Ordner mit Zeitstempeln für jede Session (z.B. `folder-X-date`). Legt rohe LaTeX-Ausgaben in Dateien ab und pflegt ein Markdown-Log (`chat_log.md`) der gesamten Interaktion.
+- **`AttachmentHandler`**: Ein hochentwickeltes Dateisuchsystem. Wenn ein Benutzer `/attach file.pdf` eingibt, durchsucht diese Klasse eine Liste von Fallback-Ordnern, findet die Datei und bereitet sie für den Upload vor.
+- **`ApiResilience`**: Enthält Logik, um temporäre HTTP-Fehler anmutig zu behandeln, wie z.B. Ratenlimits (HTTP 429) oder temporäre Serverfehler (HTTP 503).
+
+### 🌐 Namespace: `GoogleGenAi`
+- **`GeminiClientBuilder`**: Kapselt die rohe HTTP `HttpClient`-Erstellung. Bildet unsere C#-Konfigurationsobjekte (wie `ThinkingConfig`, `SystemInstruction`, `Tools`) auf den exakten JSON-Payload ab, der von Googles REST APIs erwartet wird.
+
+### 📄 Namespace: `DocumentUtilities`
+- **`LatexToolkit`**: Hilfsmethoden, um rohe Markdown-Ausgaben von Gemini zu parsen, ` ```latex ` Codeblöcke zu entfernen und die resultierenden Strings zu validieren.
+- **`LatexTimestampHelper`**: Werkzeuge zur Manipulation und Anpassung eingebetteter Zeitstempel im LaTeX-Dokument.
+
+---
+
+## 7. Bekannte API-Einschränkungen & Fehlerbehebung
+
+### Cache Priming vs. Roundtrips (Warum nicht alles auf einmal senden?)
+Um einen API-Roundtrip zu sparen, könnte man versucht sein, die `training-history` und das 30-minütige Vorlesungsvideo in einem einzigen Prompt zu senden. Dies ist jedoch höchst kontraproduktiv:
+1. **Cache Priming & Fokus:** Indem man zuerst die massive Historie sendet und eine "Bestätigung" verlangt, wird das Modell gezwungen, zu parsen und einen internen Kontext-Cache aufzubauen, der rein für die Regeln zuständig ist. Wenn das eigentliche Video im nächsten Prompt eintrifft, konzentriert sich das Modell zu 100 % auf die Ausführung, anstatt seine Aufmerksamkeit zu teilen.
+2. **Kontext-Überlastung:** Tausende Zeilen Historie und ein großes Video in einen einzigen Prompt zu packen, überfordert das Modell oft, was zu halluzinierten Ausgaben oder `500 Internal Server Errors` führt.
+
+### HTTP 500 Internal Error (Google Server Absturz)
+Wenn die Anwendung in einer Retry-Schleife mit einem `Internal error encountered (HTTP 500)` feststeckt, bedeutet dies, dass das Google Backend beim Verarbeiten der Anfrage abgestürzt ist. Dies ist selten ein Netzwerkproblem, sondern meist ein Prompt-/Payload-Problem. Häufige Ursachen sind:
+- **Überladene System Instruction:** Wenn `LoadHistoryIntoSystemInstruction` auf `true` gesetzt ist, injiziert die Pipeline die gesamte Historie in die `SystemInstruction`. Googles Backend stürzt oft ab, wenn die System Instruction zu groß ist oder komplexe Anhänge enthält. **Lösung:** Setze es auf `false`, damit die Historie als normaler, viel sicherer User Prompt gesendet wird (`AcknowledgeHistoryAsync`).
+- **Thinking bei Flash-Modellen:** Die Aktivierung eines hohen `ThinkingBudget` oder `ThinkingLevel: HIGH` bei "Flash"-Modellen (z. B. `gemini-3.5-flash`) während der Verarbeitung massiver Videodateien ist sehr instabil und verursacht häufig 500er Fehler. **Lösung:** Deaktiviere "Thinking" für Flash-Modelle oder wechsle zu einem "Pro"-Modell (`gemini-2.5-pro` / `gemini-3.1-pro-preview`), welches Logik nativ verarbeitet.
+- **Beschädigte Video-Chunks:** Gelegentlich generiert FFmpeg einen Chunk mit einem beschädigten Frame-Header, der den Gemini Vision Encoder zum Absturz bringt. **Lösung:** Lösche den `tmp`-Ordner des Videos, um FFmpeg zu zwingen, das Video neu zu schneiden.
+
+---
+
+## 8. Fehlerbehandlung & ApiResilience
+
+Die Klasse `ApiResilience` kapselt alle Aufrufe an die Google API und behandelt transiente Fehler anmutig:
+- **Ratenlimits (HTTP 429):** Wenn die API ein `retryDelay` zurückgibt, parst die Anwendung dies und wartet genau so lange plus einen Puffer von 20 Sekunden.
+- **Hohe Auslastung (HTTP 503):** Wenn der Server überlastet ist ("high demand"), initiiert die Anwendung einen harten 3-Minuten-Backoff.
+- **Linearer Backoff:** Für allgemeine 500er Fehler verwendet die Anwendung einen linearen Backoff (z. B. 45s, 75s, 105s) bis zu 8 Mal.
+- **Interaktiver Skip:** Während jeder Wartezeit kann der Benutzer `Enter` drücken, um einen sofortigen Retry zu erzwingen, oder `Ctrl+C`, um die Verzögerung abzubrechen. Das Abbrechen der Verzögerung bricht den aktuellen Video-Chunk ab und bewegt den Batch-Prozessor sicher zur nächsten Datei, ohne dass die Anwendung abstürzt.
