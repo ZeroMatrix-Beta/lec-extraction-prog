@@ -39,15 +39,13 @@ public static class ConfigLoader<T> where T : class, new() {
     return config;
   }
 
-  public static void Save(T config, string? sectionName = null) {
+  private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+  public static void Save(T config) {
     var basePath = AppDomain.CurrentDomain.BaseDirectory;
     string filePath = Path.Combine(basePath, $"{typeof(T).Name}.json");
-
-    var options = new System.Text.Json.JsonSerializerOptions {
-        WriteIndented = true
-    };
     
-    string jsonString = System.Text.Json.JsonSerializer.Serialize(config, options);
+    string jsonString = System.Text.Json.JsonSerializer.Serialize(config, _jsonOptions);
     File.WriteAllText(filePath, jsonString);
   }
 }
@@ -59,7 +57,7 @@ public class AppConfigOptions {
   public string BaseLectureFolder { get; set; } = @"D:\lecture-videos";
   public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
-  public string[] HistoryPreloadPaths { get; set; } = Array.Empty<string>();
+  public string[] HistoryPreloadPaths { get; set; } = [];
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
   public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
   public string VertexLocation { get; set; } = "global";

@@ -316,9 +316,9 @@ public class VertexAutoExtractionSession {
             if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
                 } else if (hasBudget) {
-                    int budget = _config.ThinkingBudget.Value;
+                    int budget = _config.ThinkingBudget!.Value;
                     if (budget > 32768) budget = 32768;
                     requestConfig.ThinkingConfig.ThinkingBudget = budget;
                 }
@@ -478,9 +478,9 @@ public class VertexAutoExtractionSession {
             if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
                 } else if (hasBudget) {
-                    int budget = _config.ThinkingBudget.Value;
+                    int budget = _config.ThinkingBudget!.Value;
                     if (budget > 32768) budget = 32768;
                     requestConfig.ThinkingConfig.ThinkingBudget = budget;
                 }
@@ -814,7 +814,7 @@ public class VertexAutoExtractionSession {
                         break;
                     }
 
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
+                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
                     startAudioTask();
                 }
@@ -830,7 +830,7 @@ public class VertexAutoExtractionSession {
 
                     startAudioTask();
 
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
+                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
                 }
 
                 fileTotalInputTokens += result.partInputTokens;
@@ -962,7 +962,7 @@ public class VertexAutoExtractionSession {
         }
     }
 
-    private string GetUniqueTexPath(string originalPath) {
+    private static string GetUniqueTexPath(string originalPath) {
         if (!System.IO.File.Exists(originalPath)) {
             return originalPath;
         }
@@ -1010,7 +1010,7 @@ public class VertexAutoExtractionSession {
         return (true, parsedPrompt, attachmentParts);
     }
 
-    private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, double partStartTimeSeconds) {
+    private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
         if (previousTexFiles.Any()) {
@@ -1055,9 +1055,9 @@ public class VertexAutoExtractionSession {
             if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
+                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
                 } else if (hasBudget) {
-                    int budget = _config.ThinkingBudget.Value;
+                    int budget = _config.ThinkingBudget!.Value;
                     if (budget > 32768) budget = 32768;
                     requestConfig.ThinkingConfig.ThinkingBudget = budget;
                 }

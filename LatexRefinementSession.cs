@@ -115,27 +115,25 @@ public class LatexRefinementSession {
     }
 
     // Step 1: Merge and Timestamp Control
-    string? step1Output = null;
     if (_config.Step1MergeAndTimestamp.Enabled) {
       Console.WriteLine("\n--- [Schritt 1: Merge & Timestamp Control] ---");
-      step1Output = await ExecuteStep1MergeAsync(currentFiles, _audioFilePath, baseName, targetFolder);
+      string? step1Output = await ExecuteStep1MergeAsync(currentFiles, _audioFilePath, baseName, targetFolder);
       if (step1Output == null) {
         Console.WriteLine("[FEHLER] Schritt 1 fehlgeschlagen. Breche Pipeline ab.");
         return;
       }
-      currentFiles = new[] { step1Output };
+      currentFiles = [step1Output];
     }
 
     // Step 2: Speech Refinement
-    string? step2Output = null;
     if (_config.Step2SpeechRefinement.Enabled) {
       Console.WriteLine("\n--- [Schritt 2: Speech Refinement] ---");
-      step2Output = await ExecuteStep2SpeechRefinementAsync(currentFiles[0], _audioFilePath, baseName, targetFolder);
+      string? step2Output = await ExecuteStep2SpeechRefinementAsync(currentFiles[0], _audioFilePath, baseName, targetFolder);
       if (step2Output == null) {
         Console.WriteLine("[FEHLER] Schritt 2 fehlgeschlagen. Breche Pipeline ab.");
         return;
       }
-      currentFiles = new[] { step2Output };
+      currentFiles = [step2Output];
     }
 
     // Step 3: Last Refinement
@@ -281,9 +279,9 @@ public class LatexRefinementSession {
       if (hasLevel || hasBudget) {
         requestConfig.ThinkingConfig = new ThinkingConfig();
         if (hasLevel) {
-          requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel;
+          requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel!;
         } else if (hasBudget) {
-            int budget = backendParams.ThinkingBudget.Value;
+            int budget = backendParams.ThinkingBudget!.Value;
             if (budget > 32768) budget = 32768;
             requestConfig.ThinkingConfig.ThinkingBudget = budget;
         }
