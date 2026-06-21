@@ -768,7 +768,7 @@ public class AiStudioAutoExtractionSession {
             int fileTotalOutputTokens = 0;
             bool fileProcessingSuccess = true;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
-            Task audioExtractionTask = null;
+            Task? audioExtractionTask = null;
             Action startAudioTask = () => {
                 if (_config.GenerateAudioFile && audioExtractionTask == null) {
                     string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
@@ -947,7 +947,8 @@ public class AiStudioAutoExtractionSession {
                 }
 
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
-                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(_latexRefinementConfig?.ApiKeyEnvName ?? "API_KEY-latex-refinement") ?? "no-key";
+                if (_latexRefinementConfig != null) _latexRefinementConfig.UseVertex = false;
+                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(_latexRefinementConfig?.AiStudioApiKeyEnvName ?? "API_KEY-latex-refinement") ?? "no-key";
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
                 // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
@@ -960,7 +961,7 @@ public class AiStudioAutoExtractionSession {
                 // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
                 var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
                     refinementClient, 
-                    _latexRefinementConfig, 
+                    _latexRefinementConfig!, 
                     refinementTargetFile, 
                     _config, 
                     audioFilePath);

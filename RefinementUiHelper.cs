@@ -9,36 +9,58 @@ using Google.GenAI;
 
 namespace AutoExtraction {
     public static class RefinementUiHelper {
-        public static async Task StartInteractiveRefinementAsync(LatexRefinementSessionConfig refinementConfig, AiStudioAutoExtractionConfig extractionConfig) {
+        public static async Task StartInteractiveRefinementAsync(LatexRefinementSessionConfig refinementConfig, IAutoExtractionConfig extractionConfig) {
             Console.WriteLine("\n=== Interaktiver LaTeX Refinement Modus ===");
 
             // Hot-reload the config from disk so manual edits to the .json file are picked up immediately
             refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
 
             while (true) {
-                string profileDisplay = refinementConfig.ActiveApiProfile == 0 ? "Dediziert (API_KEY-latex-refinement)" : $"Profil {refinementConfig.ActiveApiProfile}";
+                string backendDisplay = refinementConfig.UseVertex ? "Vertex AI" : "AI Studio";
+                string profileDisplay = refinementConfig.AiStudioActiveApiProfile == 0 ? "Dediziert (API_KEY-latex-refinement)" : $"Profil {refinementConfig.AiStudioActiveApiProfile}";
+                
+                string currentModel = refinementConfig.UseVertex 
+                    ? refinementConfig.Step1MergeAndTimestamp.Vertex.Model 
+                    : refinementConfig.Step1MergeAndTimestamp.AiStudio.Model;
+
                 Console.WriteLine($"\n[Refinement Config]");
-                Console.WriteLine($"API-Profil: {profileDisplay}");
-                Console.WriteLine($"Modell:     {refinementConfig.Model}");
+                Console.WriteLine($"Backend:    {backendDisplay}");
+                if (!refinementConfig.UseVertex) {
+                    Console.WriteLine($"API-Profil: {profileDisplay}");
+                } else {
+                    Console.WriteLine($"Project ID: {refinementConfig.VertexProjectId}");
+                }
+                Console.WriteLine($"Modell:     {currentModel}");
                 Console.WriteLine("\nOptionen:");
                 Console.WriteLine(" 1) Refinement fortsetzen (Dateien wählen)");
-                Console.WriteLine(" 2) API Key Profil ändern");
-                Console.WriteLine(" 3) Modell ändern");
-                Console.WriteLine(" 4) Abbrechen");
-                Console.Write("Auswahl (1-4, Standard: 1): ");
+                Console.WriteLine($" 2) Backend wechseln (Aktuell: {backendDisplay})");
+                Console.WriteLine(" 3) API Key Profil ändern (Nur für AI Studio)");
+                Console.WriteLine(" 4) Modell ändern (Für aktuelles Backend)");
+                Console.WriteLine(" 5) Abbrechen");
+                Console.Write("Auswahl (1-5, Standard: 1): ");
+                
                 string menuChoice = Console.ReadLine()?.Trim() ?? "1";
                 if (string.IsNullOrEmpty(menuChoice)) menuChoice = "1";
 
                 if (menuChoice == "2") {
+                    refinementConfig.UseVertex = !refinementConfig.UseVertex;
+                    ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
+                    Console.WriteLine($"  [INFO] Backend gewechselt auf: {(refinementConfig.UseVertex ? "Vertex AI" : "AI Studio")}");
+                    continue;
+                } else if (menuChoice == "3") {
+                    if (refinementConfig.UseVertex) {
+                        Console.WriteLine("API Profile sind nur für AI Studio relevant.");
+                        continue;
+                    }
                     Console.Write("Neues API-Key Profil (0-3, 0 für Dediziert): ");
                     if (int.TryParse(Console.ReadLine(), out int newProfile) && newProfile >= 0 && newProfile <= 3) {
-                        refinementConfig.ActiveApiProfile = newProfile;
+                        refinementConfig.AiStudioActiveApiProfile = newProfile;
                         ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
                     } else {
                         Console.WriteLine("Ungültige Eingabe.");
                     }
                     continue;
-                } else if (menuChoice == "3") {
+                } else if (menuChoice == "4") {
                     Console.WriteLine("\nWähle ein Modell:");
                     Console.WriteLine(" 1) gemini-3.5-flash");
                     Console.WriteLine(" 2) gemini-3.1-flash-lite-preview");
@@ -56,18 +78,23 @@ namespace AutoExtraction {
                         _ => ""
                     };
                     if (!string.IsNullOrEmpty(newModel)) {
-                        refinementConfig.Model = newModel;
-                        refinementConfig.Step1MergeAndTimestamp.Model = newModel;
-                        refinementConfig.Step2SpeechRefinement.Model = newModel;
-                        refinementConfig.Step3LastRefinement.Model = newModel;
+                        if (refinementConfig.UseVertex) {
+                            refinementConfig.Step1MergeAndTimestamp.Vertex.Model = newModel;
+                            refinementConfig.Step2SpeechRefinement.Vertex.Model = newModel;
+                            refinementConfig.Step3LastRefinement.Vertex.Model = newModel;
+                        } else {
+                            refinementConfig.Step1MergeAndTimestamp.AiStudio.Model = newModel;
+                            refinementConfig.Step2SpeechRefinement.AiStudio.Model = newModel;
+                            refinementConfig.Step3LastRefinement.AiStudio.Model = newModel;
+                        }
                         ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
                     }
                     continue;
-                } else if (menuChoice == "4") {
+                } else if (menuChoice == "5") {
                     return;
                 }
 
-                break;
+                break; // proceed with option 1
             }
 
             var uiConfig = ConfigLoader<RefinementUiHelperConfig>.Load();
@@ -123,7 +150,7 @@ namespace AutoExtraction {
             texFiles = texFiles.OrderBy(f => Path.GetDirectoryName(f)).ThenBy(f => Path.GetFileName(f)).ToArray();
 
             Console.WriteLine("\nVerfügbare .tex Dateien:");
-            string lastDir = null;
+            string? lastDir = null;
             for (int i = 0; i < texFiles.Length; i++) {
                 string currentDir = Path.GetDirectoryName(texFiles[i]) ?? "";
                 if (lastDir != null && currentDir != lastDir) {
@@ -165,20 +192,27 @@ namespace AutoExtraction {
 
             Console.WriteLine($"\n[INFO] Starte Refinement für: {Path.GetFileName(selectedTex)}");
             
-            string refinementApiKey;
-            if (refinementConfig.ActiveApiProfile == 0) {
-                refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(refinementConfig.ApiKeyEnvName) ?? "no-key";
+            Client refinementClient;
+            if (refinementConfig.UseVertex) {
+                refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildVertexClient(
+                    refinementConfig.VertexProjectId, 
+                    refinementConfig.VertexLocation
+                );
             } else {
-                refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(refinementConfig.ActiveApiProfile) ?? "no-key";
+                string refinementApiKey;
+                if (refinementConfig.AiStudioActiveApiProfile == 0) {
+                    refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(refinementConfig.AiStudioApiKeyEnvName) ?? "no-key";
+                } else {
+                    refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(refinementConfig.AiStudioActiveApiProfile) ?? "no-key";
+                }
+                refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
             }
-            
-            Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
             var refinementSession = new LatexRefinementSession(
                 refinementClient,
                 refinementConfig,
                 selectedTex,
-                extractionConfig,
+                extractionConfig, // using AiStudioAutoExtractionConfig here for the target folder etc. 
                 selectedAudio
             );
 

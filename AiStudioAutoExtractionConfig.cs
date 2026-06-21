@@ -7,7 +7,7 @@ namespace AutoExtraction;
 /// Defines source/target directories and the critical extraction prompt.
 /// [Human] Konfiguration für den automatisierten Extraktions-Modus mit dem kostenlosen AI Studio.
 /// </summary>
-public class AiStudioAutoExtractionConfig {
+public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Selects the environment variable API key profile to use (1-3).
     // If 0, uses the dedicated API_KEY-automated-content-extraction.
     // [Human] Stanardmäßig wird hier Profil 0 (der dedizierte Key für die automatisierte Extraktion) verwendet.
@@ -18,7 +18,7 @@ public class AiStudioAutoExtractionConfig {
     // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
     public string TargetFolder { get; set; } = @"";
     // [AI Context] Absolute paths to the overarching Director's Cut persona and instruction markdown files.
-    public string[] SystemInstructionPaths { get; set; } = Array.Empty<string>();
+    public string[] SystemInstructionPaths { get; set; } = [];
     /* Default fallback:
     new[] {
       @"C:\Users\miche\latex\prompt-engineering\transcription\transcription.md",
@@ -30,10 +30,10 @@ public class AiStudioAutoExtractionConfig {
     };
     */
     // [AI Context] Centralized fallback paths for loading historical reference materials into the context window.
-    public string[] HistoryPreloadPaths { get; set; } = new[] {
+    public string[] HistoryPreloadPaths { get; set; } = [
     @"C:\Users\miche\latex\prompt-engineering\transcription\training-history"
     //@"C:\Users\miche\latex\prompt-engineering\transcription\table-of-content.md"
-  };
+  ];
     public string LogFolder { get; set; } = @"D:\gemini-logs";
     // [AI Context] Default model selection for developer-tier batch processing.
     public float Temperature { get; set; } = 0.35f; // 1.0f is default.5  

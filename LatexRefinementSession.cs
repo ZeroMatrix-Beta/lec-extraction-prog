@@ -9,6 +9,7 @@ using DocumentUtilities;
 using Config;
 using AutoExtraction;
 using Infrastructure;
+using Google.Cloud.Storage.V1;
 
 namespace DirectChatAiInteraction;
 
@@ -17,7 +18,7 @@ public class LatexRefinementSession {
   private readonly LatexRefinementSessionConfig _config;
   private readonly string? _singleFilePathToProcess;
   private readonly string[]? _multipleFilesToProcess;
-  private readonly AiStudioAutoExtractionConfig? _extractionConfig;
+  private readonly IAutoExtractionConfig? _extractionConfig;
   private readonly string? _audioFilePath;
 
   public LatexRefinementSession(Client client, LatexRefinementSessionConfig config) {
@@ -38,7 +39,7 @@ public class LatexRefinementSession {
     _audioFilePath = null;
   }
 
-  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, AiStudioAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
+  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
     _client = client;
     _config = config;
     _singleFilePathToProcess = singleFilePathToProcess;
@@ -47,7 +48,7 @@ public class LatexRefinementSession {
     _audioFilePath = audioFilePath;
   }
 
-  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, AiStudioAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
+  public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
     _client = client;
     _config = config;
     _singleFilePathToProcess = null;
@@ -65,7 +66,7 @@ public class LatexRefinementSession {
     if ((_singleFilePathToProcess != null || _multipleFilesToProcess != null) && _extractionConfig != null) {
       if (!_extractionConfig.GoIntoLatexRefinement || !_extractionConfig.GenerateOffsetFiles || !_extractionConfig.GenerateAudioFile) {
         Console.WriteLine("\n[WARNUNG] LaTeX Refinement übersprungen.");
-        Console.WriteLine("  Grund: Die Voraussetzungen in AiStudioAutoExtractionConfig sind nicht erfüllt.");
+        Console.WriteLine("  Grund: Die Voraussetzungen in AutoExtractionConfig sind nicht erfüllt.");
         return;
       }
       
@@ -164,7 +165,7 @@ public class LatexRefinementSession {
       TimeSpan t = TimeSpan.FromSeconds(dur);
       audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
       
-      var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, true, "");
+      var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
       var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
       if (success) {
           parts.AddRange(attached);
@@ -186,7 +187,13 @@ public class LatexRefinementSession {
     }
 
     string outputFileName = $"{baseName}-offset-merged.tex";
-    return await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName);
+    var result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName);
+    
+    if (_config.UseVertex) {
+        await CleanupBucketAsync();
+    }
+    
+    return result;
   }
 
   // Overload that takes single string
@@ -198,7 +205,7 @@ public class LatexRefinementSession {
     var parts = new List<Part>();
     
     if (audioFilePath != null && System.IO.File.Exists(audioFilePath)) {
-      var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, true, "");
+      var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
       var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
       if (success) {
           parts.AddRange(attached);
@@ -213,7 +220,13 @@ public class LatexRefinementSession {
     parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
     string outputFileName = $"{baseName}-offset-speech_refined.tex";
-    return await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName);
+    var result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName);
+    
+    if (_config.UseVertex) {
+        await CleanupBucketAsync();
+    }
+    
+    return result;
   }
 
   private async Task<string?> ExecuteStep3LastRefinementAsync(string inputFile, string baseName, string targetFolder) {
@@ -225,10 +238,18 @@ public class LatexRefinementSession {
     parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
     string outputFileName = $"{baseName}-offset-final.tex";
-    return await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName);
+    var result = await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName);
+    
+    if (_config.UseVertex) {
+        await CleanupBucketAsync();
+    }
+    
+    return result;
   }
 
   private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName) {
+    BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
+
     string systemInstructionText = "";
     if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Any()) {
         var resolved = ExtractionHelpers.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
@@ -243,22 +264,22 @@ public class LatexRefinementSession {
     }
 
     var requestConfig = new GenerateContentConfig {
-      Temperature = stepConfig.Temperature,
-      TopP = stepConfig.TopP,
-      TopK = stepConfig.TopK,
-      MaxOutputTokens = stepConfig.MaxOutputTokens
+      Temperature = backendParams.Temperature,
+      TopP = backendParams.TopP,
+      TopK = backendParams.TopK,
+      MaxOutputTokens = backendParams.MaxOutputTokens
     };
     if (!string.IsNullOrWhiteSpace(systemInstructionText)) {
       requestConfig.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = systemInstructionText } } };
     }
 
-    if (stepConfig.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || stepConfig.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-      if (stepConfig.ThinkingBudget.HasValue || !string.IsNullOrEmpty(stepConfig.ThinkingLevel)) {
+    if (backendParams.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+      if (backendParams.ThinkingBudget.HasValue || !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
         requestConfig.ThinkingConfig = new ThinkingConfig();
-        if (!string.IsNullOrEmpty(stepConfig.ThinkingLevel)) {
-          requestConfig.ThinkingConfig.ThinkingLevel = stepConfig.ThinkingLevel;
-        } else if (stepConfig.ThinkingBudget.HasValue) {
-            requestConfig.ThinkingConfig.ThinkingBudget = stepConfig.ThinkingBudget;
+        if (!string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
+          requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel;
+        } else if (backendParams.ThinkingBudget.HasValue) {
+            requestConfig.ThinkingConfig.ThinkingBudget = backendParams.ThinkingBudget;
         }
       }
     }
@@ -278,13 +299,13 @@ public class LatexRefinementSession {
     Console.CancelKeyPress += cancelHandler;
 
     while (true) {
-      Console.WriteLine($"\n  [API] Sende Anfrage an Gemini ({stepConfig.Model}) (Request {currentRequest}/{maxRequests})...");
+      Console.WriteLine($"\n  [API] Sende Anfrage an Gemini ({backendParams.Model}) (Request {currentRequest}/{maxRequests})...");
       string chunkResp = "";
       bool callSuccess = false;
 
       try {
         callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
-          streamFactory: () => _client.Models.GenerateContentStreamAsync(stepConfig.Model, history, requestConfig),
+          streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.Model, history, requestConfig),
           onChunkReceived: async (chunk) => {
             string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
             
@@ -353,13 +374,13 @@ public class LatexRefinementSession {
       
       string fileHeader = $"% ==========================================\n" +
                           $"% LatexRefinement Step Output: {outputFileName}\n" +
-                          $"% Model: {stepConfig.Model}\n" +
-                          $"% Temperature: {stepConfig.Temperature}\n" +
-                          $"% TopP: {stepConfig.TopP}\n" +
-                          $"% TopK: {stepConfig.TopK}\n" +
-                          $"% MaxOutputTokens: {stepConfig.MaxOutputTokens}\n" +
-                          (stepConfig.ThinkingBudget.HasValue ? $"% ThinkingBudget: {stepConfig.ThinkingBudget.Value}\n" : "") +
-                          (!string.IsNullOrEmpty(stepConfig.ThinkingLevel) ? $"% ThinkingLevel: {stepConfig.ThinkingLevel}\n" : "") +
+                          $"% Model: {backendParams.Model}\n" +
+                          $"% Temperature: {backendParams.Temperature}\n" +
+                          $"% TopP: {backendParams.TopP}\n" +
+                          $"% TopK: {backendParams.TopK}\n" +
+                          $"% MaxOutputTokens: {backendParams.MaxOutputTokens}\n" +
+                          (backendParams.ThinkingBudget.HasValue ? $"% ThinkingBudget: {backendParams.ThinkingBudget.Value}\n" : "") +
+                          (!string.IsNullOrEmpty(backendParams.ThinkingLevel) ? $"% ThinkingLevel: {backendParams.ThinkingLevel}\n" : "") +
                           $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                           $"% ==========================================\n\n";
 
@@ -370,6 +391,25 @@ public class LatexRefinementSession {
     else {
       Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
       return null;
+    }
+  }
+
+  private async Task CleanupBucketAsync() {
+    if (string.IsNullOrWhiteSpace(_config.VertexGcsBucketName)) return;
+    try {
+      var storageClient = await StorageClient.CreateAsync();
+      var objects = storageClient.ListObjectsAsync(_config.VertexGcsBucketName);
+      int count = 0;
+      await foreach (var obj in objects) {
+        await storageClient.DeleteObjectAsync(_config.VertexGcsBucketName, obj.Name);
+        count++;
+      }
+      if (count > 0) Console.WriteLine($"  [GCS] {count} temporäre Datei(en) gelöscht, um Storage-Kosten zu sparen.");
+    }
+    catch (Exception ex) {
+      Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+      Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+      Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
     }
   }
 }
