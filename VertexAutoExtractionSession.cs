@@ -1162,7 +1162,6 @@ public class VertexAutoExtractionSession {
         }
 
         Console.CancelKeyPress -= cancelHandler;
-        await CleanupBucketAsync();
         return (fullResponse, interactionInputTokens, interactionOutputTokens);
     }
 

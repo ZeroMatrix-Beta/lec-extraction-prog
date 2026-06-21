@@ -38,14 +38,14 @@ public class LatexRefinementSessionConfig {
     public string SourceFolder { get; set; } = "";
 
     public RefinementStepConfig Step1MergeAndTimestamp { get; set; } = new RefinementStepConfig {
-        SystemInstructionPaths = [ @"C:\Users\miche\latex\prompt-engineering\merge-instructions\latex-part-merge-instruction.md" ]
+        SystemInstructionPaths = [@"C:\Users\miche\latex\prompt-engineering\merge-instructions\latex-part-merge-instruction.md"]
     };
 
     public RefinementStepConfig Step2SpeechRefinement { get; set; } = new RefinementStepConfig {
-        SystemInstructionPaths = [ @"C:\Users\miche\latex\prompt-engineering\speech-refinement\speech-refinement.md" ]
+        SystemInstructionPaths = [@"C:\Users\miche\latex\prompt-engineering\speech-refinement\speech-refinement.md"]
     };
 
     public RefinementStepConfig Step3LastRefinement { get; set; } = new RefinementStepConfig {
-        SystemInstructionPaths = [ @"C:\Users\miche\latex\prompt-engineering\last-refinement\last-refinement.md" ]
+        SystemInstructionPaths = [@"C:\Users\miche\latex\prompt-engineering\last-refinement\last-refinement.md"]
     };
 }
