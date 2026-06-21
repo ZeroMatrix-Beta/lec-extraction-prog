@@ -39,6 +39,10 @@ public static class ConfigLoader<T> where T : class, new() {
     return config;
   }
 
+  // [AI Context] Note on JsonSerializerOptions Caching:
+  // Instantiating JsonSerializerOptions is surprisingly expensive.
+  // By creating it once as a 'static readonly' field, we avoid creating a new instance
+  // every time the config is saved, significantly improving performance (fixes CA1869).
   private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
   public static void Save(T config) {

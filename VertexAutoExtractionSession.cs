@@ -20,7 +20,11 @@ namespace AutoExtraction;
 /// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos. 
 /// Schau bitte auch das entsprechende .json-File an!
 /// </summary>
-public class VertexAutoExtractionSession {
+/// <remarks>
+/// Note: This class is 'partial' because it uses the [GeneratedRegex] attribute 
+/// at the bottom of the file for compile-time regex generation (SYSLIB1045).
+/// </remarks>
+public partial class VertexAutoExtractionSession {
     private Client _client;
     private readonly VertexAutoExtractionConfig _config;
     private readonly AttachmentHandler _attachmentHandler;
@@ -1128,8 +1132,8 @@ public class VertexAutoExtractionSession {
             fullResponse += chunkResp;
             await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens);
 
-            bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            bool segmentComplete = SegmentCompleteRegex().IsMatch(chunkResp);
+            bool videoComplete = VideoCompleteRegex().IsMatch(chunkResp);
 
             if (videoComplete) break;
 
@@ -1187,4 +1191,10 @@ public class VertexAutoExtractionSession {
             Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
         }
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex SegmentCompleteRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
 }

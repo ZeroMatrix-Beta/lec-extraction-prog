@@ -98,7 +98,7 @@ public class LatexRefinementSession {
       baseName = Path.GetFileNameWithoutExtension(currentFiles[0]).Replace("-part1", "").Replace("-offset", "");
     }
     else if (_singleFilePathToProcess != null) {
-      currentFiles = new[] { _singleFilePathToProcess };
+      currentFiles = [_singleFilePathToProcess];
       targetFolder = Path.GetDirectoryName(_singleFilePathToProcess) ?? _config.TargetFolder;
       baseName = Path.GetFileNameWithoutExtension(_singleFilePathToProcess).Replace("-offset", "");
     }
@@ -163,7 +163,7 @@ public class LatexRefinementSession {
       TimeSpan t = TimeSpan.FromSeconds(dur);
       audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
       
-      var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+      var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
       var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
       if (success) {
           parts.AddRange(attached);
@@ -196,14 +196,14 @@ public class LatexRefinementSession {
 
   // Overload that takes single string
   private async Task<string?> ExecuteStep1MergeAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
-     return await ExecuteStep1MergeAsync(new[] { inputFile }, audioFilePath, baseName, targetFolder);
+     return await ExecuteStep1MergeAsync([inputFile], audioFilePath, baseName, targetFolder);
   }
 
   private async Task<string?> ExecuteStep2SpeechRefinementAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
     var parts = new List<Part>();
     
     if (audioFilePath != null && System.IO.File.Exists(audioFilePath)) {
-      var handler = new AttachmentHandler(_client, targetFolder, new[] { targetFolder }, !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+      var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
       var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
       if (success) {
           parts.AddRange(attached);
@@ -249,7 +249,10 @@ public class LatexRefinementSession {
     BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
     string systemInstructionText = "";
-    if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Any()) {
+    // [AI Context] Note on Performance (.Length vs .Any()):
+    // For arrays, checking '.Length > 0' is a direct property lookup (O(1)).
+    // Calling '.Any()' creates an enumerator object under the hood, which causes unnecessary memory allocation.
+    if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Length > 0) {
         var resolved = ExtractionHelpers.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
         foreach (var path in resolved) {
              if (System.IO.File.Exists(path)) {
@@ -350,15 +353,21 @@ public class LatexRefinementSession {
         break;
       }
 
+      // [AI Context] Note on C# 8 Range Operator: 
+      // 'chunkResp[^300..]' is modern C# syntax equivalent to 'chunkResp.Substring(chunkResp.Length - 300)'.
+      // The '^' operator means "from the end", so '^300..' means "start 300 characters from the end, and go to the very end".
       string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
-          $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp)}\n```\n\n" +
+          $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n```\n\n" +
           "Please \"continue\" exactly where you left off. Do not repeat what you already wrote.";
 
       Console.WriteLine("\n  [Refinement] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
       Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
-      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
-      history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+      // [AI Context] Note on C# 12 Collection Expressions:
+      // The '[...]' syntax is a shorthand for 'new List<Part> { ... }' or 'new[] { ... }'.
+      // It allows the compiler to infer the type and generate the most efficient allocation strategy.
+      history.Add(new Content { Role = "model", Parts = [new Part { Text = chunkResp }] });
+      history.Add(new Content { Role = "user", Parts = [new Part { Text = continuePrompt }] });
 
       Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
       if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
