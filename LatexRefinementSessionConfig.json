@@ -1,47 +1,84 @@
 {
   "Enabled": true,
-  "ApiKeyEnvName": "API_KEY-latex-refinement",
+  "UseVertex": true,
+  "AiStudioApiKeyEnvName": "API_KEY-latex-refinement",
+  "AiStudioActiveApiProfile": 3,
+  "VertexProjectId": "vertex-ai-experiments-494320",
+  "VertexLocation": "global",
+  "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
   "TargetFolder": "",
+  "SourceFolder": "",
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "Temperature": 1.0,
-    "TopP": 0.95,
-    "TopK": 40,
-    "MaxOutputTokens": 65535,
-    "Model": "gemini-3.5-flash",
-    "ThinkingBudget": 65535,
-    "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
-    "HistoryPreloadPaths": []
+    "HistoryPreloadPaths": [],
+    "AiStudio": {
+      "Temperature": 1.0,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.5-flash",
+      "ThinkingBudget": 65535,
+      "ThinkingLevel": "HIGH"
+    },
+    "Vertex": {
+      "Temperature": 1.0,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-2.5-pro",
+      "ThinkingBudget": 65535,
+      "ThinkingLevel": "HIGH"
+    }
   },
   "Step2SpeechRefinement": {
     "Enabled": true,
-    "Temperature": 1.0,
-    "TopP": 0.95,
-    "TopK": 40,
-    "MaxOutputTokens": 65535,
-    "Model": "gemini-3.5-flash",
-    "ThinkingBudget": 65535,
-    "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
-    "HistoryPreloadPaths": []
+    "HistoryPreloadPaths": [],
+    "AiStudio": {
+      "Temperature": 1.0,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.5-flash",
+      "ThinkingBudget": 65535,
+      "ThinkingLevel": "HIGH"
+    },
+    "Vertex": {
+      "Temperature": 1.0,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-2.5-pro",
+      "ThinkingBudget": 65535,
+      "ThinkingLevel": "HIGH"
+    }
   },
   "Step3LastRefinement": {
     "Enabled": true,
-    "Temperature": 0.9,
-    "TopP": 0.95,
-    "TopK": 40,
-    "MaxOutputTokens": 65535,
-    "Model": "gemini-3.5-flash",
-    "ThinkingBudget": 65535,
-    "ThinkingLevel": "HIGH",
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
     ],
-    "HistoryPreloadPaths": []
+    "HistoryPreloadPaths": [],
+    "AiStudio": {
+      "Temperature": 0.9,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.5-flash",
+      "ThinkingBudget": 65535,
+      "ThinkingLevel": "HIGH"
+    },
+    "Vertex": {
+      "Temperature": 0.9,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-2.5-pro"
+    }
   }
 }

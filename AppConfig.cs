@@ -59,10 +59,7 @@ public class AppConfigOptions {
   public string BaseLectureFolder { get; set; } = @"D:\lecture-videos";
   public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
   public string LogFolder { get; set; } = @"D:\gemini-logs";
-  public string[] HistoryPreloadPaths { get; set; } = new[] {
-    @"C:\Users\miche\latex\directors-cut-analysis2\gemini-chat-history",
-    @"D:\ETH HS 2025\Analysis I HS 2025\Analysis_I_Skript_I_25-12-22.pdf"
-  };
+  public string[] HistoryPreloadPaths { get; set; } = Array.Empty<string>();
   public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
   public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
   public string VertexLocation { get; set; } = "global";

@@ -141,3 +141,9 @@ Beim Start der Anwendung stehen 5 Betriebsmodi zur Verfügung:
    - `API_KEY-latex-refinement` (Für das Post-Processing)
 3. **Google Cloud Vertex AI:** Setzt voraus, dass du die Google Cloud CLI (`gcloud`) installiert hast und über `gcloud auth application-default login` authentifiziert bist. Das verknüpfte Projekt muss über ein aktives Rechnungskonto (Billing Account) verfügen.
 4. **System Instruction (`gemini.md`):** Die Anwendung benötigt zwingend eine System-Instruktionsdatei, die der KI die genauen LaTeX-Formatierungsregeln und Custom-Environments (z.B. `\begin{spoken-clean}`) vorgibt. Der absolute Pfad zu dieser Datei muss vor dem Start in den Konfigurationsklassen des Programms hinterlegt werden.
+
+---
+
+### 📖 Detailed Documentation / Detail-Dokumentation
+
+For a deeper dive into the system's architecture, including configuration quirks (Array Merging), API constraints, multimodal tokenization differences between Gemini versions, and advanced reasoning parameters (`ThinkingBudget`, `ThinkingLevel`), please refer to the **[Detailed System Documentation](Documentation.md)**.

@@ -88,6 +88,11 @@ public class VertexAutoExtractionSession {
             return;
         }
 
+        // [AI Context] Clean up the bucket at the very beginning to remove any leftovers from previous crashes.
+        await CleanupBucketAsync();
+
+        try {
+
         if (string.IsNullOrEmpty(_systemInstructionText)) {
             if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any()) {
                 Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
@@ -158,6 +163,11 @@ public class VertexAutoExtractionSession {
         await _sessionLogger.LogSessionSetupAsync();
 
         await ProcessFilesAsync(files);
+        }
+        finally {
+            // [AI Context] Guarantee that the bucket is cleaned up even if an exception occurs during history upload or processing.
+            await CleanupBucketAsync();
+        }
     }
 
     /// <summary>
@@ -299,12 +309,18 @@ public class VertexAutoExtractionSession {
         };
 
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+            bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
+            bool hasBudget = _config.ThinkingBudget.HasValue;
+            
+            if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                if (hasLevel) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                } else if (_config.ThinkingBudget.HasValue) {
-                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+                } else if (hasBudget) {
+                    int budget = _config.ThinkingBudget.Value;
+                    if (budget > 32768) budget = 32768;
+                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
                 }
             }
         }
@@ -455,12 +471,18 @@ public class VertexAutoExtractionSession {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+            bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
+            bool hasBudget = _config.ThinkingBudget.HasValue;
+            
+            if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                if (hasLevel) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                } else if (_config.ThinkingBudget.HasValue) {
-                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+                } else if (hasBudget) {
+                    int budget = _config.ThinkingBudget.Value;
+                    if (budget > 32768) budget = 32768;
+                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
                 }
             }
         }
@@ -1026,12 +1048,18 @@ public class VertexAutoExtractionSession {
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+            bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
+            bool hasBudget = _config.ThinkingBudget.HasValue;
+            
+            if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                if (hasLevel) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                } else if (_config.ThinkingBudget.HasValue) {
-                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
+                } else if (hasBudget) {
+                    int budget = _config.ThinkingBudget.Value;
+                    if (budget > 32768) budget = 32768;
+                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
                 }
             }
         }
@@ -1144,6 +1172,7 @@ public class VertexAutoExtractionSession {
     private async Task CleanupBucketAsync() {
         if (string.IsNullOrWhiteSpace(_config.GcsBucketName)) return;
         try {
+            Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{_config.GcsBucketName}'...");
             var storageClient = await Google.Cloud.Storage.V1.StorageClient.CreateAsync();
             var objects = storageClient.ListObjectsAsync(_config.GcsBucketName);
             int count = 0;

@@ -328,7 +328,9 @@ public class DirectAiChatSessionVertex {
     // If this functionality is intended, please check for SDK updates or alternative configuration methods.
     if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
       if (AIParams.ThinkingBudget.HasValue) {
-        config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = AIParams.ThinkingBudget };
+        int budget = AIParams.ThinkingBudget.Value;
+        if (budget > 32768) budget = 32768;
+        config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
       }
     }
 

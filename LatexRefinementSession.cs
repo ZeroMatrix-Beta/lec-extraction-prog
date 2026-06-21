@@ -274,12 +274,18 @@ public class LatexRefinementSession {
     }
 
     if (backendParams.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-      if (backendParams.ThinkingBudget.HasValue || !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
+      bool isGemini3 = backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+      bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel) && isGemini3;
+      bool hasBudget = backendParams.ThinkingBudget.HasValue;
+
+      if (hasLevel || hasBudget) {
         requestConfig.ThinkingConfig = new ThinkingConfig();
-        if (!string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
+        if (hasLevel) {
           requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel;
-        } else if (backendParams.ThinkingBudget.HasValue) {
-            requestConfig.ThinkingConfig.ThinkingBudget = backendParams.ThinkingBudget;
+        } else if (hasBudget) {
+            int budget = backendParams.ThinkingBudget.Value;
+            if (budget > 32768) budget = 32768;
+            requestConfig.ThinkingConfig.ThinkingBudget = budget;
         }
       }
     }
@@ -397,6 +403,7 @@ public class LatexRefinementSession {
   private async Task CleanupBucketAsync() {
     if (string.IsNullOrWhiteSpace(_config.VertexGcsBucketName)) return;
     try {
+      Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{_config.VertexGcsBucketName}'...");
       var storageClient = await StorageClient.CreateAsync();
       var objects = storageClient.ListObjectsAsync(_config.VertexGcsBucketName);
       int count = 0;
