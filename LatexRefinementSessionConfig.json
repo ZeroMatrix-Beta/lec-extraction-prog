@@ -15,7 +15,7 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.9,
+      "Temperature": 0.8,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -65,7 +65,7 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.9,
+      "Temperature": 0.7,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -74,7 +74,7 @@
       "ThinkingLevel": "HIGH"
     },
     "Vertex": {
-      "Temperature": 0.9,
+      "Temperature": 0.6,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,

@@ -144,6 +144,17 @@ Beim Start der Anwendung stehen 5 Betriebsmodi zur Verfügung:
 
 ---
 
+### 🚨 Troubleshooting: HTTP 500 & Retry Loops
+
+If the application gets stuck with `[Exception Caught] Type: ServerError` (HTTP 500), it means the Google backend crashed while processing your specific prompt or video chunk.
+- **Do not use "Thinking" with Flash Models:** Combining `gemini-3.5-flash` with a high `ThinkingBudget` and a 30-minute video chunk is highly unstable. Switch to a "Pro" model (e.g., `gemini-2.5-pro` or `gemini-3.1-pro-preview`) if you want to use reasoning.
+- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` can crash the backend if the history is massive.
+- **Skip the Error:** Press `Ctrl+C` during a retry delay to gracefully skip the corrupted video chunk and proceed to the next file.
+
+For more details on why cache-priming is used instead of single-prompt processing, see the Documentation.
+
+---
+
 ### 📖 Detailed Documentation / Detail-Dokumentation
 
 For a deeper dive into the system's architecture, including configuration quirks (Array Merging), API constraints, multimodal tokenization differences between Gemini versions, and advanced reasoning parameters (`ThinkingBudget`, `ThinkingLevel`), please refer to the **[Detailed System Documentation](Documentation.md)**.
