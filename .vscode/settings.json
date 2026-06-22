@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "*Config.json": "jsonc",
+    "appsettings.json": "jsonc"
+  }
+}

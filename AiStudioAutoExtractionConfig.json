@@ -1,5 +1,11 @@
 {
-  "ActiveApiProfile": 3,
+  "ActiveApiProfile": 0,
+  "AiStudioApiKeyEnvNames": [
+    "API_KEY-automated-content-extraction",
+    "API_KEY-ai-studio-test-project-1",
+    "API_KEY-ai-studio-test-project-2",
+    "API_KEY-ai-studio-test-project-3"
+  ],
   "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
   "TargetFolder": "",
   "SystemInstructionPaths": [
