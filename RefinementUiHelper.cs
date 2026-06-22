@@ -18,16 +18,17 @@ namespace AutoExtraction {
             while (true) {
                 string backendDisplay = refinementConfig.UseVertex ? "Vertex AI" : "AI Studio";
                 string profileDisplay = refinementConfig.AiStudioActiveApiProfile == 0 ? "Dediziert (API_KEY-latex-refinement)" : $"Profil {refinementConfig.AiStudioActiveApiProfile}";
-                
-                string currentModel = refinementConfig.UseVertex 
-                    ? refinementConfig.Step1MergeAndTimestamp.Vertex.Model 
+
+                string currentModel = refinementConfig.UseVertex
+                    ? refinementConfig.Step1MergeAndTimestamp.Vertex.Model
                     : refinementConfig.Step1MergeAndTimestamp.AiStudio.Model;
 
                 Console.WriteLine($"\n[Refinement Config]");
                 Console.WriteLine($"Backend:    {backendDisplay}");
                 if (!refinementConfig.UseVertex) {
                     Console.WriteLine($"API-Profil: {profileDisplay}");
-                } else {
+                }
+                else {
                     Console.WriteLine($"Project ID: {refinementConfig.VertexProjectId}");
                 }
                 Console.WriteLine($"Modell:     {currentModel}");
@@ -38,7 +39,7 @@ namespace AutoExtraction {
                 Console.WriteLine(" 4) Modell ändern (Für aktuelles Backend)");
                 Console.WriteLine(" 5) Abbrechen");
                 Console.Write("Auswahl (1-5, Standard: 1): ");
-                
+
                 string menuChoice = Console.ReadLine()?.Trim() ?? "1";
                 if (string.IsNullOrEmpty(menuChoice)) menuChoice = "1";
 
@@ -47,7 +48,8 @@ namespace AutoExtraction {
                     ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
                     Console.WriteLine($"  [INFO] Backend gewechselt auf: {(refinementConfig.UseVertex ? "Vertex AI" : "AI Studio")}");
                     continue;
-                } else if (menuChoice == "3") {
+                }
+                else if (menuChoice == "3") {
                     if (refinementConfig.UseVertex) {
                         Console.WriteLine("API Profile sind nur für AI Studio relevant.");
                         continue;
@@ -56,11 +58,13 @@ namespace AutoExtraction {
                     if (int.TryParse(Console.ReadLine(), out int newProfile) && newProfile >= 0 && newProfile <= 3) {
                         refinementConfig.AiStudioActiveApiProfile = newProfile;
                         ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
-                    } else {
+                    }
+                    else {
                         Console.WriteLine("Ungültige Eingabe.");
                     }
                     continue;
-                } else if (menuChoice == "4") {
+                }
+                else if (menuChoice == "4") {
                     Console.WriteLine("\nWähle ein Modell:");
                     Console.WriteLine(" 1) gemini-3.5-flash");
                     Console.WriteLine(" 2) gemini-3.1-flash-lite-preview");
@@ -82,7 +86,8 @@ namespace AutoExtraction {
                             refinementConfig.Step1MergeAndTimestamp.Vertex.Model = newModel;
                             refinementConfig.Step2SpeechRefinement.Vertex.Model = newModel;
                             refinementConfig.Step3LastRefinement.Vertex.Model = newModel;
-                        } else {
+                        }
+                        else {
                             refinementConfig.Step1MergeAndTimestamp.AiStudio.Model = newModel;
                             refinementConfig.Step2SpeechRefinement.AiStudio.Model = newModel;
                             refinementConfig.Step3LastRefinement.AiStudio.Model = newModel;
@@ -90,7 +95,8 @@ namespace AutoExtraction {
                         ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
                     }
                     continue;
-                } else if (menuChoice == "5") {
+                }
+                else if (menuChoice == "5") {
                     return;
                 }
 
@@ -98,7 +104,7 @@ namespace AutoExtraction {
             }
 
             var uiConfig = ConfigLoader<RefinementUiHelperConfig>.Load();
-            
+
             Console.WriteLine($"\nVerzeichnis auswählen:");
             Console.WriteLine($" 1) Voreingestellter Pfad: {uiConfig.PredefinedPath}");
             Console.WriteLine($" 2) Eigenen Pfad eingeben");
@@ -110,7 +116,8 @@ namespace AutoExtraction {
                 Console.Write($"\nVerzeichnis eingeben (Standard: {extractionConfig.TargetFolder}): ");
                 string folderInput = Console.ReadLine()?.Trim() ?? "";
                 searchFolder = string.IsNullOrEmpty(folderInput) ? extractionConfig.TargetFolder : folderInput;
-            } else {
+            }
+            else {
                 searchFolder = uiConfig.PredefinedPath;
             }
 
@@ -141,13 +148,13 @@ namespace AutoExtraction {
             }
 
             var texFiles = Directory.GetFiles(searchFolder, "*.tex", SearchOption.AllDirectories).ToArray();
-                
+
             if (texFiles.Length == 0) {
                 Console.WriteLine($"Keine passenden .tex Dateien in {searchFolder} oder den Unterordnern gefunden.");
                 return;
             }
 
-            texFiles = texFiles.OrderBy(f => Path.GetDirectoryName(f)).ThenBy(f => Path.GetFileName(f)).ToArray();
+            texFiles = [.. texFiles.OrderBy(f => Path.GetDirectoryName(f)).ThenBy(f => Path.GetFileName(f))];
 
             Console.WriteLine("\nVerfügbare .tex Dateien:");
             string? lastDir = null;
@@ -183,28 +190,29 @@ namespace AutoExtraction {
                     if (int.TryParse(audioInput, out int audioIdx) && audioIdx >= 1 && audioIdx <= audioFiles.Length) {
                         selectedAudio = audioFiles[audioIdx - 1];
                     }
-                } else {
+                }
+                else {
                     Console.WriteLine("\nKeine Audio-Dateien in diesem Ordner gefunden. (Audio ist null)");
                 }
-            } else {
+            }
+            else {
                 Console.WriteLine("\n[INFO] Überspringe Audio-Auswahl für 'Last Refinement' (Schritt 3 benötigt kein Audio).");
             }
 
             Console.WriteLine($"\n[INFO] Starte Refinement für: {Path.GetFileName(selectedTex)}");
-            
+
             Client refinementClient;
             if (refinementConfig.UseVertex) {
                 refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildVertexClient(
-                    refinementConfig.VertexProjectId, 
+                    refinementConfig.VertexProjectId,
                     refinementConfig.VertexLocation
                 );
-            } else {
-                string refinementApiKey;
-                if (refinementConfig.AiStudioActiveApiProfile == 0) {
-                    refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(refinementConfig.AiStudioApiKeyEnvName) ?? "no-key";
-                } else {
-                    refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(refinementConfig.AiStudioActiveApiProfile) ?? "no-key";
-                }
+            }
+            else {
+                string envName = (refinementConfig.AiStudioApiKeyEnvNames != null && refinementConfig.AiStudioApiKeyEnvNames.Length > refinementConfig.AiStudioActiveApiProfile) 
+                    ? refinementConfig.AiStudioApiKeyEnvNames[refinementConfig.AiStudioActiveApiProfile]
+                    : "API_KEY-latex-refinement";
+                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
                 refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
             }
 

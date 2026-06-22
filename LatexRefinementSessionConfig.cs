@@ -21,12 +21,23 @@ public class RefinementStepConfig {
     public BackendParameters Vertex { get; set; } = new BackendParameters { Model = "gemini-2.5-pro" };
 }
 
+public class PdfCompilationConfig {
+    public bool Enabled { get; set; } = true;
+    public string PreamblePath { get; set; } = "pdf-preamble.tex";
+}
+
+
 public class LatexRefinementSessionConfig {
     public bool Enabled { get; set; } = false;
     public bool UseVertex { get; set; } = false;
 
     // AI Studio Config
-    public string AiStudioApiKeyEnvName { get; set; } = "API_KEY-latex-refinement";
+    public string[] AiStudioApiKeyEnvNames { get; set; } = [
+        "API_KEY-latex-refinement",
+        "API_KEY-ai-studio-test-project-1",
+        "API_KEY-ai-studio-test-project-2",
+        "API_KEY-ai-studio-test-project-3"
+    ];
     public int AiStudioActiveApiProfile { get; set; } = 3; // 0 = Dedicated, 1-3 = General Keys
 
     // Vertex Config
@@ -36,6 +47,8 @@ public class LatexRefinementSessionConfig {
 
     public string TargetFolder { get; set; } = "";
     public string SourceFolder { get; set; } = "";
+
+    public PdfCompilationConfig PdfCompilation { get; set; } = new PdfCompilationConfig();
 
     public RefinementStepConfig Step1MergeAndTimestamp { get; set; } = new RefinementStepConfig {
         SystemInstructionPaths = [@"C:\Users\miche\latex\prompt-engineering\merge-instructions\latex-part-merge-instruction.md"]

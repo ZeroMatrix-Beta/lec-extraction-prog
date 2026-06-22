@@ -127,14 +127,16 @@ public class AiStudioAutoExtractionSession {
                 }
                 if (_config.LoadHistoryIntoSystemInstruction) {
                     Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
-                } else {
+                }
+                else {
                     Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
                 }
-                
+
                 if (Console.ReadLine()?.Trim().ToLower() == "j") {
                     if (_config.LoadHistoryIntoSystemInstruction) {
                         Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
-                    } else {
+                    }
+                    else {
                         Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
                     }
                     string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
@@ -144,7 +146,8 @@ public class AiStudioAutoExtractionSession {
                         _historyWasLoaded = true;
                         if (_config.LoadHistoryIntoSystemInstruction) {
                             Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
-                        } else {
+                        }
+                        else {
                             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
                             if (!await AcknowledgeHistoryAsync(fileList)) return;
                         }
@@ -343,7 +346,8 @@ public class AiStudioAutoExtractionSession {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                } else if (_config.ThinkingBudget.HasValue) {
+                }
+                else if (_config.ThinkingBudget.HasValue) {
                     requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
                 }
             }
@@ -499,7 +503,8 @@ public class AiStudioAutoExtractionSession {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                } else if (_config.ThinkingBudget.HasValue) {
+                }
+                else if (_config.ThinkingBudget.HasValue) {
                     requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
                 }
             }
@@ -696,7 +701,7 @@ public class AiStudioAutoExtractionSession {
                         string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
                         speedVideoDuration = await toolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                     }
-                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0; 
+                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0;
                     var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
                     for (int i = 0; i < cachedParts.Count; i++) {
                         double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - _config.OverlapSeconds) : 0;
@@ -732,12 +737,12 @@ public class AiStudioAutoExtractionSession {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
                     for (int i = 0; i < rawPartsWithTimes.Count; i++) {
                         string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
-                        
+
                         if (!string.Equals(rawPartsWithTimes[i].FilePath, safePartPath, StringComparison.OrdinalIgnoreCase)) {
                             if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
                             System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
                         }
-                        
+
                         safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
                     }
                     await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
@@ -781,7 +786,8 @@ public class AiStudioAutoExtractionSession {
                     }
                     if (useCachedAudio) {
                         Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei (jünger als 48h) gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
-                    } else {
+                    }
+                    else {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
                             await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
@@ -948,24 +954,27 @@ public class AiStudioAutoExtractionSession {
 
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
                 if (_latexRefinementConfig != null) _latexRefinementConfig.UseVertex = false;
-                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(_latexRefinementConfig?.AiStudioApiKeyEnvName ?? "API_KEY-latex-refinement") ?? "no-key";
+                string envName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
+                    ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
+                    : "API_KEY-latex-refinement";
+                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
                 // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
                 // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
                 var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
-                string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault() 
+                string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
                                        ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
                 var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
-                    refinementClient, 
-                    _latexRefinementConfig!, 
-                    refinementTargetFile, 
-                    _config, 
+                    refinementClient,
+                    _latexRefinementConfig!,
+                    refinementTargetFile,
+                    _config,
                     audioFilePath);
-                
+
                 await refinementSession.StartAsync();
             }
         }
@@ -1014,7 +1023,8 @@ public class AiStudioAutoExtractionSession {
 
         if (partNumber == 1) {
             prompt += "\n\nNote: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.";
-        } else {
+        }
+        else {
             prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
         }
 
@@ -1060,18 +1070,19 @@ public class AiStudioAutoExtractionSession {
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
-                var sysParts = new List<Part>();
-                if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-                if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
-                requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
-            }
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+            var sysParts = new List<Part>();
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+        }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                } else if (_config.ThinkingBudget.HasValue) {
+                }
+                else if (_config.ThinkingBudget.HasValue) {
                     requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
                 }
             }

@@ -28,6 +28,12 @@ public class DirectAiChatSessionAiStudioGenerationConfig {
 public class DirectAiChatSessionAiStudioConfig {
     // [AI Context] Selects the environment variable API key profile to use (1-3).
     public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
+    public string[] AiStudioApiKeyEnvNames { get; set; } = [
+        "API_KEY-automated-content-extraction",
+        "API_KEY-ai-studio-test-project-1",
+        "API_KEY-ai-studio-test-project-2",
+        "API_KEY-ai-studio-test-project-3"
+    ];
     public string UploadFolder { get; set; } = AppConfig.UploadFolder;
     public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
     public string LogFolder { get; set; } = AppConfig.LogFolder;

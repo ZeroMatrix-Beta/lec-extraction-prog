@@ -13,6 +13,12 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Stanardmäßig wird hier Profil 0 (der dedizierte Key für die automatisierte Extraktion) verwendet.
     // Dies kann bei Bedarf in der AiStudioAutoExtractionConfig.json überschrieben werden.
     public int ActiveApiProfile { get; set; } = 0;
+    public string[] AiStudioApiKeyEnvNames { get; set; } = [
+        "API_KEY-automated-content-extraction",
+        "API_KEY-ai-studio-test-project-1",
+        "API_KEY-ai-studio-test-project-2",
+        "API_KEY-ai-studio-test-project-3"
+    ];
     // [AI Context] Directory containing the raw, unprocessed lecture .mp4 files.
     public string SourceFolder { get; set; } = @"D:\lecture-videos\grundstrukturen";
     // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.

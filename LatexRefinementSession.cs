@@ -143,9 +143,63 @@ public class LatexRefinementSession {
             if (finalOutput == null) {
                 Console.WriteLine("[FEHLER] Schritt 3 fehlgeschlagen.");
             }
+            else {
+                currentFiles = [finalOutput];
+            }
+        }
+
+        // Step 4: PDF Compilation
+        if (_config.PdfCompilation?.Enabled == true) {
+            Console.WriteLine("\n--- [Schritt 4: PDF Generierung] ---");
+            await CompilePdfAsync(currentFiles[0], baseName, targetFolder);
         }
 
         Console.WriteLine("\n[AutoExtraction] LaTeX Refinement Pipeline erfolgreich abgeschlossen!");
+    }
+
+    private async Task CompilePdfAsync(string finalTexFile, string baseName, string targetFolder) {
+        if (!System.IO.File.Exists(finalTexFile)) {
+            Console.WriteLine($"[FEHLER] Kann PDF nicht generieren: {finalTexFile} existiert nicht.");
+            return;
+        }
+
+        string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
+        if (!System.IO.File.Exists(preamblePath)) {
+            Console.WriteLine($"[WARNUNG] Preamble-Datei ({preamblePath}) nicht gefunden. Überspringe PDF-Generierung.");
+            return;
+        }
+
+        try {
+            string preambleText = await System.IO.File.ReadAllTextAsync(preamblePath);
+            string finalFileName = Path.GetFileName(finalTexFile);
+            
+            // Create the wrapper .tex file
+            string wrapperFileName = $"{baseName}-offset-main.tex";
+            string wrapperPath = Path.Combine(targetFolder, wrapperFileName);
+            
+            string wrapperContent = preambleText + "\n\\begin{document}\n\n" +
+                                    $"\\input{{{finalFileName}}}\n\n" +
+                                    "\\end{document}\n";
+                                    
+            await System.IO.File.WriteAllTextAsync(wrapperPath, wrapperContent);
+            Console.WriteLine($"  [INFO] Wrapper-Datei erstellt: {wrapperPath}");
+            
+            var latexToolkit = new LatexToolkit();
+            var (success, log) = await latexToolkit.CompilePdfAsync(wrapperPath);
+            
+            if (success) {
+                // LaTeX creates aux files which can clutter the directory. 
+                // We'll leave them for now in case the user wants to inspect them.
+                Console.WriteLine($"  [INFO] PDF erfolgreich erstellt im Ordner: {targetFolder}");
+            }
+            else {
+                Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Log:");
+                Console.WriteLine(log);
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [FEHLER] Unerwarteter Fehler bei PDF-Generierung: {ex.Message}");
+        }
     }
 
     // Overload that takes string array
@@ -341,6 +395,12 @@ public class LatexRefinementSession {
 
             if (!callSuccess) {
                 Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(chunkResp)) {
+                Console.WriteLine("\n[FEHLER] Das Modell hat eine komplett leere Antwort zurückgegeben (z.B. wegen MALFORMED_RESPONSE oder Safety-Filtern).");
+                Console.WriteLine("Der Vorgang wird abgebrochen, um eine Endlosschleife (Continue-Prompt für leeren Text) zu vermeiden.");
                 break;
             }
 
