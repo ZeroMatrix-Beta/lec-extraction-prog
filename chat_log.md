@@ -4182,3 +4182,937 @@ KT_9: & \quad 0 \neq 1 && \text{(Nicht-Trivialität)} \label{eq:kt_non_trivial}
 
 *(Tokens: Input 296383, Output 7394)*
 ---
+
+**AutoExtractionSetup:** [History Acknowledgment] Angehängte Dateien: "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD-result.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\blackboard-example-1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-OK.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\characterization-of-intervals-VERY-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-BAD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\contradiction-example-GOOD.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\AI-tikz-examples\dedekind-cuts.tex", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\BAD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\board-variablenbelegung.png", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\GOOD-example-variablenbelegung.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\screenshot1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\screenshot1.md", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\sectioning_example1-continued.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\sectioning_example1.jpg", "C:\Users\miche\latex\prompt-engineering\transcription\training-history\board-transcription-example\sectioning_example1.md"
+
+Prompt:
+Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.
+
+**gemini-3.5-flash:** [AI-Model: gemini-3.5-flash] Material [...] received and analyzed. I am standing by for your instructions.
+
+*(Tokens: Input 104796, Output 27)*
+---
+
+=== Neue Chat-Sitzung (22.06.2026 00:40:54) ===
+- System Prompt geladen: True
+- History geladen: True
+---
+
+**AutoExtraction:** [Part 1] 03-03-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 03-03-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from , 03-03-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture. This specific video segment is exactly 31 minutes and 05 seconds long.
+
+Note: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 31 minutes and 05 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+CRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.
+
+**gemini-3.5-flash:** 
+
+*(Tokens: Input 274863, Output 127)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 1]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** % End of the video: 00:31:05
+% Primary Language: German
+
+\lecturechapter{Dienstag}{Woche 6}{Woche 6}{Peano-Arithmetik}
+
+\begin{nice-box}[Einführung in die Peano-Arithmetik]
+In dieser Vorlesung wird die Peano-Arithmetik ($PA$) als erststufiges Axiomensystem für die natürlichen Zahlen eingeführt. Wir betrachten die Signatur $\mathcal{L}_{PA} = \{0, S, +, \cdot\}$ und formalisieren die grundlegenden arithmetischen Eigenschaften sowie das Prinzip der mathematischen Induktion als ein Axiomenschema.
+\end{nice-box}
+
+\begin{spoken-clean}[00:00:00 - 00:01:42]
+Hallo zusammen und herzlich willkommen zu einer weiteren Woche von Grundstrukturen. Äm... Ja, wir gehen da weiter auf unserer kleinen Exkursion in die mathematische Logik. Äm, was haben wir letzte Woche gesehen? Äm... Wir haben äh zuerst gesehen den Modus Ponens und äh die Verallgemeinerung. Zwei Methoden, um aus bestehenden Formeln neue Formeln ähm abzuleiten. Und damit haben wir dann definiert, was ein formaler Beweis ist, und haben ein paar formale Beweise geführt. Das machen Sie auch diese Woche oder haben Sie hoffentlich gemacht auf den Übungsblättern, um noch ein bisschen zu üben. Ist einfach etwas, was man einmal machen muss, ein klein wenig, nicht allzu viel. \inlinemetanote{lacht} Und es kann auch ganz äh unterhaltsam sein, da etwas rumzuknobeln, aber auf die Dauer auch mühsam. Dann haben wir gesehen noch diese bisschen Metatheoreme, die hilfreich sind manchmal, um formale Beweise zu führen. Das ist Deduktionstheorem und der Satz über logische Äquivalenz. Und dann am Schluss haben wir noch Beispiele von Axiomensystemen...
+\end{spoken-clean}
+
+\begin{math-stroke}[Rückblick]
+Gesehen:
+\begin{itemize}
+    \item $(\text{MP})$ und $(\text{V})$
+    \item Formale Beweise
+    \item Ded. Thm \& Satz über log. Äqu.
+    \item Bsp. von Axiomensystemen
+\end{itemize}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:42 - 00:04:30]
+Genau, da möchte ich noch kurz eines auch nochmals ähm erwähnen, das ist, dass wir nicht Zeit gehabt haben zu besprechen, noch die dichten linearen Ordnungen. Das ist das da, äm... \inlinemetanote{zeigt auf die Projektion} Da, äm... Das ist noch, das, ein dichte lineare Ordnung, das sind die dichte linearen Ordnungen DLO, das sind die folgenden äm... die folgenden dichte linearen Ordnungen dichten linearen Ordnungen, die folgenden fünf Axiome, oder die folgenden fünf, ja, Formeln, die unsere Axiome sind. Äm, also im Prinzip das erste, das nullte sagt: für alle $x$ äm... das ist ein, haben wir einfach ein einzelnes zweistelliges Relationssymbol, das ist einfach kleiner ($<$). Wir wollen jetzt eben eine totale Ordnung haben, also wollen, dass $x$ ist nie kleiner als $x$ selbst. Dann wollen wir, dass für alle $x$, für alle $y$, für alle $z$ äm... wenn $x$ kleiner ist als $y$ und $y$ kleiner als $z$, dann ist auch $x$ kleiner als $z$. Also das ist das, was wir uns vorstellen, wenn wir diese Formel hinschreiben, dass das transitiv ist, aber eben hier ist ja nur eine Formel. Dann wollen wir, dass für alle $x$, für alle $y$ ist entweder $x$ kleiner als $y$ oder $y$ kleiner als $x$ oder $x$ ist gleich $y$. Es gibt natürlich... es gibt keine anderen Möglichkeiten, eine totale Ordnung. Dann wollen wir, dass die Ordnung dicht ist, also wollen, dass wenn, das immer zwischen zwei Elementen quasi immer ein drittes liegt. Also für alle $x$, für alle $y$ existiert immer ein $z$, so dass falls $x$ kleiner ist als $y$, dann ist $x$ kleiner als $z$ und $z$ kleiner als $y$. Das ist diese Dicht... diese Dichtheit, zum Beispiel bei reellen Zahlen. Wenn Sie zwei reelle Zahlen haben, haben Sie immer noch ein anderes Element dazwischen. Äm... Und das Letzte ist noch eben, dass es keine größten und kleinsten Elemente gibt, also für alle $x$ existiert ein $y$ und es existiert ein $z$, so dass $y$ kleiner ist als $x$ und $x$ kleiner ist als $z$. Okay, das ist einfach auch noch eine... ein wichtiger Begriff, den wir auch noch in den Übungen antreffen, und auch nochmals ein Beispiel von so einer Menge von nicht-logischen Axiomen, die man anwenden kann, oder wo man dann die entsprechenden Theorien studieren kann. Gut, dann äh schauen wir noch eines an. Äm... Nein, das war das Falsche. Das da. \inlinemetanote{schaltet den Projektor aus} Äh, das wollen... weil das möchte ich noch ein bisschen ausführen, ähm... deswegen machen wir das an der Wandtafel. Das ist die Peano-Arithmetik...
+\end{spoken-clean}
+
+\begin{math-stroke}[Dichte lineare Ordnungen]
+Die Signatur der Theorie der dichten linearen Ordnungen ist $\mathcal{L}_{\text{DLO}} = \{<\}$, wobei $<$ ein zweistelliges Relationssymbol ist.
+
+Die Axiome der Theorie der dichten linearen Ordnungen sind:
+\begin{align}
+\text{DLO}_0 &\equiv \forall x \, \neg(x < x) && \text{($<$ ist irreflexiv)} \nonumber \\
+\text{DLO}_1 &\equiv \forall x \, \forall y \, \forall z \, \bigl((x < y \wedge y < z) \to x < z\bigr) && \text{($<$ ist transitiv)} \nonumber \\
+\text{DLO}_2 &\equiv \forall x \, \forall y \, \bigl(x < y \vee y < x \vee x = y\bigr) && \text{($<$ definiert eine totale Ordnung)} \label{eq:dlo_tot} \\
+\text{DLO}_3 &\equiv \forall x \, \forall y \, \bigl(x < y \to \exists z \, (x < z \wedge z < y)\bigr) && \text{($<$ definiert eine dichte Ordnung)} \nonumber \\
+\text{DLO}_4 &\equiv \forall x \, \exists y \, \exists z \, (y < x \wedge x < z) && \text{(Keine größten bzw. kleinsten Elemente)} \nonumber
+\end{align}
+\end{math-stroke}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent schaltet den Projektor aus und bereitet die Tafel vor, um das Thema Peano-Arithmetik handschriftlich einzuführen.
+\end{meta-note}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:04:30
+% topic: Einführung der Peano-Arithmetik und dichte lineare Ordnungen
+% board_state: Rückblick-Menge, dichte lineare Ordnungen (ausgewischt)
+% next_goal: Signatur und Definition der Peano-Arithmetik aufschreiben
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Peano-Arithmetik: Signatur und Definitionen}
+
+\begin{spoken-clean}[00:04:30 - 00:06:00]
+Peano-Arithmetik, benannt nach Giuseppe Peano. Das war in der zweiten Hälfte des 19. Jahrhunderts, hat er gelebt, italienischer Mathematiker. Er hat viel auch sehr einflussreiches in der Logik gemacht. Ich glaube, viele bekannte Mengennotationen gehen auf ihn zurück, also so, dass man so einen Haken schreibt für den Durchschnitt von Mengen \inlinemetanote{zeichnet $\cap$ an die Tafel} und so etwas für die Vereinigung von Mengen \inlinemetanote{zeichnet $\cup$ an die Tafel} geht glaube ich zurück auf Peano. Und er hat auch äm... 1897 war der internationale Kongress der Mathematik in Zürich hier, da hat er auch einen Vortrag gehalten. Äm, genau, und er hat so diese Peano-Axiome formuliert. Das war die Idee eigentlich so, die natürlichen Zahlen in Axiome zu fassen. Also wir sehen jetzt, es ist nicht... so wie wir es formulieren, das sind nicht die ganzen natürlichen Zahlen, aber es geht in... ja, Sie werden sehen. Haben Sie die Peano-Axiome schon gesehen in einer anderen Vorlesung mal? Manchmal in Linalg oder Analysis, manchmal... nein? Ist gut, dann machen wir es hier. Also hier haben wir die Signatur von der Peano-Arithmetik...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:06:00 - 00:07:45]
+...das ist $0$, $S$, $+$ und $\cdot$. \inlinemetanote{schreibt an die Tafel} Und wir haben, dass $0$ ist ein Konstantensymbol. Dann $S$ ist ein Funktionssymbol, und zwar ein einstelliges. Dann haben wir $+$ ist ein zweistelliges Funktionssymbol und $\cdot$ ist auch ein zweistelliges Funktionssymbol. Okay, also wenig erstaunlich, das, was wir sehen, und das einzige ein bisschen, das komisch ist, vielleicht dieses $S$ hier, und der Name von $S$ ist Nachfolgerfunktion. \inlinemetanote{schreibt an die Tafel} Und so die... ja, die Intuition dahinter, die Idee dahinter ist eigentlich, die natürlichen Zahlen zu konstruieren, indem man sagt, okay, man macht wie Zählen eigentlich. Man beginnt mit null, das ist einfach eine Konstante, wo man weiß, dass es das gibt, und dann gibt's noch $S$, das ist quasi wie... die Idee dahinter ist, man macht wie plus eins, also man beginnt bei null, dann macht man plus eins, dann wendet man nochmals $S$ an, dann kommt plus zwei und so weiter, und so... je nachdem, wie oft man $S$ anwendet, kommt man halt dann zu einer bestimmten Zahl. Okay, und jetzt die Axiome der Peano-Arithmetik sind die folgenden Formeln...
+\end{spoken-clean}
+
+\begin{math-stroke}
+Die Signatur der Peano-Arithmetik ist definiert als:
+\[
+\mathcal{L}_{\text{PA}} = \{0, S, +, \cdot\}
+\]
+wobei die Symbole folgende Bedeutung besitzen:
+\begin{itemize}
+    \item $0$: ein \newterm{Konstantensymbol}.
+    \item $S$: ein \newterm{einstelliges Funktionssymbol} (die \newterm{Nachfolgerfunktion}).
+    \item $+$, $\cdot$: jeweils ein \newterm{zweistelliges Funktionssymbol} (Addition und Multiplikation).
+\end{itemize}
+\end{math-stroke}
+
+\subsection{Die Peano-Axiome}
+
+\begin{spoken-clean}[00:07:45 - 00:10:00]
+Wir haben $PA_0$. \inlinemetanote{schreibt an die Tafel} Okay, das sagt: es existiert kein $x$, so dass $S(x) = 0$ ist. Also es gibt kein... die Idee dahinter auch wieder, das sind ja hier a priori nur Formeln, aber die Idee ist, es gibt kein... also null ist nicht der Nachfolger von irgendeiner... von einem anderen Element. Gut, dann haben wir $PA_1$. Das sagt uns, dass diese Nachfolgerfunktion soll injektiv sein. Wie kann man das formulieren? Für alle $x$, für alle $y$: $S(x) = S(y)$ impliziert $x = y$. Okay, das ist auch die Formel, mit der man gerne ausdrücken möchte, dass $S$ injektiv ist. Gut, dann haben wir $PA_2$. Das gibt insgesamt sieben von diesen Axiomen. Äm, das sagt, dass für alle $x$ haben wir, dass $x + 0 = x$ ist. So regeln wir die... die Addition. Wir wollen gewissermaßen, dass null das rechtsneutrale Element ist. Dann haben wir $PA_3$. Das sagt, für alle $x$, für alle $y$ haben wir $x + S(y)$... okay, so quasi wie $x + (y + 1)$... das soll dasselbe sein wie der Nachfolger von $x + y$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:10:00 - 00:12:15]
+Okay, also ob man das $S$ einfach auf das Hintere anwendet oder auf beide zusammen, kommt dasselbe raus. Dann haben wir $PA_4$. Das sagt uns... jetzt kommt noch die Multiplikation, sagt für alle $x$ gilt $x \cdot 0 = 0$. Dann kommt noch $PA_5$. Das sagt für alle $x$, für alle $y$ haben wir $x \cdot S(y)$ ist dasselbe wie $(x \cdot y) + x$. Okay? Also soweit die fünf Axiome und jetzt kommt noch ein ähm Axiomenschema. Was ist ein Axiomenschema wieder? Das heißt, es ist eine riesig große Menge von Axiomen, also für jede Formel haben wir ein Axiom. Und das ist dieses Induktionsaxiom, und zwar sagen wir: Sei $\varphi$ eine Formel mit dieser Signatur und $\nu$ eine Variable, eine freie Variable in dieser Formel...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:12:15 - 00:14:40]
+Äm, dann haben wir noch $PA_6$, also eben dieses ganze Schema. Das sagt, dass... okay. Im Prinzip wollen wir sagen, dass wenn eine Formel für $0$ stimmt und dass, wenn eine Formel für $x$ stimmt, dann stimmt sie auch für den Nachfolger, dann stimmt sie für alle. Also im Prinzip wollen wir einfach das Prinzip des Induktionsbeweises in ein Axiom reinstecken, oder in ein Axiomenschema. Also das sagt, wenn $\varphi(0)$ und für alle $\nu$ gilt, dass $\varphi(\nu)$ impliziert $\varphi(S(\nu))$, impliziert... okay, jetzt haben wir keinen Platz mehr, das geht aber hier weiter, das ist noch Teil von der Formel... impliziert für alle $\nu$ gilt $\varphi(\nu)$. Okay? Also wenn wir $\varphi(0)$ haben und wir haben für alle $\nu$, dann impliziert $\varphi(\nu)$ auch $\varphi(S(\nu))$, dann folgt aus diesen zwei Sachen, dass für alle $\nu$ ist $\varphi(\nu)$. Also genau, was ein Induktionsbeweis uns sagt.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:14:40 - 00:15:37]
+Also das heißt, das schreiben wir hin, das ist das Induktionsaxiom. In gewissem... oft wird das auch in Linalg oder in Analysis auch diskutiert und oft finden Sie auch andere... es gibt ein bisschen leicht andere Versionen auch noch. Ich glaube, vor allem also die Art und Weise, wie wir das das Induktionsaxiom geschrieben haben, das ist wirklich so in dem Kontext von diesem Logik erster Ordnung. Also das heißt, wir müssen... brauchen wirklich für alle Formeln müssen wir da ein Axiom einfügen, weil wir können ja nicht über die Menge der Formeln quantifizieren. Also wir können nicht ein Axiom schreiben und sagen für alle Formeln $\varphi$ gilt das. Sondern wir müssen für jede einzelne Formel das reinschreiben. Wenn man jetzt Logik zweiter Ordnung, da darf man auch über Formeln quantifizieren, und dann kann man das auch mit einem Axiom regeln. Aber Logik zweiter Ordnung hat dann wiederum andere Probleme, äm, ja, deswegen. Aber bei uns, werden wir es später noch erwähnen, ja, in Logik erster Ordnung, wie soll ich sagen, definiert uns das nicht die natürlichen Zahlen. Also man kann die natürlichen Zahlen gar nicht in Logik erster Ordnung charakterisieren, wie wir sehen werden, aber ist auch kein Problem, dass man das nicht kann, also gut. Okay, und das ist das Induktionsaxiom...
+\end{spoken-clean}
+
+\begin{math-stroke}[Die Axiome der Peano-Arithmetik]
+Die Axiome der Peano-Arithmetik ($PA$) bestehen aus den folgenden Formeln und dem Induktionsaxiomenschema:
+\begin{align}
+PA_0 &\equiv \neg \exists x \, (Sx = 0) \label{eq:pa0} \\
+PA_1 &\equiv \forall x \, \forall y \, (Sx = Sy \to x = y) \label{eq:pa1} \\
+PA_2 &\equiv \forall x \, (x + 0 = x) \label{eq:pa2} \\
+PA_3 &\equiv \forall x \, \forall y \, (x + Sy = S(x + y)) \label{eq:pa3} \\
+PA_4 &\equiv \forall x \, (x \cdot 0 = 0) \label{eq:pa4} \\
+PA_5 &\equiv \forall x \, \forall y \, (x \cdot Sy = (x \cdot y) + x) \label{eq:pa5}
+\end{align}
+
+\begin{nice-box}[Induktionsaxiomenschema]
+Für jede $\mathcal{L}_{PA}$-Formel $\varphi$ und jede freie Variable $\nu$ in $\varphi$ ist folgende Formel ein Axiom:
+\begin{equation}
+PA_6 \equiv \bigl(\varphi(0) \wedge \forall \nu \, (\varphi(\nu) \to \varphi(S\nu))\bigr) \to \forall \nu \, \varphi(\nu) \label{eq:pa6}
+\end{equation}
+Das Axiom $PA_6$ wird als das \newterm{Induktionsaxiom} bezeichnet.
+\end{nice-box}
+
+\begin{explanation-of-steps}
+Da wir uns in der Prädikatenlogik erster Stufe befinden, können wir nicht direkt über alle Formeln quantifizieren (d.\,h. $\forall \varphi$ ist unzulässig). Daher müssen wir das Induktionsprinzip als unendliches Axiomenschema $PA_6$ formulieren, welches für jede konkrete Formel $\varphi$ ein eigenes Axiom bereitstellt.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:15:30
+% topic: Die Peano-Axiome PA_0 bis PA_6
+% board_state: Signatur von PA, PA_0 bis PA_6
+% next_goal: Erste Übungsaufgabe PA |- S0 + S0 = SS0
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Arithmetische Beweise und der Computer-Einsatz}
+
+\begin{spoken-clean}[00:15:37 - 00:18:00]
+...und deswegen habe ich diese Woche auf dem Übungsblatt hat's nochmals zwei Übungen, wo Sie wirklich nochmals einen formalen Beweis ausführen sollen mit Hilfe von... mit Hilfe von diesen Axiomen. Also ganz einfache Sachen, also zum Beispiel eine Übung, das ist nicht schlecht, das einfach einmal formalhalber zu machen, zu zeigen: in der Peano-Arithmetik folgt, dass die Nachfolgerfunktion von null plus die Nachfolgerfunktion von null ist dasselbe wie zweimal die Nachfolgerfunktion auf null angewendet. \inlinemetanote{schreibt an die Tafel} In anderen Worten: eins plus eins ist zwei. Das ist gar nicht so schlecht, das einmal wirklich im Detail zu beweisen im Laufe vom Mathestudium. Das, und dann haben wir nochmals etwas ähnliches zum Beweisen, aber nachher hören wir dann auch auf mit diesen formalen Beweisen, weil das auch mühsam ist...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:18:00 - 00:19:50]
+Ich habe noch eine... noch eine Bemerkung, ich habe einen Link noch aufgemacht auf die Moodle-Seite. Also die Frage ist so, das ganze formale Beweisen, macht man das überhaupt? Weil wenn man heutzutage Mathematik betreibt, niemand macht formale Beweise, niemand führt die Beweise auf die Axiome zurück, oder fast niemand, weil das würde ja jeglichen Rahmen von irgendeiner Publikation sprengen, und schlussendlich sind's auch nur die Logiker, die wirklich so nachdenken im Alltag. Aber es ist natürlich trotzdem spannend, die gewisse Beweise vielleicht wirklich auf solides Fundament zu stellen, und mit dem Computer kann man ja das machen. Und es gibt tatsächlich eine Community, die sind... die arbeiten fleißig daran, die ganze... oder große Teile von der Mathematik auf solide Fundamente zu stellen. Und so eines der häufigen... der Computerprogramme, das sich durchsetzt im Moment, ist LEAN... \inlinemetanote{schreibt LEAN an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Übungsaufgabe: Arithmetischer Beweis]
+\begin{exercise}
+Zeigen Sie, dass in der Peano-Arithmetik gilt:
+\begin{equation}
+PA \vdash S0 + S0 = SS0 \label{eq:one_plus_one}
+\end{equation}
+(In informeller Notation entspricht dies der Aussage $1 + 1 = 2$).
+\end{exercise}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:19:50 - 00:22:00]
+...das nochmals, die verwenden eine etwas andere Logik, als wir hier eingeführt haben, das ist eine... eine Logiksprache, die so... kommt eher aus der theoretischen Informatik, aber ich glaube ist logisch im Wesentlichen äquivalent zu dem... zu der First-Order-Logic, die wir hier gemacht haben. Also wir werden das in den nächsten Wochen noch sehen mit vor allem die Zermelo-Fraenkel-Axiome. Und genau, und mit dem Computer kann man natürlich dann viele Hilfe und wirklich solide alles aufbauen, und dann wenn man etwas bewiesen hat, kann man das dann verwenden, und weiter und weiter und weiter. Das, was wir selber machen, das ist wie zwei... zwei Teile das Computerprogramm, also ist ein Teil, das das relativ einfach man Sachen eingeben muss, und das übersetzt das in den nötigen Code, und dann braucht's aber noch einen anderen Teil, der möglichst einfach programmierbar... programmiert sein muss und jeder kann überprüfen, der dann überprüft, ob der Beweis korrekt ist, also der wirklich dann das auf die grundlegenden Schritte zurückreduziert und das kontrolliert. Und mit diesen zwei zusammen geht das relativ gut, und das ist eine Riesen-Community, und da sind schon Zehntausende Dinge bewiesen. Halt da kann man aufbauen. Ich glaube, es gibt jetzt große Forschungsprojekte in England, wo sie versuchen, den Beweis von Fermats letztem Satz zu formalisieren...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:00 - 00:25:00]
+...aber ich glaube, es ist noch nicht... geht schon noch auch mehrere Jahre oder so, vielleicht mit der Hilfe von künstlicher Intelligenz kann man da noch... kommt man da noch schneller voran. Jedenfalls, falls Sie das interessiert und Sie ein bisschen Spaß haben an diesen formalen Beweisen, würde ich empfehlen, es gibt so eine einfache Einführung in das, was so sehr ein bisschen Gamification ist, das ist das Natural Numbers Game... \inlinemetanote{schreibt Natural Numbers Game an die Tafel} Da haben Sie... habe ich einen Link gemacht, da können Sie ein bisschen... gibt's ein kurzes Tutorial so auf die grundlegenden LEAN-Begriffe, wie das geht, und das Game führt Sie dann durch... dadurch, dass Sie viele ganz kleine äm... Eigenschaften über ganze Zahlen beweisen. Beginnt ja damit zu beweisen, dass $1 + 1 = 2$ ist und so weiter. Also falls Sie Spaß haben an dem, dürfen Sie das gerne freiwillig da noch weitermachen, selbstverständlich weit weg davon prüfungsrelevant zu sein. Gut, äm... Was wir jetzt noch kurz erwähnen wollen, sind äm... semi-formale Beweise... \inlinemetanote{schreibt semi-formale Beweise an die Tafel} Also da kann... man kann keine formale Definition erwarten. \inlinemetanote{lacht} Und das ist so ein bisschen... ja, die Frage ist immer, wenn man einen Beweis führt, wie präzise ist man? Jetzt eine Idee ist eben dieses von semi-formalen ist einfach, und das werden wir in Zukunft auch tun, wenn wir über Logik reden, ist, dass man einfach einmal die Schritte weglässt, in denen man... in denen wir die logischen Axiome anwenden. Weil wir sagen, die logischen Axiome, die sind so grundlegend, und da wissen wir, okay, das ist zwar mühsam, aber wahrscheinlich in der Theorie können wir das machen, wenn wir uns genügend lange hinsetzen, deswegen machen wir das nicht, damit das Ganze übersichtlicher wird. Und dann ist... ist ein semi-formaler Beweis. Das heißt, man verwendet nur noch die Axiome von der Theorie, mit der wir arbeiten. Ist immer noch genügend mühsam, aber äm... Genau.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Formale Verifikation und das Natural Numbers Game]
+Der Dozent verweist auf den interaktiven Theorembeweiser \newterm{LEAN} und das \qt{Natural Numbers Game}. Diese Werkzeuge erlauben es, mathematische Sätze computergestützt und lückenlos auf die grundlegenden Axiome zurückzuführen. Dies verdeutlicht, dass formale Beweise heute durch moderne Software (Verifikationsprogramme) an praktischer Relevanz gewinnen.
+\end{didactic-insight}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:23:00
+% topic: LEAN, Natural Numbers Game und semi-formale Beweise
+% board_state: Peano-Axiome, LEAN, Natural Numbers Game, semi-formale Beweise
+% next_goal: Beispiel 2 per Induktion beweisen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Semi-formale Beweise}
+
+\begin{math-stroke}[Semi-formale Beweise]
+\begin{definition}[Semi-formaler Beweis]
+Ein \newterm{semi-formaler Beweis} ist eine Beweisführung, bei der:
+\begin{itemize}
+    \item Wir die rein logischen Axiomenschritte auslassen (da diese mechanisch, aber unübersichtlich sind).
+    \item Wir ausschließlich die theoriespezifischen Axiome (hier die Peano-Axiome $PA$) und mathematische Argumentation in natürlicher Sprache verwenden.
+\end{itemize}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:00 - 00:27:15]
+Also bei einem semi-formalen Beweis ist einfach so, wir lassen die Schritte aus, in denen wir logische Axiome anwenden, und verwenden stattdessen natürliche Sprache. Okay, das ist natürlich... durch der erste... der erste Schritt auf dem Weg zum Schludern, aber man kann nicht alles... also ich meine, da werden Sie heute noch nicht einmal in der zweiten Woche Ihrer Linalg-Vorlesung, wenn Sie alles formal definieren und beweisen würden, deswegen geht man so Schritt für Schritt, aber ist nicht so, dass man deswegen jetzt die Logik nicht macht. Das sind nur Sachen, man führt sie nicht mehr aus, und wenn man natürliche Sprache verwendet, kann man auch immer im Hinterkopf... ist noch gut zu behalten, was man eigentlich noch... was man eigentlich macht oder was man machen sollte. Es ist noch im Buch von Lorenz Halbeisen und Regula Krapf machen sie ein ganzes Kapitel noch, wo sie auch noch so schön ausführen, was heißt eine bestimmte Formulierung in Sachen Logik, wie kann man das beweisen und okay, von jetzt an verwenden wir diese Formulierung und das, also kann man auch noch etwas präziser machen, als wir es hier machen. Aber schauen wir uns einfach einmal ein Beispiel an. Also... \inlinemetanote{schreibt an die Tafel} Okay, das erste Beispiel ist einfach, wir nehmen dieses diese Übung hier, die sollen Sie aber noch formal beweisen, und da werden Sie sehen, ist ein bisschen mühsam. Aber wir machen jetzt einmal semi-formal wollen wir zeigen, dass in der Peano-Arithmetik haben wir, dass die Nachfolgerfunktion plus die Nachfolgerfunktion ist gleich zweimal die Nachfolgerfunktion auf null angewendet. Und ein semi-formaler Beweis hier wäre jetzt zum Beispiel, okay, wir haben hier $S(0) + S(0)$ und jetzt weisen wir Peano-Axiom 3 an. Das sagt uns, dass $S(0) + S(0)$ ist dasselbe wie $S(S(0) + 0)$. Okay, das ist einfach gemäß Peano-Axiom 3. Und okay, jetzt wenden wir Peano-Axiom 2 an, und das sagt uns, dass das dasselbe ist wie $S(S(0))$. Okay, und das ist, was wir zeigen wollten. Ist gut, das heißt, die Induktionsverankerung stimmt. Gut, und jetzt wollen wir noch zeigen, eben diesen Induktionsschritt. Wir zeigen Peano-Arithmetik gilt, dass...
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel 1: Semi-formaler Beweis von 1 + 1 = 2]
+Wir zeigen semi-formal, dass:
+\[
+PA \vdash S0 + S0 = SS0
+\]
+\begin{short-proof}
+Durch direkte Anwendung der Peano-Axiome erhalten wir:
+\begin{align*}
+S0 + S0 &\overset{\eqref{eq:pa3}}{=} S(S0 + 0) \\
+&\overset{\eqref{eq:pa2}}{=} SS0
+\end{align*}
+Dies schließt den Beweis ab.
+\end{short-proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:27:15 - 00:29:30]
+Das nächste wollen wir noch zeigen, dass $2 \cdot x$ dasselbe ist wie $x + x$. Das ist etwas schwieriger. Das wollen wir jetzt mit Induktion machen. Und hier vielleicht noch zwei Resultate, die Sie in den Übungen zeigen, auch semi-formal. Und zwar zeigen Sie in Übungen, dass... dass da die Addition assoziativ ist: für alle $x$, für alle $y$, für alle $z$ gilt $(x + y) + z = x + (y + z)$. Und Sie zeigen auch, dass die Addition kommutativ ist, das heißt, für alle $x$ und für alle $y$ ist $x + y = y + x$. Okay, und jetzt genau, jetzt wollen wir noch Induktion anwenden, um zu zeigen, dass... vielleicht mache ich das auf dieser Tafel. \inlinemetanote{wischt die Tafel} Ist okay, wenn ich hier auswische? Dann machen wir, damit wir die Axiome da noch haben. Also machen wir das zweite Beispiel. Wir wollen zeigen, in der Peano-Arithmetik gilt für alle $x$ ist... zweimal die Nachfolgerfunktion auf null angewendet, also moralisch zwei, mal $x$ dasselbe wie $x + x$. Wir machen wieder einen semi-formalen Beweis.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:29:30 - 00:31:05]
+Und dafür, okay, wir definieren jetzt die Formel, die wir beweisen wollen. Wir sagen $\varphi(x)$, wir haben einfach hier... das soll jetzt die Formel sein, die wir beweisen wollen: $SS0 \cdot x = x + x$. Und wir wollen jetzt Induktion verwenden. Also das heißt, was wir tun, ist wir zeigen zuerst, dass das stimmt für $x = 0$ und wir zeigen dann, dass es, wenn es für $x$ stimmt, dann stimmt's auch für die Nachfolgerfunktion von $x$, und dann verwenden wir das Axiom 6 und wir wissen, dass das Ganze... dass es für alle stimmt. Also zuerst müssen wir beweisen, dass in der Peano-Arithmetik gilt $\varphi(0)$. Also eigentlich müsste man hier schreiben $\varphi(0/x)$, weil wir $x$ durch null substituieren, aber wenn aus dem Kontext klar ist, welche Variable wir substituieren, dann müssen wir das nicht hinschreiben. Okay, und das ist relativ einfach. Wir haben Nachfolgerfunktion zweimal von null mal null. Okay, das wissen wir, das ist null gemäß Peano 4. Okay, wenn man etwas mit null multipliziert, dann gibt's wieder null. Und dann verwenden wir Peano 2 und das sagt uns, dass das dasselbe ist wie $0 + 0$. Okay, und das ist, was wir zeigen wollten. Es ist gut, das heißt, die Induktionsverankerung stimmt. Gut, und jetzt wollen wir noch zeigen, eben diesen Induktionsschritt. Wir zeigen Peano-Arithmetik gilt, dass $\varphi(x)$ impliziert $\varphi(Sx)$...
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiel 2: Multiplikation mit 2]
+Wir zeigen semi-formal mittels mathematischer Induktion:
+\[
+PA \vdash \forall x \, (SS0 \cdot x = x + x)
+\]
+Wir definieren die Induktionsformel:
+\[
+\varphi(x) :\equiv (SS0 \cdot x = x + x)
+\]
+
+\textbf{Induktionsanfang ($\varphi(0)$):}
+Wir müssen zeigen, dass $PA \vdash \varphi(0)$, also:
+\[
+SS0 \cdot 0 = 0 + 0
+\]
+Dies folgt direkt aus den Axiomen:
+\begin{align*}
+SS0 \cdot 0 &\overset{\eqref{eq:pa4}}{=} 0 \\
+&\overset{\eqref{eq:pa2}}{=} 0 + 0
+\end{align*}
+Die Induktionsverankerung ist somit bewiesen.
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:31:05
+% topic: Peano-Arithmetik Induktionsanfang für Multiplikation mit 2
+% board_state: Peano-Axiome, Übung 1 + 1 = 2 (ausgewischt), Beispiel 2 Induktionsanfang
+% next_goal: Induktionsschritt für das Beispiel 2 beweisen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content}
+
+% [SYSTEM] Video complete.
+
+*(Tokens: Input 274896, Output 8043)*
+---
+
+**AutoExtraction:** [Part 2] 03-03-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 03-03-tuesday-part2.mp4
+[Kontext-Dateien]: 03-03-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from , 03-03-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture. This specific video segment is exactly 31 minutes and 07 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 31 minutes and 07 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+CRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.
+
+**gemini-3.5-flash:** % End of the video: 00:31:07
+% Primary Language: German
+
+\subsection{Induktionsschritt für die Multiplikation mit 2}
+
+\begin{spoken-clean}[00:00:00 - 00:01:21]
+Was wir jetzt tun, ist wir zeigen zuerst, dass das stimmt für... äh für $x = 0$ und wir zeigen dann, dass es, wenn es für $x$ (i.e., die Variable $x$) stimmt, dann stimmt's auch für die Nachfolgerfunktion von $x$ (i.e., $Sx$). Und dann verwenden wir das Axiom 6 (Recall: das Induktionsaxiomenschema \ref{eq:pa6}) und wir wissen, dass das Ganze... dass es für alle stimmt. 
+
+Also zuerst müssen wir beweisen, dass in der Peano-Arithmetik gilt, äh, $\varphi(0)$. Also eigentlich müsste man hier schreiben $\varphi(0/x)$, weil wir $x$ durch null substituieren, aber wenn aus dem Kontext klar ist, welche Variable wir substituieren, dann müssen wir das nicht hinschreiben.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:01:21 - 00:03:00]
+Gut, und jetzt wollen wir noch zeigen, eben diesen Induktionsschritt. Wir zeigen, in der Peano-Arithmetik gilt, dass $\varphi(x)$ impliziert $\varphi(Sx)$ (i.e., $\varphi(x) \to \varphi(Sx)$).
+
+Wir nehmen an, also... genau, wir nehmen an, dass... dass, dass das gilt... das ist der semi-formale Beweis. Wir nehmen an, dass $\varphi(x)$, das ist die Formel... das ist $SS0 \cdot x = x + x$. Wir nehmen an, dass das gilt. 
+
+Und jetzt, äh, formen wir das um. Wir wissen... jetzt wollen wir zeigen, dass das da gilt. Jetzt wissen wir, dass $SS0$, also zweimal die Nachfolgerfunktion, mal... Nachfolgerfunktion von $x$ (i.e., $Sx$)... Okay, das ist dasselbe wie, ähm... jetzt müssen wir... verwenden wir Peano 5 (i.e., das Axiom \ref{eq:pa5}), okay? Gemäß Peano 5 ist das das gleiche wie...
+\end{spoken-clean}
+
+\begin{math-stroke}[Induktionsschritt für den Beweis]
+Wir wollen zeigen:
+\begin{equation}
+PA \vdash \varphi(x) \to \varphi(Sx) \label{eq:ind_step_goal}
+\end{equation}
+
+\begin{proof}[Beweis des Induktionsschritts]
+Wir nehmen an, dass die Induktionsannahme $\varphi(x)$ gilt:
+\[
+SS0 \cdot x = x + x
+\]
+Nun untersuchen wir den Term für den Nachfolger $Sx$:
+\begin{align}
+SS0 \cdot Sx &\overset{\eqref{eq:pa5}}{=} (SS0 \cdot x) + SS0 \nonumber \\
+&\overset{\text{Ind. Ann. \& Bsp. 1}}{=} (x + x) + (S0 + S0) \label{eq:ind_step_sub}
+\end{align}
+\begin{explanation-of-steps}
+Im ersten Schritt wenden wir das Axiom $PA_5$ \eqref{eq:pa5} auf den Term $SS0 \cdot Sx$ an, wobei der Faktor $Sx$ als Nachfolger interpretiert wird. Im zweiten Schritt substituieren wir den ersten Summanden durch die Induktionsannahme $(x+x)$ und den zweiten Summanden durch das Resultat aus Beispiel 1 (i.e., $SS0 = S0 + S0$).
+\end{explanation-of-steps}
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:03:00 - 00:05:00]
+Okay, das ist genau das, was uns das Peano 5 sagt. Und, äh, okay, da wissen wir jetzt gemäß Induktionsannahme, dass das ist dasselbe wie $x + x$. Und da, das haben wir oben, ähm, gesehen, das ist dasselbe wie, ähm, $S0 + S0$. 
+
+Das heißt, wir haben diese zwei Einheiten. Und, ähm, das können wir jetzt, ähm, schreiben. Da verwenden wir jetzt eben diese zwei... diese zwei, ähm, Facts, dass wir brauchen hier, dass es, ähm, assoziativ und kommutativ ist die Addition (Recall: Assoziativität und Kommutativität der Addition). Das heißt, wir dürfen das vertauschen, wie wir wollen. 
+
+Das heißt, wir wissen, sehen, das hier ist das gleiche wie, äh, $x + S0$ plus $x + S0$. Und da verwenden wir jetzt wieder, ähm, Peano 3 (i.e., das Axiom \ref{eq:pa3}), um zu schließen, dass das dasselbe ist wie $S(x + 0)$ plus $S(x + 0)$. Und das wissen wir, ist gemäß Peano 2 (i.e., das Axiom \ref{eq:pa2}) dasselbe wie $Sx + Sx$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Assoziativität und Kommutativität im Induktionsschritt]
+Unter Ausnutzung der Assoziativität und Kommutativität der Addition formen wir den Term \eqref{eq:ind_step_sub} weiter um:
+\begin{align}
+(x + x) + (S0 + S0) &\overset{\text{Assoc., Kommut.}}{=} (x + S0) + (x + S0) \nonumber \\
+&\overset{\eqref{eq:pa3}}{=} S(x + 0) + S(x + 0) \nonumber \\
+&\overset{\eqref{eq:pa2}}{=} Sx + Sx \label{eq:ind_step_final}
+\end{align}
+
+\begin{explanation-of-steps}
+Durch Umordnung der Summanden (Kommutativität und Assoziativität) gruppieren wir die Terme zu $(x + S0) + (x + S0)$. Anschließend wenden wir rückwärts das Axiom $PA_3$ \eqref{eq:pa3} an, wodurch $x + S0$ zu $S(x + 0)$ wird. Schließlich vereinfacht das Axiom $PA_2$ \eqref{eq:pa2} den inneren Term zu $x$, sodass wir exakt $Sx + Sx$ erhalten.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:05:00 - 00:06:53]
+Okay, das ist genau das, was wir, ähm, zeigen wollten. Das heißt, wir haben gezeigt, dass $SS0 \cdot Sx$ ist dasselbe wie $Sx + Sx$. Und jetzt, äh, können wir Induktion anwenden. Jetzt verwenden wir Peano 6 (i.e., das Axiom \ref{eq:pa6}), um aus diesen zwei Formeln zu schließen, was wir wollen. 
+
+Das heißt, wir haben also, ähm, dass Peano-Arithmetik impliziert $\varphi(0)$ und Peano-Arithmetik impliziert, ähm, für alle $x$ gilt $\varphi(x)$ impliziert $\varphi(Sx)$. Okay, ähm, wir haben das gezeigt. Und somit, ähm, folgt das aus... somit folgt mit Peano 6, dass Peano-Arithmetik... aus der Peano-Arithmetik kann man zeigen, dass für alle $x$ gilt $\varphi(x)$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Formaler Abschluss des Induktionsbeweises]
+Zusammenfassend haben wir folgende zwei Resultate etabliert:
+\begin{align*}
+PA &\vdash \varphi(0) \\
+PA &\vdash \forall x \, (\varphi(x) \to \varphi(Sx))
+\end{align*}
+Durch Anwendung des Induktionsaxioms $PA_6$ \eqref{eq:pa6} folgt unmittelbar:
+\[
+PA \vdash \forall x \, \varphi(x)
+\]
+In informeller Schreibweise entspricht dies der bewiesenen Aussage:
+\[
+\forall x \, (2 \cdot x = x + x)
+\]
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:06:53
+% topic: Abschluss des Induktionsbeweises für 2*x = x+x
+% board_state: Peano-Axiome, Beweis für 2*x = x+x
+% next_goal: LEAN, Natural Numbers Game und semi-formale Beweise
+% open_loops: none
+\  \end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Moderne formale Verifikation und LEAN}
+
+\begin{spoken-clean}[00:06:53 - 00:07:55]
+Okay, und in jedem Schritt muss man natürlich wieder argumentieren. Also wir wissen, dass das gilt, wir wissen, dass das gilt, aber wir zeigen, dass daraus folgt, dass das und das gilt, und dann PA_6 anwenden und so weiter. Aber wir lassen eben die logischen Schritte aus, um das Ganze etwas übersichtlicher zu machen.
+
+Gut, so viel zur Peano-Arithmetik für den Moment und auch zu semi-formalen Beweisen. Gut, gibt's da noch Fragen dazu? Sonst gehen wir jetzt zum nächsten Kapitel. Da kommen, äh, die Modelle. Das ist im Bereich der Modelltheorie.
+\end{spoken-clean}
+
+\begin{meta-note}[Tafelübergang]
+Der Dozent wischt die linke und mittlere Tafel, um Platz für das neue Kapitel über Modelltheorie und Semantik zu schaffen, während er eine kurze Einführung in das Thema gibt.
+\end{meta-note}
+
+\section{Semantik und Modelltheorie}
+\subsection{Einführung in die Semantik}
+
+\begin{spoken-clean}[00:07:55 - 00:11:20]
+Äm, ja, genau. Also das... Sie wissen, okay. Vielleicht so philosophisch oder so muss man ein bisschen aufpassen, was man genau macht oder so, aber wir haben... was wir bis jetzt gemacht haben, ist wir haben rein sprachlich gearbeitet. Wir haben diese ganze Syntax aufgebaut, wir haben Alphabet, wie man all diese Sachen umformen darf und so weiter, aber es war eine reine Sprache, die wir entwickelt haben. Also es ist eigentlich... es hat a priori keine Bedeutung. 
+
+Und die Idee ist, wir wollen jetzt gerne dem Ganzen, ähm, Sinn geben. Also wir wollen jetzt dieser Syntaktik jetzt auf die semantische Ebene wechseln. Und die semantische Ebene, das ist wirklich... da geben wir dem... da schauen wir jetzt tatsächlich nicht einfach nur die Gruppenaxiome an, sondern tatsächlich Gruppen, ähm, und wir wollen dem Ganzen Bedeutung geben, wir wollen über wahr und falsch sprechen können. 
+
+Genau, aber das ist natürlich wie auch wieder eigentlich... man nimmt einen Schritt zurück. Also es ist jetzt nicht mehr... wir können das nicht in der derselben Sprache machen, in der wir die ganze Syntaktik aufgebaut haben, weil sonst würde sich irgendwann die Schlange wieder in den Schwanz beißen und es geht nicht anders. Das heißt, wir werden jetzt quasi eine naive Mengenlehre verwenden. Wir werden von Mengen sprechen, ähm, und auch von Teilmengen und von Funktionen, aber jetzt keine schlimmen Mengenbegriffe machen. 
+
+Aber ist immer noch die Frage genau, wo das Ganze lebt. Das ist das, was wir später noch Zermelo-Fraenkel Mengenlehre, das ist danach wieder eigentlich wird wieder über ein Axiomensystem aufgebaut. Das heißt, wir können auch sagen, wir schauen uns das über ein Unterding der Zermelo-Fraenkel an. Oder man nimmt irgendein anderes Logiksystem, wie auch immer. 
+
+Aber die Idee ist auf jeden Fall, wir gehen jetzt eigentlich von dieser reinen syntaktischen Ebene weg und schauen uns jetzt die konkreten, ähm, die konkreten Modelle an von unseren... von unserer Mathematik. Also ist ein bisschen wie... okay, wir haben jetzt in einer Petrischale diese reine Logik aufgebaut, die man da studieren kann, und jetzt gehen wir quasi in die wilde Wildnis zurück oder so und gehen da in die... in die Mathematik.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Syntaktik vs. Semantik]
+Der Dozent führt die fundamentale Unterscheidung zwischen \newterm{Syntax} (reine Zeichenketten, Axiome und formale Ableitungsregeln ohne inhärente Bedeutung) und \newterm{Semantik} (Interpretation der Symbole in mathematischen Strukturen, Wahrheitswerte, Modelle) ein. Er nutzt dafür treffende Analogien wie die Partitur versus die gespielte Musik oder die Speisekarte versus das tatsächliche Essen.
+\end{didactic-insight>
+
+\begin{spoken-clean}[00:11:20 - 00:13:38]
+Es ist ein bisschen wie... okay, ich glaube, es finden da alle gerne Metaphern in diesem Bereich. Im Skript von Lorenz Halbeisen, er schreibt da ist ein bisschen wie, sich vorstellen wie so die Partitur und die Musik. So, wir haben da die Partitur, da stehen alle Noten, aber so jetzt in Semantik... semantischen Ebene, da ist die ganze Musik und so weiter, die zwar die Musik ist so... äh, aber eben die Musik... die eigentliche Musik ist nochmals etwas anderes. 
+
+Oder Richard Pink hat gesehen, der... der vergleicht das eher kulinarisch, er sagt so: okay, die ganze Syntaktik, das ist wie die Speisekarte, und die Semantik, das ist die ganze, ähm, das ist dann das eigentliche... die eigentliche Speise, die auf den Tisch serviert wird. Ähm, ja, genau. Da dürfen Sie auch gerne Ihre Lieblings-Metapher, ähm, hervorbringen. 
+
+Ähm, ja, also wenn man grob... grob sagen, wir haben die... die syntaktische Ebene, da gibt es Formeln, Beweise und Zeichen, und die semantische Ebene, da gibt es Strukturen, Bedeutung, Wahrheit oder nicht Wahrheit. Kann man es auch noch ein paar Sachen sagen, dass wir hier Syntaktik... Semantik... also hier haben wir Terme, das sind einfach reine Terme, aber die entsprechen auf der semantischen Ebene Objekten, tatsächlich Objekten von Mengen. 
+
+Und hier haben wir Formeln, aber wenn wir den jetzt... nicht rein sprachlich da weggehen, sondern eben zum Begriff, dann sind das tatsächlich auch Aussagen. Dann hier haben wir logische Axiome oder Folgerungen aus logischen Axiomen. Das sind aber solche Sachen, die gelten einfach immer, so wie wir's gemacht haben, und in der Semantik nennt man das, ähm, oft Tautologien. Das sind auch Begriffe, die rein aus der logischen Struktur folgen. Und hier haben wir die nicht-logischen Aussagen... äh, nicht-logischen Axiome. Und hier sind das... ist das das Axiomensystem einer Theorie.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:13:30
+% topic: Gegenüberstellung von Syntax und Semantik
+% board_state: Modelle-Überschrift, Syntaktik vs. Semantik Tabelle
+% next_goal: Definition einer L-Struktur aufschreiben
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content}
+
+\begin{math-stroke}[Gegenüberstellung: Syntax vs. Semantik]
+Die mathematische Logik trennt streng zwischen der formalen Sprache und ihrer Interpretation:
+
+\begin{center}
+\begin{tabular}{l|l}
+\textbf{Syntax (Formale Ebene)} & \textbf{Semantik (Inhaltliche Ebene)} \\ \hline
+Terme (Zeichenketten) & Objekte (Elemente einer Menge) \\
+Formeln & Aussagen (wahr oder falsch) \\
+Logische Axiome & Tautologien (immer wahr) \\
+Nicht-logische Axiome & Axiomensystem einer Theorie (z.\,B. Gruppen) \\
+Formale Beweise & Modelle (konkrete Realisierungen)
+\end{tabular}
+\end{center}
+\end{math-stroke}
+
+\subsection{L-Strukturen}
+
+\begin{spoken-clean}[00:13:38 - 00:18:00]
+Ähm, ja, ja. Ich glaube, das Ganze geht auch ein bisschen so Sprachphilosophie noch zurück oder so. Ist ein bisschen wie Sprache. Man kann rein mit der Sprache hantieren, sagen: okay, wenn es... wenn es regnet, ist die Straße nass, um dann zu sagen: okay, aber das kann man jetzt rein mit dem herum... herumspielen und logische Sachen daraus folgern. Und in der Mathematik reicht das vielleicht auch, ähm, aber man kann sagen: okay, hier ist die Straße, hier ist der Regen, und das bedeutet nass zu sein, da kann man trotzdem logisch da herumspielen und kann dann etwas über die Straße aussagen. Und das ist, was wir hier machen. 
+
+Machen wir das auch, äh, präzise, ähm, präzise, aber eben im Kontext einer naiven Mengenlehre und eines gewissen Wahrheitsbegriffs, den wir, ähm, den wir bereits haben. Ich glaube, das könnte man philosophisch wahrscheinlich noch, äh, länger erörtern, was das genau ist, der Wahrheitsbegriff und so weiter. Ja, machen wir... ist für uns alles... alles klar, denke ich. 
+
+Noch für Definition, ähm, wenn L... wir haben jetzt eine Signatur L. Und wir sagen jetzt, eine L-Struktur M (i.e., $\mathcal{M}$), nennen wir das M, das ist eine... besteht aus einer nichtleeren Menge A und... ähm, eine Abbildung... oh, ich definiere das noch. Eine Abbildung, die jedem Konstantensymbol... also wir wollen jetzt eigentlich alle... alle Elemente in L, also alle diese Elemente von der Signatur, die wollen wir hier eine... das sind ja nur Symbole, denen wollen wir hier einen Sinn geben. 
+
+Also jedem Konstantensymbol C (i.e., $c$) in L... ja, wir verwenden jetzt auch das Elementsymbol von einer Menge, aber auch hier im Sinne im naiven Sinn... ein Element, wir nennen das jetzt C_M (i.e., $c^{\mathcal{M}}$), das ist jetzt diese Struktur, und das liegt in A zuordnet. Okay? Gut, äh, und dann jedem, äh, n-stelligen Relationssymbol R in L, also falls wir ein Relationssymbol haben, dann, ähm, ordnen wir dem eine Menge von n-Tupeln, ähm, R_M (i.e., $R^{\mathcal{M}}$) zu. Also R^M, das heißt, das ist eine Teilmenge von A^n. Das ist jetzt einfach eine Menge von n-Tupeln, und wir sagen, all diese n-Tupel sind diejenigen, die diese Relation erfüllen. 
+
+Das ist... und... jedem n-stelligen Funktionssymbol F in unserer Signatur L... ähm, was ordnet es einem Funktionssymbol sinnvollerweise zu? ... eine Funktion. Ah, einfach eine Funktion. Eine Symbol... eine Funktion F_M (i.e., $F^{\mathcal{M}}$), die geht von, gut, A^n nach A zuordnet. Und diese Menge A heißt der Bereich von M. Genau, das ist, ja, das ist eine L-Struktur. Wir machen dann nach der Pause weiter. Entschuldigung fürs Überziehen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition einer \texorpdfstring{$\mathcal{L}$}{L}-Struktur]
+\begin{definition}[$\mathcal{L}$-Struktur]\label[definition]{def:l-struktur}
+Sei $\mathcal{L}$ eine Signatur. Eine \newterm{$\mathcal{L}$-Struktur} $\mathcal{M}$ besteht aus:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Einer nichtleeren Menge $M$, genannt der \newterm{Bereich} (oder das \newterm{Universum}) von $\mathcal{M}$.
+    \setcounter{enumi}{1} \item Einem Element $c^{\mathcal{M}} \in M$ für jedes Konstantensymbol $c \in \mathcal{L}$.
+    \setcounter{enumi}{2} \item Einer Funktion $F^{\mathcal{M}}: M^n \to M$ für jedes $n$-stellige Funktionssymbol $F \in \mathcal{L}$.
+    \setcounter{enumi}{3} \item Einer Relation $R^{\mathcal{M}} \subseteq M^n$ für jedes $n$-stellige Relationssymbol $R \in \mathcal{L}$.
+\end{enumerate}
+\end{definition}
+\end{math-stroke}
+
+\begin{lecture-break}[15-minütige Vorlesungspause]
+Der Dozent kündigt eine Pause an und entschuldigt sich kurz für das Überziehen der Zeit. Das Video schneidet zur Pause und setzt nach der Unterbrechung fort.
+\end{lecture-break}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:18:00
+% topic: Definition einer L-Struktur und Vorlesungspause
+% board_state: Definition L-Struktur (teilweise ausgewischt)
+% next_goal: Wiederholung der L-Struktur und Definition von Relationen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Beispiele für \texorpdfstring{$\mathcal{L}$}{L}-Strukturen und Relationen}
+
+\begin{spoken-clean}[00:18:04 - 00:21:00]
+Also, wir machen weiter. Bitte nehmen Sie Ihren Platz ein und beenden Sie Ihre Konversationen. Also einfach nochmals... Entschuldigung, jetzt habe ich's blöderweise schon ausgeputzt. Was ist eine L-Struktur? Eine L-Struktur ist natürlich... wir haben eine L-Struktur M, bezeichnen wir durch M, und es ist einfach eine... L-Struktur M besteht aus dem Bereich von M, das ist eine Menge A, und dann für jedes Konstantensymbol haben wir ein Element... jedem Konstantensymbol ordnen wir ein Element in der... in dem Bereich A zu. 
+
+Das heißt, die Konstanten sind wirklich Elemente. Die Funktionen sind jetzt wirklich Funktionen von unserem Bereich oder von dem kartesischen Produkt von A mit sich selbst nach A. Und dann die Relationssymbole, das sind Relationen zwischen den Elementen von A. 
+
+Und eben nochmals zu sagen, was ist eine Relation? Schreiben wir's nochmals als Bemerkung hin, das ist allgemein in der Mathematik: eine n-stellige Relation auf einer Menge A ist nichts anderes als eine Teilmenge $R \subseteq A^n$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Relationen in der Mathematik]
+\begin{remark}[Relationen als Teilmengen]
+Eine $n$-stellige Relation $R$ auf einer Menge $A$ wird formal als eine Teilmenge des $n$-fachen kartesischen Produkts definiert:
+\[
+R \subseteq A^n
+\]
+Für ein $n$-Tupel $(x_1, \dots, x_n) \in A^n$ sagen wir, dass die Relation gilt, falls gilt:
+\[
+(x_1, \dots, x_n) \in R
+\]
+\end{remark}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:00 - 00:25:00]
+Also zum Beispiel, wenn Sie, weiß ich... wenn Sie die strikt kleiner Relation auf R definieren wollen, dann können Sie das einfach definieren als... das ist dann einfach, ähm, in dem Fall wäre die Teilmenge R, das wäre eine Teilmenge von R^2, das sind alle, ähm, (x, y) in R^2, so dass, ähm, x strikt kleiner ist als y. Okay, und wenn wir diese menge kennen, dann können wir zwei Elemente x und y anschauen und wir sehen: wenn sie in dieser menge sind, erfüllen sie die Relation, wenn sie nicht in dieser menge sind, erfüllen sie nicht die Relation. Okay, ist einfach eine Mengenschreibweise für Relationen. Das ist, was wir hier verwenden. Deswegen für jedes Relationssymbol erhalten wir tatsächlich eine Relation auf unserem Bereich A. 
+
+Vielleicht ein kleines Beispiel. Äm... Schauen wir an unsere Signatur, das soll die Signatur von der Gruppentheorie sein. Okay, was war die Signatur von der Gruppentheorie? ... Genau, wir haben nur das... ein Konstantensymbol und ein zweistelliges Funktion... Funktionssymbol. 
+
+Gut, und jetzt können wir zum Beispiel nehmen, ähm... Okay, wir können zum Beispiel A nehmen die... okay, sei M die L-Struktur mit Bereich A = Z, zum Beispiel. Äm, und jetzt müssen wir aber definieren, was ist unser Konstant... unser e. Sei e^M, das machen wir e^M, das ist jetzt eben diese Interpretation, und das definieren wir als 0. Und, ähm, diese... dieses zweistellige Funktionssymbol verknüpft, auch M, das sagen wir, ist die Funktion, die geht von Z kreuz Z, weil es zweistellig ist, nach Z und schickt hier ein Element (a, b) auf das Element a + b. Und das definiert eine... ja, genau, das definiert eine L-Struktur.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beispiele für \texorpdfstring{$\mathcal{L}$}{L}-Strukturen]
+\textbf{Beispiel 1: Die Relation $<$ auf $\mathbb{R}$}
+Wir betrachten das zweistellige Relationssymbol $<$ auf dem Bereich $A = \mathbb{R}$. Die zugehörige Relation $R$ ist definiert als:
+\[
+R = \left\{ (x, y) \in \mathbb{R}^2 \;\middle|\; x < y \right\} \subseteq \mathbb{R}^2
+\]
+
+\textbf{Beispiel 2: Die additive Gruppe der ganzen Zahlen als $\mathcal{L}_{\text{GT}}$-Struktur}
+Sei die Signatur der Gruppentheorie $\mathcal{L}_{\text{GT}} = \{e, \circ\}$, wobei $e$ ein Konstantensymbol und $\circ$ ein zweistelliges Funktionssymbol ist. 
+Wir definieren eine $\mathcal{L}_{\text{GT}}$-Struktur $\mathcal{M}$ mit dem Universum $M = \mathbb{Z}$:
+\begin{align*}
+e^M &:= 0 \in \mathbb{Z} \\
+\circ^M &: \mathbb{Z} \times \mathbb{Z} \to \mathbb{Z}, \quad (a, b) \mapsto a + b
+\end{align*}
+Diese Struktur $(\mathbb{Z}, 0, +)$ stellt eine wohldefinierte $\mathcal{L}_{\text{GT}}$-Struktur dar.
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:24:00
+% topic: L-Strukturen und Beispiele (Z, 0, +)
+% board_state: Bemerkung Relationen, Bsp. Gruppentheorie-Signatur auf Z
+% next_goal: Definition der Variablenbelegung einführen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Variablenbelegung und Modifikation}
+
+\begin{spoken-clean}[00:25:00 - 00:27:15]
+Und hier ist es, okay, hier ist es besonders schön, weil das ist jetzt auch tatsächlich eine Gruppe, das wissen wir, das heißt, das erfüllt auch gleich alle Gruppenaxiome. Aber a priori haben wir das vielleicht noch nicht gefordert. Lockenweise... ich hätte auch sagen können e ist 100 und Verknüpfung ist irgendwie Multiplikation plus 3 oder so. Kein Problem, es muss nur eine Funktion sein. 
+
+Okay, aber wir wollen jetzt noch genauer sagen, eben, dass wir sagen können, was ein Modell ist. Als nächstes wollen wir machen... okay, wir haben jetzt eine L-Struktur. Und jetzt wollen wir gerne noch einen Term interpretieren. Was war ein Term? Einen Term haben wir konstruiert aus Konstanten und aus Variablen und dann Funktionen darauf angewendet. Das waren Terme, und dann wieder Funktionen auf Funktionen und so weiter. Und damit können wir jetzt eigentlich, mit unserer... wenn wir eine L-Interpretation haben, können wir jetzt auch jeden Term interpretieren. 
+
+Als es kommt jetzt wieder ein bisschen wie, äh, in der ersten Stunde, als wir die ganze Syntax eingeführt haben, eine Reihe von Definitionen, aber ja, sind alle recht natürlich, muss man sich einfach nochmals hinsetzen und das genau anschauen. Also... eine Variablenbelegung, sagen wir, was das ist. Eine Variablenbelegung, sagen wir, j, einer L-Struktur M mit Bereich A ist eine Abbildung...
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:27:15 - 00:30:03]
+Was könnte eine Variablenbelegung sein, einfach vom Wort her? Ja, genau, und welche menge könnte es sein? Also ja, das heißt eine Variablenbelegung, das heißt, wir wollen jetzt jede Variable mit einer Konstanten belegen, also wir sagen jetzt, jede Variable soll ein Element aus unserem Bereich A sein. Da gibt es ganz viele Möglichkeiten. Ja, das ist einfach eine Abbildung, die jeder Variablen $\nu$ ein Objekt $j(\nu) \in A$ zuordnet. Okay, das ist eine Variablenbelegung. 
+
+Dann haben wir noch, das andere ist einfach, um uns zu helfen ein bisschen zu schreiben, wenn $\nu$ eine Variable ist und $j$ eine Variablenbelegung ist... jetzt definieren wir eine neue Variablenbelegung, wo wir einfach, ähm, $j$ ein bisschen abändern, hm? Wir machen jetzt, so wir definieren nun $j_{\frac{a}{\nu}}$... und jetzt machen wir hier eine Variable $\nu'$ hier rein und wir sagen jetzt, das ist gleich, ähm, $a$ falls diese Variable hier genau die Variable $\nu$ ist, und ansonsten ist es einfach $j(\nu')$. 
+
+Also das ist die Variablenbelegung... wir nehmen... wir nehmen die Variablenbelegung $j$ und jetzt verändern wir die einfach für $\nu$. Also das heißt, für $\nu$ machen wir anstatt $j(\nu)$ machen wir $a$, aber ansonsten bleibt es das gleiche. Also wir ändern die Variablenbelegung einfach für eine Variable. Also nichts Kompliziertes, nichts Gefährliches, nur etwas mühsam. Ähm, gut, und jetzt können wir sagen, was eine Interpretation ist. Eine... eine L-Interpretation, wir sagen $I$, das ist jetzt einfach ein Paar $(M, j)$, wobei $M$ eine L-Struktur ist und $j$ eine Variablenbelegung ist. Und für $I = (M, j)$ eine Interpretation definieren wir $I_{\frac{a}{\nu}} = (M, j_{\frac{a}{\nu}})$. Okay, das ist eine Interpretation.
+\end{spoken-clean}
+
+\begin{math-stroke}[Variablenbelegung und Interpretation]
+\begin{definition}[Variablenbelegung]\label[definition]{def:variablenbelegung}
+Sei $\mathcal{M}$ eine $\mathcal{L}$-Struktur mit Bereich $A$. Eine \newterm{Variablenbelegung} $j$ ist eine Abbildung, die jeder Variablen $\nu$ ein Element aus dem Bereich $A$ zuordnet:
+\[
+j: \text{Var} \to A
+\]
+\end{definition}
+
+\begin{definition}[Modifizierte Variablenbelegung]\label[definition]{def:mod_variablenbelegung}
+Sei $\nu$ eine Variable, $j$ eine Variablenbelegung und $a \in A$. Die \newterm{modifizierte Variablenbelegung} $j_{\frac{a}{\nu}}$ ist für jede Variable $\nu'$ definiert durch:
+\[
+j_{\frac{a}{\nu}}(\nu') = \begin{cases} 
+a & \text{falls } \nu' \equiv \nu \\ 
+j(\nu') & \text{sonst} 
+\end{cases}
+\]
+\end{definition}
+
+\begin{definition}[$\mathcal{L}$-Interpretation]\label[definition]{def:l_interpretation}
+Eine \newterm{$\mathcal{L}$-Interpretation} $I$ ist ein geordnetes Paar $(\mathcal{M}, j)$, bestehend aus einer $\mathcal{L}$-Struktur $\mathcal{M}$ und einer Variablenbelegung $j$:
+\[
+I = (\mathcal{M}, j)
+\]
+Für $a \in A$ definieren wir die modifizierte Interpretation $I_{\frac{a}{\nu}}$ durch:
+\[
+I_{\frac{a}{\nu}} = \left(\mathcal{M}, j_{\frac{a}{\nu}}\right)
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:29:00
+% topic: Variablenbelegungen und Interpretationen
+% board_state: Definition j, j_{a/nu}, Interpretation I = (M, j)
+% next_goal: Definition der Interpretation eines Terms (t^I)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Interpretation von Termen}
+
+\begin{spoken-clean}[00:30:03 - 00:31:07]
+Gut, wir haben Struktur, Variablenbelegungen, Interpretationen. Gut, und jetzt, als nächstes wollen wir machen... okay, wir haben jetzt eine L-Struktur. Und jetzt wollen wir gerne noch einen Term interpretieren. Was war ein Term? Einen Term haben wir konstruiert aus Konstanten und aus Variablen und dann Funktionen darauf angewendet. Das waren Terme, und dann wieder Funktionen auf Funktionen und so weiter. Und damit können wir jetzt eigentlich, mit unserer... wenn wir eine L-Interpretation haben, können wir jetzt auch jeden Term interpretieren.
+
+Also, das ist die Interpretation eines Terms. Also sei $I = (\mathcal{M}, j)$ eine $\mathcal{L}$-Interpretation. Einem $\mathcal{L}$-Term $t$ weisen wir ein Element $t^I \in A$ induktiv wie folgt zu:
+\end{spoken-clean}
+
+\begin{math-stroke}[Interpretation eines Terms]
+\begin{definition}[Interpretation eines Terms]\label[definition]{def:term_interpretation}
+Sei $I = (\mathcal{M}, j)$ eine $\mathcal{L}$-Interpretation mit Bereich $A$. Jedem $\mathcal{L}$-Term $t$ ordnen wir induktiv ein Element $t^I \in A$ zu:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Falls $t \equiv \nu$ eine Variable ist, dann ist:
+    \[
+    \nu^I := j(\nu)
+    \]
+    \setcounter{enumi}{1} \item Falls $t \equiv c$ ein Konstantensymbol ist, dann ist:
+    \[
+    c^I := c^{\mathcal{M}}
+    \]
+    \setcounter{enumi}{2} \item Falls $t \equiv F(t_1, \dots, t_n)$ ein Funktionsterm ist, dann ist:
+    \[
+    F(t_1, \dots, t_n)^I := F^{\mathcal{M}}\left(t_1^I, \dots, t_n^I\right)
+    \]
+\end{enumerate}
+\end{definition}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+
+*(Tokens: Input 283278, Output 8049)*
+---
+
+**AutoExtraction:** [Part 3] 03-03-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 03-03-tuesday-part3.mp4
+[Kontext-Dateien]: 03-03-tuesday-part1.tex, 03-03-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from , 03-03-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture. This specific video segment is exactly 31 minutes and 02 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 31 minutes and 02 seconds length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+After transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.
+
+CRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.
+
+**gemini-3.5-flash:** % End of the video: 00:31:02
+% Primary Language: German
+
+\subsection{Interpretation von Termen und Formeln}
+
+\begin{spoken-clean}[00:00:00 - 00:01:52]
+... eine $\mathcal{L}$-Interpretation $I$ ist ein Paar $(\mathcal{M}, j)$, wobei $\mathcal{M}$ eine $\mathcal{L}$-Struktur ist und $j$ eine Variablenbelegung ist. Und für $I = (\mathcal{M}, j)$ eine Interpretation definieren wir $I_{\frac{a}{\nu}} = (\mathcal{M}, j_{\frac{a}{\nu}})$.
+\end{spoken-clean}
+
+\begin{math-stroke}
+Eine \newterm{$\mathcal{L}$-Interpretation} $I$ ist ein geordnetes Paar $(\mathcal{M}, j)$, wobei $\mathcal{M}$ eine $\mathcal{L}$-Struktur und $j$ eine Variablenbelegung ist.
+Für $I = (\mathcal{M}, j)$ eine Interpretation und ein Element $a \in A$ definieren wir die modifizierte Interpretation:
+\begin{equation}
+I_{\frac{a}{\nu}} := \left(\mathcal{M}, j_{\frac{a}{\nu}}\right)
+\end{equation}
+\end{math-stroke}
+
+\subsection{Interpretation von Termen}
+
+\begin{spoken-clean}[00:01:52 - 00:03:52]
+Gut, wir haben Struktur, Variablenbelegungen, Interpretationen. Gut, und jetzt, als nächstes wollen wir machen... okay, wir haben jetzt eine $\mathcal{L}$-Struktur. Und jetzt wollen wir gerne noch einen Term interpretieren. Was war ein Term? Einen Term haben wir konstruiert aus Konstanten und aus Variablen und dann Funktionen darauf angewendet. Das waren Terme, und dann wieder Funktionen auf Funktionen und so weiter. Und damit können wir jetzt eigentlich, mit unserer... wenn wir eine $\mathcal{L}$-Interpretation haben, können wir jetzt auch jeden Term interpretieren.
+
+Wir ordnen jedem $\mathcal{L}$-Term $\tau$ rekursiv ein Objekt $I(\tau) \in A$ zu. Und wir machen das rekursiv.
+\end{spoken-clean}
+
+\begin{math-stroke}[Interpretation eines Terms]
+\begin{definition}[Interpretation eines Terms]\label[definition]{def:term_interpretation}
+Sei $I = (\mathcal{M}, j)$ eine $\mathcal{L}$-Interpretation mit Bereich $A$. Wir ordnen jedem $\mathcal{L}$-Term $\tau$ rekursiv ein Objekt $I(\tau) \in A$ zu durch:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Für Variablensymbole $\nu$ gilt:
+    \[
+    I(\nu) := j(\nu)
+    \]
+    \setcounter{enumi}{1} \item Für Konstantensymbole $c \in \mathcal{L}$ gilt:
+    \[
+    I(c) := c^{\mathcal{M}}
+    \]
+    \setcounter{enumi}{2} \item Für ein $n$-stelliges Funktionssymbol $F \in \mathcal{L}$ und $\mathcal{L}$-Terme $\tau_1, \dots, \tau_n$ gilt:
+    \[
+    I(F(\tau_1, \dots, \tau_n)) := F^{\mathcal{M}}\left(I(\tau_1), \dots, I(\tau_n)\right)
+    \]
+\end{enumerate}
+\end{definition}
+\end{math-stroke}
+
+\subsection{Interpretation von Formeln}
+
+\begin{spoken-clean}[00:03:52 - 00:06:40]
+Ja, man muss sich ein bisschen kurz konzentrieren und sich überlegen, was da vorgeht, aber es ist auch wieder genau das, was man tut. Man ersetzt einfach die Sachen und gibt ihnen jetzt Sinn. Und jetzt ist es nicht mehr nur reine Symbole und Syntaktik, sondern jetzt sind es tatsächlich Elemente von Mengen.
+
+Gut, und jetzt, was wir tun wollen, ist... okay, nach Termen haben wir Formeln definiert. Und was wir jetzt tun wollen, wir wollen sagen, wann ist eine Formel in einer gewissen Interpretation wahr oder nicht. Und das können wir jetzt auch wieder rekursiv definieren.
+
+Als kurze Erinnerung, wie sind Formeln entstanden? Wir haben Terme genommen und dann haben wir die zusammengesetzt durch... also diese $F_0$ bis $F_4$, oder? Wir haben Terme genommen und dann haben wir gesagt: okay, wenn das eine... ein Term gleich ein anderer Term ist eine Formel, oder Terme... wenn wir eine $n$-stellige Relation hatten, dann konnten wir die Terme einsetzen. Und nachher konnten wir wieder sagen: okay, wenn wir Formeln haben, können wir daraus neue Formeln bauen, indem wir die logischen Quantoren und Junktoren eingesetzt haben. Und ja, genau, das sind die Formeln. Noch zur Erinnerung...
+\end{spoken-clean>
+
+\begin{math-stroke}[Erinnerung: Formelaufbau]
+Eine Formel $\psi$ ist aus den syntaktischen Regeln $(F_0)$--$(F_4)$ entstanden, d.\,h. sie besitzt eine der folgenden Formen:
+\[
+\tau_1 = \tau_2, \quad R(\tau_1, \dots, \tau_n), \quad \neg \psi_1, \quad \psi_1 \wedge \psi_2, \quad \psi_1 \vee \psi_2, \quad \psi_1 \to \psi_2, \quad \exists \nu \, \psi_1, \quad \forall \nu \, \psi_1
+\]
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:40 - 00:09:48]
+Eine Formel $\psi$ ist aus den Regeln $F_0$ bis $F_4$ entstanden. Das heißt, eine Formel ist von der Form: also ein Term gleich ein anderer Term, oder eine Relation zwischen Termen --- das ist ein Relationssymbol --- oder wenn wir jetzt eine Formel haben, es kann sein, dass es nicht die Formel ist, oder einfach zwei Formeln $\psi_1$ und $\psi_2$, oder $\psi_1$ oder $\psi_2$, $\psi_1$ impliziert $\psi_2$, oder dann noch mit den Quantoren: es existiert ein $\nu$, so dass $\psi$, oder für alle $\nu$ $\psi$. Okay, das heißt, so haben wir die Formeln gebildet.
+
+Und jetzt ist das ein bisschen eine längliche Definition wieder. Jetzt wollen wir all das in die semantische Ebene übersetzen. Und das tun wir genau, indem wir das verwenden, was wir eigentlich wollen, dass diese Schriftzeichen bedeuten.
+
+Wir definieren, wann eine Formel $\psi$ wahr ist bezüglich einer Interpretation $I$. Wir schreiben $I \models \psi$ für „$\psi$ gilt in $I$“ oder auch „$\psi$ ist wahr bezüglich der Interpretation $I$“. Und das definieren wir wieder rekursiv wie folgt...
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition der Gültigkeit]
+\begin{definition}[Gültigkeit/Wahrheit einer Formel]\label[definition]{def:formula_validity}
+Für eine $\mathcal{L}$-Formel $\psi$ definieren wir, wann $I \models \psi$ (d.\,h. $\psi$ gilt in $I$ oder $\psi$ ist wahr bezüglich $I$). Dies definieren wir rekursiv wie folgt:
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:48 - 00:12:35]
+Wie tun wir das? Also wir sagen zuerst einmal, dass $\tau_1 = \tau_2$ ist wahr bezüglich $I$ falls, Definition, die Interpretation von $\tau_1$ --- das ist ein Element in $A$ --- in $A$ soll das dasselbe Objekt sein wie die Interpretation von $\tau_2$.
+
+Das macht absolut Sinn. $\tau_1 = \tau_2$, das ist jetzt hier einfach ein Symbolzeichen. Wenn wir aber eine Interpretation haben, dann werden das zwei Elemente, und wir können schauen, sind diese Elemente dieselben Objekte. Und falls ja, dann schreiben wir das so hin.
+
+Dann schreiben wir, in $I$ gilt die Relation $\tau_1$ bis $\tau_n$ per Definition genau dann, wenn die entsprechenden Elemente diese Relation erfüllen. Das heißt, wenn diese Elemente hier enthalten sind in unserer $R^{\mathcal{M}}$, also dieser Teilmenge von $A^n$, gegeben durch unsere Struktur $\mathcal{M}$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Gültigkeit atomarer Formeln]
+\begin{enumerate}
+    \setcounter{enumi}{0} \item $I \models \tau_1 = \tau_2 \iff I(\tau_1) = I(\tau_2)$
+    \setcounter{enumi}{1} \item $I \models R(\tau_1, \dots, \tau_n) \iff \left(I(\tau_1), \dots, I(\tau_n)\right) \in R^{\mathcal{M}}$
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:12:35 - 00:15:35]
+Und das andere machen wir jetzt wieder rekursiv, was wir für die Terme einmal machen. Und danach sagen wir, dass nicht $\psi$ ist wahr in $I$ genau dann, wenn wir haben, dass nicht $\psi$ wahr ist in $I$ (i.e., $I \not\models \psi$). Okay, wir können schauen, also wenn das... wenn das nicht gilt, dann schreiben wir das.
+
+Und natürlich haben wir dann per Definition immer, dass in $I$ entweder gilt $\psi$ oder, per Definition, wie wir nicht $\psi$ definiert haben, wenn $\psi$ nicht gilt, dann muss nicht $\psi$ gelten. Und das ist ein exklusives oder, das heißt, es gilt nie beides, das heißt, und nicht beides.
+
+Manche Leute verwenden den Satz „entweder oder“, um exklusives oder hinzuschreiben, aber es ist immer verwirrend, das sollte man besser... ist besser, das nicht zu tun, ja. Ja.
+\end{spoken-clean}
+
+\begin{math-stroke}[Gültigkeit von Negationen]
+\begin{enumerate}
+    \setcounter{enumi}{2} \item $I \models \neg \psi \iff I \not\models \psi$
+\end{enumerate}
+\begin{remark}[Bivalenzprinzip]
+Für jede $\mathcal{L}$-Interpretation $I$ und jede $\mathcal{L}$-Formel $\psi$ gilt stets genau eine der beiden Aussagen:
+\[
+I \models \psi \qquad \text{oder} \qquad I \models \neg \psi
+\]
+Insbesondere gilt niemals beides gleichzeitig.
+\end{remark}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:15:35 - 00:18:35]
+Nein, genau dasselbe, aber das ist hier Teil in der rekursiven... in der rekursiven Definition, aber genau, es ist eigentlich eine Übersetzung von dem in dem. Aber man verwendet diese Schreibweise manchmal. Genau. Aber das soll innerhalb der Formel, also wenn Sie eine Formel haben, dann gehen Sie wieder durch und wieder durch und wieder durch, also Sie haben für alle $x$ nicht $\varphi$ impliziert $\psi$ und so weiter, da kommt das nacheinander rein, oder?
+
+Wir sagen jetzt, $\psi_1$ und $\psi_2$ gilt in $I$ genau dann, wenn $\psi_1$ gilt in $I$ und $\psi_2$ gilt in $I$. Und wir haben, dass $I$ in $I$ gilt $\psi_1$ oder $\psi_2$ genau dann, wenn $\psi_1$ gilt oder $\psi_2$ gilt in $I$. Und $I \models \psi_1 \to \psi_2$ genau dann, wenn falls $\psi_1$ in $I$ gilt, dann gilt auch $\psi_2$ in $I$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Gültigkeit von Junktoren]
+\begin{enumerate}
+    \setcounter{enumi}{3} \item $I \models \psi_1 \wedge \psi_2 \iff I \models \psi_1 \text{ und } I \models \psi_2$
+    \setcounter{enumi}{4} \item $I \models \psi_1 \vee \psi_2 \iff I \models \psi_1 \text{ oder } I \models \psi_2$
+    \setcounter{enumi}{5} \item $I \models \psi_1 \to \psi_2 \iff \left(\text{falls } I \models \psi_1, \text{ dann } I \models \psi_2\right)$
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:35 - 00:21:35]
+Dann haben wir noch die Quantoren. Da brauchen wir jetzt unsere Notation. Wir sagen, es existiert ein $\nu$, so dass $\psi$. Das entspricht nun: es existiert ein $a \in A$, so dass... okay, jetzt wird es ein bisschen... weil jetzt nehmen wir nicht unsere übliche Interpretation, sondern dass, wenn wir in dieser Interpretation die Variable $\nu$ durch $a$ ersetzen, dann gilt $\psi$ in dieser Interpretation.
+
+Und wir sagen, dass für alle $\nu$ $\psi$ soll gelten genau dann, wenn für alle $a \in A$ gilt, in dieser anderen Variablenbelegung, wo wir $\nu$ anders besetzen, nämlich durch $a$, soll immer noch $\psi$ gelten. Und das ist jetzt... okay, das sind diese Definitionen. Okay, es ist genau das, was man denkt. \inlinemetanote{lacht}
+\end{spoken-clean}
+
+\begin{math-stroke}[Gültigkeit von Quantoren]
+\begin{enumerate}
+    \setcounter{enumi}{6} \item $I \models \exists \nu \, \psi \iff \text{es existiert ein } a \in A \text{ so dass } I_{\frac{a}{\nu}} \models \psi$
+    \setcounter{enumi}{7} \item $I \models \forall \nu \, \psi \iff \text{für alle } a \in A \text{ gilt } I_{\frac{a}{\nu}} \models \psi$
+\end{enumerate}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:21:35 - 00:23:05]
+Links ist wirklich unser formales System, unsere formale Sprache. Und auf der rechten Seite, das sind jetzt gewissermaßen metamathematische Bedingungen, also die liegen außerhalb von dem formalen System, das wir aufgebaut haben. Im Skript und im Buch machen sie es so, dass sie sagen: okay, das verwenden sie, wenn sie diese Sachen schreiben alle in Großbuchstaben, sagen: okay, wenn alles in Großbuchstaben ist, dann ist es quasi eine Metamathematik, wo man einen Schritt zurück macht. Ich habe jetzt nicht alles in Großbuchstaben geschrieben, aber einfach hier haben wir einen anderen Begriff. Vorher haben wir reine syntaktische Zeichen und hier haben wir jetzt eine Interpretation.
+
+Genau, so Achtung mit „entweder oder“. Also ich würde das im mathematischen Bereich eher verwenden... vermeiden, und wenn man ein exklusives oder schreibt, das ausdrücklich tun.
+\end{spoken-clean}
+
+\begin{didactic-insight}[Metasprachliche Übersetzung]
+Die Definition der semantischen Gültigkeit übersetzt formale syntaktische Junktoren (wie $\wedge$, $\vee$, $\neg$, $\to$, $\forall$, $\exists$) in informelle, metalinguistische Aussagen der naiven Mengenlehre und Logik. Während die Symbole auf der linken Seite reine Syntax sind, beschreiben die Bedingungen auf der rechten Seite tatsächliche mathematische Sachverhalte im Universum $A$.
+\end{didactic-insight}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:23:00
+% topic: Rekursive Definition der Wahrheitsbeziehung (Semantik)
+% board_state: Terminterpretation, Wahrheitsdefinition für atomare Formeln, Junktoren und Quantoren
+% next_goal: Definition eines Modells für Formeln und Formelmengen
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Modelltheorie: Definition des Modells}
+
+\begin{spoken-clean}[00:23:05 - 00:26:04]
+Okay, jetzt können wir endlich sagen, was ein Modell ist. Das reicht noch. Folgende Definition: wir haben jetzt $\mathcal{L}$ eine Signatur von Anfang an und $\psi$ eine $\mathcal{L}$-Formel und $\mathcal{M}$ eine $\mathcal{L}$-Struktur. Gut, dann ist $\mathcal{M}$ ein Modell von $\psi$ und wir schreiben $\mathcal{M} \models \psi$ falls für jede Variablenbelegung $j$ gilt, dass in dieser Interpretation $(\mathcal{M}, j)$ immer noch $\psi$ gilt. Also egal, wie Sie die Variablen belegen, es soll immer $\psi$ in dieser Interpretation gelten.
+
+Und dasselbe kann man natürlich auch machen für eine Menge von $\mathcal{L}$-Formeln. Sei $\Phi$ eine Menge von $\mathcal{L}$-Formeln, dann ist $\mathcal{M}$ ein Modell von $\Phi$ falls für jede Formel $\psi \in \Phi$ gilt, dass $\mathcal{M}$ ein Modell von $\psi$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definition des Modellbegriffs]
+\begin{definition}[Modell einer Formel]\label[definition]{def:model_formula}
+Sei $\mathcal{L}$ eine Signatur, $\psi$ eine $\mathcal{L}$-Formel und $\mathcal{M}$ eine $\mathcal{L}$-Struktur. Wir nennen $\mathcal{M}$ ein \newterm{Modell} von $\psi$ (geschrieben $\mathcal{M} \models \psi$), falls für jede Variablenbelegung $j$ gilt:
+\[
+(\mathcal{M}, j) \models \psi
+\]
+\end{definition}
+
+\begin{definition}[Modell einer Formelmenge]\label[definition]{def:model_theory_set}
+Sei $\Phi$ eine Menge von $\mathcal{L}$-Formeln. Die Struktur $\mathcal{M}$ heißt ein \newterm{Modell} von $\Phi$ (geschrieben $\mathcal{M} \models \Phi$), falls sie ein Modell für jede einzelne Formel in $\Phi$ ist:
+\[
+\forall \psi \in \Phi \implies \mathcal{M} \models \psi
+\]
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:26:04 - 00:27:28]
+Das heißt, egal wie Sie die Variablen belegen, es soll immer $\psi$ in dieser Interpretation gelten.
+
+Und dasselbe kann man natürlich auch machen für eine Menge von $\mathcal{L}$-Formeln. Sei $\Phi$ eine Menge von $\mathcal{L}$-Formeln, dann ist $\mathcal{M}$ ein Modell von $\Phi$ falls für jede Formel $\psi$ in $\Phi$ gilt, dass $\mathcal{M}$ ein Modell ist von $\psi$.
+
+Machen wir noch Beispiele. Also ein Beispiel ist... wir hatten vorher kurz die Gruppentheorie-Struktur angeschaut, gegeben durch die ganzen Zahlen, okay?
+\end{spoken-clean}
+
+\subsection{Beispiele und Gegenbeispiele}
+
+\begin{spoken-clean}[00:27:28 - 00:30:32]
+Also wir hatten diese $\mathcal{L}_{\text{GT}}$-Struktur und die war gegeben durch... wir haben gesagt, der Bereich sind die ganzen Zahlen $\mathbb{Z}$, und wir haben gesagt, das Konstantensymbol $e^{\mathcal{M}} = 0$ und wir sagen, diese Verknüpfung soll sein $a + b$. Dann ist das ein Modell von... wenn wir die Axiome von der Gruppentheorie nehmen.
+
+Das kann man zeigen, weil all diese Formeln in $\Phi$ — das ist die Gruppentheorie — das ist so... egal mit welcher Variablenbelegung, diese Verknüpfung hier erfüllt all die Axiome der Gruppentheorie. Man kann alle Axiome durchgehen, sehen das stimmt, egal für welche Variablenbelegung. Also ist das ein Modell von der Theorie der Gruppentheorie.
+
+Wir können auch einfachere Beispiele anschauen. Machen wir noch ein... haben wir noch Zeit? Doch, wir haben noch Zeit für ein Beispiel. Machen wir, sagen wir, die Signatur nehmen wir einfach $c$ und $f$, und wir sagen, $c$ ist ein Konstantensymbol und $f$ soll ein einstelliges Funktionssymbol sein. Okay, und jetzt nehmen wir einfach eine... wir nehmen zwei verschiedene $\mathcal{L}$-Strukturen $\mathcal{M}_1$ und $\mathcal{M}_2$, beide mit Bereich $A$, und zwar folgendermaßen: der Bereich $A$ nehmen wir einfach die Menge bestehend aus zwei Elementen, $0$ und $1$. Und wir definieren auf diesem Bereich zwei $\mathcal{L}$-Strukturen $\mathcal{M}_1$ und $\mathcal{M}_2$.
+
+Die erste Struktur $\mathcal{M}_1$, da definieren wir die Konstante als $0$, und wir müssen die Funktion in der ersten Struktur definieren. Das sagen wir einfach, die Funktion $f^{\mathcal{M}_1}$ bildet $0$ auf $1$ ab, und wir sagen, sie soll $1$ auf $0$ abbilden. Okay, kann man so definieren, das ist eine $\mathcal{L}$-Struktur.
+
+Und die zweite Struktur $\mathcal{M}_2$, da soll auch wieder die Konstante $c^{\mathcal{M}_2}$ gleich $0$ sein, und die Funktion $f^{\mathcal{M}_2}$ definieren wir jetzt anders, sagen wir, $0$ soll auf $0$ abgebildet werden, und $1$ soll auf $1$ abgebildet werden.
+
+Und jetzt müssen wir schauen, was gilt hier.
+\end{spoken-clean}
+
+\begin{math-stroke}[Zwei einfache Strukturen im Vergleich]
+Wir betrachten die Signatur $\mathcal{L} = \{c, f\}$, wobei $c$ ein Konstantensymbol und $f$ ein einstelliges Funktionssymbol ist.
+Sei das Universum $A := \{0, 1\}$. Wir definieren zwei $\mathcal{L}$-Strukturen $\mathcal{M}_1$ und $\mathcal{M}_2$ wie folgt:
+
+\textbf{Struktur $\mathcal{M}_1$:}
+\begin{align}
+c^{\mathcal{M}_1} &:= 0 \nonumber \\
+f^{\mathcal{M}_1}(0) &:= 1 \label{eq:m1_f0} \\
+f^{\mathcal{M}_1}(1) &:= 0 \nonumber
+\end{align}
+
+\textbf{Struktur $\mathcal{M}_2$:}
+\begin{align}
+c^{\mathcal{M}_2} &:= 0 \nonumber \\
+f^{\mathcal{M}_2}(0) &:= 0 \label{eq:m2_f0} \\
+f^{\mathcal{M}_2}(1) &:= 1 \nonumber
+\end{align}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:30:32 - 00:31:02]
+Wir haben auf jeden Fall, dass $\mathcal{M}_1$ ist ein Modell von $\psi_2$ und $\mathcal{M}_2$ ist auch ein Modell von $\psi_2$. Weil $\psi_2$ sagt einfach, es existiert ein $x$, so dass $x \neq c$ ist. Und $c$ hier ist einfach $0$, und in beiden Modellen existiert ein Element, das nicht $0$ ist, nämlich $1$. Also erfüllen beide Modelle $\psi_2$.
+
+Aber für die zweite Formel sehen wir, dass $\mathcal{M}_1$ ist ein Modell von $\psi_1$. Wir haben: jedes Element $x$ ist entweder gleich der Konstanten oder es ist gleich dem Funktionswert von der Konstanten. Das ist gut, entweder ist es $0$ oder es ist $1$. Aber hier ist der Funktionswert von der Konstanten auch wieder $0$, das heißt, $1$ erfüllt das nicht. Das heißt, in $\mathcal{M}_2$ gilt nicht $\psi_1$.
+
+Okay, das ist auch ein Beispiel noch, und da kann man natürlich die Junktoren und so weiter nehmen. So viel zur Modelltheorie. Vielleicht noch eine Bemerkung: Modelltheorie ist wirklich auch ein Gebiet der Mathematik, also das ist so der Anfang, da sind viele Bücher dazu geschrieben worden, das ist auch ein aktives Forschungsgebiet. Und man verwendet das effektiv auch, um mathematische Sätze zu beweisen, also es gibt Bereiche von der Zahlentheorie, die verwenden viel Modelltheorie, um ihre... um neue Sätze zu beweisen.
+
+Okay, vielen Dank fürs Kommen, und wir sehen uns nächste Woche wieder!
+\end{spoken-clean}
+
+\begin{math-stroke}[Modelleigenschaften für Spielzeugformeln]
+Wir untersuchen die beiden $\mathcal{L}$-Formeln:
+\begin{align}
+\psi_1 &\equiv \forall x \, \bigl(x = c \vee x = f(c)\bigr) \label{eq:toy_formel1} \\
+\psi_2 &\equiv \exists x \, \neg(x = c) \label{eq:toy_formel2}
+\end{align}
+
+Es gelten folgende Modellbeziehungen:
+\begin{itemize}
+    \item \textbf{Gültigkeit von $\psi_2$:} Da in beiden Strukturen $c^{\mathcal{M}} = 0$ gilt und das Element $1 \in A$ ungleich $0$ ist, existiert stets ein Element ungleich der Konstanten. Somit gilt:
+    \[
+    \mathcal{M}_1 \models \psi_2 \quad \text{und} \quad \mathcal{M}_2 \models \psi_2
+    \]
+    \item \textbf{Gültigkeit von $\psi_1$:} 
+    \begin{itemize}
+        \item In $\mathcal{M}_1$ ist $c^{\mathcal{M}_1} = 0$ und $f^{\mathcal{M}_1}(0) = 1$. Jedes Element $x \in \{0, 1\}$ ist somit gleich $c^{\mathcal{M}_1}$ oder gleich $f^{\mathcal{M}_1}(c^{\mathcal{M}_1})$. Daher gilt:
+        \[
+        \mathcal{M}_1 \models \psi_1
+        \]
+        \item In $\mathcal{M}_2$ ist $c^{\mathcal{M}_2} = 0$ und $f^{\mathcal{M}_2}(0) = 0$. Für $x = 1$ gilt weder $1 = 0$ noch $1 = f^{\mathcal{M}_2}(0) = 0$. Somit ist diese Formel in $\mathcal{M}_2$ verletzt:
+        \[
+        \mathcal{M}_2 \not\models \psi_1
+        \]
+    \end{itemize}
+\end{itemize}
+\end{math-stroke}
+
+\begin{didactic-insight}[Die Trennung von Syntax und Semantik]
+Dieses einfache Beispiel illustriert die Unabhängigkeit syntaktischer Formeln von ihrer konkreten Interpretation. Die Formel $\psi_1$ ist weder allgemeingültig noch unerfüllbar; ihr Wahrheitswert hängt vollständig von der gewählten Struktur ($\mathcal{M}_1$ oder $\mathcal{M}_2$) ab. Die Modelltheorie untersucht genau diese Wechselwirkung zwischen formalen Axiomensystemen und den mathematischen Welten, in denen sie interpretiert werden.
+\end{didactic-insight}
+
+% [SYSTEM] Video complete.
+
+*(Tokens: Input 291207, Output 6238)*
+---
