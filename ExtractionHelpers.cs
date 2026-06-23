@@ -33,6 +33,28 @@ public static class ExtractionHelpers
   }
 
   /// <summary>
+  /// Prints a list of file paths in a structured, folder-like tree format.
+  /// </summary>
+  public static void PrintFileTree(List<string> filePaths)
+  {
+    if (filePaths == null || filePaths.Count == 0) return;
+    
+    var grouped = filePaths.OrderBy(p => p).GroupBy(p => Path.GetDirectoryName(p));
+    
+    foreach (var group in grouped)
+    {
+      Console.WriteLine($"  📁 {group.Key}");
+      var files = group.ToList();
+      for (int i = 0; i < files.Count; i++)
+      {
+        string filename = Path.GetFileName(files[i]);
+        string prefix = (i == files.Count - 1) ? "└──" : "├──";
+        Console.WriteLine($"      {prefix} 📄 {filename}");
+      }
+    }
+  }
+
+  /// <summary>
   /// [AI Context] Regex-based cleanup ensures that even if the output is split across multiple continuation chunks,
   /// all markdown blocks and system messages are fully stripped, preventing compilation errors.
   /// </summary>

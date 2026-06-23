@@ -473,9 +473,7 @@ public class DirectAiChatSessionVertex {
     if (distinctFiles.Count == 0) return null;
 
     WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-    foreach (var file in distinctFiles) {
-      WriteLine($"  - {file}");
-    }
+    ExtractionHelpers.PrintFileTree(distinctFiles);
 
     string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
     if (historyChoice == "__EXIT__") return historyChoice;

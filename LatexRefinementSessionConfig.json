@@ -24,15 +24,16 @@
    */
   "Step1MergeAndTimestamp": {
     "Enabled": true,
+    "AttachAudio": false,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.6,
-      "TopP": 0.94,
-      "TopK": 41,
+      "Temperature": 0.1,
+      "TopP": 0.95,
+      "TopK": 40,
       "MaxOutputTokens": 32768,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
@@ -41,8 +42,8 @@
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
       "Temperature": 0.6,
-      "TopP": 0.94,
-      "TopK": 41,
+      "TopP": 0.93,
+      "TopK": 35,
       "MaxOutputTokens": 32768,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
@@ -56,29 +57,30 @@
    */
   "Step2SpeechRefinement": {
     "Enabled": true,
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.6,
-      "TopP": 0.94,
-      "TopK": 41,
+      "Temperature": 0.2,
+      "TopP": 0.95,
+      "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "MEDIUM"
+      "ThinkingLevel": "HIGH"
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
       "Temperature": 0.6,
-      "TopP": 0.94,
-      "TopK": 41,
+      "TopP": 0.93,
+      "TopK": 35,
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "MEDIUM"
+      "ThinkingLevel": "HIGH"
     }
   },
   /*
@@ -88,15 +90,16 @@
    */
   "Step3LastRefinement": {
     "Enabled": true,
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
     ],
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.6,
-      "TopP": 0.94,
-      "TopK": 41,
+      "Temperature": 0.1,
+      "TopP": 0.95,
+      "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 65535,
@@ -105,8 +108,8 @@
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
       "Temperature": 0.6,
-      "TopP": 0.94,
-      "TopK": 41,
+      "TopP": 0.93,
+      "TopK": 35,
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 65535,

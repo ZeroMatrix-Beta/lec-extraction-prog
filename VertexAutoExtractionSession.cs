@@ -128,9 +128,7 @@ public partial class VertexAutoExtractionSession {
             var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (distinctFiles.Any()) {
                 Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-                foreach (var file in distinctFiles) {
-                    Console.WriteLine($"  - {file}");
-                }
+                ExtractionHelpers.PrintFileTree(distinctFiles);
                 if (_config.LoadHistoryIntoSystemInstruction) {
                     Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
                 } else {
@@ -1003,10 +1001,10 @@ public partial class VertexAutoExtractionSession {
             prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
         }
 
-        prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Furthermore, do NOT calculate any time scaling factor for the speed adjustments. Just transcribe the timestamps exactly as they appear in the video player.";
-        prompt += "\n\nWhen in doubt, transcribe more content into the 'spoken-clean' environment rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
-        prompt += "\n\nAfter transcribing, meticulously review your generated LaTeX code for any compilation errors, syntax issues, or formatting mistakes, and perform a thorough spell check before providing the final output.";
-        prompt += "\n\nCRITICAL RULE: The provided video file is the ONLY source of content. Do NOT invent, hallucinate, or include any external information, formulas, or explanations that are not explicitly present or spoken in this specific video segment.";
+        prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.";
+        prompt += "\n\nWhen in doubt, transcribe more content into the 'math-stroke' rather than less. Everything that is written on the blackboard must be present there. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
+
+        prompt += "\n\nCRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || !attachmentParts.Any()) return (false, null, new List<Part>());

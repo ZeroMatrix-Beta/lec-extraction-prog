@@ -14,6 +14,7 @@ public class BackendParameters {
 
 public class RefinementStepConfig {
     public bool Enabled { get; set; } = true;
+    public bool AttachAudio { get; set; } = true;
     public string[] SystemInstructionPaths { get; set; } = [];
     public string[] HistoryPreloadPaths { get; set; } = [];
 

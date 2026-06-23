@@ -554,9 +554,7 @@ public class DirectAiChatSessionAiStudio {
         }
 
         WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        foreach (var file in distinctFiles) {
-            WriteLine($"  - {file}");
-        }
+        ExtractionHelpers.PrintFileTree(distinctFiles);
 
         string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
         if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;

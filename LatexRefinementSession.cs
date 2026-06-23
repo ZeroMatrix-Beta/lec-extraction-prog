@@ -187,19 +187,76 @@ public class LatexRefinementSession {
             var latexToolkit = new LatexToolkit();
             var (success, log) = await latexToolkit.CompilePdfAsync(wrapperPath);
             
+            string logContent = FormatLatexLog(log, success);
+            string logPath = Path.Combine(targetFolder, "compile-log.txt");
+            await System.IO.File.WriteAllTextAsync(logPath, logContent);
+
             if (success) {
                 // LaTeX creates aux files which can clutter the directory. 
                 // We'll leave them for now in case the user wants to inspect them.
                 Console.WriteLine($"  [INFO] PDF erfolgreich erstellt im Ordner: {targetFolder}");
+                if (logContent.Contains("⚠️ WARNING:")) {
+                    Console.WriteLine($"  [INFO] Es gab LaTeX-Warnungen. Details in: compile-log.txt");
+                }
             }
             else {
-                Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Log:");
-                Console.WriteLine(log);
+                Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Log gespeichert in: {logPath}");
             }
         }
         catch (Exception ex) {
             Console.WriteLine($"  [FEHLER] Unerwarteter Fehler bei PDF-Generierung: {ex.Message}");
         }
+    }
+
+    private static string FormatLatexLog(string rawLog, bool success) {
+        var lines = rawLog.Split('\n');
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("==========================================");
+        sb.AppendLine($" LaTeX Compilation Log - {(success ? "SUCCESS" : "FAILED")}");
+        sb.AppendLine("==========================================");
+        sb.AppendLine();
+
+        bool inError = false;
+        int errorCount = 0;
+        int warningCount = 0;
+
+        foreach(var line in lines) {
+            string tLine = line.Trim();
+            if (tLine.StartsWith("! ")) {
+                sb.AppendLine();
+                sb.AppendLine("❌ ERROR: " + tLine[2..]);
+                inError = true;
+                errorCount++;
+            }
+            else if (tLine.StartsWith("l.")) {
+                sb.AppendLine("   Line: " + tLine);
+                inError = false;
+            }
+            else if (tLine.Contains("Warning:", StringComparison.OrdinalIgnoreCase)) {
+                sb.AppendLine("⚠️ WARNING: " + tLine);
+                inError = false;
+                warningCount++;
+            }
+            else if (tLine.StartsWith("Overfull") || tLine.StartsWith("Underfull")) {
+                // Ignore layout noise
+            }
+            else if (inError && !string.IsNullOrWhiteSpace(tLine)) {
+                sb.AppendLine("   " + tLine); // Continuation of error message
+            }
+            else if (string.IsNullOrWhiteSpace(tLine)) {
+                inError = false;
+            }
+        }
+
+        sb.Insert(0, $"Summary: {errorCount} Errors, {warningCount} Warnings\n\n");
+        
+        // If we failed but couldn't parse the errors cleanly, append raw log so nothing is lost
+        if (!success && errorCount == 0) {
+            sb.AppendLine("\n--- Raw Output (Could not format cleanly) ---");
+            sb.AppendLine(rawLog);
+        }
+
+        return sb.ToString();
     }
 
     // Overload that takes string array
@@ -211,24 +268,47 @@ public class LatexRefinementSession {
         // Upload audio if available
         var parts = new List<Part>();
         string audioLengthStr = "unknown";
-        if (audioFilePath != null && System.IO.File.Exists(audioFilePath)) {
+        string partTimestampsStr = "";
+
+        bool audioExists = audioFilePath != null && System.IO.File.Exists(audioFilePath);
+        if (audioExists && audioFilePath != null) {
             var toolkit = new FfmpegUtilities.FfmpegToolkit();
             double dur = await toolkit.GetVideoDurationAsync(audioFilePath);
             TimeSpan t = TimeSpan.FromSeconds(dur);
             audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
 
-            var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
-            var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
-            if (success) {
-                parts.AddRange(attached);
-                Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+            // Calculate expected timestamps for each part
+            int overlapSec = _extractionConfig?.OverlapSeconds ?? 180;
+            double segmentLength = (dur + (partsCount - 1) * overlapSec) / partsCount;
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < partsCount; i++) {
+                double start = i * (segmentLength - overlapSec);
+                double end = start + segmentLength;
+                if (end > dur) end = dur;
+                
+                TimeSpan tStart = TimeSpan.FromSeconds(start);
+                TimeSpan tEnd = TimeSpan.FromSeconds(end);
+                sb.AppendLine($"- Part {i + 1}: {tStart.Hours:D2}:{tStart.Minutes:D2}:{tStart.Seconds:D2} - {tEnd.Hours:D2}:{tEnd.Minutes:D2}:{tEnd.Seconds:D2}");
+            }
+            partTimestampsStr = sb.ToString();
+
+            if (_config.Step1MergeAndTimestamp.AttachAudio) {
+                var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+                var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
+                if (success) {
+                    parts.AddRange(attached);
+                    Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+                }
             }
         }
 
-        string promptText = $"Here is the generated audio file alongside with the combined file with all the offset parts together. " +
+        bool audioAttached = audioExists && _config.Step1MergeAndTimestamp.AttachAudio;
+        string promptText = (audioAttached ? "Here is the generated audio file alongside with the combined file with all the offset parts together. " : "Here is the combined file with all the offset parts together. ") +
                             $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
-                            $"The actual audio length is exactly {audioLengthStr}. The `spoken-clean` blocks timestamps need to perfectly align with this full duration. " +
-                            $"Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio.";
+                            $"The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
+                            (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
+                            (audioAttached ? $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio." : 
+                                             $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please correct any misaligned timestamps using the expected part timestamps provided above.");
 
         parts.Add(new Part { Text = promptText });
 
@@ -256,7 +336,8 @@ public class LatexRefinementSession {
     private async Task<string?> ExecuteStep2SpeechRefinementAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
         var parts = new List<Part>();
 
-        if (audioFilePath != null && System.IO.File.Exists(audioFilePath)) {
+        bool audioAttached = _config.Step2SpeechRefinement.AttachAudio && audioFilePath != null && System.IO.File.Exists(audioFilePath);
+        if (audioAttached) {
             var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
             var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
             if (success) {
@@ -265,7 +346,10 @@ public class LatexRefinementSession {
             }
         }
 
-        parts.Add(new Part { Text = "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps." });
+        string promptText = audioAttached ? 
+            "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Listen to the provided audio to correct transcription mistakes. Do not alter the math or the timestamps." :
+            "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps.";
+        parts.Add(new Part { Text = promptText });
 
         Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {inputFile}");
         string content = await System.IO.File.ReadAllTextAsync(inputFile);

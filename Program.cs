@@ -89,7 +89,10 @@ partial class Program {
 
     private static async Task RunDirectAiStudioChatAsync() {
         var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
-        string apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
+        string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
+            ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
+            : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
+        string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
         var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
         var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
@@ -132,13 +135,10 @@ partial class Program {
         }
         else {
             var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
-            string apiKey;
-            if (config.ActiveApiProfile == 0) {
-                apiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction") ?? "no-key";
-            }
-            else {
-                apiKey = GoogleAiClientBuilder.ResolveApiKey(config.ActiveApiProfile) ?? "no-key";
-            }
+            string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
+                ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
+                : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
+            string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "");
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
