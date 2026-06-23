@@ -20,31 +20,23 @@ namespace AutoExtraction;
 /// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos. 
 /// Schau bitte auch das entsprechende .json-File an!
 /// </summary>
-public class AiStudioAutoExtractionSession {
-    private Client _client;
-    private readonly AiStudioAutoExtractionConfig _config;
-    private readonly AttachmentHandler _attachmentHandler;
-    private readonly SessionLogger _sessionLogger;
-    private readonly LatexRefinementSessionConfig _latexRefinementConfig;
+public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+    private Client _client = client;
+    private readonly AiStudioAutoExtractionConfig _config = config;
+    private readonly AttachmentHandler _attachmentHandler = attachmentHandler;
+    private readonly SessionLogger _sessionLogger = sessionLogger;
+    private readonly LatexRefinementSessionConfig _latexRefinementConfig = latexRefinementConfig;
     private double _speed = 1.0;
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
-    private List<Part> _historyParts = new List<Part>();
+    private readonly List<Part> _historyParts = [];
     // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
-    private List<Content> _sessionPreamble = new List<Content>();
+    private readonly List<Content> _sessionPreamble = [];
     private bool _historyWasLoaded = false;
     // [AI Context] Stateful history exclusively for the REPL loop's debug chat.
-    private List<Content> _debugChatHistory = new List<Content>();
+    private readonly List<Content> _debugChatHistory = [];
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
-
-    public AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
-        _client = client;
-        _config = config;
-        _attachmentHandler = attachmentHandler;
-        _sessionLogger = sessionLogger;
-        _latexRefinementConfig = latexRefinementConfig; // Initialized
-    }
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
@@ -99,7 +91,7 @@ public class AiStudioAutoExtractionSession {
         }
 
         if (string.IsNullOrEmpty(_systemInstructionText)) {
-            if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any()) {
+            if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Length != 0) {
                 Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
 
                 // Resolve all files from configured paths, handling directories
@@ -215,8 +207,8 @@ public class AiStudioAutoExtractionSession {
             }
             else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";
-                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput.Substring(9).Trim();
-                else if (normalizedInput.StartsWith("2 ")) val = normalizedInput.Substring(2).Trim();
+                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput[9..].Trim();
+                else if (normalizedInput.StartsWith("2 ")) val = normalizedInput[2..].Trim();
                 else if (normalizedInput == "2") {
                     Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
                     val = Console.ReadLine()?.Trim() ?? "";
@@ -247,13 +239,13 @@ public class AiStudioAutoExtractionSession {
             else if (normalizedInput == "6" || normalizedInput.StartsWith("6 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";
                 if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
-                    val = normalizedInput.Substring("change-key".Length).Trim();
+                    val = normalizedInput["change-key".Length..].Trim();
                 }
                 else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
-                    val = normalizedInput.Substring("change key".Length).Trim();
+                    val = normalizedInput["change key".Length..].Trim();
                 }
                 else if (normalizedInput.StartsWith("6 ")) {
-                    val = normalizedInput.Substring(2).Trim();
+                    val = normalizedInput[2..].Trim();
                 }
 
                 if (string.IsNullOrEmpty(val)) {
@@ -331,7 +323,7 @@ public class AiStudioAutoExtractionSession {
             "9" => "gemini-1.5-pro",
             "10" => "gemini-robotics-er-1.6-preview",
             "11" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
-            _ => choice.Contains("-") ? choice : _config.Model
+            _ => choice.Contains('-') ? choice : _config.Model
         };
     }
 
@@ -341,7 +333,7 @@ public class AiStudioAutoExtractionSession {
     /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
     /// </summary>
     private async Task DebugChatAsync(string input) {
-        _debugChatHistory.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = input } } });
+        _debugChatHistory.Add(new Content { Role = "user", Parts = [new() { Text = input }] });
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -365,7 +357,7 @@ public class AiStudioAutoExtractionSession {
         Console.Write($"\n[Debug Chat] {_config.Model} (Strg+C zum Abbrechen): ");
 
         using var cts = new CancellationTokenSource();
-        ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
         Console.CancelKeyPress += cancelHandler;
 
         int maxRetries = 8;
@@ -441,7 +433,7 @@ public class AiStudioAutoExtractionSession {
                         backoff = waitTime;
                     }
                     else if (attempt == 1) {
-                        var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+                        var retryMatch = MyRegex().Match(ex.Message);
                         if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                             waitTime = serverSuggestedDelay + 20;
                             Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
@@ -475,7 +467,7 @@ public class AiStudioAutoExtractionSession {
         }
 
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            _debugChatHistory.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+            _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
         }
         else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user") {
             // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
@@ -489,8 +481,9 @@ public class AiStudioAutoExtractionSession {
     /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
     /// </summary>
     private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
-        var historyPromptParts = new List<Part>(_historyParts);
-        historyPromptParts.Add(new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." });
+        var historyPromptParts = new List<Part>(_historyParts) {
+            new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
+        };
         var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
         _sessionPreamble.Add(userContent);
@@ -530,7 +523,7 @@ public class AiStudioAutoExtractionSession {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             fullResponse = "";
             using var cts = new CancellationTokenSource();
-            ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
             Console.CancelKeyPress += cancelHandler;
 
             try {
@@ -584,7 +577,7 @@ public class AiStudioAutoExtractionSession {
                         backoff = waitTime;
                     }
                     else if (attempt == 1) {
-                        var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+                        var retryMatch = MyRegex().Match(ex.Message);
                         if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                             waitTime = serverSuggestedDelay + 20;
                             Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
@@ -613,7 +606,7 @@ public class AiStudioAutoExtractionSession {
         }
 
         if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
-            _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+            _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             string logMsg = $"[History Acknowledgment] Angehängte Dateien: {loadedFiles}\n\nPrompt:\n{historyPromptParts.Last().Text}";
             await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens);
             return true;
@@ -633,7 +626,7 @@ public class AiStudioAutoExtractionSession {
     /// </summary>
     private async Task ProcessFilesAsync(string[] files) {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens
-        files = files.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
+        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date)];
 
         var toolkit = new FfmpegUtilities.FfmpegToolkit();
 
@@ -665,7 +658,7 @@ public class AiStudioAutoExtractionSession {
                 // Removed dateStr from filename pattern for caching to work across days for 2-hour window
                 var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
 
-                double fullOriginalVideoDuration = await toolkit.GetVideoDurationAsync(file); // Get original video duration
+                double fullOriginalVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(file); // Get original video duration
                 TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
                 bool useCache = false;
 
@@ -703,12 +696,12 @@ public class AiStudioAutoExtractionSession {
 
                     if (wasInputFilePreCompressedWhenCached) {
                         // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
-                        speedVideoDuration = await toolkit.GetVideoDurationAsync(file);
+                        speedVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(file);
                     }
                     else {
                         // Otherwise, it was the output of ProcessGeneralVideoAsync that was cached.
                         string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
-                        speedVideoDuration = await toolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
+                        speedVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                     }
                     double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0;
                     var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
@@ -743,7 +736,7 @@ public class AiStudioAutoExtractionSession {
                 var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
 
                 if (rawPartsWithTimes.Any()) {
-                    List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
+                    List<(string FilePath, double StartTime)> safePartsWithTimes = [];
                     for (int i = 0; i < rawPartsWithTimes.Count; i++) {
                         string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
 
@@ -772,7 +765,7 @@ public class AiStudioAutoExtractionSession {
 
 
             Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
-            List<string> generatedTexFiles = new List<string>();
+            List<string> generatedTexFiles = [];
             string baseName = Path.GetFileNameWithoutExtension(file);
             baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -783,7 +776,7 @@ public class AiStudioAutoExtractionSession {
             bool fileProcessingSuccess = true;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
             Task? audioExtractionTask = null;
-            Action startAudioTask = () => {
+            void startAudioTask() {
                 if (_config.GenerateAudioFile && audioExtractionTask == null) {
                     string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
                     bool useCachedAudio = false;
@@ -804,7 +797,7 @@ public class AiStudioAutoExtractionSession {
                         });
                     }
                 }
-            };
+            }
 
             for (int i = 0; i < partsWithTimes.Count; i++) {
                 string safePartPath = partsWithTimes[i].FilePath;
@@ -830,8 +823,10 @@ public class AiStudioAutoExtractionSession {
                 if (i > 0) {
                     // Start delay and upload in parallel for subsequent parts
                     var delayTask = Task.Run(async () => {
-                        Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
+                        // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
+                        // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+                        Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+                        await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
                     });
 
                     var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, toolkit);
@@ -962,7 +957,9 @@ public class AiStudioAutoExtractionSession {
                 }
 
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
-                if (_latexRefinementConfig != null) _latexRefinementConfig.UseVertex = false;
+                if (_latexRefinementConfig != null) {
+                    _latexRefinementConfig.UseVertex = false;
+                }
                 string envName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
                     ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
                     : "API_KEY-latex-refinement";
@@ -999,7 +996,7 @@ public class AiStudioAutoExtractionSession {
         }
     }
 
-    private string GetUniqueTexPath(string originalPath) {
+    private static string GetUniqueTexPath(string originalPath) {
         if (!System.IO.File.Exists(originalPath)) {
             return originalPath;
         }
@@ -1024,7 +1021,7 @@ public class AiStudioAutoExtractionSession {
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
         prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
 
-        double partDurationSeconds = await toolkit.GetVideoDurationAsync(partFile);
+        double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
 
@@ -1111,7 +1108,7 @@ public class AiStudioAutoExtractionSession {
         string currentLogPrompt = logContext;
 
         using var cts = new CancellationTokenSource();
-        ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
@@ -1173,20 +1170,22 @@ public class AiStudioAutoExtractionSession {
 
             string continuePrompt = segmentComplete ? "Continue" :
                 $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp)}\n```\n\n" +
-                "Please \"continue\" exactly where you left off...";
+                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                "Please \"continue\" exactly where you left off. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
 
             if (segmentComplete) Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
             else Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
 
             Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
-            history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
-            history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+            history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
+            history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
-            Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
+            // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }
@@ -1197,4 +1196,7 @@ public class AiStudioAutoExtractionSession {
         Console.CancelKeyPress -= cancelHandler;
         return (fullResponse, interactionInputTokens, interactionOutputTokens);
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
+    private static partial System.Text.RegularExpressions.Regex MyRegex();
 }

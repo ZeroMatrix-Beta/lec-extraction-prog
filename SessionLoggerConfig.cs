@@ -6,5 +6,5 @@ namespace Infrastructure;
 /// Configuration for the SessionLogger, defining where log files should be stored.
 /// </summary>
 public class SessionLoggerConfig {
-  public string LogFolderPath { get; set; } = AppConfig.LogFolder;
+    public string LogFolderPath { get; set; } = AppConfig.LogFolder;
 }

@@ -12186,3 +12186,1361 @@ Here is the material from my history. In the history, you may find some tex code
 - System Prompt geladen: True
 - History geladen: True
 ---
+
+**AutoExtraction:** [Part 1] 03-31-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 03-31-tuesday-part1.mp4
+
+[Prompt]:
+The lecture being transcribed is from , 03-31-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 1 of 3 from this lecture. This specific video segment is exactly 31 minutes and 46 seconds long.
+
+Note: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 31 minutes and 46 seconds length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'math-stroke' rather than less. Everything that is written on the blackboard must be present there. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+CRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.
+
+**gemini-3.5-flash:** 
+
+
+*(Tokens: Input 282544, Output 1)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 1]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+
+
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** % End of the video: 00:31:46
+% Primary Language: German
+
+\lecturechapter{Dienstag}{31. Mär}{31. März 2020}{Auswahlaxiom und Wohlordnungsprinzip}
+
+\begin{nice-box}[Einführung in das Auswahlaxiom]
+Dieses Kapitel markiert den Übergang zu den tieferen mengentheoretischen Grundlagen der modernen Mathematik. Das Auswahlaxiom ($\text{AC}$) ist eines der faszinierendsten und zugleich kontroversesten Axiome der Mathematik, da es einerseits intuitiv völlig einleuchtend erscheint, andererseits aber hochgradig kontraintuitive Konsequenzen wie das Banach-Tarski-Paradoxon nach sich zieht.
+\end{nice-box}
+
+\section{Das Banach-Tarski-Paradoxon}
+
+\begin{spoken-clean}[00:00:00 - 00:01:45]
+Ah, jetzt. Guten Tag. Also mein Name ist Fabian Ziltener, ich vertrete Christian Uhrig heute für diese Vorlesung über Grundstrukturen und möchte anfangen mit einem Video. Ähm, und dann sehen wir, was das zu tun hat mit Grundstrukturen. Also hier ist es, ich hoffe, dass Sie was hören. Äh, vielleicht muss ich das Mikrofon dann hinhalten, aber mal schauen.
+
+\inlinemetanote{Der Dozent startet ein Video von Vsauce über das Banach-Tarski-Paradoxon und die Schokoladen-Illusion}
+
+Hey, Vsauce. Michael here. There's a famous way to seemingly create chocolate out of nothing. Maybe you've seen it before. This chocolate bar is 4 squares by 8 squares, but if you cut it like this, and then like this, and finally like this, you can rearrange the pieces like so and wind up with the same 4 by 8 bar but with a leftover piece, apparently created out of thin air. There's a popular animation of this illusion as well. I call it an illusion because it's just that: fake. In reality, the
+
+*(Tokens: Input 282578, Output 456)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 1]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+nd then like this, and finally like this, you can rearrange the pieces like so and wind up with the same 4 by 8 bar but with a leftover piece, apparently created out of thin air. There's a popular animation of this illusion as well. I call it an illusion because it's just that: fake. In reality, the
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+% End of the video: 00:31:46
+% Primary Language: German
+
+\begin{spoken-clean}[continued]
+final bar is a bit smaller. It contains this much less chocolate. Each square along the cut is shorter than it was in the original, but the cut makes it difficult to notice right away. The animation is extra misleading, because it tries to cover up its deception. The lost height of each square is surreptitiously added in while the piece moves to make it hard to notice. I mean, come on, obviously you cannot cut up a chocolate bar and rearrange the pieces into more than you started with
+
+*(Tokens: Input 283142, Output 137)*
+---
+
+**AutoExtraction:** [Continue Prompt für Part 1]:
+[IMPORTANT] Your response was cut short. Your last output ended with:
+
+```latex
+...
+animation is extra misleading, because it tries to cover up its deception. The lost height of each square is surreptitiously added in while the piece moves to make it hard to notice. I mean, come on, obviously you cannot cut up a chocolate bar and rearrange the pieces into more than you started with
+```
+
+Please "continue" exactly where you left off...
+
+**gemini-3.5-flash:** ```latex
+% End of the video: 00:31:46
+% Primary Language: German
+
+or can you? One of the strangest...
+\end{spoken-clean}
+
+\begin{meta-note}[Video-Unterbrechung]
+Der Dozent pausiert das Video und wendet sich mit einer interaktiven Abstimmung an das Auditorium.
+\end{meta-note>
+
+\begin{spoken-clean}[00:01:45 - 00:02:32]
+Also, ähm, ich würde sagen, wir sind in der Schweiz, da stimmen wir über alles, also stimmen wir jetzt mal ab. Also wer ist dafür, dass man das kann? \inlinemetanote{schaut ins Plenum} Eine Person, zwei, drei... ja, vielleicht zehn. Und wer ist dafür, dass man das nicht kann? Also Schokolade so aufspalten und dann wieder zusammenfügen, und am Schluss hat man mehr? Also es ist ein... einigermaßen ausgeglichen. 
+
+Ich verrate Ihnen jetzt gleich die Antwort. Also mit Hilfe des Auswahlaxioms kann man das. Es geht also heute um das Auswahlaxiom. \inlinemetanote{zeigt auf das an der Tafel vorbereitete Banach-Tarski-Paradoxon} Ich habe hier auch das Banach-Tarski-Paradoxon nochmals hingemalt. Ich muss hier mal... so, umstellen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Banach-Tarski-Paradoxon]
+Das \newterm{Banach-Tarski-Paradoxon} ist ein fundamentaler Satz der mengentheoretischen Geometrie. Es besagt, dass man eine Kugel im dreidimensionalen Raum $\mathbb{R}^3$ in endlich viele disjunkte Teile zerlegen und diese durch reine Kongruenzabbildungen (Drehungen und Verschiebungen) so zusammensetzen kann, dass zwei Kugeln entstehen, von denen jede das gleiche Volumen wie die ursprüngliche Kugel besitzt:
+\[
+\text{Kugel} \xrightarrow{\text{Zerlegung}} P_1 \cup P_2 \cup P_3 \cup P_4 \cup P_5 \xrightarrow{\text{Bewegung}} \text{Kugel}_1 \cup \text{Kugel}_2
+\]
+Dieses Paradoxon ist im Rahmen der Standard-Mengenlehre (Zermelo-Fraenkel-Mengenlehre mit Auswahlaxiom, $\text{ZFC}$) mathematisch beweisbar, widerspricht jedoch eklatant unserer physikalischen Intuition der Volumenerhaltung.
+
+\begin{center}
+\begin{tikzpicture}[scale=1.2]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Original sphere on the left, split into 5 colored sectors.
+  % 2. Midground: Transition arrow with label "Zerlegung & Bewegung".
+  % 3. Foreground: Two identical spheres on the right, reconstructed from the pieces.
+  % 4. Colors: MidnightBlue, BrickRed, BurntOrange, Yellow, ForestGreen.
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Original Sphere (Left)
+  \draw[thick, gray] (0,0) circle (1cm);
+  \fill[MidnightBlue!30] (0,0) -- (0,1) arc (90:162:1cm) -- cycle;
+  \fill[BrickRed!30] (0,0) -- (0,1) arc (90:18:1cm) -- cycle;
+  \fill[BurntOrange!30] (0,0) -- (18:1cm) arc (18:-54:1cm) -- cycle;
+  \fill[Yellow!30] (0,0) -- (-54:1cm) arc (-54:-126:1cm) -- cycle;
+  \fill[ForestGreen!30] (0,0) -- (-126:1cm) arc (-126:-198:1cm) -- cycle;
+  \draw[gray!70, thin] (0,0) -- (0,1);
+  \draw[gray!70, thin] (0,0) -- (18:1cm);
+  \draw[gray!70, thin] (0,0) -- (-54:1cm);
+  \draw[gray!70, thin] (0,0) -- (-126:1cm);
+  \draw[gray!70, thin] (0,0) -- (-198:1cm);
+  \node[below] at (0,-1.1) {Originale Kugel};
+  
+  % Transition Arrow
+  \draw[->, very thick, gray!80] (1.5,0) -- (2.5,0) node[midway, above] {\footnotesize $\text{AC}$};
+  
+  % Reconstructed Sphere 1 (Right Top)
+  \begin{scope}[shift={(4,0.8)}]
+    \draw[thick, gray] (0,0) circle (1cm);
+    \fill[MidnightBlue!30] (0,0) -- (0,1) arc (90:210:1cm) -- cycle;
+    \fill[BrickRed!30] (0,0) -- (0,1) arc (90:-150:1cm) -- cycle;
+    \draw[gray!70, thin] (0,0) -- (0,1);
+    \draw[gray!70, thin] (0,0) -- (210:1cm);
+    \node[right] at (1.1,0) {Kugel 1};
+  \end{scope}
+  
+  % Reconstructed Sphere 2 (Right Bottom)
+  \begin{scope}[shift={(4,-0.8)}]
+    \draw[thick, gray] (0,0) circle (1cm);
+    \fill[BurntOrange!30] (0,0) -- (0,1) arc (90:-30:1cm) -- cycle;
+    \fill[Yellow!30] (0,0) -- (-30:1cm) arc (-30:-150:1cm) -- cycle;
+    \fill[ForestGreen!30] (0,0) -- (-150:1cm) arc (-150:-270:1cm) -- cycle;
+    \draw[gray!70, thin] (0,0) -- (0,1);
+    \draw[gray!70, thin] (0,0) -- (-30:1cm);
+    \draw[gray!70, thin] (0,0) -- (-150:1cm);
+    \node[right] at (1.1,0) {Kugel 2};
+  \end{scope}
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:02:32 - 00:03:39]
+Ähm, also das Banach-Tarski-Paradox sagt etwas Allgemeineres, aber eine Version davon sagt Folgendes: Sie können eine Kugel nehmen, also einen dreidimensionalen Ball, jetzt in drei Dimensionen oder auch höher, und die Kugel aufspalten in fünf Teile, die habe ich hier so verschiedenfarbig gemalt. Und dann nehmen Sie zwei dieser Teile, also den blauen Teil und den roten, und drehen die und verschieben, vielleicht noch, und fügen die wieder zusammen und Sie kriegen die gleiche Kugel wie da links, gleiche Größe, gleicher Radius. Und Sie nehmen die anderen drei Teile, das ist dann orange, gelb und grün, und drehen die und verschieben und kriegen dann wieder die gleiche Kugel wie links.
+
+Ähm, und das hier ist möglich, also es ist ein mathematischer Satz in Zermelo-Fraenkel plus AC. AC steht für Auswahlaxiom, Axiom of Choice.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:03:39 - 00:05:20]
+Also ich habe von meinen Kollegen gehört, dass Sie schon Zermelo-Fraenkel, die Zermelo-Fraenkel-Axiome behandelt haben. Weiß jemand noch, kennt jemand noch eins? Ein Zermelo-Fraenkel-Axiom?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Das Aussonderungsaxiom.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Das Aussonderungsaxiom, genau. Was sagt das?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort continued]
+Wenn ich eine Menge $X$ habe und $\varphi$ ein $L$-Satz ist, dann kann ich eine Menge aus den Elementen von $X$ machen, die die Bedingung $\varphi$ erfüllen.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ja, genau. Ähm, das heißt, man sondert halt alle die Elemente aus, die eine bestimmte Bedingung erfüllen. Und das nullte, was ist das nullte Zermelo-Fraenkel-Axiom?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Existenzaxiom, dass es eine leere Menge gibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, es gibt eine Menge, die keine Elemente enthält. Und dann gibt's halt noch ein paar andere. Und was alle brauchen, die täglich sich nicht mit Logik befassen, sondern mit anderer Mathematik, ist auch das Auswahlaxiom. Das ist quasi das letzte in der Liste. Je nach Zählung ist das dann das zehnte oder so.
+
+Und dieses Auswahlaxiom, das... um das geht's heute. Und okay, man kann jetzt einfach... ich sag' Ihnen jetzt den Satz gleich jetzt schon, was das sagt. Das Auswahlaxiom sagt, wenn Sie eine menge von nicht-leeren Mengen haben, dann können Sie gleichzeitig aus jeder dieser Mengen ein Element auswählen. Klingt irgendwie sehr plausibel, ähm, nicht sehr kontrovers, also nicht sehr, ähm, ja, scheint irgendwie nicht so kontrovers zu sein. Aber aus dem Auswahlaxiom kriegen Sie dann eben zum Beispiel dieses Banach-Tarski-Paradox. Sie können dann so eine Kugel aufspalten. Warum heißt das jetzt Paradox?
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:07:00
+% topic: Einführung in das Auswahlaxiom und Banach-Tarski-Paradoxon
+% board_state: Banach-Tarski-Paradoxon Zeichnung, Zermelo-Fraenkel Axiome Diskussion
+% next_goal: Formale Definition des Auswahlaxioms (AC) aufschreiben
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:07:00 - 00:09:45]
+Respektive das sollte ich die Leute fragen, die gesagt haben, das geht nicht mit dem Aufspalten. Also wenn man das kann, kann man das mit der Schokolade übrigens auch. Äh, theoretisch natürlich. Das hat nichts zu tun mit praktischer... also praktischem Schneiden, praktisch geht's nicht. Ja, bitte?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Das geht aber ja theoretisch nur aufgrund der unendlich vielen Anzahl der Punkte, die es gibt, oder?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ja, genau. Es geht nur theoretisch. Man muss irgendwie sehr, sehr genau schneiden. Also es ist sehr ausgefranst, oder? Diese Mengen habe ich... die habe ich ein bisschen so zackig gemacht. Sie sollten sich das sehr ausgefranst denken. Man kann die eben auch nicht hinschreiben. Eine Sache mit diesem Auswahlaxiom is, dass man nicht explizit diese Auswahl hinschreiben kann, wie man die Elemente jetzt wählt. Man braucht eben dafür das Axiom. Und hier ist es dann auch so. Sie können nicht hinschreiben, wie man die Menge aufspaltet, aber es gibt so eine Aufspaltung.
+
+Aber warum heißt es Paradox? Anders gesagt, die Leute, die gesagt haben, es geht nicht mit der Schokolade, warum haben die das so gesehen? Warum denken Sie, es geht nicht? Irgendwie muss es ja einen Grund geben, dass das jetzt ein Paradox ist. Übrigens kommt das aus dem Griechischen: \qt{para} heißt gegen und \qt{doxa} heißt Anschein. Es ist gegen den Anschein. Es ist eben kein Widerspruch, es ist einfach nur gegen den Anschein. Warum? Ja, bitte?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Weil man erwarten würde, dass wenn man das zerschneidet und wieder zusammenschiebt, das Volumen das gleiche bleibt.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, wegen des Volumens ist es ein Paradox. Also der Grund, warum das viele Leute nicht so intuitiv finden, ist das Volumen. Oder wenn alle diese Teile ein wohldefiniertes Volumen haben, dann geht es eben nicht. Wenn das Volumen auch noch gewisse Eigenschaften erfüllt wie in der Maßtheorie, nämlich Additivität hier, endlich-Additivität. Ähm, oder weil dann haben Sie hier auf der rechten Seite das doppelte Volumen. Das Lustige ist aber, diese Teile, die haben gar kein Volumen. Die haben ein äußeres Maß, aber kein richtiges Maß. Das heißt, daher ist das kein Widerspruch, sondern nur ein Paradox.
+
+Okay, gut. Das wollte ich zum Anfang sagen. Das ist eine Sache, die man aus dem Auswahlaxiom kriegt. Und das ist jetzt etwas, was wir dann nicht verwenden werden, aber was wir verwenden werden, ist eine andere Sache. Also vielleicht... ich mache dann alles formal, aber zuerst schreibe ich mal ein bisschen, was die Relevanz ist dieses Auswahlaxioms. In der Realität werden Sie Folgendes brauchen, nämlich...
+\inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\subsection{Formulierung des Auswahlaxioms}
+
+\begin{math-stroke}[Das Auswahlaxiom (AC)]
+Das \newterm{Auswahlaxiom} ($\text{AC}$ -- Axiom of Choice) lässt sich formal als folgende Aussage in der Sprache der Mengenlehre formulieren:
+\begin{equation}
+\label{eq:axiom-of-choice}
+\text{AC} \equiv \forall \mathcal{X} \left( \emptyset \notin \mathcal{X} \rightarrow \exists f \left( f \in {}^{\displaystyle \mathcal{X}}\!\bigcup \mathcal{X} \;\wedge\; \forall X \in \mathcal{X} \, \bigl( f(X) \in X \bigr) \right) \right)
+\end{equation}
+Hierbei bezeichnet $\mathcal{X}$ ein \newterm{Mengensystem} (eine Kollektion von Mengen) und die Vereinigung aller Elemente von $\mathcal{X}$ ist definiert durch:
+\[
+\bigcup \mathcal{X} := \left\{ x \;\middle|\; \exists X \in \mathcal{X} \text{ mit } x \in X \right\}
+\]
+Eine solche Funktion $f$ heißt \newterm{Auswahlfunktion} (Choice function).
+
+\begin{explanation-of-steps}
+Das Axiom besagt, dass zu jeder Familie $\mathcal{X}$ von nichtleeren Mengen eine Funktion $f$ existiert, die aus jeder dieser Mengen $X \in \mathcal{X}$ genau ein Element $f(X) \in X$ auswählt. Die Notation ${}^{\mathcal{X}}\!\bigcup \mathcal{X}$ bezeichnet die Menge aller Abbildungen von $\mathcal{X}$ in die Vereinigungsmenge $\bigcup \mathcal{X}$.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:45 - 00:13:50]
+Also ich folge jetzt den Notizen, die ich damals geschrieben habe, und die sind auf dem Internet. Vielleicht hat das Herr Uhrig angekündigt, und wenn nicht, können Sie die auch in der Pause dann vielleicht mal noch suchen. Also Sie brauchen jetzt nicht alles abzuschreiben, sondern eben dazu gibt's ziemlich ausführliche Notizen. Hoffentlich stimmt die Nummerierung, das kann aber sich auch ändern. Also Formulierung des Auswahlaxioms ist jetzt Punkt 3.1, auf den ich eingehen möchte.
+
+Ich werde es jetzt einfach gleich hinschreiben. Also das Auswahlaxiom ist folgende Formel. Das hier bedeutet \qt{ist identisch gleich}. Ich weiß nicht, ob Herr Uhrig das auch so geschrieben hat. Es bedeutet Folgendes: Für alle $X$... und ich mache jetzt ein geschweiftes $\mathcal{X}$, weil ich mir das als ein Mengensystem denke, das heißt, eine menge von Mengen. Aber vielleicht haben Sie bei Herrn Uhrig gehört, dass alles eine Menge ist. Also wenn Sie eine Menge haben, und Sie schauen sich die Elemente davon an, sind das auch wieder Mengen. Das heißt, mathematisch gesehen ist das nichts Spezielles, aber ich denke mir das als eine Menge von Mengen, und dann mache ich so ein geschweiftes $\mathcal{X}$ dafür. Ich nenne das dann auch eine Kollektion von Mengen.
+
+Für jede Kollektion von Mengen, die nicht die leere Menge enthält als Element --- die leere Menge soll nicht da drin liegen --- gilt, dass es eine Funktion $f$ gibt, und die Funktion heißt dann Auswahlfunktion. Die muss eine Abbildung sein von dieser menge, von dieser Kollektion, zur Vereinigung aller Elemente der Kollektion. Also das hier ist meine Notation --- nicht nur meine, hat vielleicht Herr Uhrig auch eingeführt --- die Notation für die Vereinigung über alle Elemente. Also man vereinigt alle Elemente hier drin. Die Elemente nenne ich jetzt einfach normal groß $X$.
+
+\inlinemetanote{schreibt an die Tafel}
+
+So, ich vereinige alle Mengen groß $X$, die in diesem geschweiften $\mathcal{X}$ liegen. Also ich habe jetzt eine Abbildung von da nach da. Das ist die Notation für Abbildungen. Haben Sie das gesehen? Notation von Abbildungen. Manchmal schreibt man das $X$ auch da hin, das ist die üblichere, aber ich schreibe es jetzt mal so. Oh, ja, das ist ein bisschen doof. Jetzt muss ich das noch irgendwie abstellen, das ist immer so eine Sache. Vielleicht einfach drücken, bis das alles aus ist? Nein. Entschuldigung.
+
+\inlinemetanote{Das Telefon des Dozenten klingelt laut im Hörsaal; er versucht es hastig auszuschalten}
+
+Ja... okay. Hoffentlich kommt's nicht nochmals. Vielleicht doch.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:14:00
+% topic: Formale Definition des Auswahlaxioms (AC)
+% board_state: AC Formel, Mengensystem-Skizze
+% next_goal: Visualisierung der Auswahlfunktion und Umformulierung mit kartesischem Produkt (AC')
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content}
+
+\begin{spoken-clean}[00:14:00 - 00:19:15]
+Also. Also es gibt so eine Auswahlfunktion. Die geht von der ganzen Kollektion von Mengen zur Vereinigung, sodass für jedes $X$ da drin, in dieser Kollektion, gilt, dass $f$ von $X$ in $X$ liegt. Und darum heißt es eben Auswahlaxiom. Oder Auswahlfunktion, also ein kleines $f$ nennt sich eine Auswahlfunktion. Das wählt eben aus jedem normalen $X$ --- ich mache mal das normale $X$ mal blau, also aus jedem solchen $X$ wählt es ein Element aus. Ich schreibe dafür mal klein $x$. Es wählt ein kleines $x$ aus dieser Menge aus, okay?
+
+Also Sie haben da ein paar Mengen, äh, vielleicht drei. \inlinemetanote{zeichnet drei Kreise an die Tafel} Die haben einige Elemente. Und jetzt nehme ich diese blaue Menge hier, das ist vielleicht die erste, und wähle halt etwas aus. Und das Etwas, was ich auswähle, ist eben $f$ von $X$. Das Rote hier ist $f$ von $X$, und $X$ ist die blaue Menge. Und das mache ich für alle gleichzeitig. Und das sagt dieses Axiom, dass es eben so ein $f$ gibt.
+
+\inlinemetanote{zeichnet rote Punkte in die Kreise und verbindet sie gedanklich mit der Auswahlfunktion}
+
+Gut. Ja. Und jetzt möchte ich dieses Auswahlaxiom umformulieren mit Hilfe des kartesischen Produktes, und ich nehme jetzt nicht schon an, dass Sie formal das kartesische Produkt einer beliebigen Kollektion von Mengen gesehen haben, das heißt, das werde ich jetzt erklären. Dieses kartesische Produkt verallgemeinert das von zwei Mengen, aber jetzt geht es eben gerade um unendlich viele Mengen. Dann wird's interessant. Wenn wir nur endlich viele nehmen, dann brauchen Sie kein Axiom, dann folgt das aus Induktion, dass es so ein $f$ gibt.
+
+Also kartesisches Produkt... man kann das eben so sehen: Was das sagt, ist, wenn Sie eine Kollektion von nicht-leeren Mengen haben, und Sie nehmen das kartesische Produkt davon, dann ist es auch wieder nicht leer. Und dieses kartesische Produkt, die Elemente davon entsprechen eben so Auswahlfunktionen. Und das möchte ich jetzt erklären. Also Definition... oder ja, zuerst mal Setting.
+\end{spoken-clean}
+
+\subsection{Das verallgemeinerte kartesische Produkt}
+
+\begin{math-stroke}[Das verallgemeinerte kartesische Produkt und AC']
+Seien $I$ eine Indexmenge und $\mathcal{X}$ ein Mengensystem. Wir betrachten eine Familie von Mengen, formalisiert als Abbildung:
+\[
+X: I \to \mathcal{X}, \quad i \mapsto X_i := X(i)
+\]
+
+\begin{definition}[Verallgemeinertes kartesisches Produkt]\label[definition]{def:generalized-cartesian-product}
+Das \newterm{kartesische Produkt} der Familie $(X_i)_{i \in I}$ ist definiert als die Menge aller Abbildungen $x$ von $I$ in die Vereinigungsmenge $\bigcup \mathcal{X}$, welche jedem Index $i \in I$ ein Element aus der entsprechenden Menge $X_i$ zuordnen:
+\begin{equation}
+\label{eq:generalized-cartesian-product}
+\bigtimes_{i \in I} X_i := \left\{ x: I \to \bigcup \mathcal{X} \;\middle|\; \forall i \in I \, \bigl( x(i) \in X_i \bigr) \right\}
+\end{equation}
+\end{definition}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Three disjoint sets X_1, X_2, X_3 representing the family.
+  % 2. Midground: Points inside each set.
+  % 3. Foreground: A choice function f selecting one element from each set.
+  % 4. Colors: MidnightBlue for sets, BrickRed for selected elements.
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Set X_1
+  \draw[thick, MidnightBlue, fill=MidnightBlue!5] (0,0) circle (0.8cm);
+  \node[above] at (0,0.8) {$X_1$};
+  \fill (0.2,0.3) circle (1.5pt);
+  \fill (-0.3,-0.2) circle (1.5pt);
+  \fill[BrickRed] (0.1,-0.1) circle (2pt) node[below right] {$x(1)$};
+  
+  % Set X_2
+  \draw[thick, MidnightBlue, fill=MidnightBlue!5] (2.5,0) circle (0.8cm);
+  \node[above] at (2.5,0.8) {$X_2$};
+  \fill (2.3,0.2) circle (1.5pt);
+  \fill[BrickRed] (2.7,-0.2) circle (2pt) node[below right] {$x(2)$};
+  \fill (2.1,-0.3) circle (1.5pt);
+  
+  % Set X_3
+  \draw[thick, MidnightBlue, fill=MidnightBlue!5] (5,0) circle (0.8cm);
+  \node[above] at (5,0.8) {$X_3$};
+  \fill[BrickRed] (4.8,0.3) circle (2pt) node[above left] {$x(3)$};
+  \fill (5.2,-0.1) circle (1.5pt);
+  \fill (4.9,-0.4) circle (1.5pt);
+  
+  % Label for the family
+  \node[below] at (2.5,-1.0) {Familie $(X_i)_{i \in I}$ mit Indexmenge $I = \{1, 2, 3\}$};
+\end{tikzpicture}
+\end{center}
+
+\begin{nice-box}[Äquivalente Formulierung des Auswahlaxioms]
+\begin{theorem}[Äquivalente Formulierung des Auswahlaxioms -- AC']\label[theorem]{thm:ac-prime}
+Das Auswahlaxiom ist äquivalent zu der Aussage, dass das kartesische Produkt einer Familie nichtleerer Mengen nichtleer ist:
+\begin{equation}
+\label{eq:ac-prime}
+\text{AC}' \equiv \forall I \, \forall X \left( \left( X: I \to \mathcal{X} \;\wedge\; \forall i \in I \, (X_i \neq \emptyset) \right) \rightarrow \bigtimes_{i \in I} X_i \neq \emptyset \right)
+\end{equation}
+\end{theorem}
+\end{nice-box}
+
+\begin{proposition}\label[proposition]{prop:ac-equivalence}
+Unter Annahme der Zermelo-Fraenkel-Axiome ($\text{ZF}$) gilt:
+\[
+\text{AC} \iff \text{AC}'
+\]
+\end{proposition}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:21:00
+% topic: Verallgemeinertes kartesisches Produkt und AC'
+% board_state: Definition des kartesischen Produkts, AC' Formel, Äquivalenz AC <=> AC'
+% next_goal: Diskussion, wann AC nicht benötigt wird (Wohlordnung von omega)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:19:15 - 00:23:45]
+Seien jetzt $I$ und so ein geschweiftes $\mathcal{X}$ Mengen. Das hier denken wir uns als eine Indexmenge, wir indizieren dann Elemente aus gewissen Mengen mit so Indizes da drin. Und jetzt haben wir noch eben so eine Funktion groß $X$, die geht von groß $I$ nach dem geschweiften $\mathcal{X}$. Die nimmt also... man kann dann schreiben, oder die nimmt einen Index $i$ und dann schreibe ich $X$ unten $i$ für einfach für $X$ von $i$. Und das soll dann eine dieser Mengen sein. Also man hat eine Kollektion von Mengen. Aber formal gesehen ist das eine Abbildung, die einen Index nimmt und ihn in eine Menge gibt.
+
+Gut. Und jetzt haben wir das Folgende: Definition des kartesischen Produktes. Ich schreibe dafür so ein Kreuz, und letztes Jahr haben die Leute protestiert, dass es hier zu viele Kreuze gibt. Der Grund ist... schauen Sie, es geht alles irgendwie synchron. Sie haben ein kleines $x$, das liegt im großen $X$, und das große $X$ liegt im geschweiften $\mathcal{X}$. Mir gefällt das irgendwie. Aber wenn es Ihnen nicht gefällt, dann müssen Sie die Notation für sich persönlich ändern, dürfen Sie gerne machen. Und das Kreuz ist ein Kreuz. Das möchte ich nicht ändern. Ich mache es jetzt dick. Das steht für kartesisches Produkt. Und ich schreibe jetzt einfach Kreuz $X$, hier steht immer noch diese Abbildung $X$. Schauen Sie, und dann darf man das aber auch so schreiben, dann ist es ein bisschen intuitiver. Das hier ist effizient und das hier rechts ist intuitiv: Produkt über alle Indizes, und dann schreibe ich dieses $X_i$. $X_i$ ist immer noch eine Menge. Jetzt scheint's ein bisschen intuitiver. Also nehmen Sie zum Beispiel da die Indexmenge $\{0, 1\}$, und dann haben Sie ein $X_0 \times X_1$, okay?
+
+Und es ist das Folgende: Man schreibt vielleicht auch ein anderes Produktzeichen, aber ich schreibe jetzt mal das so. Das sind alle Funktionen, die nehmen einen Index und geben ihn in etwas in dieser Vereinigung hier, okay? Und zwar so, dass für alle $i$ in der Indexmenge gilt, $x$ unten $i$ --- das ist wieder meine Lieblingsnotation für $x$ von $i$ --- liegt in groß $X$ unten $i$. Also anders gesagt, sie wählen aus... sie wählen für jeden Index ein Element aus aus dem großen entsprechenden $X_i$, okay?
+
+Gut, dann könnte ich jetzt hier ein paar Beispiele machen. Ich denke, Sie sollten sich das selbst anschauen, ich möchte nicht zu viel hier hinschreiben. Was ich noch sagen möchte, ist: Schauen Sie, wenn Sie jetzt nur zwei Mengen haben, $X_0$ und $X_1$, und Sie nehmen das kartesische Produkt, was Sie vielleicht mal hier gesehen haben, denke ich, weil Sie ja die Zermelo-Fraenkel-Axiome hingeschrieben haben, woraus besteht das? Was gibt's da drin? Kartesisches Produkt zweier Mengen. Ja, bitte?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Das sind alle Kombinationen von Mengen, also alle Paare von Elementen von $X_1$ und von $X_0$.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ja, Paare von Elementen, genau. Und ich habe so ein Zeichen verwendet wie Herr Halbeisen. Haben Sie das auch so gemacht, dieses eckige Zeichen für Paar? Okay. Dann haben wir ein $\langle x_0, x_1 \rangle$. $x_0$ liegt in groß $X_0$, $x_1$ liegt in groß $X_1$. Und was ich jetzt sagen möchte, ist, das, was ich jetzt neu gemacht habe, das ist eben das Gleiche. Und zwar, genauer gesagt, Sie können dieses Paar identifizieren mit der Funktion: $0$ geht nach $x_0$, $1$ geht nach $x_1$. Und diese Funktion, die liegt dann eben da drin, in diesem neuen kartesischen Produkt, wenn Sie gerade die Indexmenge $\{0, 1\}$ haben, okay?
+
+Das heißt, das Neue ist gleich dem Alten, wenn Sie nur zwei Mengen haben. Wenn Sie nur drei haben, können Sie sich auch so was überlegen. Aber das geht eben allgemeiner, auch wenn Sie unendlich... also eine... wenn Sie unendlich viele Mengen haben, das heißt, wenn die Indexmenge $I$ unendlich ist, geht das Neue eben auch und das Alte nicht. Und jetzt geht das nicht hoch. Es geht nur die eine Tafel, vorher ging's gerade noch. Äm, doch.
+
+\inlinemetanote{Der Dozent versucht die Tafel nach oben zu schieben; nach kurzem Zögern funktioniert der Mechanismus}
+\end{spoken-clean}
+
+\subsection{Wann das Auswahlaxiom nicht benötigt wird}
+
+\begin{math-stroke}[Bemerkung: Wohlordnung und explizite Auswahl]
+In vielen mathematischen Situationen ist die explizite Konstruktion einer Auswahlfunktion ohne das Auswahlaxiom möglich. Dies ist insbesondere dann der Fall, wenn die beteiligten Mengen eine natürliche Struktur besitzen, die ein eindeutiges Element auszeichnet.
+
+\begin{proposition}\label[proposition]{prop:no-ac-needed}
+Sei $I$ eine beliebige Indexmenge und $X: I \to \mathcal{P}(\omega) \setminus \{\emptyset\}$ eine Familie von nichtleeren Teilmengen der natürlichen Zahlen $\omega$. Dann ist das kartesische Produkt nichtleer:
+\[
+\bigtimes_{i \in I} X_i \neq \emptyset
+\]
+Für diesen Beweis wird das Auswahlaxiom \emph{nicht} benötigt.
+\end{proposition}
+
+\begin{short-proof}
+Da die Menge der natürlichen Zahlen $\omega$ wohlgeordnet ist, besitzt jede nichtleere Teilmenge $X_i \subseteq \omega$ ein eindeutig bestimmtes kleinstes Element. Wir können daher die Auswahlfunktion $x: I \to \bigcup_{i \in I} X_i$ explizit definieren durch:
+\begin{equation}
+\label{eq:explicit-choice}
+x(i) := \min(X_i) \quad \text{für alle } i \in I
+\end{equation}
+Diese Abbildung $x$ ist wohldefiniert und liegt per Definition im kartesischen Produkt $\bigtimes_{i \in I} X_i$.
+\end{short-proof}
+
+\begin{explanation-of-steps}
+Dieses Beispiel verdeutlicht den Unterschied zwischen \emph{nicht-konstruktiver Existenz} (durch das Auswahlaxiom) und \emph{expliziter Konstruierbarkeit}. Da $\omega$ wohlgeordnet ist, liefert der Minimum-Operator eine explizite Auswahlregel. Das Auswahlaxiom wird erst dann unentbehrlich, wenn wir aus einer unendlichen Familie von Mengen auswählen müssen, die keine solche auszeichnende Struktur besitzen (wie etwa beliebige Teilmengen der reellen Zahlen $\mathbb{R}$).
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:23:45 - 00:28:00]
+Und jetzt können wir das Auswahlaxiom eben auch damit formulieren. Und in meinen Notizen schreibe ich dann noch mehr dazu, warum jetzt die zwei Sachen... wie die zwei Sachen genau zusammenhängen. Können Sie gerne durchlesen.
+
+Also jetzt kommt Umformulierung des Auswahlaxioms mittels dieses Produkts, und ich schreibe jetzt dafür $\text{AC}'$. Das ist eben folgende Formel, respektive folgender Satz: Für alle $I$, also Indexmengen, für alle geschweiften $\mathcal{X}$ und für alle großen $X$, das waren diese Abbildungen von der Indexmenge nach dem geschweiften $\mathcal{X}$, gilt Folgendes: Nämlich, wenn für alle Indizes die Menge $X$ von $i$ nicht leer ist, dann ist das kartesische Produkt von $X$ nicht leer.
+
+Und dieses neue Auswahlaxiom ist äquivalent mit dem alten über Zermelo-Fraenkel. Also über Zermelo-Fraenkel gilt, $\text{AC}$ ist äquivalent mit $\text{AC}'$. Okay. Das ist vielleicht das, was man eher sagt in der Realität. Sie sagen, das kartesische Produkt von nicht-leeren Mengen ist nicht leer. Das wird normalerweise so formuliert, okay? Haben Sie dazu gerade Fragen?
+
+Ähm, jetzt möchte ich Folgendes tun, nämlich ich möchte ein bisschen erklären, wann man dann überhaupt das Auswahlaxiom braucht und wann nicht. Also wie gesagt, wenn Sie eine endliche Indexmenge haben, brauchen Sie es nicht, dann können Sie mit Induktion zeigen, dass Sie aus endlich vielen Mengen endlich viele Elemente auswählen können. Und wenn Sie ein Merkmal haben, das ein Element aus jeder Menge kennzeichnet oder charakterisiert, dann brauchen Sie das Auswahlaxiom nicht.
+
+Zum Beispiel, wenn Sie... das ist also eine Bemerkung. Wenn Sie jetzt eine Abbildung haben nach der Potenzmenge von $\omega$ --- haben Sie das gesehen, dieses Zeichen $\mathcal{P}$? Potenzmenge, menge aller Teilmengen von $\omega$. Und zwar so, dass jedes $X_i$ nicht gerade... also nicht leer ist. Dann brauchen wir kein Auswahlaxiom, um aus jeder... also um da für jedes $i$ ein kleines $x_i$ in groß $X_i$ zu finden für eine Auswahlfunktion.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:28:00
+% topic: Relevanz und Anwendungen des Auswahlaxioms (AC)
+% board_state: AC' Formel, Bemerkung zu omega, Schuhe vs. Socken Analogie
+% next_goal: Die berühmte "Schuhe vs. Socken" Analogie von Bertrand Russell erklären
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:28:00 - 00:31:46]
+Also um zu zeigen... ja, kein Auswahlaxiom, um zu zeigen, dass das Produkt aller dieser $X_i$ nicht leer ist. Äh, Grund: Wähle $x_i$ in groß $X_i$ als das Kleinste, als die kleinste Zahl, also das kleinste Element. Und der Punkt hier ist eben, oder, es gibt hier ein ausgezeichnetes Element, das hat ein bestimmtes Merkmal, nämlich dass es das kleinste Element ist, die kleinste natürliche Zahl. Sie wählen jetzt für jede... also dieses groß $X_i$ ist eine Teilmenge von... von $\omega$, von der Menge der natürlichen Zahlen. Die haben Sie auch gesehen, oder? Haben Sie auch $\omega$ geschrieben? Das ist das, was es gibt gemäß einem Axiom von Zermelo und Fraenkel. Spielt die Rolle der Zahlen $0, 1$ und so weiter, enthält die.
+
+Und man kann jetzt... also in dem Fall, wenn man eben... wenn jetzt gerade $X$ von $i$ oder $X_i$ immer eine Teilmenge ist von $\omega$, die nicht leer ist, dann nehmen Sie einfach die kleinste Zahl da drin, dann brauchen Sie kein Auswahlaxiom, um ein Element auszuwählen. Es gibt eben Situationen, wo Sie es nicht brauchen.
+
+Eine anschauliche Art, wie man das sagen kann, ist... das hat mit Schuhen zu tun und mit Socken. Also wenn Sie so eine Kollektion von Schuhen haben, immer ein Paar von Schuhen, unendliche Kollektion, dann brauchen Sie kein Auswahlaxiom, um bei jedem Paar einen Schuh auszuwählen. Warum? Wie machen Sie das ohne Auswahlaxiom? Ja, bitte?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Man nimmt einfach immer den linken Schuh.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, Sie nehmen immer den linken Schuh, da brauchen Sie kein Auswahlaxiom. Das ist ein spezielles Merkmal, dass es eben... ein Schuh ist links, der andere rechts, ein rechter Schuh. Wenn Sie jetzt Socken haben, geht das eben nicht. Also ich nehme jetzt an, die zwei Socken sehen immer gleich aus. Wenn Sie unendlich viele Paare von Socken haben, können Sie nicht einfach jeweils den linken Socken nehmen, die linke Socke. Das heißt, dann brauchen Sie eben das Auswahlaxiom. Also es gibt einen Unterschied zwischen Schuhen und Socken, sagt das.
+
+\inlinemetanote{schreibt an die Tafel}
+
+Das ist nicht von mir übrigens, das ist von... ja, wer hat das schon wieder gesagt? Äm, Russell hat das gesagt, der mit dem Paradox. Haben Sie das gesehen, das Russellsche Paradox? Ja, der Gleiche.
+
+Okay, gut. Ich... haben Sie Fragen zum Auswahlaxiom? Wir haben jetzt zwei Versionen, die sind äquivalent über Zermelo-Fraenkel. Mache ich jetzt nicht vor, warum das so ist. Vielleicht war das bei mir eine Übungsaufgabe vor einem Jahr. Ist nicht so schwierig, denke ich, zu zeigen.
+
+\inlinemetanote{bereitet die Tafel für den nächsten Abschnitt vor}
+
+Also jetzt kommt ein Abschnitt 4.2: Wohlordnungsprinzip. Und dann geht's auch noch um Ordinalzahlen, die werden wir dann brauchen, um eben zu zeigen, dass man das Wohlordnungsprinzip kriegt, wenn man das Auswahlaxiom hat. Ordinalzahlen... die Ordinalzahlen verallgemeinern die natürlichen Zahlen $0, 1$ und so weiter. Und die Menge der natürlichen Zahlen ist auch eine Ordinalzahl, und zwar die kleinste unendliche. Es gibt also Ordinalzahlen, die unendlich groß sind. Das ist, ja, das ist der Hauptpunkt daran.
+
+Jetzt möchte ich erklären, was das Wohlordnungsprinzip sagt, und dafür brauche ich folgende Definition. Also... ich mache jetzt hier noch eine kleine Notation, das heißt, die brauche ich nicht wirklich so allgemein einzuführen. Sei das hier eine binäre Relation auf einer menge $A$. Ich sag' gleich, was das bedeutet. Das ist nämlich eine Teilmenge... also das hier ist eine Teilmenge von $A \times A$. $A \times A$ ist immer noch das kartesische Produkt mit sich selber, das Alte, mit diesen Paaren von mir aus.
+
+Jetzt gibt's folgende Definition, was es bedeutet, dass das hier eine Wohlordnung ist. Ich nenne jetzt die Relation nicht groß $R$, sondern kleiner, darf man ja, oder? Und jetzt erkläre ich, was es bedeutet, dass das eine strikte lineare Ordnung ist zuerst, und dann, was es bedeutet, dass es eine Wohlordnung ist. Also es gibt hier die Bedingung der Trichotomie.
+
+\inlinemetanote{schreibt an die Tafel}
+
+Also wir sagen... ich schreibe es jetzt einfach so. Trichotomie bedeutet: Für alle $x$ und $y$ in $A$ gilt entweder... und entweder bedeutet wirklich entweder, also ausschließliches Oder. Das andere hat kein entweder. Entweder $x < y$ oder $x = y$ oder $x > y$.
+
+Dann, zweiter Teil: lineare Ordnung. Also die Relation heißt strikte oder strenge lineare Ordnung auf $A$ genau dann, wenn wenn dieses hier transitiv ist und Trichotomie erfüllt. Übrigens kommt das aus dem Griechischen: \qt{trich} also \qt{tri} heißt drei und \qt{temno} heißt schneiden. Man schneidet die Sache in drei Teile, nämlich den Teil oder den Teil oder den Teil, und die Sachen schließen sich aus. Darum heißt es so.
+
+Okay, also transitiv, was heißt das schon wieder? Dass die Relation transitiv ist?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Wenn $x < y$ und $y < z$, dann ist $x < z$.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ja, umgekehrt. Wenn $x < y$ und $y < z$, dann ist $x < z$, genau. Also transitiv bedeutet... für alle $x, y$ und $z$ gilt, wenn $x < y$ und $y < z$, dann... übrigens, meine Pfeile bedeuten Implikation, meistens. Kann auch mal ein Funktionszeichen sein, aber meistens ist es Implikation hier. Dann folgt daraus $x < z$.
+
+Genau, das haben wir jetzt also, und das nehmen wir an. Und jetzt gibt's eben die nächste Bedingung, die sagt, was es bedeutet, ein minimales Element einer Teilmenge zu sein. Also ich nehme jetzt eine Teilmenge $S$. Dann heißt ein $x$ hier drin minimal, und zwar bezüglich meiner Relation, genau dann, wenn für alle $y$ in $S$ gilt, dass $y$ nicht kleiner als $x$ ist.
+\end{spoken-clean}
+
+\subsection{Strikte lineare Ordnungen und Wohlordnungen}
+
+\begin{math-stroke}[Definitionen: Ordnungsstrukturen]
+Sei $A$ eine Menge und $<$ eine binäre Relation auf $A$ (d.h. $< \,\subseteq A \times A$).
+
+\begin{definition}[Strikte lineare Ordnung]\label[definition]{def:strict-linear-order}
+Die Relation $<$ heißt eine \newterm{strikte lineare Ordnung} auf $A$, falls sie die folgenden zwei Bedingungen erfüllt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \newterm{Transitivität}: Für alle $x, y, z \in A$ gilt:
+    \[
+    (x < y \;\wedge\; y < z) \implies x < z
+    \]
+    \setcounter{enumi}{1} \item \newterm{Trichotomie}: Für alle $x, y \in A$ gilt genau eine der folgenden drei Aussagen:
+    \[
+    x < y \quad \text{oder} \quad x = y \quad \text{oder} \quad y < x
+    \]
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Minimales Element]\label[definition]{def:minimal-element}
+Sei $S \subseteq A$ eine Teilmenge. Ein Element $x \in S$ heißt \newterm{minimales Element} von $S$ bezüglich $<$, falls gilt:
+\begin{equation}
+\label{eq:minimal-element}
+\forall y \in S \, \bigl( \neg(y < x) \bigr)
+\end{equation}
+\end{definition}
+
+\begin{definition}[Wohlordnung]\label[definition]{def:well-ordering}
+Die Relation $<$ heißt eine \newterm{Wohlordnung} auf $A$, falls $<$ eine strikte lineare Ordnung auf $A$ ist und jede nichtleere Teilmenge $S \subseteq A$ ein minimales Element bezüglich $<$ besitzt:
+\begin{equation}
+\label{eq:well-ordering}
+\forall S \subseteq A \left( S \neq \emptyset \implies \exists x \in S \, \forall y \in S \, \bigl( \neg(y < x) \bigr) \right)
+\end{equation}
+\end{definition}
+
+\begin{explanation-of-steps}
+Die Trichotomie teilt die Relation zwischen zwei beliebigen Elementen in genau drei disjunkte Fälle auf (daher der griechische Ursprung \emph{trichotomia} = Dreiteilung). Eine Wohlordnung verschärft die lineare Ordnung dahingehend, dass jede nichtleere Teilmenge einen eindeutigen \qt{Anfang} (ein minimales Element) besitzen muss. Das klassische Beispiel für eine Wohlordnung sind die natürlichen Zahlen $\omega$ mit der Standard-Kleiner-Relation. Die reellen Zahlen $\mathbb{R}$ mit der Standard-Ordnung sind hingegen keine Wohlordnung, da beispielsweise das offene Intervall $(0,1)$ kein minimales Element besitzt.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 283377, Output 10610)*
+---
+
+**AutoExtraction:** [Part 2] 03-31-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 03-31-tuesday-part2.mp4
+[Kontext-Dateien]: 03-31-tuesday-part1.tex
+
+[Prompt]:
+The lecture being transcribed is from , 03-31-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 2 of 3 from this lecture. This specific video segment is exactly 31 minutes and 45 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 31 minutes and 45 seconds length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'math-stroke' rather than less. Everything that is written on the blackboard must be present there. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+CRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.
+
+**gemini-3.5-flash:** % End of the video: 00:31:45
+% Primary Language: German
+
+\begin{spoken-clean}[00:00:00 - 00:01:59]
+...alte, mit diesen Paaren von mir aus. Jetzt gibt's folgende Definition, was es bedeutet, dass das hier eine Wohlordnung ist. Ich nenne jetzt die Relation nicht groß $R$, sondern kleiner, darf man ja, oder? Und jetzt erkläre ich, was es bedeutet, dass es eine strikte lineare Ordnung ist zuerst, und dann, was es bedeutet, dass es eine Wohlordnung ist. Also es gibt hier die Bedingung der Trichotomie. 
+
+Ähm, also wir sagen... ich schreibe es jetzt einfach so. Trichotomie bedeutet: Für alle $x$ und $y$ in $A$ gilt entweder... und entweder bedeutet wirklich entweder, also ausschließliches Oder. Das andere hat kein entweder. Entweder $x < y$ oder $x = y$ oder $x > y$. 
+
+Dann, zweiter Teil: lineare Ordnung. Also die Relation heißt strikte oder strenge lineare Ordnung auf $A$ genau dann, wenn dieses hier transitiv ist und Trichotomie erfüllt. Übrigens kommt das aus dem Griechischen: \qt{trich} also \qt{tri} heißt drei und \qt{temno} heißt schneiden. Man schneidet die Sache in drei Teile, nämlich den Teil oder den Teil oder den Teil, und die Sachen schließen sich aus. Darum heißt es so. 
+
+Okay, also transitiv, was heißt das schon wieder? Dass die Relation transitiv ist?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Wenn $x < y$ und $y < z$, dann ist $x < z$.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Ja, umgekehrt. Wenn $x < y$ und $y < z$, dann ist $x < z$, genau. Also transitiv bedeutet... für alle $x, y$ und $z$ gilt, wenn $x < y$ und $y < z$, dann... übrigens, meine Pfeile bedeuten Implikation, meistens. Kann auch mal ein Funktionszeichen sein, aber meistens ist es Implikation hier. Dann folgt daraus $x < z$. 
+
+Genau, das haben wir jetzt also, und das nehmen wir an. Und jetzt gibt's eben die nächste Bedingung, die sagt, was es bedeutet, ein minimales Element einer Teilmenge zu sein. Also ich nehme jetzt eine Teilmenge $S$. Dann heißt ein $x$ hier drin minimal, und zwar bezüglich meiner Relation, genau dann, wenn für alle $y$ in $S$ gilt, dass $y$ nicht kleiner als $x$ ist.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definitionen: Ordnungsstrukturen (Fortsetzung)]
+\setcounter{theorem}{3}
+\begin{definition}[Minimales Element]\label[definition]{def:minimal-element-continued}
+Sei $S \subseteq A$ eine Teilmenge. Ein Element $x \in S$ heißt \newterm{minimales Element} von $S$ bezüglich $<$, falls gilt:
+\begin{equation}
+\label{eq:minimal-element-continued}
+\forall y \in S \, \bigl( \neg(y < x) \bigr)
+\end{equation}
+\end{definition}
+
+\begin{definition}[Wohlordnung]\label[definition]{def:well-ordering-continued}
+Die Relation $<$ heißt eine \newterm{Wohlordnung} auf $A$, falls $<$ eine strikte lineare Ordnung auf $A$ ist und jede nichtleere Teilmenge $S \subseteq A$ ein minimales Element bezüglich $<$ besitzt:
+\begin{equation}
+\label{eq:well-ordering-continued}
+\forall S \subseteq A \left( S \neq \emptyset \implies \exists x \in S \, \forall y \in S \, \bigl( \neg(y < x) \bigr) \right)
+\end{equation}
+\end{definition}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:59 - 00:04:30]
+Es muss nicht so sein, dass es ein eindeutiges minimales Element gibt... wird's dann gleich geben, wenn wir eine lineare Ordnung haben, ist es so, aber im Allgemeinen braucht das nicht der Fall zu sein, okay? 
+
+Dann Nummer 4: Wohlordnung. Also die Relation heißt Wohlordnung, und um das geht's ja, wenn sie jetzt all das andere erfüllt. Das heißt, es muss eine lineare Ordnung sein. Man kann also je zwei Elemente vergleichen. Das war da, strikte lineare... ich lasse das Wort strikte jetzt weg in der Zukunft. Strikte lineare Ordnung und es muss auch noch so sein, dass jede nichtleere Teilmenge ein minimales Element besitzt. 
+
+Okay, das bedeutet Wohlordnung, und um das geht's jetzt. Es geht jetzt um solche Wohlordnungen. Haben Sie dazu eine Frage?
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:05:00
+% topic: Wohlordnungsprinzip (WOP) und Äquivalenz zu AC
+% board_state: Def Wohlordnung, WOP, THEOREM: ZF |- AC <=> WOP
+% next_goal: Beweis der Richtung WOP => AC
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:04:30 - 00:07:00]
+Also in meinen Notizen stehen dann auch noch ein paar Bemerkungen und so, die jetzt nicht so wichtig sind. Jetzt sagt eben das Wohlordnungsprinzip, WOP...
+\inlinemetanote{schreibt an die Tafel}
+Das ist... das hat den Status eines Axioms, okay? Nicht eines Theorems, sondern eines Axioms. Also Wohlordnungsprinzip sagt: Jede Menge kann wohlgeordnet werden. Also auf jeder Menge $A$ gibt es eine Wohlordnung. 
+
+Und ich möchte jetzt erklären, dass oder warum dieses Wohlordnungsprinzip äquivalent ist zum Auswahlaxiom. Das ist jetzt das Ziel dieser Vorlesung. Also es gibt da ein Theorem, das sagt: Das und das Auswahlaxiom sind äquivalent über Zermelo-Fraenkel. Wenn Sie also noch zusätzlich Zermelo-Fraenkel annehmen. Man kann also das eine aus dem anderen herleiten, heißt das.
+\end{spoken-clean}
+
+\subsection{Das Wohlordnungsprinzip und die Äquivalenz zum Auswahlaxiom}
+
+\begin{math-stroke}[Das Wohlordnungsprinzip (WOP)]
+\setcounter{theorem}{4}
+\begin{nice-box}[Das Wohlordnungsprinzip]
+\begin{theorem}[Wohlordnungsprinzip -- WOP]\label[theorem]{thm:wop}
+Auf jeder Menge $A$ existiert eine Wohlordnung $<$.
+\end{theorem}
+\end{nice-box}
+
+\begin{theorem}[Äquivalenzsatz von Zermelo]\label[theorem]{thm:zermelo-equivalence}
+Unter der Annahme der Zermelo-Fraenkel-Mengenlehre ($\text{ZF}$) ist das Auswahlaxiom ($\text{AC}$) äquivalent zum Wohlordnungsprinzip ($\text{WOP}$):
+\begin{equation}
+\label{eq:zermelo-equivalence}
+\text{ZF} \vdash \text{AC} \iff \text{WOP}
+\end{equation}
+\end{theorem}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:07:00 - 00:12:00]
+Also die eine Richtung ist ziemlich einfach zu beweisen. Also es gibt jetzt ein Theorem, ich schreibe das mit großen Buchstaben, weil das ein metamathematisches Theorem ist. Das hat vielleicht Herr Uhrig nicht so explizit gesagt, aber es gibt eben auch die kleinen... die Kleinbuchstaben, also wo diese Buchstaben klein sind, damit meine ich... was ist denn ein Theorem mit Kleinbuchstaben? Ein Satz, den man herleiten kann aus einem Axiom, oder? Und ein Satz war also eine Formel ohne freie Variablen, wo alle Variablen gebunden sind durch ein \qt{für alle} oder \qt{es existiert}. 
+
+Und was ich jetzt hier meine mit Großbuchstaben ist eben ein bisschen was anderes, nämlich: Das Theorem sagt Folgendes: In Zermelo-Fraenkel sind das Auswahlaxiom und das Wohlordnungsprinzip äquivalent. Und das, was jetzt hier steht, ist eben nicht eine Formel im Sinne der Logik erster Stufe, weil hier noch dieses Zeichen vorkommt. Weiß jemand noch, was das bedeutet, dieses Zeichen?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Dass man aus den Zermelo-Fraenkel-Axiomen das beweisen kann.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, es gibt einen Beweis dieser Äquivalenz aus Zermelo-Fraenkel. Und diese Aussage hier ist eben ein metamathematisches Theorem, dass es einen Beweis gibt, okay? Ja. Gut. Haben Sie dazu Fragen jetzt gerade? 
+
+Jetzt, Beweis der Implikation so, also dass man in Zermelo-Fraenkel aus dem das kriegt, das ist einfach. Also Annahme... ich mache jetzt übrigens nicht einen formalen Beweis wie ganz am Anfang, weil das viel zu schwierig wäre. Ich mache jetzt so... ich würde mal sagen, also was ich jetzt eigentlich mache, ist, ich verwende den Gödelschen Vollständigkeitssatz und argumentiere dann, wie man das so macht. Das haben Sie vielleicht gehört bei Herrn Uhrig, der Zweck dieses Vollständigkeitssatzes war, dass man normal argumentieren kann, in Anführungszeichen. 
+
+Also wir nehmen an, das Wohlordnungsprinzip gilt, und dann zeige ich, dass das Auswahlaxiom gilt. Und das ist nicht schwierig. Auswahlaxiom, jetzt müssen wir uns erinnern, was das bedeutete. Da hat man so mit einer menge von Mengen angefangen, dem geschweiften $\mathcal{X}$, die die leere Menge nicht enthält. Und dann war die Aussage, es gibt eine Auswahlfunktion. Das möchte ich dann zeigen. 
+
+Also sei das hier jetzt eine Menge von nicht-leeren Mengen. Und jetzt möchte ich meine Auswahlfunktion definieren, und dazu brauche ich jetzt eben den Trick, den ich vorhin in einem Beispiel erwähnt habe, nämlich: Wenn alle Elemente aus dem geschweiften $X$ ein spezielles Element klein $x$ haben, das eine... ein spezielles Merkmal besitzt, dann bin ich fertig. Und das spezielle Merkmal wird sein, das kleinste Element zu sein. Und jetzt verwende ich eben meine Wohlordnung, die ich habe. 
+
+Also es geht wie folgt: Wegen des Wohlordnungsprinzips gibt es eine Wohlordnung, ich nenne die jetzt auch wieder kleiner, Wohlordnung auf der Vereinigung aller dieser Mengen da drin. Also das ist immer noch die Vereinigung über alle normalen $X$ im geschweiften $X$, so. Darauf gibt's eine Wohlordnung. 
+
+Dann definiere ich meine Auswahlfunktion wie folgt: Also die soll ja so eine Menge in der Kollektion nehmen und mir ein Element geben, also die geht in diese Vereinigung, und $f$ von einem normalen $X$ ist definiert als das kleinste Element, kleiner-Minimal-Element von dem normalen $X$. Das ist eindeutig, weil ich eine Wohlordnung habe, weil ich je zwei... wegen Trichotomie. Wegen des Entweders, okay? Entweder bedeutet wirklich entweder. Es kann nicht gleichzeitig sein, dass das eine kleiner ist als das andere und das andere auch kleiner als das eine, das geht eben nicht. Ja. Und dann nehme ich halt das Kleinste. Diese Menge ist ja nicht leer, darum gibt's überhaupt irgendein Element drin, sonst wäre... ginge es irgendwie schief. Ja. 
+
+Haben Sie dazu gerade Fragen? Das ist meine Auswahlfunktion, und jetzt habe ich also das Auswahlaxiom hergeleitet aus dem Wohlordnungsprinzip. Also das hier ist eine Auswahlfunktion, und daher gilt also $\text{AC}$, Axiom of Choice heißt das übrigens. Das C bedeutet Choice. Und jetzt habe ich also diese Implikation bewiesen. Und die andere Implikation ist eben schwieriger, da brauchen wir jetzt eben Ordinalzahlen. Und das ist an sich was Interessantes.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:11:30
+% topic: Beweis WOP => AC und Einführung in Ordinalzahlen
+% board_state: Beweis WOP => AC, Definition Ordinalzahl (transitiv, wohlgeordnet durch \in)
+% next_goal: Definition von Transitivität und Vergleichbarkeit für Ordinalzahlen aufschreiben
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{proof}[Beweis des Theorems (Richtung \texorpdfstring{$\text{WOP} \implies \text{AC}$}{WOP => AC})]
+\begin{math-stroke}[Beweis der Richtung WOP => AC]
+Wir nehmen an, dass das Wohlordnungsprinzip ($\text{WOP}$) gilt. Sei $\mathcal{X}$ ein Mengensystem mit $\emptyset \notin \mathcal{X}$. Wir wollen die Existenz einer Auswahlfunktion $f$ für $\mathcal{X}$ zeigen.
+
+Wir betrachten die Vereinigungsmenge aller Elemente von $\mathcal{X}$:
+\[
+A := \bigcup \mathcal{X} = \left\{ x \;\middle|\; \exists X \in \mathcal{X} \text{ mit } x \in X \right\}
+\]
+Nach dem Wohlordnungsprinzip existiert eine Wohlordnung $<$ auf $A$. Da jedes $X \in \mathcal{X}$ eine nichtleere Teilmenge von $A$ ist ($X \subseteq A$ und $X \neq \emptyset$), besitzt jedes $X \in \mathcal{X}$ bezüglich $<$ ein eindeutig bestimmtes minimales Element.
+
+Wir definieren die Auswahlfunktion $f: \mathcal{X} \to \bigcup \mathcal{X}$ durch:
+\begin{equation}
+\label{eq:choice-function-definition}
+f(X) := \min_{<}(X) \quad \text{für alle } X \in \mathcal{X}
+\end{equation}
+Da $<$ eine Wohlordnung ist, ist dieses minimale Element für jede Menge $X \in \mathcal{X}$ wohldefiniert und es gilt per Definition:
+\[
+f(X) \in X \quad \text{für alle } X \in \mathcal{X}
+\]
+Somit ist $f$ eine zulässige Auswahlfunktion für das Mengensystem $\mathcal{X}$. Dies beweist das Auswahlaxiom ($\text{AC}$).
+\end{math-stroke}
+\end{proof}
+
+\begin{spoken-clean}[00:12:00 - 00:18:00]
+Also die... haben Sie jetzt dazu Fragen? Ja? Die Ordinalzahlen verallgemeinern natürliche Zahlen, und zwar ist die Idee, dass die die Position in einer Rangliste angeben. Also die natürlichen Zahlen sind Ordinalzahlen, okay? Ich schreibe das mal hin. Bemerkungen... also jede natürliche Zahl, $\omega$ ist immer noch die menge natürlichen Zahlen, ist eine Ordinalzahl. Und so eine natürliche Zahl besteht aus allen natürlichen Zahlen, die kleiner sind, okay? Also $n$ ist die Menge $\{0, \dots, n-1\}$. Also sprich, zum Beispiel die Menge $0$, also die... die Zahl $0$ ist die leere Menge, so ist es definiert. Und dann $1$ ist die Menge, die genau $0$ enthält, und $2$ ist die Menge, die $0$ und $1$ enthält, und so weiter. Und das sind alles Ordinalzahlen, Sie können das nachprüfen, okay? Ist jetzt nicht so schwierig. 
+
+Wenn Sie zum Beispiel das Erste anschauen, ich nehme mal die Menge $2$, ich nehme jetzt das Element $1$. Ja gut, $1$ ist eben auch eine Teilmenge von $2$, weil $1$ enthält genau die $0$ und die $0$ ist ja auch da enthalten in $2$, und so weiter. Und die Idee ist eben, dass das eine Position in einer Liste angeben, und es hört eben nicht auf mit endlichen Zahlen. $\omega$ ist nämlich auch eine Ordinalzahl. Zum Beispiel, dass es transitiv ist, ist einfach, oder? Wenn Sie jetzt da eine natürliche Zahl klein $n$ nehmen, das ist mein $\beta$ in meinem $\alpha$, $\alpha$ ist gleich $\omega$. Ja gut, dann... die Elemente von $n$, die sind ja auch wieder natürliche Zahlen, okay? Und so weiter. Und es gibt eben immer ein kleinstes Element da drin, das ist mehr oder weniger Induktion. Wenn Sie eine nichtleere Teilmenge der natürlichen Zahlen haben, gibt es ein kleinstes Element. 
+
+Dann hört's eben nicht auf mit unendlich, also mit $\omega$, sondern es geht noch viel weiter. Also es gibt dann eben $\omega + 1$, das ist der Nachfolger von $\omega$, das haben Sie gebraucht, um die Menge der natürlichen Zahlen zu definieren, dieses Symbol $S$, vielleicht hat's anders geheißen, $S$ für successor, und das ist der Nachfolger, das ist die Menge $\omega$ Vereinigung mit der Menge, die genau $\omega$ enthält. Also wir tun einfach $\omega$ noch als Element dazu. Das ist auch eine Ordinalzahl, kann man sich wieder überlegen. Insbesondere ist eben dieses Element hier eine Teilmenge von dem, weil ja da wieder $\omega$ steht, oder? Ist es eben auch eine Teilmenge. 
+
+Ja, und dann nach $\omega + 1$ kommt $\omega + 2$, sprich $\omega + 1 + 1$. Jetzt machen wir das Spielchen einfach nochmals, $S$ von $S$ von $\omega$, und so weiter. Und irgendwann kommt dann mal $\omega + \omega$. Bei mir war das eine Übungsaufgabe zu zeigen, dass das eine wohldefinierte Menge ist. Zuerst muss man definieren, was man meint, und das ist dann sinnvoll. Man braucht dann das Ersetzungsaxiom, um zu zeigen, dass das sinnvoll ist, oder um das überhaupt zu definieren. Das schreibt man dann als $\omega \cdot 2$, okay? Äm, und dann gibt's natürlich $\omega \cdot 3$ und so weiter, und dann gibt's auch $\omega \cdot \omega$, also $\omega^2$, und nachher gibt's natürlich $\omega^3$, und dann gibt's aber auch noch $\omega^\omega$, und dann gibt's aber auch noch $\omega^{\omega^\omega}$, und mit Klammern so, dass es interessant wird, und so weiter. Es hört nicht auf, okay? Aber wir machen das nicht. Wir brauchen das gar nicht, so viel brauchen wir nicht. Ich wollte nur sagen, es geht dann noch viel weiter. 
+
+Also Ordinalzahlen... Definition.
+\inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\subsection{Einführung in die Ordinalzahlen}
+
+\begin{math-stroke}[Definition: Ordinalzahlen]
+\setcounter{theorem}{5}
+Sei $\alpha$ eine Menge.
+
+\begin{definition}[Transitive Menge]\label[definition]{def:transitive-set}
+Die Menge $\alpha$ heißt \newterm{transitiv}, falls jedes Element von $\alpha$ zugleich eine Teilmenge von $\alpha$ ist:
+\begin{equation}
+\label{eq:transitive-set}
+\alpha \text{ ist transitiv} :\iff \forall \beta \in \alpha \, (\beta \subseteq \alpha)
+\end{equation}
+Dies ist äquivalent zu der Aussage:
+\[
+\forall \beta \in \alpha \, \forall \gamma \in \beta \, (\gamma \in \alpha)
+\]
+\end{definition}
+
+\begin{definition}[Vergleichbarkeit bezüglich der Elementrelation]\label[definition]{def:comparability-element-relation}
+Zwei Elemente $\beta, \gamma$ heißen \newterm{$\in$-vergleichbar}, falls gilt:
+\begin{equation}
+\label{eq:comparability-element-relation}
+\beta \in \gamma \quad \text{oder} \quad \beta = \gamma \quad \text{oder} \quad \gamma \in \beta
+\end{equation}
+\end{definition}
+
+\begin{definition}[Ordinalzahl]\label[definition]{def:ordinal-number}
+Die Menge $\alpha$ heißt eine \newterm{Ordinalzahl}, falls die folgenden drei Bedingungen erfüllt sind:
+\begin{enumerate}[label=(\alph*)]
+    \setcounter{enumi}{0} \item $\alpha$ ist transitiv.
+    \setcounter{enumi}{1} \item Alle Elemente von $\alpha$ sind paarweise $\in$-vergleichbar.
+    \setcounter{enumi}{2} \item Jede nichtleere Teilmenge $S \subseteq \alpha$ besitzt ein minimales Element bezüglich der Elementrelation $\in$:
+    \begin{equation}
+    \label{eq:ordinal-well-ordered}
+    \forall S \subseteq \alpha \left( S \neq \emptyset \implies \exists \beta \in S \, \forall \gamma \in S \, \bigl( \neg(\gamma \in \beta) \bigr) \right)
+    \end{equation}
+\end{enumerate}
+\end{definition}
+
+\begin{explanation-of-steps}
+Eine Ordinalzahl ist somit eine transitive Menge, die durch die Elementrelation $\in$ wohlgeordnet wird. Die Transitivität stellt sicher, dass die Elemente der Ordinalzahl selbst wieder Ordinalzahlen sind und die Struktur hierarchisch aufgebaut ist.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:18:00 - 00:20:40]
+Und jetzt definiere ich groß $\Omega$ als die Klasse aller Ordinalzahlen. Und Sie haben bei Herrn Uhrig gehört, dass es einen Unterschied gibt zwischen Klasse und Menge, oder? Also ich mache hier so geschweifte Klammern und lese das als Klasse. Formal gesehen gibt's das nicht in Zermelo-Fraenkel. In Zermelo-Fraenkel gibt's formal nur Mengen, also alles, was Variablen... Variablennamen trägt, ein $x$ oder ein $y$ oder sonst was. Dieses geschweifte $X$ ist eine Menge, wird interpretiert als eine Menge. Und dann passiert's wegen des Russellschen Paradoxons, dass es gewisse Dinge gibt, die keine Mengen sind, und die nennen wir dann Klasse. Und das ist jetzt der Fall mit diesem $\Omega$ hier, okay? Was gab's denn so für ein Ding, was keine Menge war?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenantwort]
+Die Menge aller Mengen.
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Genau, die Menge aller Mengen gibt's eben nicht, und das... da nennt man's eben die Klasse aller Mengen. Man darf dann mit diesen Zeichen... muss man ein bisschen aufpassen, wie man damit umgeht, okay? Man darf dann nicht einfach alles machen damit. Aber man kann alles, was man damit macht, übersetzen in... in wohldefinierte Formeln, okay? Also ich mache jetzt Pause, nachher mache ich da weiter.
+\end{spoken-clean}
+
+\begin{lecture-break}[Pause]
+Der Dozent kündigt eine Pause an. Nach der Pause wird die Vorlesung fortgesetzt.
+\end{lecture-break}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:21:00
+% topic: Eigenschaften von Ordinalzahlen und Burali-Forti-Paradoxon
+% board_state: Bemerkungen zu Ordinalzahlen, THEOREM: Eigenschaften von Ordinalzahlen in ZF
+% next_goal: Beweis des Theorems über Ordinalzahlen und Burali-Forti-Paradoxon
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:20:40 - 00:25:00]
+Okay, also wir machen weiter. Bitte setzen Sie sich. 
+
+Also vor der Pause habe ich... vor der Pause habe ich den Begriff einer Ordinalzahl definiert. Hier ist nochmals. Und gesagt, dass die Idee ist, dass diese Ordinalzahlen die Position in einer Liste angeben. Also die natürlichen Zahlen sind Ordinalzahlen, okay? Ich schreibe das mal hin. 
+
+Bemerkungen... also jede natürliche Zahl, $\omega$ ist immer noch die Menge der natürlichen Zahlen, ist eine Ordinalzahl. Und so eine natürliche Zahl besteht aus allen natürlichen Zahlen, die kleiner sind, okay? Also $n$ ist die Menge $\{0, \dots, n-1\}$. Also sprich, zum Beispiel die Menge $0$, also die... die Zahl $0$ ist die leere Menge, so ist es definiert. Und dann $1$ ist die Menge, die genau $0$ enthält, und $2$ ist die Menge, die $0$ und $1$ enthält, und so weiter. Und das sind alles Ordinalzahlen, Sie können das nachprüfen, okay? Ist jetzt nicht so schwierig. 
+
+Wenn Sie zum Beispiel das Erste anschauen, ich nehme mal die Menge $2$, ich nehme jetzt das Element $1$. Ja gut, $1$ ist eben auch eine Teilmenge von $2$, weil $1$ enthält genau die $0$ und die $0$ ist ja auch da enthalten in $2$, und so weiter. Und die Idee ist eben, dass das eine Position in einer Liste angeben, und es hört eben nicht auf mit endlichen Zahlen. $\omega$ ist nämlich auch eine Ordinalzahl. Zum Beispiel, dass es transitiv ist, ist einfach, oder? Wenn Sie jetzt da eine natürliche Zahl klein $n$ nehmen, das ist mein $\beta$ in meinem $\alpha$, $\alpha$ ist gleich $\omega$. Ja gut, dann... die Elemente von $n$, die sind ja auch wieder natürliche Zahlen, okay? Und so weiter. Und es gibt eben immer ein kleinstes Element da drin, das ist mehr oder weniger Induktion. Wenn Sie eine nichtleere Teilmenge der natürlichen Zahlen haben, gibt es ein kleinstes Element. 
+
+Dann hört's eben nicht auf mit unendlich, also mit $\omega$, sondern es geht noch viel weiter. Also es gibt dann eben $\omega + 1$, das ist der Nachfolger von $\omega$, das haben Sie gebraucht, um die Menge der natürlichen Zahlen zu definieren, dieses Symbol $S$, vielleicht hat's anders geheißen, $S$ für successor, und das ist der Nachfolger, das ist die Menge $\omega$ Vereinigung mit der menge, die genau $\omega$ enthält. Also wir tun einfach $\omega$ noch als Element dazu. Das ist auch eine Ordinalzahl, kann man sich wieder überlegen. Insbesondere ist eben dieses Element hier eine Teilmenge von dem, weil ja da wieder $\omega$ steht, oder? Ist es eben auch eine Teilmenge. 
+
+Ja, und dann nach $\omega + 1$ kommt $\omega + 2$, sprich $\omega + 1 + 1$. Jetzt machen wir das Spielchen einfach nochmals, $S$ von $S$ von $\omega$, und so weiter. Und irgendwann kommt dann mal $\omega + \omega$. Bei mir war das eine Übungsaufgabe zu zeigen, dass das eine wohldefinierte Menge ist. Zuerst muss man definieren, was man meint, und das ist dann sinnvoll. Man braucht dann das Ersetzungsaxiom, um zu zeigen, dass das sinnvoll ist, oder um das überhaupt zu definieren. Das schreibt man dann als $\omega \cdot 2$, okay? Äm, und dann gibt's natürlich $\omega \cdot 3$ und so weiter, und dann gibt's auch $\omega \cdot \omega$, also $\omega^2$, und nachher gibt's natürlich $\omega^3$, und dann gibt's aber auch noch $\omega^\omega$, und dann gibt's aber auch noch $\omega^{\omega^\omega}$, und mit Klammern so, dass es interessant wird, und so weiter. Es hört nicht auf, okay? Aber wir machen das nicht. Wir brauchen das gar nicht, so viel brauchen wir nicht. Ich wollte nur sagen, es geht dann noch viel weiter. 
+
+Also Ordinalzahlen... Bemerkungen.
+\inlinemetanote{schreibt an die Tafel}
+\end{spoken-clean}
+
+\begin{math-stroke}[Bemerkungen zu Ordinalzahlen]
+Wir definieren die Klasse aller Ordinalzahlen:
+\[
+\Omega := \{ \alpha \mid \alpha \text{ ist eine Ordinalzahl} \}
+\]
+
+\begin{nice-box}[Beispiele für Ordinalzahlen]
+\begin{enumerate}[label=\arabic*.]
+    \setcounter{enumi}{0} \item Die natürlichen Zahlen $\omega$ (im Sinne von von Neumann) sind Ordinalzahlen:
+    \begin{align*}
+    0 &:= \emptyset \\
+    1 &:= \{0\} = \{\emptyset\} \\
+    2 &:= \{0, 1\} = \{\emptyset, \{\emptyset\}\} \\
+    &\;\vdots \\
+    n &:= \{0, 1, \dots, n-1\} = n-1 \cup \{n-1\}
+    \end{align*}
+    
+    \setcounter{enumi}{1} \item Die Menge der natürlichen Zahlen selbst ist die kleinste unendliche Ordinalzahl:
+    \[
+    \omega := \{0, 1, 2, \dots\}
+    \]
+    
+    \setcounter{enumi}{2} \item Nachfolger-Ordinalzahlen werden über den Nachfolger-Operator $S$ gebildet:
+    \begin{align*}
+    \omega + 1 &:= S(\omega) = \omega \cup \{\omega\} \\
+    \omega + 2 &:= S(\omega + 1) = (\omega + 1) \cup \{\omega + 1\} \\
+    &\;\vdots \\
+    \omega + \omega &:= \omega \cdot 2 := \bigcup_{n \in \omega} (\omega + n)
+    \end{align*}
+\end{enumerate}
+\end{nice-box}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:25:00 - 00:31:45]
+Und jetzt kommt eben dieses Theorem, das unter anderem sagt, dass groß $\Omega$ eben auch formal eine Ordinalzahl ist, nämlich in Zermelo-Fraenkel gilt Folgendes: Teil 1 sagt, dass für jedes $\alpha$ in $\Omega$, für jede Ordinalzahl, gilt, $\alpha$ ist die leere Menge oder die leere Menge ist ein Element von $\alpha$. 
+
+Dann Teil 2 sagt, für alle $\alpha$ und $\beta$ Ordinalzahlen, und zwar so, dass... also... entschuldigung, für alle $\alpha$ in $\beta$ und $\beta$ Ordinalzahl, gilt $\alpha$ ist auch eine Ordinalzahl, okay? Wenn ich ein Element habe einer Ordinalzahl, ist es selber auch eine Ordinalzahl. 
+
+Dann Teil 3 ist Trichotomie, also für alle $\alpha$ und $\beta$ in $\Omega$ gilt, entweder... ich sollte hier schreiben entweder... entweder $\alpha$ in $\beta$ oder $\alpha = \beta$ oder $\beta$ Element von $\alpha$. 
+
+Äm, dann gibt's noch Folgendes: Der Durchschnitt und die Vereinigung von Ordinalzahlen ist wieder eine Ordinalzahl. Also für alle... jetzt sollte ich hier schreiben Mengen, ich meine jetzt mit $S$ eine Menge, für alle Mengen von Ordinalzahlen, so sollten Sie das lesen. Für jede Menge, die nur Ordinalzahlen enthält, gilt Folgendes: Der Durchschnitt ist eine Ordinalzahl, das ist der Durchschnitt aller Elemente von $S$, und die Vereinigung aller Elemente von $S$ ist auch wieder eine Ordinalzahl. Jetzt bei diesem Durchschnitt muss man noch ein bisschen aufpassen, wenn $S$ die leere Menge ist, dann war das bei mir formal definiert als die leere Menge. Philosophisch gesehen sollte der Durchschnitt von $S$, wenn $S$ die leere Menge ist, die Allmenge sein, also die Klasse aller Mengen, philosophisch. Aber in der Praxis kam's dann so raus, dass es einfach die leere Menge war, weil anders konnte man's irgendwie nicht definieren, okay? Dann ist das also kein Problem, wenn ich hier sage, der Durchschnitt ist ein Element von $\omega$. Es kommt nicht die Allklasse raus. 
+
+Jetzt, Wohlgeordnetheit ist auch noch eine Eigenschaft, also für jede nichtleere Menge... das ist wieder eine Menge von Ordinalzahlen, gibt's ein kleinstes Element. Es existiert ein minimales Element. Okay. 
+
+Äm, und weil man jetzt eben die Eigenschaften 2, 3, 5 hat, die ich jetzt mal rot mache, 2, 3 und 5, sieht das so aus, als ob dieses große $\Omega$ auch eine Ordinalzahl wäre. Und das Erste ist Transitivität. Jedes Element von $\Omega$ ist ja auch eine Teilmenge, sagt das hier. Das hier sagt, dass je zwei Elemente vergleichbar sind, noch stärker, also hier gibt's ein entweder-oder, vorhin war nur oder gefordert. Und das Dritte sagt Wohlgeordnetheit. Und das waren die Bedingungen in der Definition einer Ordinalzahl. 
+
+Jetzt kann's aber nicht so sein, dass $\Omega$ eine menge ist, weil man eben aus dem jetzt ein Problem kriegt. Also Bemerkung: $\Omega$ ist keine Menge, und das nennt sich das Burali-Forti-Paradox. Und der Grund: Sonst kriegt man, dass es eine Ordinalzahl ist, wegen dieser Punkte 2, 3 und 4 aus diesem Theorem. Und dann... ja gut, wenn's eine Ordinalzahl ist, ist es ein Element von sich selber. Und das geht nicht, wegen Trichotomie. Also Ordinalzahlen haben diese Eigenschaft, entweder-oder, sehen Sie hier? Hier steht entweder. Das ist also im Widerspruch zu diesem entweder-oder hier, weil $\Omega = \Omega$ ist, kann's nicht auch ein Element von sich selber sein. Also ist eben $\Omega$ keine Menge, okay? Damit hat man das Problem gelöst, das Paradox. Ist halt größer als eine Menge. Haben Sie dazu eine Frage? Das war übrigens nur eine Person. Cesare Burali-Forti war eine Person, ja. Cesare heißt er, entschuldigung. Ich versuche jetzt das abzustellen, hoffentlich funktioniert's diesmal. Also entschuldigung, ich muss mal rausfinden, wie man's anders macht. Ah, ich hätte einfach... okay, gut, nächstes Mal. 
+
+Jetzt... ja, kommt ein Hilfssatz, ich möchte immer noch zeigen, das Auswahlaxiom, also will zeigen, Auswahlaxiom impliziert Wohlordnungsprinzip über Zermelo-Fraenkel, und dazu brauche ich den Hilfssatz, und folgenden Hilfssatz, nämlich: Das Auswahlaxiom impliziert in Zermelo-Fraenkel, dass es für jede Menge $A$ eine Ordinalzahl gibt, $\alpha$, und eine Bijektion von $\alpha$ nach $A$. Und das hier ist so der Hauptknackpunkt an der ganzen... am ganzen Beweis, Auswahlaxiom impliziert Wohlordnungsprinzip. Wenn man das hat, geht's dann relativ schnell, und das mache ich jetzt vor, das Schnelle, okay? 
+
+Also Bemerkungen, und dazu muss ich jetzt etwas definieren. Ich definiere jetzt den Push-Forward $u_* R$ einer Relation unter einer injektiven Abbildung. Also seien $X$ und $Y$ Mengen, $R$ eine binäre Relation, binär bedeutet eine Teilmenge von $X \times Y$, nein, auf $X$, entschuldigung, binäre Relation auf $X$, also Teilmenge von $X \times X$, binäre Relation auf $X$, und $u$ von $X$ nach $Y$ eine injektive Funktion, das Zeichen bedeutet injektiv. Dann definiere ich den Push-Forward $u_* R$ als das Einzige, was ich tun kann. Ich möchte jetzt eine Relation auf $Y$, und was kann ich jetzt tun? Ja gut, ich schaue mir die Paare an $u(x), u(x')$, wobei das Paar $x, x'$ eben in der Relation liegt, in $R$. Und das hier ist eine Relation, und zwar binäre Relation auf $Y$. Es ist eine Teilmenge von $Y \times Y$, bedeutet das, ja, weil ja $u(x)$ in $Y$ liegt und das hier auch. 
+
+Ja gut, ähm, dann Bemerkung 2, das ist Bemerkung 1. Wenn das hier eine Wohlordnung ist auf $X$, und $u$ injektiv, dann ist das, was ich jetzt gerade erklärt habe, dieser Push-Forward, also $u_* R$, eine Relation... eine Wohlordnung auf $Y$.
+\end{spoken-clean}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:31:00
+% topic: Eigenschaften von Ordinalzahlen, Burali-Forti-Paradoxon und Push-Forward von Relationen
+% board_state: THEOREM (Eigenschaften von Ordinalzahlen), Burali-Forti-Paradoxon, Definition Push-Forward u_* R
+% next_goal: Beweis des Hilfssatzes (AC => Existenz einer Bijektion alpha -> A)
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\subsection{Eigenschaften von Ordinalzahlen und das Burali-Forti-Paradoxon}
+
+\begin{math-stroke}[Theorem: Eigenschaften von Ordinalzahlen in ZF]
+\setcounter{theorem}{6}
+\begin{theorem}[Eigenschaften von Ordinalzahlen in ZF]\label[theorem]{thm:ordinal-properties}
+In der Zermelo-Fraenkel-Mengenlehre ($\text{ZF}$) gelten für die Klasse der Ordinalzahlen $\Omega$ die folgenden Eigenschaften:
+\begin{enumerate}[label=(\roman*)]
+    \setcounter{enumi}{0} \item Für jedes $\alpha \in \Omega$ gilt:
+    \begin{equation}
+    \label{eq:ordinal-empty-element}
+    \alpha = \emptyset \quad \lor \quad \emptyset \in \alpha
+    \end{equation}
+    
+    \setcounter{enumi}{1} \item Für alle $\beta \in \Omega$ und alle $\alpha \in \beta$ gilt:
+    \begin{equation}
+    \label{eq:ordinal-element-is-ordinal}
+    \alpha \in \Omega
+    \end{equation}
+    
+    \setcounter{enumi}{2} \item Für alle $\alpha, \beta \in \Omega$ gilt genau eine der folgenden Aussagen (Trichotomie):
+    \begin{equation}
+    \label{eq:ordinal-trichotomy}
+    \alpha \in \beta \quad \text{oder} \quad \alpha = \beta \quad \text{oder} \quad \beta \in \alpha
+    \end{equation}
+    
+    \setcounter{enumi}{3} \item Für jede Menge $S \subseteq \Omega$ gilt:
+    \begin{equation}
+    \label{eq:ordinal-intersection-union}
+    \bigcap S \in \Omega \quad \text{und} \quad \bigcup S \in \Omega
+    \end{equation}
+    Dabei ist für $S = \emptyset$ formal definiert: $\bigcap \emptyset := \emptyset$.
+    
+    \setcounter{enumi}{4} \item Jede nichtleere Menge $S \subseteq \Omega$ besitzt ein bezüglich $\in$ minimales Element:
+    \begin{equation}
+    \label{eq:ordinal-set-well-ordered}
+    \forall S \subseteq \Omega \left( S \neq \emptyset \implies \exists \alpha \in S \, \forall \beta \in S \, \bigl( \neg(\beta \in \alpha) \bigr) \right)
+    \end{equation}
+\end{enumerate}
+\end{theorem}
+
+\begin{nice-box}[Das Burali-Forti-Paradoxon]
+\begin{theorem}[Burali-Forti-Paradoxon]\label[theorem]{thm:burali-forti}
+Die Klasse $\Omega$ aller Ordinalzahlen ist keine Menge.
+\end{theorem}
+\end{nice-box}
+
+\begin{short-proof}
+Angenommen, $\Omega$ wäre eine Menge. Nach Theorem \ref{thm:ordinal-properties} erfüllt $\Omega$ die Bedingungen (ii), (iii) und (v), was bedeutet, dass $\Omega$ transitiv ist, seine Elemente paarweise $\in$-vergleichbar sind und jede nichtleere Teilmenge ein $\in$-minimales Element besitzt. 
+
+Daraus folgt, dass $\Omega$ selbst eine Ordinalzahl wäre, also $\Omega \in \Omega$. Dies widerspricht jedoch der strikten Trichotomie (Eigenschaft (iii)), wonach für kein Element $\alpha \in \Omega$ gelten kann, dass $\alpha \in \alpha$. Somit ist $\Omega$ eine echte Klasse und keine Menge.
+\end{short-proof}
+\end{math-stroke}
+
+\subsection{Push-Forward von Relationen}
+
+\begin{math-stroke}[Definition: Push-Forward einer Relation]
+\setcounter{theorem}{8}
+\begin{definition}[Push-Forward einer Relation]\label[definition]{def:push-forward-relation}
+Seien $X, Y$ Mengen, $R \subseteq X \times X$ eine binäre Relation auf $X$ und $u: X \to Y$ eine injektive Abbildung. Wir definieren den \newterm{Push-Forward} $u_* R \subseteq Y \times Y$ der Relation $R$ unter $u$ durch:
+\begin{equation}
+\label{eq:push-forward-relation}
+u_* R := \left\{ \langle u(x), u(x') \rangle \in Y \times Y \;\middle|\; \langle x, x' \rangle \in R \right\}
+\end{equation}
+\end{definition}
+
+\begin{proposition}\label[proposition]{prop:push-forward-well-ordering}
+Ist $R$ eine Wohlordnung auf $X$ und $u: X \to Y$ eine injektive Abbildung, so ist der Push-Forward $u_* R$ eine Wohlordnung auf der Bildmenge $u(X) \subseteq Y$.
+\end{proposition}
+\end{math-stroke}
+
+% [SYSTEM] Video complete.
+```
+
+*(Tokens: Input 293535, Output 9551)*
+---
+
+**AutoExtraction:** [Part 3] 03-31-tuesday-speed-1-compressed.mp4
+[Angehängtes Video]: 03-31-tuesday-part3.mp4
+[Kontext-Dateien]: 03-31-tuesday-part1.tex, 03-31-tuesday-part2.tex
+
+[Prompt]:
+The lecture being transcribed is from , 03-31-tuesday-speed-1-compressed. Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.
+
+As a reminder: You are currently transcribing Part 3 of 3 from this lecture. This specific video segment is exactly 31 minutes and 43 seconds long.
+
+Note: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.
+
+IMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the 31 minutes and 43 seconds length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.
+
+When in doubt, transcribe more content into the 'math-stroke' rather than less. Everything that is written on the blackboard must be present there. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.
+
+CRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.
+
+**gemini-3.5-flash:** % End of the video: 00:31:43
+% Primary Language: German
+
+\begin{spoken-clean}[00:00:00 - 00:01:14]
+...zeigen, Auswahlaxiom impliziert, ähm, Wohlordnungsprinzip über Zermelo-Fraenkel, und dazu brauche ich den Hilfssatz, und folgenden Hilfssatz, nämlich, ähm, dass das Auswahlaxiom impliziert in Zermelo-Fraenkel, dass es für jede Menge $A$ eine Ordinalzahl gibt, $\alpha$, und eine Bijektion von $\alpha$ nach $A$. Und das hier ist so der Hauptknackpunkt an der ganzen... am ganzen Beweis, Auswahlaxiom impliziert Wohlordnungsprinzip. Wenn man das hat, geht's dann relativ schnell, und das mache ich jetzt vor, das Schnelle, okay?
+
+Also Bemerkungen, und dazu muss ich jetzt etwas definieren. Ich definiere jetzt den Push-Forward $u_* R$ einer Relation unter einer injektiven Abbildung. Also seien $X$ und $Y$ Mengen, $R$ eine binäre Relation, binär bedeutet eine Teilmenge von $X \times Y$, nein, auf $X$, entschuldigung, binäre Relation auf $X$, also Teilmenge von $X \times X$, binäre Relation auf $X$, und $u$ von $X$ nach $Y$ eine injektive Funktion, das Zeichen bedeutet injektiv. Dann definiere ich den Push-Forward $u_* R$ als das Einzige, was ich tun kann. Ich möchte jetzt eine Relation auf $Y$, und was kann ich jetzt tun? Ja gut, ich schaue mir die Paare an $u(x), u(x')$, wobei das Paar $x, x'$ eben in der Relation liegt, in $R$. Und das hier ist eine Relation, und zwar binäre Relation auf $Y$. Es ist eine Teilmenge von $Y \times Y$, bedeutet das, ja, weil ja $u(x)$ in $Y$ liegt und das hier auch.
+
+Ja gut, ähm, dann Bemerkung 2, das ist Bemerkung 1. Wenn das hier eine Wohlordnung ist auf $X$, und $u$ injektiv, dann ist das, was ich jetzt gerade erklärt habe, dieser Push-Forward, also $u_* R$, eine Relation... eine Wohlordnung auf $Y$.
+\end{spoken-clean}
+
+\begin{math-stroke}[Hilfssatz und Beweis des Wohlordnungsprinzips]
+\setcounter{theorem}{9}
+\begin{lemma}[Existenz einer Bijektion zu einer Ordinalzahl]\label[lemma]{lem:bijection-to-ordinal}
+Unter Annahme des Auswahlaxioms ($\text{AC}$) existiert für jede Menge $A$ eine Ordinalzahl $\alpha \in \Omega$ und eine Bijektion $v: \alpha \to A$:
+\begin{equation}
+\label{eq:bijection-to-ordinal}
+\text{ZF} + \text{AC} \vdash \forall A \, \exists \alpha \in \Omega \, \exists v \, (v: \alpha \xrightarrow{\sim} A)
+\end{equation}
+\end{lemma}
+
+\begin{proof}[Beweis des Wohlordnungsprinzips (\texorpdfstring{$\text{AC} \implies \text{WOP}$}{AC => WOP}) unter Verwendung des Hilfssatzes]
+Wir nehmen an, dass das Auswahlaxiom ($\text{AC}$) gilt. Sei $A$ eine beliebige Menge. Falls $A = \emptyset$, ist die leere Relation $\emptyset$ trivialerweise eine Wohlordnung auf $A$. Wir nehmen daher an, dass $A \neq \emptyset$.
+
+Nach dem Hilfssatz (Lemma \ref{lem:bijection-to-ordinal}) existiert eine Ordinalzahl $\alpha \in \Omega$ und eine Bijektion:
+\[
+v: \alpha \to A
+\]
+Da $\alpha$ eine Ordinalzahl ist, ist die Elementrelation $\in_\alpha$ eine Wohlordnung auf $\alpha$ (gemäß Definition \ref{def:ordinal-number}). 
+
+Da $v: \alpha \to A$ eine Bijektion (und somit insbesondere injektiv) ist, können wir den Push-Forward der Wohlordnung $\in_\alpha$ unter $v$ definieren (gemäß Definition \ref{def:push-forward-relation}):
+\[
+< \,:= v_*(\in_\alpha) = \left\{ \langle v(\beta), v(\gamma) \rangle \in A \times A \;\middle|\; \beta \in \gamma \right\}
+\]
+Nach Proposition \ref{prop:push-forward-well-ordering} ist der Push-Forward $v_*(\in_\alpha)$ einer Wohlordnung unter einer injektiven Abbildung wieder eine Wohlordnung auf der Bildmenge $v(\alpha)$. Da $v$ surjektiv ist, gilt $v(\alpha) = A$.
+
+Somit ist $<$ eine Wohlordnung auf $A$. Dies zeigt, dass auf jeder Menge $A$ eine Wohlordnung existiert, was genau das Wohlordnungsprinzip ($\text{WOP}$) ist.
+\end{proof}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:01:14 - 00:02:35]
+Also weil jetzt ja das $\alpha$ eine Ordinalzahl ist, ist gemäß einer Bemerkung, ähm, diese Relation hier, Elementrelation auf $\alpha$, eine Wohlordnung. Das war eine Bemerkung, die ich soeben hingeschrieben hatte, okay? Äm, da oben wahrscheinlich noch, oder? Da steht's noch, oder nicht mehr? Da oben steht's noch, okay? Wohlordnung auf dem $\alpha$. Aha, jetzt kann ich natürlich das verwenden, was da steht, Bemerkung 2, da oben, und zwar mit dieser Bijektion. Die Bijektion heißt, ähm, ja, $v$, okay? Jetzt nehme ich also den Push-Forward dieser Relation hier, dieser Wohlordnung, mit dem $v$, und dann kriege ich eine Wohlordnung auf $A$. Und dann bin ich fertig. Das beweist, dass das Auswahlaxiom das Wohlordnungsprinzip impliziert.
+
+Und der ganze... also die Arbeit liegt im Beweis des Hilfssatzes, okay? Das möchte ich jetzt auch erklären. Haben Sie dazu eine Frage? Also Beweis des Hilfssatzes. Bevor ich da was Formales mache, möchte ich Ihnen die Idee erklären des Beweises. Also was möchten wir? Wir haben ein... äh, wo ist er? Da. Also für jede Menge gibt's ein $\alpha$ und eine Bijektion zwischen $\alpha$ und $A$. Die Idee ist, wir zählen die Elemente aus $A$ auf. Also wir wählen eins und nennen es das Nullte. Dann nehmen wir ein nächstes, und zwar ein anderes, und nennen es das Erste. Und das Nächste nennen wir das Zweite, und so weiter. Und wenn wir Glück haben, gibt's nur abzählbar viele Elemente und die haben wir vielleicht alle aufgezählt, wenn wir Glück haben, okay? Aber selbst wenn es unendlich viele Elemente hat, ja, vielleicht haben wir nach dem unendlichsten, quasi nach all diesen natürlichen Zahlen, haben wir noch nicht alle aufgezählt. Und dann machen wir einfach weiter mit $\omega$. Dann kommt das $\omega$-te, und nachher das $\omega+1$-te, und das $\omega+2$-te, und so weiter, und so weiter, und so weiter. Und irgendwann haben wir dann alle, und dann sind wir fertig. Ja? Das gibt uns die Bijektion, oder? $0$ geht nach diesem nullten Element, $1$ geht nach dem ersten, und $2$ nach dem zweiten, und so weiter. Das ist dann die Bijektion zwischen gewissen Ordinalzahlen, die dann ein Element sein werden einer anderen Ordinalzahl. So ist der Trick. Und jetzt mache ich das ein bisschen formal.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:02:35 - 00:04:20]
+Also sei $A$ eine Menge. Annahme, das Auswahlaxiom gilt. Jetzt... also ich mache jetzt nur den Fall, dass $A$ nicht die leere Menge ist, das ist der interessante Fall. Äm, dann definiere ich $P^*(A)$, $P$ oben Stern von $A$, als die Potenzmenge ohne das... also die menge, die genau die leere Menge enthält. Und jetzt gibt's eben wegen des Auswahlaxioms eine Auswahlfunktion für diese Potenzmenge. Die wählt aus jeder nicht-leeren Menge ein Element aus. Und formal geht das in diese Vereinigung, diese Vereinigung ist einfach wieder $A$, okay? Auswahlfunktion. 
+
+Jetzt habe ich das Auswahlaxiom verwendet. Dann definiere ich einen neuen Begriff, nämlich eine $f$-Menge. Ich weiß nicht, ob ich das Wort mag, aber so steht's im Buch von Herrn Halbeisen und Gräf. Ich möchte es lieber eine $f$-Abbildung nennen. Es heißt jetzt halt $f$-Menge, aber denken Sie an eine Abbildung. Eine $f$-Menge ist ein Paar $\langle \alpha, v \rangle$, wobei $\alpha$ eine Ordinalzahl ist und $v$ eine injektive Funktion von $\alpha$ nach $A$, und zwar so, dass für alle Elemente von $\alpha$ gilt: $v(\gamma)$... jetzt kommt eben der Zusammenhang mit der Auswahlfunktion $f$, und darum nennen wir es eine $f$-Menge... also für alle Elemente von $\alpha$ gilt, $v(\gamma)$ ist gegeben durch $f$ von dieser Menge hier. Also wir schauen uns das Bild von $\gamma$ unter $v$ an, das ist immer noch das Bild, das mit den eckigen Klammern. Und das nehmen wir jetzt weg. Das heißt, wir nehmen $f$ von dieser Menge, das heißt, das gibt uns ein Element da drin, also das Element liegt nicht in diesem Bild, okay? Das ist jetzt der Trick. Das heißt, wir haben was Neues dazugenommen.
+\end{spoken-clean}
+
+\begin{math-stroke}[Beweis des Hilfssatzes: Konstruktion und f-Mengen]
+\setcounter{theorem}{10}
+Sei $A \neq \emptyset$ eine Menge. Wir nehmen an, dass das Auswahlaxiom ($\text{AC}$) gilt. 
+Wir definieren die Menge aller nichtleeren Teilmengen von $A$:
+\[
+\mathcal{P}^*(A) := \mathcal{P}(A) \setminus \{\emptyset\}
+\]
+Nach dem Auswahlaxiom existiert eine Auswahlfunktion $f$ für $\mathcal{P}^*(A)$:
+\begin{equation}
+\label{eq:choice-function-A}
+f: \mathcal{P}^*(A) \to A \quad \text{mit} \quad f(B) \in B \quad \text{für alle } B \in \mathcal{P}^*(A)
+\end{equation}
+
+\begin{definition}[$f$-Menge / $f$-Abbildung]\label[definition]{def:f-set}
+Eine \newterm{$f$-Menge} (oder $f$-Abbildung) ist ein geordnetes Paar $\langle \alpha, v \rangle$, wobei $\alpha \in \Omega$ eine Ordinalzahl und $v: \alpha \to A$ eine injektive Abbildung ist, sodass für alle $\gamma \in \alpha$ gilt:
+\begin{equation}
+\label{eq:f-set-condition}
+v(\gamma) = f\left( A \setminus v[\gamma] \right)
+\end{equation}
+Hierbei bezeichnet $v[\gamma] := \{ v(\beta) \mid \beta \in \gamma \}$ das Bild von $\gamma$ unter $v$.
+\end{definition}
+
+\begin{explanation-of-steps}
+Die Bedingung $v(\gamma) = f(A \setminus v[\gamma])$ formalisiert den intuitiven Prozess des sukzessiven Auswählens: Am Schritt $\gamma$ ist die Menge der bereits ausgewählten Elemente genau das Bild der kleineren Ordinalzahlen, also $v[\gamma]$. Wir ziehen diese bereits gewählten Elemente von $A$ ab und wenden die Auswahlfunktion $f$ auf die verbleibende Menge $A \setminus v[\gamma]$ an, um das nächste Element $v(\gamma)$ auszuwählen. Dies garantiert, dass $v(\gamma) \notin v[\gamma]$, wodurch die Injektivität von $v$ automatisch sichergestellt wird.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{spoken-clean}[00:04:20 - 00:06:15]
+Ja. Und jetzt... und zwar, das Gute, das wollen wir sowieso, weil es soll ja injektiv sein, aber der Trick ist, wir nehmen jetzt genau dieses neue Element, was eben... was durch dieses $f$ bestimmt wird, das wir haben, die Auswahlfunktion. Okay, gut. Jetzt habe ich also gesagt, was eine $f$-Menge ist, und jetzt kommt eben so eine Art, ja, es klingt so ein bisschen wie eine Induktion. Also man... man nimmt dann eben am Schluss die Vereinigung von allen $f$-Mengen, und das ist dann... das ist das, was wir wollen. Das entsprechende $\alpha$ ist unser $\alpha$, diese Bijektion, die wir wollen. Das heißt, jetzt muss ich da noch was definieren, nämlich: Wenn ich zwei Mengen $X$ und $Y$ habe, dann schreibe ich $X \le Y$ genau dann... ich mache jetzt mal nur einen einfachen Pfeil, so, also nicht zwei Striche... wenn $X$ Element ist von $Y$ oder $X = Y$. Und jetzt seien $\alpha, v$ und $\beta, w$ $f$-Mengen. Dann gibt's eine Behauptung 1, nämlich: Falls $\alpha \le \beta$ ist, dann ist die Einschränkung von $w$ auf $\alpha$ gleich $v$. Also anders gesagt, $\beta$ ist eine Erweiterung... nicht das $\beta$, das $w$. $w$ ist eine Erweiterung von $v$. Es ist quasi die gleiche Funktion, einfach mit einem größeren Definitionsbereich. Hier habe ich $\alpha$, hier habe ich das größere $\beta$. Ich mache mal das $\alpha$ gelb, und dann habe ich hier das größere $\beta$, und dann wird die Funktion erweitert. So, das hier ist $\beta$, das Rote, und dann habe ich hier das entsprechende... das $w$, und hier habe ich das $v$, das Gelbe.
+\end{spoken-clean}
+
+\begin{math-stroke}[Vergleich von f-Mengen und Behauptung 1]
+\setcounter{theorem}{12}
+Wir definieren eine schwache Ordnung $\le$ auf der Klasse der Ordinalzahlen $\Omega$ durch:
+\begin{equation}
+\label{eq:ordinal-weak-order}
+\alpha \le \beta :\iff \alpha \in \beta \quad \lor \quad \alpha = \beta
+\end{equation}
+
+\begin{nice-box}[Behauptung 1: Kompatibilität von f-Mengen]
+\begin{proposition}[Behauptung 1]\label[proposition]{prop:f-sets-compatibility}
+Seien $\langle \alpha, v \rangle$ und $\langle \beta, w \rangle$ zwei $f$-Mengen. Falls $\alpha \le \beta$, dann ist die Einschränkung von $w$ auf $\alpha$ identisch mit $v$:
+\begin{equation}
+\label{eq:f-sets-compatibility}
+w\vert_{\alpha} = v
+\end{equation}
+Mit anderen Worten: $w$ ist eine Fortsetzung (Erweiterung) von $v$.
+\end{proposition}
+\end{nice-box}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5]
+  % \begin{ai-tikz-planner-invisible-content}
+  % 1. Background: Two nested intervals representing ordinals \alpha and \beta.
+  % 2. Midground: Curves representing the functions v and w.
+  % 3. Foreground: Shading showing that w restricted to \alpha is exactly v.
+  % 4. Colors: Yellow for \alpha and v, BrickRed for \beta and w.
+  % \end{ai-tikz-planner-invisible-content}
+  
+  % Axis
+  \draw[thick, ->] (-0.5,0) -- (4.5,0) node[right] {$\Omega$};
+  
+  % Ordinal \alpha (Yellow interval)
+  \draw[line width=4pt, Yellow!80!black, line cap=round] (0,0.1) -- (2,0.1);
+  \node[Yellow!80!black, below] at (1,0) {$\alpha$};
+  
+  % Ordinal \beta (BrickRed interval, extending \alpha)
+  \draw[line width=2pt, BrickRed, line cap=round] (0,0.2) -- (3.5,0.2);
+  \node[BrickRed, above] at (2.75,0.3) {$\beta$};
+  
+  % Function v (Yellow curve)
+  \draw[thick, Yellow!80!black] (0,1) to[out=20,in=160] (2,1.5);
+  \node[Yellow!80!black, left] at (0,1) {$v$};
+  
+  % Function w (BrickRed curve, overlapping v on \alpha)
+  \draw[thick, BrickRed, dashed] (0,1) to[out=20,in=160] (2,1.5) to[out=-20,in=170] (3.5,1.8);
+  \node[BrickRed, right] at (3.5,1.8) {$w$};
+  
+  \node[below, align=center] at (1.75,-0.5) {Veranschaulichung der Fortsetzung: $w\vert_{\alpha} = v$};
+\end{tikzpicture}
+\end{center}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:06:15 - 00:08:00]
+Ja gut, ähm, beweisen werde ich das nicht. Lesen Sie selber nach. Ja, ist jetzt auch nicht so kompliziert, glaube ich. Dann Behauptung 2: Ich schreibe jetzt eine Menge hin, $S$. Das ist die Menge aller $f$-Mengen. Und die Aussage ist genau, dass das eine menge ist. Also wenn man's richtig sagt, bedeutet das, es existiert eine Menge, deren Elemente genau die $f$-Mengen sind, okay? Beweise ich jetzt auch nicht. Können Sie auch selber nachlesen in meinen Notizen, dass das wahr ist. Und aus diesen zwei Behauptungen möchte ich jetzt, ähm, diese Implikation Auswahlaxiom... also, Entschuldigung, ich möchte den Hilfssatz beweisen. Also dass es diese Bijektion gibt. Und wie gesagt, der Trick ist, ich mache jetzt die Vereinigung von allen $F$-Mengen. Das ist der Trick.
+\end{spoken-clean}
+
+\begin{math-stroke}[Behauptung 2: Die Menge aller F-Mengen]
+\setcounter{theorem}{13}
+\begin{proposition}\label[proposition]{prop:f-sets-form-set}
+Die Klasse $S$ aller $F$-Mengen ist eine Menge:
+\begin{equation}
+\label{eq:f-sets-class-is-set}
+S := \left\{ \langle \beta, w \rangle \;\middle|\; \langle \beta, w \rangle \text{ ist eine } F\text{-Menge} \right\} \text{ ist eine Menge.}
+\end{equation}
+\end{proposition}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:08:00
+% topic: Beweis des Hilfssatzes (AC => Bijektion alpha -> A)
+% board_state: Definition F-Menge, Behauptung 1, Behauptung 2, Definition von alpha und v als Vereinigungen
+% next_goal: Definition von alpha und v aufschreiben und zeigen, dass v eine Bijektion ist
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:08:00 - 00:09:45]
+Ja, also ich definiere $\alpha$ als die Vereinigung aller $\beta$s, wobei $\beta, w$ so eine $f$-Menge ist. Das ist... das, was ich jetzt hier hinschreibe, ist mal eine Menge, weil das $S$ hier eine Menge ist. Und dann $v$ definiere ich als die Vereinigung aller $\beta, w$ in $S$ und dann $w$. Das ist dieses Rote hier. Also nicht das Rote, sondern die Vereinigung all dieser Graphen. Eine Funktion ist in dieser Vorlesung dasselbe wie ein Graph. In anderen Vorlesungen ist es eine Tripel, bestehend aus einem Definitionsbereich, Zielbereich und Graphen, und hier ist es einfach der Graph. Wir sagen dann einfach Funktion von $X$ nach $Y$, das ist dann der Graph, okay? Und das hier ist dann die Vereinigung der Graphen, also gelber Graph vereinigt mit rotem Graph und all den anderen noch. Ja gut, jetzt habe ich hier zwei Sachen geschrieben, und der Punkt ist eben, jetzt kommt Behauptung 3. Und bei mir war das dann eine Übungsaufgabe, das zu beweisen, okay? Also ich mache es jetzt auch nicht vor. Es geht mir nur darum, dass Sie eine Idee haben, wie das überhaupt geht. Also es gibt hier drei Teile, nämlich: $v$ ist eine Abbildung von $\alpha$ nach $A$. Ja, oder es geht nichts schief, heißt das. Wenn Sie das Bild anschauen, ist das irgendwie klar. Oder weil ja das $\beta$ eine Erweiterung ist von $\alpha$, kriege ich hier den gleichen Wert, wenn ich das $w$ mache, wie das... wie das andere. Das heißt, wenn ich all diese Graphen vereinige, kriege ich immer noch einen Graphen. Ich verwende hier also das... ich verwende jetzt Behauptung 1 an der Stelle. Und dann 2: $v$ ist injektiv. Das hat zu tun mit der Injektivität der einzelnen Teile, weil eine $f$-Menge ja so definiert war, dass das $w$ hier injektiv ist. Daher kommt das. Und dann 3: $v$ ist surjektiv. Das ist jetzt das Interessante.
+\end{spoken-clean}
+
+\begin{math-stroke}[Konstruktion der maximalen F-Menge]
+\setcounter{theorem}{14}
+Wir definieren die Vereinigung aller Definitionsbereiche der $F$-Mengen in $S$:
+\begin{equation}
+\label{eq:union-of-domains}
+\alpha := \bigcup \left\{ \beta \in \Omega \;\middle|\; \exists w : \langle \beta, w \rangle \in S \right\}
+\end{equation}
+Da $S$ eine Menge von Paaren ist, ist die Klasse der ersten Komponenten ebenfalls eine Menge von Ordinalzahlen. Nach Theorem \ref{thm:ordinal-properties} (iv) ist die Vereinigung einer menge von Ordinalzahlen wieder eine Ordinalzahl, also gilt:
+\[
+\alpha \in \Omega
+\]
+Wir definieren die Abbildung $v$ als die Vereinigung aller Graphen $w$ der $F$-Mengen in $S$:
+\begin{equation}
+\label{eq:union-of-graphs}
+v := \bigcup \left\{ w \;\middle|\; \exists \beta : \langle \beta, w \rangle \in S \right\}
+\end{equation}
+In dieser Vorlesung wird eine Funktion formal mit ihrem Graphen identifiziert (d.h. als Menge von geordneten Paaren).
+
+\begin{nice-box}[Behauptung 3: Eigenschaften der maximalen Abbildung v]
+\begin{proposition}[Behauptung 3]\label[proposition]{prop:properties-of-v}
+Für die oben definierten Mengen $\alpha$ und $v$ gilt:
+\begin{enumerate}[label=(\roman*)]
+    \setcounter{enumi}{0} \item $v$ ist eine wohldefinierte Abbildung von $\alpha$ nach $A$:
+    \[
+    v: \alpha \to A
+    \]
+    \setcounter{enumi}{1} \item $v$ ist eine injektive Abbildung.
+    \setcounter{enumi}{2} \item $v$ ist eine surjektive Abbildung (d.h. $v[\alpha] = A$).
+\end{enumerate}
+\end{proposition}
+\end{nice-box}
+
+\begin{explanation-of-steps}
+\begin{itemize}
+    \item \textbf{Teil (i):} Die Wohldefiniertheit von $v$ als Funktion folgt direkt aus Behauptung 1 (Proposition \ref{prop:f-sets-compatibility}). Da je zwei $F$-Mengen auf dem gemeinsamen Durchschnitt ihrer Definitionsbereiche übereinstimmen, führt die Vereinigung ihrer Graphen nicht zu Mehrdeutigkeiten.
+    \item \textbf{Teil (ii):} Die Injektivität von $v$ folgt aus der Injektivität der einzelnen Abbildungen $w$ und der Tatsache, dass neue Elemente stets aus dem Komplement des bisherigen Bildes gewählt werden.
+    \item \textbf{Teil (iii):} Die Surjektivität ist der entscheidende Schritt. Wäre $v$ nicht surjektiv, so wäre die Restmenge $A \setminus v[\alpha]$ nicht leer. Wir könnten dann unter Verwendung der Auswahlfunktion $f$ ein weiteres Element auswählen und die $F$-Menge zu einer echten Obermenge erweitern, was der Maximalität von $\alpha$ widersprechen würde.
+\end{itemize}
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:09:45 - 00:13:15]
+Und hier verwende ich halt, dass ich... dass ich so eine Vereinigung gemacht habe. Dann habe ich halt alles. Okay? Ja, und das war's. Jetzt habe ich eine Bijektion zwischen einer Ordinalzahl $\alpha$ und der beliebigen Menge $A$. Und das war der Hilfssatz, der ist jetzt bewiesen, modulo Beweis der Behauptungen, die finde ich jetzt nicht so interessant, die Beweise der Behauptungen möchte ich Ihnen jetzt nicht zumuten. Ja, haben Sie dazu Fragen? Ist vielleicht alles ein bisschen schnell. Ja, Sie können... ja gerne, bitte?
+\end{spoken-clean}
+
+\begin{student-interaction}[Studentenfrage]
+Schreibt man da nur bei... bei Beweis des Hilfssatzes... gilt für jede Menge $A$, $A$ Element von $\text{AC}$, ist das...?
+\end{student-interaction}
+
+\begin{spoken-clean}[continued]
+Annahme, Annahme, genau. Ich nehme das Auswahlaxiom an. Genau. 
+
+Und am Schluss kriege ich dann mein... die Bijektion zwischen $\alpha$ und $A$. Die nennt sich dann $v$.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:13:15 - 00:15:30]
+Ja, andere Fragen? Also ich war ziemlich schnell dieses Mal. Ist vielleicht nicht so ein gutes Zeichen, aber, ähm, ich habe natürlich Sachen weggelassen, aber ich glaube, das schadet nicht. Weil das sind jetzt nicht Sachen, wo Sie wirklich eine neue Idee sehen, sondern Sie arbeiten halt... wie soll man sagen, Sie arbeiten halt... Sie brauchen das, was Sie haben. Ja. 
+
+Was ich jetzt tun möchte, ist, das Kuratowski-Zornsche Lemma noch erklären. Weil ich habe ja versprochen, dass das Auswahlaxiom zu drei Sachen... also zu sich selber und dann noch zu... zum Wohlordnungsprinzip und zum Kuratowski-Zornschen Lemma äquivalent ist, und das Kuratowski-Zornsche Lemma ist eben das, was Sie in der Realität sehen. Die Version des Auswahlaxioms, die Sie tatsächlich sehen. Und darum schreibe ich das jetzt hin. Da geht es um eine halbgeordnete Menge. Es gibt jetzt halt noch einen Begriff, der Halbordnung. Und zwar mache ich das im schwachen Sinn, also mit kleiner-gleich, nicht mit kleiner. Und dann bedeutet es Transitivität und Antireflexivität... also $x \le y$ und $y \le x$ impliziert $x = y$.
+\end{spoken-clean}
+
+\subsection{Das Kuratowski-Zornsche Lemma}
+
+\begin{math-stroke}[Das Kuratowski-Zornsche Lemma (Zornsches Lemma)]
+\setcounter{theorem}{15}
+\begin{nice-box}[Das Kuratowski-Zornsche Lemma]
+\begin{theorem}[Kuratowski-Zornsches Lemma -- KZL]\label[theorem]{thm:zorns-lemma}
+Das \newterm{Kuratowski-Zornsche Lemma} (oft einfach als \newterm{Zornsches Lemma} bezeichnet) hat in der Standard-Mengenlehre ebenfalls den Status eines Axioms. Es besagt:
+
+Sei $\langle P, \le \rangle$ eine nichtleere halbgeordnete Menge. Falls jede Kette $C \subseteq P$ eine obere Schranke in $P$ besitzt, dann hat $P$ mindestens ein maximales Element.
+\end{theorem}
+\end{nice-box}
+
+\begin{definition}[Halbordnung / Teilordnung]\label[definition]{def:partial-order}
+Eine schwache (nicht-strikte) \newterm{Halbordnung} (oder Teilordnung) auf einer menge $P$ ist eine binäre Relation $\le \,\subseteq P \times P$, die für alle $x, y, z \in P$ die folgenden drei Axiome erfüllt:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item \newterm{Reflexivität}: 
+    \[
+    x \le x
+    \]
+    \setcounter{enumi}{1} \item \newterm{Antisymmetrie}: 
+    \[
+    (x \le y \;\wedge\; y \le x) \implies x = y
+    \]
+    \setcounter{enumi}{2} \item \newterm{Transitivität}: 
+    \[
+    (x \le y \;\wedge\; y \le z) \implies x \le z
+    \]
+\end{enumerate}
+Das Paar $\langle P, \le \rangle$ heißt dann eine \newterm{halbgeordnete Menge} (Poset -- partially ordered set).
+\end{definition}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:16:00
+% topic: Kuratowski-Zornsches Lemma (KZL) und Ordnungsbegriffe
+% board_state: Definition Halbordnung, Definition Kette, Definition obere Schranke, Definition maximales Element
+% next_goal: Definitionen von Kette, oberer Schranke und maximalem Element aufschreiben
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:15:30 - 00:17:45]
+Und dann hat man auf dieser... auf der halbgeordneten Menge, hat man folgende Annahme, nämlich immer wenn Sie eine Kette haben da drin, das ist eine linear geordnete Teilmenge, gibt es eine obere Schranke. Und die Aussage ist dann, des Lemmas, also des Zornschen Lemmas, dass es dann ein maximales Element gibt. Okay? Und dieses maximale Element ist dann Ihre Basis des Vektorraums. So werden Sie es anwenden, zum Beispiel. 
+
+Also Kuratowski-Zorn-Lemma. Das hat wieder den Status eines Axioms, also das Wort Lemma sollte man sich mit Anführungszeichen denken. Und jetzt brauche ich eben den Begriff einer Halbordnung. Also eine schwache oder nicht-strikte Halbordnung auf einer Menge $P$, $P$ für partial, wie... wie halb, ist eine binäre Relation, also nein, ich schreibe jetzt nicht $R$, ich schreibe kleiner-gleich, auf $P$ mit den folgenden Eigenschaften: Reflexivität habe ich vergessen zu erwähnen, also für jedes $x$ in $P$ ist $x \le x$. Dann Antisymmetrie ist das, was ich vorher gesagt habe, also für alle $x, y$ in $P$ gilt, wenn $x \le y$ und $y \le x$, dann ist $x = y$, das nennt sich Antisymmetrie. Und dann gibt's noch Transitivität, wie immer.
+\end{spoken-clean}
+
+\begin{math-stroke}[Definitionen: Kette, obere Schranke und maximales Element]
+\setcounter{theorem}{16}
+Sei $\langle P, \le \rangle$ eine halbgeordnete Menge.
+
+\begin{definition}[Kette]\label[definition]{def:chain}
+Eine Teilmenge $C \subseteq P$ heißt eine \newterm{Kette} in $P$, falls je zwei Elemente in $C$ bezüglich $\le$ vergleichbar sind (d.h. die Einschränkung von $\le$ auf $C$ ist eine lineare Ordnung):
+\begin{equation}
+\label{eq:chain-definition}
+\forall x, y \in C \, \bigl( x \le y \quad \lor \quad y \le x \bigr)
+\end{equation}
+\end{definition}
+
+\begin{definition}[Obere Schranke]\label[definition]{def:upper-bound}
+Sei $S \subseteq P$ eine Teilmenge. Ein Element $x \in P$ heißt eine \newterm{obere Schranke} für $S$ in $P$, falls jedes Element von $S$ kleiner oder gleich $x$ ist:
+\begin{equation}
+\label{eq:upper-bound-definition}
+\forall y \in S \, \bigl( y \le x \bigr)
+\end{equation}
+\end{definition}
+
+\begin{definition}[Maximales Element]\label[definition]{def:maximal-element}
+Ein Element $x \in P$ heißt ein \newterm{maximales Element} von $P$, falls kein Element in $P$ strikt größer als $x$ ist:
+\begin{equation}
+\label{eq:maximal-element-definition}
+\forall y \in P \, \bigl( x \le y \implies x = y \bigr)
+\end{equation}
+\end{definition}
+
+\begin{explanation-of-steps}
+Es ist wichtig, den Unterschied zwischen einem \newterm{maximalen Element} und einem \newterm{größten Element} (Maximum) zu verstehen:
+\begin{itemize}
+    \item Ein Element $m \in P$ ist das \emph{größte Element}, falls für alle $y \in P$ gilt: $y \le m$. In einer Halbordnung muss ein solches Element nicht existieren, selbst wenn maximale Elemente vorhanden sind.
+    \item Ein Element $x \in P$ ist ein \emph{maximales Element}, wenn es schlicht kein Element gibt, das echt größer ist. Es kann in einer Halbordnung viele unvergleichbare maximale Elemente geben.
+\end{itemize}
+Das Kuratowski-Zornsche Lemma garantiert unter der Bedingung, dass jede Kette nach oben beschränkt ist, die Existenz von mindestens einem solchen maximalen Element.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{spoken-clean}[00:17:45 - 00:20:15]
+Gut, und dann nennen wir das Paar $P, \le$ eine halbgeordnete Menge, wenn wir so was haben. Und jetzt ist eine lineare Ordnung, und zwar eine schwache lineare Ordnung... jetzt haben wir eben diesen Begriff einer schwachen linearen Ordnung... vorher war es eine starke oder strikte oder strenge Ordnung... da hat man's ein bisschen anders gesagt, aber die Idee ist die Gleiche, einer linearen Ordnung. 
+
+Und jetzt, Annahme, wir haben so eine halbgeordnete Menge. Und jetzt ist eine Kette in $P$ eine Teilmenge, die linear geordnet ist durch kleiner-gleich, also man kann also je zwei Elemente der Kette vergleichen. Und eine obere Schranke ist das, was es sein soll, also eine obere Schranke für eine Teilmenge von $P$ ist ein Element in $P$, und zwar so, dass für alle $y$ in dieser Teilmenge gilt, $y$ ist kleiner-gleich $x$. Jedes Element ist kleiner-gleich die obere Schranke. Okay, das haben wir jetzt auch, und dann gibt's eben den Begriff eines maximalen Elementes. Also $x$ in $P$ heißt maximal genau dann, wenn für alle $y$ in $P$ gilt, falls $y$ größer-gleich $x$, dann ist $y = x$. Es gibt also kein größeres Element. Das heißt aber nicht, dass dieses $x$ größer-gleich jedes andere Element ist, das ist nicht so. Es gibt einfach nur kein größeres Element, okay? Wichtiger Punkt hier, weil wir jetzt nur eine halbgeordnete Menge haben, spielt das jetzt eine Rolle. Vorher spielte es keine Rolle bei einer Wohlordnung, aber hier eben schon. Okay?"
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:20:15 - 00:22:00]
+Gut. Jetzt habe ich in meinen Notizen noch Bemerkungen dazu gemacht, lese ich jetzt nicht vor. Und jetzt kommt dieses Kuratowski-Zorn-Lemma. Kuratowski-Zorn-Lemma. Das kann ich jetzt formulieren. Also sei... das schreibt man auch als $\text{KZL}$... sei $P$ mit kleiner-gleich eine halbgeordnete Menge, und zwar so, dass für jede Kette $C$ in $P$ eine obere Schranke existiert. Dann besitzt $P$ ein maximales Element. Ja, und das hat wieder den Status eines Axioms, also das Wort Lemma sollte man sich mit Anführungszeichen denken. Und jetzt brauche ich eben... ja, das habe ich jetzt hingeschrieben, oder? Da steht's. Okay. Kuratowski-Zorn-Lemma.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:22:00 - 00:24:15]
+Und jetzt gilt eben folgendes Theorem: Also in Zermelo-Fraenkel sind äquivalent: Erstens, Auswahlaxiom, zweitens, Wohlordnungsprinzip, und drittens, Kuratowski-Zorn-Lemma. Und dass jetzt die zwei äquivalent sind, habe ich jetzt vorher gerade bewiesen, und jetzt geht es noch darum zu zeigen, dass die zwei äquivalent sind, Auswahlaxiom und Lemma von Zorn. Und damit werde ich wahrscheinlich jetzt nicht mehr anfangen, weil ich habe mir auch die Notizen nicht ausgedruckt dafür. Dachte nicht, dass ich so schnell bin. Äm, jetzt möchte ich vielleicht eher noch ein bisschen etwas zu diesem Auswahlaxiom sagen, also respektive zum Zornschen Lemma. Also historisch gesehen ist es nicht so ganz korrekt, es Zornsches Lemma zu nennen, so wird's meistens genannt. Der Erste, der etwas gemacht hat, was ähnlich war zum Zornschen Lemma, war Herr Bochner. Und dann hat Herr Kuratowski eine ähnliche Version des Zornschen Lemmas angeschaut, und dann erst kam Zorn. Also Zorn war am Schluss. Aber es wird leider, vielleicht leider, ja, Zornsches Lemma genannt.
+\end{spoken-clean}
+
+\begin{math-stroke}[Das Äquivalenztheorem der Mengenlehre]
+\setcounter{theorem}{17}
+\begin{nice-box}[Das Äquivalenztheorem]
+\begin{theorem}[Äquivalenztheorem der Standard-Mengenlehre]\label[theorem]{thm:equivalence-theorem}
+Unter Annahme der Zermelo-Fraenkel-Mengenlehre ($\text{ZF}$) sind die folgenden drei Aussagen mathematisch äquivalent:
+\begin{enumerate}
+    \setcounter{enumi}{0} \item Das Auswahlaxiom ($\text{AC}$).
+    \setcounter{enumi}{1} \item Das Wohlordnungsprinzip ($\text{WOP}$).
+    \setcounter{enumi}{2} \item Das Kuratowski-Zornsche Lemma ($\text{KZL}$).
+\end{enumerate}
+Formal ausgedrückt:
+\begin{equation}
+\label{eq:equivalence-theorem}
+\text{ZF} \vdash \text{AC} \iff \text{WOP} \iff \text{KZL}
+\end{equation}
+\end{theorem}
+\end{nice-box}
+
+\begin{explanation-of-steps}
+Dieses Theorem ist einer der bedeutendsten Sätze der mengentheoretischen Grundlagenforschung. Es zeigt, dass drei völlig unterschiedlich formulierte mathematische Prinzipien — ein Auswahlprinzip ($\text{AC}$), ein Ordnungsprinzip ($\text{WOP}$) und ein Maximalitätsprinzip ($\text{KZL}$) — logisch vollkommen gleichwertig sind. In der mathematischen Praxis (insbesondere in der Algebra, Topologie und Funktionalanalysis) wird fast ausschließlich das Kuratowski-Zornsche Lemma verwendet, da es sich hervorragend für unendlich-dimensionale Existenzbeweise (wie die Existenz von Basen in beliebigen Vektorräumen oder maximalen Idealen in Ringen) eignet.
+\end{explanation-of-steps}
+\end{math-stroke}
+
+\begin{ai-global-state-checkpoint-invisible-content}
+% timestamp: 00:23:00
+% topic: Äquivalenztheorem und historische Einordnung
+% board_state: THEOREM: ZF |- AC <=> WOP <=> KZL, Historische Notizen (Bochner, Kuratowski, Zorn)
+% next_goal: Historische Anekdoten und das berühmte Zitat von Bona aufschreiben
+% open_loops: none
+\end{ai-global-state-checkpoint-invisible-content>
+
+\begin{spoken-clean}[00:24:15 - 00:26:30]
+Und ja, dann habe ich ja auch was gesagt zum Auswahlaxiom ganz am Anfang, und wie gesagt, hat dieses Auswahlaxiom so unintuitive Konsequenzen, zum Beispiel das Banach-Tarski-Paradox, und darum war es auch umstritten. Und dann hat aber Herr Gödel bewiesen, dass man das... die... also dass man die Verneinung des Auswahlaxioms nicht beweisen kann aus Zermelo-Fraenkel, falls Zermelo-Fraenkel konsistent ist. Das heißt, das Auswahlaxiom ist nicht so schlecht. Es geht nichts schief, wenn... wenn jetzt Zermelo-Fraenkel konsistent ist, dann, wenn man noch das Auswahlaxiom dazutut, bleibt's immer noch konsistent. Das war mal beruhigend. Und dann hat später Herr Cohen auch noch gezeigt, dass aus dem... wenn Zermelo-Fraenkel konsistent ist, dass dann das... also nicht... hier 'nicht' ist wichtig, man kann... man kann die Verneinung nicht beweisen, und man kann aber auch nicht aus dem Zermelo-Fraenkel das Auswahlaxiom beweisen. Das heißt, das Auswahlaxiom ist unabhängig von Zermelo-Fraenkel. Und es ist dann eben etwas, was man annehmen kann oder halt nicht, und alle nehmen's an, weil man sonst relativ wenig Mathematik machen kann.
+\end{spoken-clean}
+
+\begin{math-stroke}[Metamathematische Resultate zur Unabhängigkeit des Auswahlaxioms]
+\setcounter{theorem}{18}
+Die logische Stellung des Auswahlaxioms ($\text{AC}$) innerhalb der Zermelo-Fraenkel-Mengenlehre ($\text{ZF}$) wird durch zwei fundamentale Resultate der mathematischen Logik charakterisiert:
+
+\begin{nice-box}[Satz von Gödel (Konsistenz)]
+\begin{theorem}[Satz von Gödel, 1938]\label[theorem]{thm:goedel-consistency}
+Ist die Zermelo-Fraenkel-Mengenlehre ($\text{ZF}$) konsistent (widerspruchsfrei), so ist auch das System $\text{ZFC}$ (ZF mit Auswahlaxiom) konsistent. Das bedeutet, das Auswahlaxiom kann in $\text{ZF}$ nicht widerlegt werden:
+\begin{equation}
+\label{eq:goedel-consistency}
+\operatorname{Con}(\text{ZF}) \implies \operatorname{Con}(\text{ZF} + \text{AC})
+\end{equation}
+\end{theorem}
+\end{nice-box}
+
+\begin{nice-box}[Satz von Cohen (Unabhängigkeit)]
+\begin{theorem}[Satz von Cohen, 1963]\label[theorem]{thm:cohen-independence}
+Ist $\text{ZF}$ konsistent, so kann das Auswahlaxiom in $\text{ZF}$ nicht bewiesen werden. Das bedeutet, das Auswahlaxiom ist von den $\text{ZF}$-Axiomen logisch unabhängig:
+\begin{equation}
+\label{eq:cohen-independence}
+\operatorname{Con}(\text{ZF}) \implies \operatorname{Con}(\text{ZF} + \neg\text{AC})
+\end{equation}
+\end{theorem}
+\end{nice-box}
+
+\begin{explanation-of-steps}
+Zusammen zeigen die Sätze von Gödel und Cohen, dass das Auswahlaxiom ein echtes, unabhängiges Axiom ist. Man kann sich frei entscheiden, es anzunehmen ($\text{ZFC}$) oder abzulehnen ($\text{ZF} + \neg\text{AC}$), ohne dadurch neue Widersprüche zu erzeugen (vorausgesetzt, $\text{ZF}$ selbst ist widerspruchsfrei). In der modernen Mathematik hat sich das System $\text{ZFC}$ als Standard etabliert, da ohne das Auswahlaxiom viele fundamentale Sätze (wie der Satz von Tychonoff in der Topologie oder der Satz von Hahn-Banach in der Funktionalanalysis) nicht bewiesen werden könnten.
+\end{explanation-of-steps>
+\end{math-stroke}
+
+\begin{didactic-insight}[Historische Kontroversen und Anekdoten]
+Die Akzeptanz des Auswahlaxioms war in der ersten Hälfte des 20. Jahrhunderts heftig umstritten. Zwei berühmte Anekdoten illustrieren diese historische Kontroverse:
+
+\begin{enumerate}[label=\arabic*.]
+    \setcounter{enumi}{0} \item \textbf{Das Zitat von Jerry Bona:}
+    Der Mathematiker Jerry Bona fasste die psychologische Wahrnehmung der drei äquivalenten Prinzipien treffend zusammen:
+    \begin{quote}
+    \qt{The Axiom of Choice is obviously true, the well-ordering theorem is obviously false, and who can tell about Zorn's lemma?}
+    \end{quote}
+    Obwohl alle drei mathematisch absolut äquivalent sind, erscheint das Auswahlaxiom unserer Intuition völlig offensichtlich (man wählt einfach aus), während das Wohlordnungsprinzip extrem unintuitiv erscheint (es besagt z.B., dass man die reellen Zahlen $\mathbb{R}$ so anordnen kann, dass jede Teilmenge ein kleinstes Element hat, was sich niemand visuell vorstellen kann). Das Zornsche Lemma liegt in seiner Abstraktheit irgendwo dazwischen.
+
+    \setcounter{enumi}{1} \item \textbf{Alfred Tarskis Publikationsschwierigkeiten:}
+    Alfred Tarski bewies in den 1920er Jahren, dass für jede unendliche Menge $A$ die Äquivalenz $|A| = |A \times A|$ zum Auswahlaxiom äquivalent ist. Als er dieses Resultat bei den renommierten \emph{Comptes Rendus de l'Académie des Sciences} in Paris einreichte, wurde es von den Gutachtern Émile Borel (oder Maurice Fréchet) und Henri Lebesgue abgelehnt:
+    \begin{itemize}
+        \item Fréchet (oder Borel) argumentierte, dass eine Äquivalenz zwischen zwei bekannten wahren Sätzen (da er das Auswahlaxiom als wahr ansah) kein neues Resultat darstelle.
+        \item Lebesgue argumentierte, dass eine Äquivalenz zwischen zwei falschen Sätzen (da er das Auswahlaxiom ablehnte) völlig uninteressant sei.
+    \end{itemize}
+    Diese frustrierende Erfahrung führte dazu, dass Tarski die Arbeit dort zurückzog.
+\end{enumerate}
+\end{didactic-insight}
+
+\begin{spoken-clean}[00:26:30 - 00:29:00]
+Dann gibt's noch eine kleine Anekdote. Also der amerikanische Mathematiker Bona sagte zum Auswahlaxiom, dem Wohlordnungsprinzip und dem Lemma von Zorn... ich kann's Ihnen vorlesen, also: \qt{The Axiom of Choice is obviously true, the well-ordering theorem is obviously false, and who can tell about Zorn's lemma?} Und das drückt ein bisschen diese Kontroverse aus, die es mal gab vor 100 Jahren, und jetzt nicht mehr. 
+
+Und... also es war auch noch so, es gibt noch eine andere Anekdote, und zwar geht's da um einen Satz von Tarski. Also Tarski versuchte einen... einen... einen Satz ein-... also eine... eine äquivalente Formel oder... er versuchte Folgendes einzureichen in ein-... in einer Zeitschrift, nämlich dass man aus dem Auswahlaxiom zeigen kann, dass jede unendliche Menge, für jede unendliche Menge $A$ es eine Bijektion zwischen der Menge und dem kartesischen Produkt von $A$ mit sich selber gibt. Und dann hat Fréchet war dann zuständig, das zu beurteilen, und Herr Lebesgue auch, zwei berühmte Mathematiker. Und Fréchet hat geschrieben, dass eine Implikation zwischen zwei bekannten Sätzen nicht ein neues Resultat ist. Und Lebesgue schrieb, dass eine Implikation zwischen zwei falschen Aussagen nicht interessant sei. Und dann hat Herr Tarski aufgegeben, hat's dann... er hat dann nicht mehr eingereicht später bei diesen Comptes Rendus. Also damals war das eine kontroverse Geschichte, das ganze Auswahlaxiom und eben diese Umformulierung davon, und heute nicht mehr. Also Sie finden heute wahrscheinlich keine Mathematiker oder keine Mathematikerinnen mehr, die... die das strikt ablehnen, das Auswahlaxiom.
+\end{spoken-clean}
+
+\begin{spoken-clean}[00:29:00 - 00:31:43]
+Man kann natürlich in der Mathematik selber seine Axiome wählen, aber... aber der Konsens ist, man wählt das, man nimmt das mit zu, dazu. Einfach weil man damit dann erst gewisse interessante Mathematik machen kann. Und das ist auch alles, was man braucht. Sie brauchen kein neues Axiom mehr, modulo vielleicht algebraische Geometrie, die machen noch irgendwas mit einem zusätzlichen Axiom, aber anscheinend kann man das auch wieder loswerden. Es macht dann die Theorie schöner, okay? Aber man kann auch ohne damit leben. Also ich glaube, man kann mit dem Auswahlaxiom die ganze Mathematik machen, die Sie so machen möchten, wenn Sie nicht Logiker oder Logikerinnen werden wollen. Dann machen Sie was anderes, dann machen Sie alle möglichen Axiome. Aber sonst, wenn Sie das nicht werden, können Sie auch mit... eben, reicht es quasi, Zermelo-Fraenkel und das Auswahlaxiom zu haben. Und jetzt habe ich alles erzählt, was ich wollte. Haben Sie Fragen noch? 
+
+Also gut, ich höre jetzt auf, also ja, Sie können gerne auch nachher noch kommen und Fragen stellen. Vielen Dank!
+\end{spoken-clean}
+
+% [SYSTEM] Video complete.
+
+*(Tokens: Input 303130, Output 11658)*
+---

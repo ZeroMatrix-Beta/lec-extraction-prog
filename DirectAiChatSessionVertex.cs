@@ -22,537 +22,537 @@ namespace DirectChatAiInteraction.Vertex;
 /// [Human] Der Manager für Chat-Sitzungen, die über Google Cloud Vertex AI laufen. Getrennt vom normalen AI Studio, da es eigene Abrechnungs- und Zugriffsregeln hat.
 /// </summary>
 public class DirectAiChatSessionVertex {
-  private readonly string UploadFolderPath;
-  private readonly string[] HistoryPreloadPaths;
-  private string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
-  private readonly string GcsBucketName;
-  private readonly string LogFolderPath;
-  private readonly string SystemInstructionPath;
-  private string? _systemInstructionText; // Stores the content of the system instruction file
-  private DirectAiChatSessionVertexAIConfig AIParams; // Localized generation parameters for the current session
-  private readonly AttachmentHandler _attachmentHandler;
-  private readonly SessionLogger _sessionLogger;
-  private readonly Client _client;
-  private int _sessionTotalInputTokens = 0;
-  private int _sessionTotalOutputTokens = 0;
+    private readonly string UploadFolderPath;
+    private readonly string[] HistoryPreloadPaths;
+    private readonly string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
+    private readonly string GcsBucketName;
+    private readonly string LogFolderPath;
+    private readonly string SystemInstructionPath;
+    private string? _systemInstructionText; // Stores the content of the system instruction file
+    private readonly DirectAiChatSessionVertexAIConfig AIParams; // Localized generation parameters for the current session
+    private readonly AttachmentHandler _attachmentHandler;
+    private readonly SessionLogger _sessionLogger;
+    private readonly Client _client;
+    private int _sessionTotalInputTokens = 0;
+    private int _sessionTotalOutputTokens = 0;
 
-  // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
-  public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentHandler attachmentHandler) {
-    _client = client;
-    _sessionLogger = logger;
-    _attachmentHandler = attachmentHandler;
-    UploadFolderPath = config.UploadFolder;
-    HistoryPreloadPaths = config.HistoryPreloadPaths;
-    LogFolderPath = config.LogFolder;
-    GcsBucketName = config.GcsBucketName; // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
-    SystemInstructionPath = config.SystemInstructionPath;
+    // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
+    public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentHandler attachmentHandler) {
+        _client = client;
+        _sessionLogger = logger;
+        _attachmentHandler = attachmentHandler;
+        UploadFolderPath = config.UploadFolder;
+        HistoryPreloadPaths = config.HistoryPreloadPaths;
+        LogFolderPath = config.LogFolder;
+        GcsBucketName = config.GcsBucketName; // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
+        SystemInstructionPath = config.SystemInstructionPath;
 
-    AIParams = new DirectAiChatSessionVertexAIConfig {
-      Temperature = config.AI.Temperature,
-      TopP = config.AI.TopP,
-      TopK = config.AI.TopK,
-      MaxOutputTokens = config.AI.MaxOutputTokens
-    };
-  }
-
-  /// <summary>
-  /// [AI Context] Asynchronous entry point for the Vertex session. Initializes clients and enforces rigorous bucket cleanup.
-  /// [Human] Startet die Vertex-Session, verbindet sich mit Google Cloud und stellt sicher, dass der GCS Bucket für Datei-Uploads komplett leer ist.
-  /// </summary>
-  public async Task StartAsync() {
-    while (true) {
-      string selectedModel = SelectModel();
-      if (selectedModel == "__EXIT__") return;
-
-      WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
-
-      // ALWAYS clean up the bucket completely before starting a session (crash recovery)
-      await ForcePurgeGcsBucketAsync();
-
-      _sessionLogger.InitializeSession();
-
-      bool loadedSysPrompt = false;
-      string sysPromptChoice = PromptWithCommands($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
-      if (sysPromptChoice == "__EXIT__") return;
-
-      if (sysPromptChoice.Trim().ToLower() == "j") {
-        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
-          _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-          WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
-          loadedSysPrompt = true;
-        }
-        else {
-          WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
-        }
-      }
-      else {
-        WriteLine("  [INFO] System Instruction wird ignoriert.");
-      }
-
-      string? initialInput = GetInitialHistoryCommand(selectedModel);
-      if (initialInput == "__EXIT__") return;
-
-      bool loadedHistory = initialInput != null;
-
-      _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
-      await _sessionLogger.LogSessionSetupAsync();
-
-      await RunChatSessionAsync(selectedModel, initialInput);
-      break; // Session beendet, zurück zu Program.cs
-    }
-  }
-
-  /// <summary>
-  /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
-  /// RULE: If you add, modify, or remove a model in the switch expression below, you MUST synchronously update the WriteLine menu text here!
-  /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
-  /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
-  /// </summary>
-  private string SelectModel() {
-    WriteLine("\n=== Model Selection (Vertex AI) ===");
-    WriteLine("Wähle ein Modell:");
-    WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
-    WriteLine("                                  || Output: $1.50 (<== Claimed to be the most cost-efficient, optimized)");
-    WriteLine(" 2) gemini-3-flash-preview        || Input:  $0.50 (text / image / video), $1.00 (audio)");
-    WriteLine("                                  || Output: $3.0");
-    WriteLine(" 3) gemini-3.1-pro-preview        || Input:  $2.00, prompts <= 200k tokens, $4.00, prompts > 200k tokens");
-    WriteLine("                                  || Output: $12.00, prompts <= 200k tokens, $18.00, prompts > 200k");
-    WriteLine(" 4) gemini-2.5-flash              || Input:  $0.30  (text / image / video) $1.00 (audio). ");
-    WriteLine("                                  || Output: $2.50");
-    WriteLine(" 5) gemini-2.5-flash-lite         || Input:  $0.10  (text / image / video). ");
-    WriteLine("                                  || Output: $0.40");
-    WriteLine(" 6) gemini-2.5-pro                || Input:  $1.25, prompts <= 200k tokens, $2.50, prompts > 200k tokens.");
-    WriteLine("                                  || Output: $10.00, prompts <= 200k tokens $15.00, prompts > 200k");
-    WriteLine(" 7) gemma-3-27b-it                || (Open Model, 27B Parameter)");
-    WriteLine(" 8) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
-    WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
-    WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
-    WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
-    WriteLine("12) gemini-3.5-flash"); // Added Gemini 3.5 Flash
-
-    string choice = PromptWithCommands("Auswahl (1-12) [Standard: 4]: ");
-    if (choice == "__EXIT__") return choice;
-
-    return choice switch {
-      "1" => "gemini-3.1-flash-lite-preview",
-      "2" => "gemini-3-flash-preview",
-      "3" => "gemini-3.1-pro-preview",
-      "4" => "gemini-2.5-flash",
-      "5" => "gemini-2.5-flash-lite",
-      "6" => "gemini-2.5-pro",
-      "7" => "gemma-3-27b-it",
-      "8" => "gemini-1.5-flash",
-      "9" => "gemini-1.5-pro",
-      "10" => "gemini-robotics-er-1.5-preview",
-      "11" => "gemini-robotics-er-1.6-preview",
-      "12" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
-      _ => "gemini-2.5-flash"
-    };
-  }
-
-  /// <summary>
-  /// [AI Context] Main REPL loop for Vertex. Manages state, handles commands, and invokes streaming responses.
-  /// [Human] Hauptschleife für den Vertex-Chat. Nimmt Eingaben entgegen und verarbeitet sie fortlaufend.
-  /// </summary>
-  private async Task RunChatSessionAsync(string selectedModel, string? initialInput) {
-    var history = new List<Content>();
-    var initialHistory = new List<Content>(history);
-    string userName = "Vertex AI User";
-
-    WriteLine($"\n--- Vertex Chat gestartet ({selectedModel}) ---");
-    ShowCommands();
-
-    while (true) {
-      string? input;
-      if (initialInput != null) {
-        input = initialInput;
-        WriteLine($"\n{userName}: {input}");
-        initialInput = null;
-      }
-      else {
-        Write($"\n{userName}: ");
-        input = ReadLine();
-      }
-
-      if (string.IsNullOrWhiteSpace(input)) continue;
-      if (input.ToLower() == "exit" || input.ToLower() == "quit") break;
-
-      var parts = new List<Part>();
-      string promptText = input;
-
-      bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt);
-
-      if (isCommandHandled) {
-        if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
-        if (parts.Count == 0) continue;
-      }
-
-      if (!string.IsNullOrWhiteSpace(promptText)) parts.Add(new Part { Text = promptText });
-      else if (parts.Count == 0) continue;
-
-      history.Add(new Content { Role = "user", Parts = parts });
-
-      try {
-        await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
-      }
-      catch (Exception ex) {
-        WriteLine($"\n[Vertex Error]: {ex.Message}");
-
-        if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
-          WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut!");
-        }
-        else {
-          WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
-        }
-
-        if (history.Any() && history.Last().Role == "user") {
-          history.RemoveAt(history.Count - 1);
-        }
-      }
+        AIParams = new DirectAiChatSessionVertexAIConfig {
+            Temperature = config.AI.Temperature,
+            TopP = config.AI.TopP,
+            TopK = config.AI.TopK,
+            MaxOutputTokens = config.AI.MaxOutputTokens
+        };
     }
 
-    WriteLine("\n[INFO] Chat beendet. Räume GCS Bucket komplett auf...");
+    /// <summary>
+    /// [AI Context] Asynchronous entry point for the Vertex session. Initializes clients and enforces rigorous bucket cleanup.
+    /// [Human] Startet die Vertex-Session, verbindet sich mit Google Cloud und stellt sicher, dass der GCS Bucket für Datei-Uploads komplett leer ist.
+    /// </summary>
+    public async Task StartAsync() {
+        while (true) {
+            string selectedModel = SelectModel();
+            if (selectedModel == "__EXIT__") return;
 
-    // ALWAYS clean up the bucket at the end of the session to save costs.
-    await ForcePurgeGcsBucketAsync();
-  }
+            WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
 
-  private string PromptWithCommands(string promptMessage) {
-    while (true) {
-      Write(promptMessage);
-      string? input = ReadLine()?.Trim();
-      if (string.IsNullOrWhiteSpace(input)) continue;
+            // ALWAYS clean up the bucket completely before starting a session (crash recovery)
+            await ForcePurgeGcsBucketAsync();
 
-      string normalizedInput = input.TrimStart('/');
-      if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
-        return "__EXIT__";
-      }
+            _sessionLogger.InitializeSession();
 
-      // Placeholder for future setup-time commands in Vertex mode
-      // if (input.StartsWith("some-vertex-command")) { ...; continue; }
+            bool loadedSysPrompt = false;
+            string sysPromptChoice = PromptWithCommands($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+            if (sysPromptChoice == "__EXIT__") return;
 
-      return input; // Return the non-command input
-    }
-  }
-
-  private void ShowCommands() {
-    WriteLine("\nBefehle:");
-    WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
-    WriteLine("  exit / quit               -> Beendet den Chat");
-    WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-    WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
-    WriteLine("  set temp [wert]           -> Ändert die Temperatur dynamisch");
-    WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch");
-    WriteLine("  set thinking-budget [wert]  -> Setzt das Thinking Budget für Gemini 2.5 Modelle (z.B. 4096)");
-    WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
-  }
-
-  /// <summary>
-  /// [AI Context] Intercepts and executes local REPL commands (e.g., /clear, /set temp) to avoid sending them as prompts to the AI.
-  /// [Human] Fängt spezielle Befehle ab, bevor sie an die KI geschickt werden (z.B. zum Löschen der Historie).
-  /// </summary>
-  private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText) {
-    string normalizedInput = input.TrimStart('/');
-
-    if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-      ShowCommands();
-      return true;
-    }
-
-    if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
-      history.Clear();
-      history.AddRange(initialHistory);
-      WriteLine("\n[INFO] Gedächtnis gelöscht! Vertex Modell startet frisch.");
-      return true;
-    }
-
-    if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
-      string tempValueStr = normalizedInput.Substring(9).Trim();
-      if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
-        AIParams.Temperature = newTemp;
-        WriteLine($"[INFO] Temperatur auf {AIParams.Temperature:F1} gesetzt.");
-      }
-      return true;
-    }
-
-    if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
-      string tokenValueStr = normalizedInput.Substring(11).Trim();
-      if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
-        AIParams.MaxOutputTokens = newTokens;
-        WriteLine($"[INFO] MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
-      }
-      return true;
-    }
-
-    if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
-      string budgetValueStr = normalizedInput.Substring(18).Trim();
-      if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
-        AIParams.ThinkingBudget = newBudget;
-        WriteLine($"[INFO] ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
-      }
-      else {
-        WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
-      }
-      return true;
-    }
-
-    if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
-      string levelValueStr = normalizedInput.Substring(17).Trim().ToUpper();
-      var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
-      if (validLevels.Contains(levelValueStr)) {
-        AIParams.ThinkingLevel = levelValueStr;
-        WriteLine($"[INFO] ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
-      }
-      else {
-        WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
-      }
-      return true;
-    }
-
-    if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
-      var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput);
-
-      if (!success) return true;
-
-      parts.AddRange(attachmentParts);
-      updatePromptText(parsedPrompt);
-      return true;
-    }
-
-    return false;
-  }
-
-  /// <summary>
-  /// [AI Context] Streams the response from Vertex AI back to the console and logs the output tokens.
-  /// [Human] Holt sich die Antwort Stück für Stück von der Vertex API und schreibt sie flüssig in die Konsole.
-  /// </summary>
-  private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
-    Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
-    string fullResponse = "";
-
-    int inputTokens = 0;
-    int outputTokens = 0;
-
-    var config = new GenerateContentConfig {
-      Temperature = AIParams.Temperature,
-      TopP = AIParams.TopP,
-      TopK = AIParams.TopK,
-      MaxOutputTokens = AIParams.MaxOutputTokens
-    };
-
-    // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models
-    // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-    // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-    if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-      if (AIParams.ThinkingBudget.HasValue) {
-        int budget = AIParams.ThinkingBudget.Value;
-        if (budget > 32768) budget = 32768;
-        config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-      }
-    }
-
-    var apiContents = history; // By default, use the original history
-
-    if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
-      config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
-      // Gemma models (pre-v4) don't support the 'system' role.
-      // We prepend the instruction to the first user message instead.
-      if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4")) {
-        bool isFirstTurn = !history.Any(c => c.Role == "model");
-        if (isFirstTurn) {
-          var modifiedHistory = new List<Content>();
-          bool prepended = false;
-          foreach (var content in history) {
-            if (!prepended && content.Role == "user") {
-              var newParts = content.Parts?.ToList() ?? new List<Part>();
-              newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
-              modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
-              prepended = true;
+            if (sysPromptChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase)) {
+                if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+                    _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+                    WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                    loadedSysPrompt = true;
+                }
+                else {
+                    WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+                }
             }
             else {
-              modifiedHistory.Add(content);
+                WriteLine("  [INFO] System Instruction wird ignoriert.");
             }
-          }
-          apiContents = modifiedHistory;
-          config.SystemInstruction = null;
+
+            string? initialInput = GetInitialHistoryCommand(selectedModel);
+            if (initialInput == "__EXIT__") return;
+
+            bool loadedHistory = initialInput != null;
+
+            _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
+            await _sessionLogger.LogSessionSetupAsync();
+
+            await RunChatSessionAsync(selectedModel, initialInput);
+            break; // Session beendet, zurück zu Program.cs
         }
-      }
-      else {
-        config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
-      }
     }
 
-    bool exceptionCaught = false;
-    using var cts = new CancellationTokenSource();
-    ConsoleCancelEventHandler cancelHandler = (sender, e) => {
-      e.Cancel = true; // Verhindert das harte Beenden
-      try { cts.Cancel(); } catch { }
-    };
-    Console.CancelKeyPress += cancelHandler;
+    /// <summary>
+    /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
+    /// RULE: If you add, modify, or remove a model in the switch expression below, you MUST synchronously update the WriteLine menu text here!
+    /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
+    /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
+    /// </summary>
+    private string SelectModel() {
+        WriteLine("\n=== Model Selection (Vertex AI) ===");
+        WriteLine("Wähle ein Modell:");
+        WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
+        WriteLine("                                  || Output: $1.50 (<== Claimed to be the most cost-efficient, optimized)");
+        WriteLine(" 2) gemini-3-flash-preview        || Input:  $0.50 (text / image / video), $1.00 (audio)");
+        WriteLine("                                  || Output: $3.0");
+        WriteLine(" 3) gemini-3.1-pro-preview        || Input:  $2.00, prompts <= 200k tokens, $4.00, prompts > 200k tokens");
+        WriteLine("                                  || Output: $12.00, prompts <= 200k tokens, $18.00, prompts > 200k");
+        WriteLine(" 4) gemini-2.5-flash              || Input:  $0.30  (text / image / video) $1.00 (audio). ");
+        WriteLine("                                  || Output: $2.50");
+        WriteLine(" 5) gemini-2.5-flash-lite         || Input:  $0.10  (text / image / video). ");
+        WriteLine("                                  || Output: $0.40");
+        WriteLine(" 6) gemini-2.5-pro                || Input:  $1.25, prompts <= 200k tokens, $2.50, prompts > 200k tokens.");
+        WriteLine("                                  || Output: $10.00, prompts <= 200k tokens $15.00, prompts > 200k");
+        WriteLine(" 7) gemma-3-27b-it                || (Open Model, 27B Parameter)");
+        WriteLine(" 8) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
+        WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
+        WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
+        WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
+        WriteLine("12) gemini-3.5-flash"); // Added Gemini 3.5 Flash
 
-    bool isGenerating = true;
-    var inputInterceptorTask = Task.Run(async () => {
-      while (isGenerating) {
-        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
-          while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-          WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
-        }
-        await Task.Delay(100);
-      }
-    });
+        string choice = PromptWithCommands("Auswahl (1-12) [Standard: 4]: ");
+        if (choice == "__EXIT__") return choice;
 
-    try {
-      bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
-          streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
-          onChunkReceived: async (chunk) => {
-            string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-            Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
-            fullResponse += chunkText;
+        return choice switch {
+            "1" => "gemini-3.1-flash-lite-preview",
+            "2" => "gemini-3-flash-preview",
+            "3" => "gemini-3.1-pro-preview",
+            "4" => "gemini-2.5-flash",
+            "5" => "gemini-2.5-flash-lite",
+            "6" => "gemini-2.5-pro",
+            "7" => "gemma-3-27b-it",
+            "8" => "gemini-1.5-flash",
+            "9" => "gemini-1.5-pro",
+            "10" => "gemini-robotics-er-1.5-preview",
+            "11" => "gemini-robotics-er-1.6-preview",
+            "12" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
+            _ => "gemini-2.5-flash"
+        };
+    }
 
-            if (chunk.UsageMetadata != null) {
-              if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-              if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+    /// <summary>
+    /// [AI Context] Main REPL loop for Vertex. Manages state, handles commands, and invokes streaming responses.
+    /// [Human] Hauptschleife für den Vertex-Chat. Nimmt Eingaben entgegen und verarbeitet sie fortlaufend.
+    /// </summary>
+    private async Task RunChatSessionAsync(string selectedModel, string? initialInput) {
+        var history = new List<Content>();
+        var initialHistory = new List<Content>(history);
+        string userName = "Vertex AI User";
+
+        WriteLine($"\n--- Vertex Chat gestartet ({selectedModel}) ---");
+        ShowCommands();
+
+        while (true) {
+            string? input;
+            if (initialInput != null) {
+                input = initialInput;
+                WriteLine($"\n{userName}: {input}");
+                initialInput = null;
             }
-            await Task.CompletedTask;
-          },
-          cancellationToken: cts.Token,
-          maxRetries: 5,
-          retryContext: "Chat-Antwort"
-      );
-      if (!success) exceptionCaught = true;
-    }
-    catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
-      exceptionCaught = true;
-    }
-    finally {
-      isGenerating = false;
-      await inputInterceptorTask;
-      Console.CancelKeyPress -= cancelHandler;
+            else {
+                Write($"\n{userName}: ");
+                input = ReadLine();
+            }
 
-      if (inputTokens > 0 || outputTokens > 0) {
-        _sessionTotalInputTokens += inputTokens;
-        _sessionTotalOutputTokens += outputTokens;
-        WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
-        WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
-      }
+            if (string.IsNullOrWhiteSpace(input)) continue;
+            if (input.Equals("exit", StringComparison.CurrentCultureIgnoreCase) || input.Equals("quit", StringComparison.CurrentCultureIgnoreCase)) break;
 
-      if (exceptionCaught || cts.IsCancellationRequested) {
-        WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
-      }
-      else {
-        WriteLine();
-      }
-    }
+            var parts = new List<Part>();
+            string promptText = input;
 
-    if (!string.IsNullOrWhiteSpace(fullResponse)) {
-      history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
-      await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
-    }
-    else {
-      history.RemoveAt(history.Count - 1);
-    }
-  }
+            bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt);
 
-  /// <summary>
-  /// [AI Context] Scans history directories to automatically append context to the beginning of the chat session.
-  /// [Human] Sucht nach alten Chat-Verläufen, um sie gleich beim Start als Erinnerung für das Modell hochzuladen.
-  /// </summary>
-  private string? GetInitialHistoryCommand(string selectedModel) {
-    if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
-      return null;
-    }
+            if (isCommandHandled) {
+                if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
+                if (parts.Count == 0) continue;
+            }
 
-    var allHistoryFiles = new List<string>();
-    var notFoundPaths = new List<string>();
+            if (!string.IsNullOrWhiteSpace(promptText)) parts.Add(new Part { Text = promptText });
+            else if (parts.Count == 0) continue;
 
-    foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p))) {
-      if (System.IO.File.Exists(path)) {
-        allHistoryFiles.Add(Path.GetFullPath(path));
-      }
-      else if (Directory.Exists(path)) {
-        allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
-      }
-      else {
-        notFoundPaths.Add(path);
-      }
+            history.Add(new Content { Role = "user", Parts = parts });
+
+            try {
+                await StreamGeminiResponseAsync(selectedModel, history, input, promptText, userName);
+            }
+            catch (Exception ex) {
+                WriteLine($"\n[Vertex Error]: {ex.Message}");
+
+                if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
+                    WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut!");
+                }
+                else {
+                    WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+                }
+
+                if (history.Any() && history.Last().Role == "user") {
+                    history.RemoveAt(history.Count - 1);
+                }
+            }
+        }
+
+        WriteLine("\n[INFO] Chat beendet. Räume GCS Bucket komplett auf...");
+
+        // ALWAYS clean up the bucket at the end of the session to save costs.
+        await ForcePurgeGcsBucketAsync();
     }
 
-    if (notFoundPaths.Any()) {
-      WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
-      foreach (var path in notFoundPaths) {
-        WriteLine($"  - {path}");
-      }
+    private static string PromptWithCommands(string promptMessage) {
+        while (true) {
+            Write(promptMessage);
+            string? input = ReadLine()?.Trim();
+            if (string.IsNullOrWhiteSpace(input)) continue;
+
+            string normalizedInput = input.TrimStart('/');
+            if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
+                return "__EXIT__";
+            }
+
+            // Placeholder for future setup-time commands in Vertex mode
+            // if (input.StartsWith("some-vertex-command")) { ...; continue; }
+
+            return input; // Return the non-command input
+        }
     }
 
-    var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-    // Verhindert, dass die System Instruction versehentlich als History geladen wird
-    if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
-      distinctFiles = distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToList();
+    private static void ShowCommands() {
+        WriteLine("\nBefehle:");
+        WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
+        WriteLine("  exit / quit               -> Beendet den Chat");
+        WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+        WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
+        WriteLine("  set temp [wert]           -> Ändert die Temperatur dynamisch");
+        WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch");
+        WriteLine("  set thinking-budget [wert]  -> Setzt das Thinking Budget für Gemini 2.5 Modelle (z.B. 4096)");
+        WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
     }
 
-    if (distinctFiles.Count == 0) return null;
+    /// <summary>
+    /// [AI Context] Intercepts and executes local REPL commands (e.g., /clear, /set temp) to avoid sending them as prompts to the AI.
+    /// [Human] Fängt spezielle Befehle ab, bevor sie an die KI geschickt werden (z.B. zum Löschen der Historie).
+    /// </summary>
+    private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText) {
+        string normalizedInput = input.TrimStart('/');
 
-    WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-    ExtractionHelpers.PrintFileTree(distinctFiles);
+        if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
+            ShowCommands();
+            return true;
+        }
 
-    string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
-    if (historyChoice == "__EXIT__") return historyChoice;
+        if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
+            history.Clear();
+            history.AddRange(initialHistory);
+            WriteLine("\n[INFO] Gedächtnis gelöscht! Vertex Modell startet frisch.");
+            return true;
+        }
 
-    bool loadHistory = historyChoice.Trim().ToLower() == "j";
+        if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
+            string tempValueStr = normalizedInput[9..].Trim();
+            if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
+                AIParams.Temperature = newTemp;
+                WriteLine($"[INFO] Temperatur auf {AIParams.Temperature:F1} gesetzt.");
+            }
+            return true;
+        }
 
-    if (!loadHistory) return null;
+        if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
+            string tokenValueStr = normalizedInput[11..].Trim();
+            if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
+                AIParams.MaxOutputTokens = newTokens;
+                WriteLine($"[INFO] MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
+            }
+            return true;
+        }
 
-    string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-    return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
-  }
+        if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
+            string budgetValueStr = normalizedInput[18..].Trim();
+            if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
+                AIParams.ThinkingBudget = newBudget;
+                WriteLine($"[INFO] ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
+            }
+            else {
+                WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
+            }
+            return true;
+        }
 
-  /// <summary>
-  /// [AI Context] Deep cleans the assigned Vertex AI Bucket. Crucial for managing storage costs and cleaning up crashed sessions.
-  /// [Human] Löscht radikal alle Dateien aus dem Cloud Bucket. Das ist bei Vertex besonders wichtig, um horrende Speicherkosten zu vermeiden!
-  /// </summary>
-  private async Task ForcePurgeGcsBucketAsync() {
-    if (string.IsNullOrWhiteSpace(GcsBucketName)) return;
+        if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
+            string levelValueStr = normalizedInput[17..].Trim().ToUpper();
+            var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
+            if (validLevels.Contains(levelValueStr)) {
+                AIParams.ThinkingLevel = levelValueStr;
+                WriteLine($"[INFO] ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
+            }
+            else {
+                WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
+            }
+            return true;
+        }
 
-    try {
-      // StorageClient utilizes Application Default Credentials
-      var storageClient = await StorageClient.CreateAsync();
-      WriteLine($"  [GCS] Verifying Bucket '{GcsBucketName}' and purging ALL files...");
+        if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
+            var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput);
 
-      var objects = storageClient.ListObjectsAsync(GcsBucketName);
-      int count = 0;
+            if (!success) return true;
 
-      await foreach (var obj in objects) {
-        await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
-        count++;
-      }
+            parts.AddRange(attachmentParts);
+            updatePromptText(parsedPrompt);
+            return true;
+        }
 
-      if (count > 0) {
-        WriteLine($"  [GCS] Successfully deleted {count} file(s) to secure billing.");
-      }
-      else {
-        WriteLine($"  [GCS] Bucket is already empty.");
-      }
+        return false;
     }
-    catch (Exception ex) {
-      WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-      WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-      WriteLine($"\n  --- GCS ERROR DUMP ---");
-      WriteLine($"{ex}");
-      WriteLine($"  ----------------------\n");
+    /// <summary>
+    /// [AI Context] Streams the response from Vertex AI back to the console and logs the output tokens.
+    /// [Human] Holt sich die Antwort Stück für Stück von der Vertex API und schreibt sie flüssig in die Konsole.
+    /// </summary>
+    private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
+        Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
+        string fullResponse = "";
 
-      if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
-          ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
-          ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
-        WriteLine($"  [GCS ERROR] Netzwerkfehler beim Zugriff auf '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
-      }
-      else if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase)) {
-        WriteLine($"  [GCS ERROR] Zugriff auf Bucket '{GcsBucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}");
-      }
-      else {
-        WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
-      }
+        int inputTokens = 0;
+        int outputTokens = 0;
+
+        var config = new GenerateContentConfig {
+            Temperature = AIParams.Temperature,
+            TopP = AIParams.TopP,
+            TopK = AIParams.TopK,
+            MaxOutputTokens = AIParams.MaxOutputTokens
+        };
+
+        // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models
+        // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
+        // If this functionality is intended, please check for SDK updates or alternative configuration methods.
+        if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
+            if (AIParams.ThinkingBudget.HasValue) {
+                int budget = AIParams.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
+            }
+        }
+
+        var apiContents = history; // By default, use the original history
+
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
+            config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };
+            // Gemma models (pre-v4) don't support the 'system' role.
+            // We prepend the instruction to the first user message instead.
+            if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4")) {
+                bool isFirstTurn = !history.Any(c => c.Role == "model");
+                if (isFirstTurn) {
+                    var modifiedHistory = new List<Content>();
+                    bool prepended = false;
+                    foreach (var content in history) {
+                        if (!prepended && content.Role == "user") {
+                            var newParts = content.Parts?.ToList() ?? [];
+                            newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
+                            modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
+                            prepended = true;
+                        }
+                        else {
+                            modifiedHistory.Add(content);
+                        }
+                    }
+                    apiContents = modifiedHistory;
+                    config.SystemInstruction = null;
+                }
+            }
+            else {
+                config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };
+            }
+        }
+
+        bool exceptionCaught = false;
+        using var cts = new CancellationTokenSource();
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
+            e.Cancel = true; // Verhindert das harte Beenden
+            try { cts.Cancel(); } catch { }
+        }
+        Console.CancelKeyPress += cancelHandler;
+
+        bool isGenerating = true;
+        var inputInterceptorTask = Task.Run(async () => {
+            while (isGenerating) {
+                if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+                    while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+                    WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
+                }
+                await Task.Delay(100);
+            }
+        });
+
+        try {
+            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+                streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
+                onChunkReceived: async (chunk) => {
+                    string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                    Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
+                    fullResponse += chunkText;
+
+                    if (chunk.UsageMetadata != null) {
+                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                    }
+                    await Task.CompletedTask;
+                },
+                cancellationToken: cts.Token,
+                maxRetries: 5,
+                retryContext: "Chat-Antwort"
+            );
+            if (!success) exceptionCaught = true;
+        }
+        catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
+            exceptionCaught = true;
+        }
+        finally {
+            isGenerating = false;
+            await inputInterceptorTask;
+            Console.CancelKeyPress -= cancelHandler;
+
+            if (inputTokens > 0 || outputTokens > 0) {
+                _sessionTotalInputTokens += inputTokens;
+                _sessionTotalOutputTokens += outputTokens;
+                WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
+                WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+            }
+
+            if (exceptionCaught || cts.IsCancellationRequested) {
+                WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
+            }
+            else {
+                WriteLine();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(fullResponse)) {
+            history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
+            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
+        }
+        else {
+            history.RemoveAt(history.Count - 1);
+        }
     }
-  }
+
+    /// <summary>
+    /// [AI Context] Scans history directories to automatically append context to the beginning of the chat session.
+    /// [Human] Sucht nach alten Chat-Verläufen, um sie gleich beim Start als Erinnerung für das Modell hochzuladen.
+    /// </summary>
+    private string? GetInitialHistoryCommand(string selectedModel) {
+        if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
+            return null;
+        }
+
+        var allHistoryFiles = new List<string>();
+        var notFoundPaths = new List<string>();
+
+        foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p))) {
+            if (System.IO.File.Exists(path)) {
+                allHistoryFiles.Add(Path.GetFullPath(path));
+            }
+            else if (Directory.Exists(path)) {
+                allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+            }
+            else {
+                notFoundPaths.Add(path);
+            }
+        }
+
+        if (notFoundPaths.Any()) {
+            WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
+            foreach (var path in notFoundPaths) {
+                WriteLine($"  - {path}");
+            }
+        }
+
+        var distinctFiles = allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        // Verhindert, dass die System Instruction versehentlich als History geladen wird
+        if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
+            distinctFiles = [.. distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase))];
+        }
+
+        if (distinctFiles.Count == 0) return null;
+
+        WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+        ExtractionHelpers.PrintFileTree(distinctFiles);
+
+        string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
+        if (historyChoice == "__EXIT__") return historyChoice;
+
+        bool loadHistory = historyChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase);
+
+        if (!loadHistory) return null;
+
+        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+        return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
+    }
+
+    /// <summary>
+    /// [AI Context] Deep cleans the assigned Vertex AI Bucket. Crucial for managing storage costs and cleaning up crashed sessions.
+    /// [Human] Löscht radikal alle Dateien aus dem Cloud Bucket. Das ist bei Vertex besonders wichtig, um horrende Speicherkosten zu vermeiden!
+    /// </summary>
+    private async Task ForcePurgeGcsBucketAsync() {
+        if (string.IsNullOrWhiteSpace(GcsBucketName)) return;
+
+        try {
+            // StorageClient utilizes Application Default Credentials
+            var storageClient = await StorageClient.CreateAsync();
+            WriteLine($"  [GCS] Verifying Bucket '{GcsBucketName}' and purging ALL files...");
+
+            var objects = storageClient.ListObjectsAsync(GcsBucketName);
+            int count = 0;
+
+            await foreach (var obj in objects) {
+                await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
+                count++;
+            }
+
+            if (count > 0) {
+                WriteLine($"  [GCS] Successfully deleted {count} file(s) to secure billing.");
+            }
+            else {
+                WriteLine($"  [GCS] Bucket is already empty.");
+            }
+        }
+        catch (Exception ex) {
+            WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            WriteLine($"Originaler Fehlertext: {ex.Message}");
+
+            WriteLine($"\n  --- GCS ERROR DUMP ---");
+            WriteLine($"{ex}");
+            WriteLine($"  ----------------------\n");
+
+            if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
+                ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
+                ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
+                WriteLine($"  [GCS ERROR] Netzwerkfehler beim Zugriff auf '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
+            }
+            else if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase)) {
+                WriteLine($"  [GCS ERROR] Zugriff auf Bucket '{GcsBucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}");
+            }
+            else {
+                WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
+            }
+        }
+    }
 }

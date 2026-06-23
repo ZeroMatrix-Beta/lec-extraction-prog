@@ -39,9 +39,9 @@ public class DirectAiChatSessionAiStudioConfig {
     public string LogFolder { get; set; } = AppConfig.LogFolder;
     public string GcsBucketName { get; set; } = "biran-linalg-source-material";
     public string SystemInstructionPath { get; set; } = AppConfig.SystemInstructionPath;
-    public string[] IncludePaths { get; set; } = new[] {
+    public string[] IncludePaths { get; set; } = [
         @"D:\lecture-videos\d-und-a/",
         @"D:\lecture-videos\d-und-a/new"
-    };
+    ];
     public DirectAiChatSessionAiStudioGenerationConfig AI { get; set; } = new DirectAiChatSessionAiStudioGenerationConfig();
 }

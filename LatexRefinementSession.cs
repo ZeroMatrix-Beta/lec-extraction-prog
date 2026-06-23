@@ -188,21 +188,21 @@ public class LatexRefinementSession {
         try {
             string preambleText = await System.IO.File.ReadAllTextAsync(preamblePath);
             string finalFileName = Path.GetFileName(finalTexFile);
-            
+
             // Create the wrapper .tex file
             string wrapperFileName = $"{baseName}-offset-main.tex";
             string wrapperPath = Path.Combine(targetFolder, wrapperFileName);
-            
+
             string wrapperContent = preambleText + "\n\\begin{document}\n\n" +
                                     $"\\input{{{finalFileName}}}\n\n" +
                                     "\\end{document}\n";
-                                    
+
             await System.IO.File.WriteAllTextAsync(wrapperPath, wrapperContent);
             Console.WriteLine($"  [INFO] Wrapper-Datei erstellt: {wrapperPath}");
-            
+
             var latexToolkit = new LatexToolkit();
-            var (success, log) = await latexToolkit.CompilePdfAsync(wrapperPath);
-            
+            var (success, log) = await LatexToolkit.CompilePdfAsync(wrapperPath);
+
             string logContent = FormatLatexLog(log, success);
             string logPath = Path.Combine(targetFolder, "compile-log.txt");
             await System.IO.File.WriteAllTextAsync(logPath, logContent);
@@ -236,7 +236,7 @@ public class LatexRefinementSession {
         int errorCount = 0;
         int warningCount = 0;
 
-        foreach(var line in lines) {
+        foreach (var line in lines) {
             string tLine = line.Trim();
             if (tLine.StartsWith("! ")) {
                 sb.AppendLine();
@@ -265,7 +265,7 @@ public class LatexRefinementSession {
         }
 
         sb.Insert(0, $"Summary: {errorCount} Errors, {warningCount} Warnings\n\n");
-        
+
         // If we failed but couldn't parse the errors cleanly, append raw log so nothing is lost
         if (!success && errorCount == 0) {
             sb.AppendLine("\n--- Raw Output (Could not format cleanly) ---");
@@ -292,7 +292,7 @@ public class LatexRefinementSession {
         bool audioExists = audioFilePath != null && System.IO.File.Exists(audioFilePath);
         if (audioExists && audioFilePath != null) {
             var toolkit = new FfmpegUtilities.FfmpegToolkit();
-            double dur = await toolkit.GetVideoDurationAsync(audioFilePath);
+            double dur = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(audioFilePath);
             TimeSpan t = TimeSpan.FromSeconds(dur);
             audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
 
@@ -304,7 +304,7 @@ public class LatexRefinementSession {
                 double start = i * (segmentLength - overlapSec);
                 double end = start + segmentLength;
                 if (end > dur) end = dur;
-                
+
                 TimeSpan tStart = TimeSpan.FromSeconds(start);
                 TimeSpan tEnd = TimeSpan.FromSeconds(end);
                 sb.AppendLine($"- Part {i + 1}: {tStart.Hours:D2}:{tStart.Minutes:D2}:{tStart.Seconds:D2} - {tEnd.Hours:D2}:{tEnd.Minutes:D2}:{tEnd.Seconds:D2}");
@@ -326,7 +326,7 @@ public class LatexRefinementSession {
                             $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
                             $"The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
                             (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
-                            (audioAttached ? $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio." : 
+                            (audioAttached ? $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio." :
                                              $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please correct any misaligned timestamps using the expected part timestamps provided above.");
 
         parts.Add(new Part { Text = promptText });
@@ -369,7 +369,7 @@ public class LatexRefinementSession {
             }
         }
 
-        string promptText = audioAttached ? 
+        string promptText = audioAttached ?
             "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Listen to the provided audio to correct transcription mistakes. Do not alter the math or the timestamps." :
             "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps.";
         parts.Add(new Part { Text = promptText });
@@ -537,8 +537,8 @@ public class LatexRefinementSession {
             // 'chunkResp[^300..]' is modern C# syntax equivalent to 'chunkResp.Substring(chunkResp.Length - 300)'.
             // The '^' operator means "from the end", so '^300..' means "start 300 characters from the end, and go to the very end".
             string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
-                $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n```\n\n" +
-                "Please \"continue\" exactly where you left off. Do not repeat what you already wrote.";
+                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                "Please \"continue\" exactly where you left off. Do not repeat what you already wrote. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
 
             Console.WriteLine("\n  [Refinement] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
             Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
@@ -549,8 +549,10 @@ public class LatexRefinementSession {
             history.Add(new Content { Role = "model", Parts = [new Part { Text = chunkResp }] });
             history.Add(new Content { Role = "user", Parts = [new Part { Text = continuePrompt }] });
 
-            Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
+            // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

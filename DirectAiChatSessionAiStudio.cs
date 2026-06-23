@@ -21,7 +21,7 @@ namespace DirectChatAiInteraction.AiStudio;
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary> 
-public class DirectAiChatSessionAiStudio {
+public partial class DirectAiChatSessionAiStudio {
     // [AI Context] Global state for file resolution. 
     // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
     // Konfigurierbarer Basis-Pfad für deine Uploads. 
@@ -33,7 +33,7 @@ public class DirectAiChatSessionAiStudio {
     private readonly string[] HistoryPreloadPaths;
 
     // Standard-Nachricht, die gesendet wird, wenn die History geladen wird.
-    private string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
+    private readonly string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
 
     // [GCS] Der Name deines Google Cloud Storage Buckets
     // Z.B.: "en-linalg-biran-gemini-videos"
@@ -43,7 +43,7 @@ public class DirectAiChatSessionAiStudio {
     private readonly string LogFolderPath;
     private readonly string SystemInstructionPath;
     private string? _systemInstructionText;
-    private DirectAiChatSessionAiStudioGenerationConfig AIParams;
+    private readonly DirectAiChatSessionAiStudioGenerationConfig AIParams;
     private readonly bool IsAiStudio;
     private readonly AttachmentHandler _attachmentHandler;
     private readonly SessionLogger _sessionLogger;
@@ -100,7 +100,7 @@ public class DirectAiChatSessionAiStudio {
             if (sysPromptChoice == "__EXIT__") return;
             if (sysPromptChoice == "__CHANGED_KEY__") continue;
 
-            if (sysPromptChoice.Trim().ToLower() == "j") {
+            if (sysPromptChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase)) {
                 if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
                     _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
                     WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
@@ -206,7 +206,7 @@ public class DirectAiChatSessionAiStudio {
             }
 
             if (string.IsNullOrWhiteSpace(input)) continue;
-            if (input.ToLower() == "exit" || input.ToLower() == "quit") break;
+            if (input.Equals("exit", StringComparison.CurrentCultureIgnoreCase) || input.Equals("quit", StringComparison.CurrentCultureIgnoreCase)) break;
 
             var parts = new List<Part>();
             string promptText = input;
@@ -265,7 +265,7 @@ public class DirectAiChatSessionAiStudio {
                 return "__EXIT__";
             }
 
-            if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) {
+            if (MyRegex().IsMatch(normalizedInput)) {
                 HandleChangeKey(normalizedInput);
                 return "__CHANGED_KEY__";
             }
@@ -273,7 +273,7 @@ public class DirectAiChatSessionAiStudio {
         }
     }
 
-    private void ShowCommands() {
+    private static void ShowCommands() {
         WriteLine("\nBefehle:");
         WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
         WriteLine("  exit / quit               -> Beendet den Chat");
@@ -307,7 +307,7 @@ public class DirectAiChatSessionAiStudio {
         }
 
         if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
-            string tempValueStr = normalizedInput.Substring(9).Trim();
+            string tempValueStr = normalizedInput[9..].Trim();
             if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
                 AIParams.Temperature = newTemp;
                 WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
@@ -319,7 +319,7 @@ public class DirectAiChatSessionAiStudio {
         }
 
         if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
-            string tokenValueStr = normalizedInput.Substring(11).Trim();
+            string tokenValueStr = normalizedInput[11..].Trim();
             if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
                 AIParams.MaxOutputTokens = newTokens;
                 WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
@@ -331,7 +331,7 @@ public class DirectAiChatSessionAiStudio {
         }
 
         if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
-            string budgetValueStr = normalizedInput.Substring(18).Trim();
+            string budgetValueStr = normalizedInput[18..].Trim();
             if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
                 AIParams.ThinkingBudget = newBudget;
                 WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
@@ -343,7 +343,7 @@ public class DirectAiChatSessionAiStudio {
         }
 
         if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
-            string levelValueStr = normalizedInput.Substring(17).Trim().ToUpper();
+            string levelValueStr = normalizedInput[17..].Trim().ToUpper();
             var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
             if (validLevels.Contains(levelValueStr)) {
                 AIParams.ThinkingLevel = levelValueStr;
@@ -355,7 +355,7 @@ public class DirectAiChatSessionAiStudio {
             return true;
         }
 
-        if (System.Text.RegularExpressions.Regex.IsMatch(normalizedInput, @"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase)) {
+        if (MyRegex().IsMatch(normalizedInput)) {
             HandleChangeKey(normalizedInput);
             return true;
         }
@@ -416,7 +416,7 @@ public class DirectAiChatSessionAiStudio {
                     bool prepended = false;
                     foreach (var content in history) {
                         if (!prepended && content.Role == "user") {
-                            var newParts = content.Parts?.ToList() ?? new List<Part>();
+                            var newParts = content.Parts?.ToList() ?? [];
                             newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
                             modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
                             prepended = true;
@@ -431,16 +431,16 @@ public class DirectAiChatSessionAiStudio {
             }
             else {
                 // For all other models (Gemini, Gemma v4+), use the standard system instruction field.
-                config.SystemInstruction = new Content { Role = "system", Parts = new List<Part> { new Part { Text = _systemInstructionText } } };
+                config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };
             }
         }
 
         bool exceptionCaught = false;
         using var cts = new CancellationTokenSource();
-        ConsoleCancelEventHandler cancelHandler = (sender, e) => {
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
             e.Cancel = true; // Verhindert das Beenden des Programms
             try { cts.Cancel(); } catch { }
-        };
+        }
         Console.CancelKeyPress += cancelHandler;
 
         bool isGenerating = true;
@@ -499,7 +499,7 @@ public class DirectAiChatSessionAiStudio {
 
         // 7. KI-Antwort in die Historie aufnehmen
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+            history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
         }
         else {
@@ -545,7 +545,7 @@ public class DirectAiChatSessionAiStudio {
         // Verhindert, dass die System Instruction versehentlich als History geladen wird, 
         // falls der Nutzer sie physisch im History-Ordner abgelegt hat.
         if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
-            distinctFiles = distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase)).ToList();
+            distinctFiles = [.. distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase))];
         }
 
         if (distinctFiles.Count == 0) {
@@ -558,7 +558,7 @@ public class DirectAiChatSessionAiStudio {
         string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
         if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;
 
-        bool loadHistory = historyChoice.Trim().ToLower() == "j";
+        bool loadHistory = historyChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase);
 
         if (!loadHistory) return null;
 
@@ -635,4 +635,7 @@ public class DirectAiChatSessionAiStudio {
             }
         }
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase, "de-CH")]
+    private static partial System.Text.RegularExpressions.Regex MyRegex();
 }

@@ -24,31 +24,23 @@ namespace AutoExtraction;
 /// Note: This class is 'partial' because it uses the [GeneratedRegex] attribute 
 /// at the bottom of the file for compile-time regex generation (SYSLIB1045).
 /// </remarks>
-public partial class VertexAutoExtractionSession {
-    private Client _client;
-    private readonly VertexAutoExtractionConfig _config;
-    private readonly AttachmentHandler _attachmentHandler;
-    private readonly SessionLogger _sessionLogger;
-    private readonly LatexRefinementSessionConfig _latexRefinementConfig;
+public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+    private readonly Client _client = client;
+    private readonly VertexAutoExtractionConfig _config = config;
+    private readonly AttachmentHandler _attachmentHandler = attachmentHandler;
+    private readonly SessionLogger _sessionLogger = sessionLogger;
+    private readonly LatexRefinementSessionConfig _latexRefinementConfig = latexRefinementConfig;
     private double _speed = 1.0;
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
-    private List<Part> _historyParts = new List<Part>();
+    private readonly List<Part> _historyParts = [];
     // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
-    private List<Content> _sessionPreamble = new List<Content>();
+    private readonly List<Content> _sessionPreamble = [];
     private bool _historyWasLoaded = false;
     // [AI Context] Stateful history exclusively for the REPL loop's debug chat.
-    private List<Content> _debugChatHistory = new List<Content>();
+    private readonly List<Content> _debugChatHistory = [];
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
-
-    public VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
-        _client = client;
-        _config = config;
-        _attachmentHandler = attachmentHandler;
-        _sessionLogger = sessionLogger;
-        _latexRefinementConfig = latexRefinementConfig; // Initialized
-    }
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
@@ -104,74 +96,77 @@ public partial class VertexAutoExtractionSession {
 
         try {
 
-        if (string.IsNullOrEmpty(_systemInstructionText)) {
-            if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Any()) {
-                Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
+            if (string.IsNullOrEmpty(_systemInstructionText)) {
+                if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Length != 0) {
+                    Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
 
-                // Resolve all files from configured paths, handling directories
-                var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
+                    // Resolve all files from configured paths, handling directories
+                    var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
-                if (resolvedInstructionFiles.Any()) {
-                    foreach (var file in resolvedInstructionFiles) {
-                        Console.WriteLine($"  - {file}");
-                    }
-                    Console.Write("System Instructions laden? (j/n): ");
-                    if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                        var instructionBuilder = new System.Text.StringBuilder();
-                        foreach (var filePath in resolvedInstructionFiles) {
-                            instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
-                            Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
+                    if (resolvedInstructionFiles.Any()) {
+                        foreach (var file in resolvedInstructionFiles) {
+                            Console.WriteLine($"  - {file}");
                         }
-                        _systemInstructionText = instructionBuilder.ToString();
-                    }
-                }
-                else {
-                    Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
-                }
-            }
-        }
-
-        if (!_historyWasLoaded) {
-            var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-            if (distinctFiles.Any()) {
-                Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-                ExtractionHelpers.PrintFileTree(distinctFiles);
-                if (_config.LoadHistoryIntoSystemInstruction) {
-                    Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
-                } else {
-                    Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
-                }
-                
-                if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                    if (_config.LoadHistoryIntoSystemInstruction) {
-                        Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
-                    } else {
-                        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
-                    }
-                    string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
-                    if (success && attachmentParts.Any()) {
-                        _historyParts.AddRange(attachmentParts);
-                        _historyWasLoaded = true;
-                        if (_config.LoadHistoryIntoSystemInstruction) {
-                            Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
-                        } else {
-                            Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-                            if (!await AcknowledgeHistoryAsync(fileList)) return;
+                        Console.Write("System Instructions laden? (j/n): ");
+                        if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                            var instructionBuilder = new System.Text.StringBuilder();
+                            foreach (var filePath in resolvedInstructionFiles) {
+                                instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
+                                Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
+                            }
+                            _systemInstructionText = instructionBuilder.ToString();
                         }
                     }
                     else {
-                        Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+                        Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
                     }
                 }
             }
-        }
 
-        _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
-        _sessionLogger.InitializeSession();
-        await _sessionLogger.LogSessionSetupAsync();
+            if (!_historyWasLoaded) {
+                var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+                if (distinctFiles.Any()) {
+                    Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+                    ExtractionHelpers.PrintFileTree(distinctFiles);
+                    if (_config.LoadHistoryIntoSystemInstruction) {
+                        Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
+                    }
+                    else {
+                        Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
+                    }
 
-        await ProcessFilesAsync(files);
+                    if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                        if (_config.LoadHistoryIntoSystemInstruction) {
+                            Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
+                        }
+                        else {
+                            Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+                        }
+                        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
+                        if (success && attachmentParts.Any()) {
+                            _historyParts.AddRange(attachmentParts);
+                            _historyWasLoaded = true;
+                            if (_config.LoadHistoryIntoSystemInstruction) {
+                                Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
+                            }
+                            else {
+                                Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
+                                if (!await AcknowledgeHistoryAsync(fileList)) return;
+                            }
+                        }
+                        else {
+                            Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+                        }
+                    }
+                }
+            }
+
+            _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
+            _sessionLogger.InitializeSession();
+            await _sessionLogger.LogSessionSetupAsync();
+
+            await ProcessFilesAsync(files);
         }
         finally {
             // [AI Context] Guarantee that the bucket is cleaned up even if an exception occurs during history upload or processing.
@@ -191,7 +186,7 @@ public partial class VertexAutoExtractionSession {
         Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
         Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) Beenden (exit/quit)");
-        
+
         Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
         Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
@@ -215,7 +210,7 @@ public partial class VertexAutoExtractionSession {
                 Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
                 Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
                 Console.WriteLine("  5) Beenden (exit/quit)");
-                
+
                 Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
                 Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
                 Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
@@ -223,8 +218,8 @@ public partial class VertexAutoExtractionSession {
             }
             else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";
-                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput.Substring(9).Trim();
-                else if (normalizedInput.StartsWith("2 ")) val = normalizedInput.Substring(2).Trim();
+                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput[9..].Trim();
+                else if (normalizedInput.StartsWith("2 ")) val = normalizedInput[2..].Trim();
                 else if (normalizedInput == "2") {
                     Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
                     val = Console.ReadLine()?.Trim() ?? "";
@@ -259,7 +254,7 @@ public partial class VertexAutoExtractionSession {
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
                 _latexRefinementConfig.UseVertex = true;
-                            await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
+                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
             }
             else {
                 await DebugChatAsync(input); // Chat erhält den originalen Input
@@ -302,7 +297,7 @@ public partial class VertexAutoExtractionSession {
             "9" => "gemini-1.5-pro",
             "10" => "gemini-robotics-er-1.6-preview",
             "11" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
-            _ => choice.Contains("-") ? choice : _config.Model
+            _ => choice.Contains('-') ? choice : _config.Model
         };
     }
 
@@ -312,7 +307,7 @@ public partial class VertexAutoExtractionSession {
     /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
     /// </summary>
     private async Task DebugChatAsync(string input) {
-        _debugChatHistory.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = input } } });
+        _debugChatHistory.Add(new Content { Role = "user", Parts = [new() { Text = input }] });
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -325,12 +320,13 @@ public partial class VertexAutoExtractionSession {
             bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
             bool hasBudget = _config.ThinkingBudget.HasValue;
-            
+
             if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (hasLevel) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
-                } else if (hasBudget) {
+                }
+                else if (hasBudget) {
                     int budget = _config.ThinkingBudget!.Value;
                     if (budget > 32768) budget = 32768;
                     requestConfig.ThinkingConfig.ThinkingBudget = budget;
@@ -341,7 +337,7 @@ public partial class VertexAutoExtractionSession {
         Console.Write($"\n[Debug Chat] {_config.Model} (Strg+C zum Abbrechen): ");
 
         using var cts = new CancellationTokenSource();
-        ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
         Console.CancelKeyPress += cancelHandler;
 
         int maxRetries = 8;
@@ -417,7 +413,7 @@ public partial class VertexAutoExtractionSession {
                         backoff = waitTime;
                     }
                     else if (attempt == 1) {
-                        var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+                        var retryMatch = MyRegex().Match(ex.Message);
                         if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                             waitTime = serverSuggestedDelay + 20;
                             Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
@@ -451,7 +447,7 @@ public partial class VertexAutoExtractionSession {
         }
 
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            _debugChatHistory.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+            _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
         }
         else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user") {
             // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
@@ -465,8 +461,9 @@ public partial class VertexAutoExtractionSession {
     /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
     /// </summary>
     private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
-        var historyPromptParts = new List<Part>(_historyParts);
-        historyPromptParts.Add(new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." });
+        var historyPromptParts = new List<Part>(_historyParts) {
+            new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
+        };
         var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
         _sessionPreamble.Add(userContent);
@@ -487,12 +484,13 @@ public partial class VertexAutoExtractionSession {
             bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
             bool hasBudget = _config.ThinkingBudget.HasValue;
-            
+
             if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (hasLevel) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
-                } else if (hasBudget) {
+                }
+                else if (hasBudget) {
                     int budget = _config.ThinkingBudget!.Value;
                     if (budget > 32768) budget = 32768;
                     requestConfig.ThinkingConfig.ThinkingBudget = budget;
@@ -511,7 +509,7 @@ public partial class VertexAutoExtractionSession {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             fullResponse = "";
             using var cts = new CancellationTokenSource();
-            ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
             Console.CancelKeyPress += cancelHandler;
 
             try {
@@ -565,7 +563,7 @@ public partial class VertexAutoExtractionSession {
                         backoff = waitTime;
                     }
                     else if (attempt == 1) {
-                        var retryMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"""retryDelay""\s*:\s*""(\d+)s""");
+                        var retryMatch = MyRegex().Match(ex.Message);
                         if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                             waitTime = serverSuggestedDelay + 20;
                             Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
@@ -594,7 +592,7 @@ public partial class VertexAutoExtractionSession {
         }
 
         if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
-            _sessionPreamble.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = fullResponse } } });
+            _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             string logMsg = $"[History Acknowledgment] Angehängte Dateien: {loadedFiles}\n\nPrompt:\n{historyPromptParts.Last().Text}";
             await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens);
             return true;
@@ -614,7 +612,7 @@ public partial class VertexAutoExtractionSession {
     /// </summary>
     private async Task ProcessFilesAsync(string[] files) {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens
-        files = files.OrderBy(f => VideoDateParser.Parse(f).Date).ToArray();
+        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date)];
 
         var toolkit = new FfmpegUtilities.FfmpegToolkit();
 
@@ -646,7 +644,7 @@ public partial class VertexAutoExtractionSession {
                 // Removed dateStr from filename pattern for caching to work across days for 2-hour window
                 var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
 
-                double fullOriginalVideoDuration = await toolkit.GetVideoDurationAsync(file); // Get original video duration
+                double fullOriginalVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(file); // Get original video duration
                 TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
                 bool useCache = false;
 
@@ -684,14 +682,14 @@ public partial class VertexAutoExtractionSession {
 
                     if (wasInputFilePreCompressedWhenCached) {
                         // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
-                        speedVideoDuration = await toolkit.GetVideoDurationAsync(file);
+                        speedVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(file);
                     }
                     else {
                         // Otherwise, it was the output of ProcessGeneralVideoAsync that was cached.
                         string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
-                        speedVideoDuration = await toolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
+                        speedVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                     }
-                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0; 
+                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0;
                     var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
                     for (int i = 0; i < cachedParts.Count; i++) {
                         double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - _config.OverlapSeconds) : 0;
@@ -724,15 +722,15 @@ public partial class VertexAutoExtractionSession {
                 var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
 
                 if (rawPartsWithTimes.Any()) {
-                    List<(string FilePath, double StartTime)> safePartsWithTimes = new List<(string, double)>();
+                    List<(string FilePath, double StartTime)> safePartsWithTimes = [];
                     for (int i = 0; i < rawPartsWithTimes.Count; i++) {
                         string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
-                        
+
                         if (!string.Equals(rawPartsWithTimes[i].FilePath, safePartPath, StringComparison.OrdinalIgnoreCase)) {
                             if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
                             System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
                         }
-                        
+
                         safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
                     }
                     await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
@@ -753,7 +751,7 @@ public partial class VertexAutoExtractionSession {
 
 
             Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
-            List<string> generatedTexFiles = new List<string>();
+            List<string> generatedTexFiles = [];
             string baseName = Path.GetFileNameWithoutExtension(file);
             baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -764,7 +762,7 @@ public partial class VertexAutoExtractionSession {
             bool fileProcessingSuccess = true;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
             Task? audioExtractionTask = null;
-            Action startAudioTask = () => {
+            void startAudioTask() {
                 if (_config.GenerateAudioFile && audioExtractionTask == null) {
                     string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
                     bool useCachedAudio = false;
@@ -776,7 +774,8 @@ public partial class VertexAutoExtractionSession {
                     }
                     if (useCachedAudio) {
                         Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei (jünger als 48h) gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
-                    } else {
+                    }
+                    else {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
                             await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
@@ -784,7 +783,7 @@ public partial class VertexAutoExtractionSession {
                         });
                     }
                 }
-            };
+            }
 
             for (int i = 0; i < partsWithTimes.Count; i++) {
                 string safePartPath = partsWithTimes[i].FilePath;
@@ -810,8 +809,10 @@ public partial class VertexAutoExtractionSession {
                 if (i > 0) {
                     // Start delay and upload in parallel for subsequent parts
                     var delayTask = Task.Run(async () => {
-                        Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...");
+                        // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
+                        // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+                        Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+                        await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
                     });
 
                     var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, toolkit);
@@ -942,24 +943,26 @@ public partial class VertexAutoExtractionSession {
                 }
 
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
-                if (_latexRefinementConfig != null) _latexRefinementConfig.UseVertex = true;
+                if (_latexRefinementConfig != null) {
+                    _latexRefinementConfig.UseVertex = true;
+                }
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildVertexClient(_latexRefinementConfig?.VertexProjectId ?? "", _latexRefinementConfig?.VertexLocation ?? "");
 
                 // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
                 // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
                 var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
-                string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault() 
+                string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
                                        ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the Vertex AI client for refinement, as VertexAutoExtractionSession requires an Vertex AI client for this
                 var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
-                    refinementClient, 
-                    _latexRefinementConfig!, 
-                    refinementTargetFile, 
-                    _config, 
+                    refinementClient,
+                    _latexRefinementConfig!,
+                    refinementTargetFile,
+                    _config,
                     audioFilePath);
-                
+
                 await refinementSession.StartAsync();
             }
         }
@@ -1000,7 +1003,7 @@ public partial class VertexAutoExtractionSession {
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
         prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
 
-        double partDurationSeconds = await toolkit.GetVideoDurationAsync(partFile);
+        double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
 
@@ -1008,7 +1011,8 @@ public partial class VertexAutoExtractionSession {
 
         if (partNumber == 1) {
             prompt += "\n\nNote: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.";
-        } else {
+        }
+        else {
             prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
         }
 
@@ -1054,22 +1058,23 @@ public partial class VertexAutoExtractionSession {
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
-                var sysParts = new List<Part>();
-                if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-                if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
-                requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
-            }
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+            var sysParts = new List<Part>();
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+        }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
             bool hasBudget = _config.ThinkingBudget.HasValue;
-            
+
             if (hasLevel || hasBudget) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (hasLevel) {
                     requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
-                } else if (hasBudget) {
+                }
+                else if (hasBudget) {
                     int budget = _config.ThinkingBudget!.Value;
                     if (budget > 32768) budget = 32768;
                     requestConfig.ThinkingConfig.ThinkingBudget = budget;
@@ -1091,7 +1096,7 @@ public partial class VertexAutoExtractionSession {
         string currentLogPrompt = logContext;
 
         using var cts = new CancellationTokenSource();
-        ConsoleCancelEventHandler cancelHandler = (sender, e) => { e.Cancel = true; try { cts.Cancel(); } catch { } };
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
@@ -1153,20 +1158,22 @@ public partial class VertexAutoExtractionSession {
 
             string continuePrompt = segmentComplete ? "Continue" :
                 $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"```latex\n{(chunkResp.Length > 300 ? "...\n" + chunkResp.Substring(chunkResp.Length - 300) : chunkResp)}\n```\n\n" +
-                "Please \"continue\" exactly where you left off...";
+                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                "Please \"continue\" exactly where you left off. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
 
             if (segmentComplete) Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
             else Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
 
             Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
-            history.Add(new Content { Role = "model", Parts = new List<Part> { new Part { Text = chunkResp } } });
-            history.Add(new Content { Role = "user", Parts = new List<Part> { new Part { Text = continuePrompt } } });
+            history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
+            history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
-            Console.WriteLine($"\n  [Timer] Warte 20 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(20, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
+            // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }
@@ -1206,4 +1213,6 @@ public partial class VertexAutoExtractionSession {
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
+    [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
+    private static partial System.Text.RegularExpressions.Regex MyRegex();
 }

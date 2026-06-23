@@ -13,54 +13,54 @@ namespace DocumentUtilities;
 /// Unabhängig von der KI, ruft direkt pdflatex auf dem System auf.
 /// </summary>
 public class LatexToolkit {
-  /// <summary>
-  /// [AI Context] Spawns an external pdflatex process to compile a .tex file to a .pdf. Captures standard output and errors for debugging.
-  /// </summary>
-  public async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath) {
-    if (!File.Exists(texFilePath)) {
-      return (false, $"File not found: {texFilePath}");
+    /// <summary>
+    /// [AI Context] Spawns an external pdflatex process to compile a .tex file to a .pdf. Captures standard output and errors for debugging.
+    /// </summary>
+    public static async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath) {
+        if (!File.Exists(texFilePath)) {
+            return (false, $"File not found: {texFilePath}");
+        }
+
+        string workDir = Path.GetDirectoryName(texFilePath) ?? string.Empty;
+        string fileName = Path.GetFileName(texFilePath);
+
+        Console.WriteLine($"\n  [LatexToolkit] Starte pdflatex für {fileName}...");
+
+        // [AI Context] -interaction=nonstopmode and -halt-on-error are critical for automated CI/CD-like pipelines to prevent the process from hanging indefinitely on syntax errors.
+        // [Human] -interaction=nonstopmode verhindert, dass pdflatex bei einem Syntaxfehler unendlich lange einfriert und auf Benutzereingaben wartet.
+        var startInfo = new ProcessStartInfo {
+            FileName = "pdflatex",
+            Arguments = $"-interaction=nonstopmode -halt-on-error \"{fileName}\"",
+            WorkingDirectory = workDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        try {
+            using var process = Process.Start(startInfo);
+            if (process == null) return (false, "Could not start pdflatex process.");
+
+            string output = await process.StandardOutput.ReadToEndAsync();
+            string error = await process.StandardError.ReadToEndAsync();
+
+            await process.WaitForExitAsync();
+
+            if (process.ExitCode == 0) {
+                Console.WriteLine($"  [SUCCESS] PDF erfolgreich generiert!");
+                return (true, output);
+            }
+            else {
+                Console.WriteLine($"  [FAILED] pdflatex hat Fehler gemeldet.");
+                return (false, output + "\n" + error);
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Console.WriteLine($"  [Error] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
+            return (false, ex.Message);
+        }
     }
-
-    string workDir = Path.GetDirectoryName(texFilePath) ?? string.Empty;
-    string fileName = Path.GetFileName(texFilePath);
-
-    Console.WriteLine($"\n  [LatexToolkit] Starte pdflatex für {fileName}...");
-
-    // [AI Context] -interaction=nonstopmode and -halt-on-error are critical for automated CI/CD-like pipelines to prevent the process from hanging indefinitely on syntax errors.
-    // [Human] -interaction=nonstopmode verhindert, dass pdflatex bei einem Syntaxfehler unendlich lange einfriert und auf Benutzereingaben wartet.
-    var startInfo = new ProcessStartInfo {
-      FileName = "pdflatex",
-      Arguments = $"-interaction=nonstopmode -halt-on-error \"{fileName}\"",
-      WorkingDirectory = workDir,
-      RedirectStandardOutput = true,
-      RedirectStandardError = true,
-      UseShellExecute = false,
-      CreateNoWindow = true
-    };
-
-    try {
-      using var process = Process.Start(startInfo);
-      if (process == null) return (false, "Could not start pdflatex process.");
-
-      string output = await process.StandardOutput.ReadToEndAsync();
-      string error = await process.StandardError.ReadToEndAsync();
-
-      await process.WaitForExitAsync();
-
-      if (process.ExitCode == 0) {
-        Console.WriteLine($"  [SUCCESS] PDF erfolgreich generiert!");
-        return (true, output);
-      }
-      else {
-        Console.WriteLine($"  [FAILED] pdflatex hat Fehler gemeldet.");
-        return (false, output + "\n" + error);
-      }
-    }
-    catch (Exception ex) {
-      Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-      Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-      Console.WriteLine($"  [Error] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
-      return (false, ex.Message);
-    }
-  }
 }
