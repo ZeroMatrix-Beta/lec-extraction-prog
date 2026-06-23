@@ -50,8 +50,11 @@ public partial class VertexAutoExtractionSession {
         _latexRefinementConfig = latexRefinementConfig; // Initialized
     }
 
+    /// <summary>
+    /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
+    /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
+    /// </summary>
     public async Task StartAsync() {
-        // [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
         Console.WriteLine($"\n[AutoExtraction] Starte Vertex AI Extraction Session...");
         Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
         Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
@@ -86,6 +89,10 @@ public partial class VertexAutoExtractionSession {
         await ReplLoopAsync();
     }
 
+    /// <summary>
+    /// [AI Context] Core initialization routine before batch processing. Loads system instructions and pre-warms the model context with attachments.
+    /// [Human] Lädt die System-Instruktionen und die Historie hoch, bevor die eigentliche Video-Verarbeitung startet.
+    /// </summary>
     private async Task SetupContextAndProcessAsync(string[] files) {
         if (files == null || files.Length == 0) {
             Console.WriteLine("Keine Dateien ausgewählt.");
@@ -260,6 +267,10 @@ public partial class VertexAutoExtractionSession {
         }
     }
 
+    /// <summary>
+    /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
+    /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
+    /// </summary>
     private string SelectModel() {
         Console.WriteLine($"\n=== Model Selection (Vertex AI) ===");
         Console.WriteLine("Wähle ein Modell:");

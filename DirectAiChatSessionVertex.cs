@@ -19,6 +19,7 @@ namespace DirectChatAiInteraction.Vertex;
 /// <summary>
 /// [AI Context] Core REPL manager specifically for Google Cloud Vertex AI interactions.
 /// This completely isolates the enterprise execution context from the developer AI Studio context.
+/// [Human] Der Manager für Chat-Sitzungen, die über Google Cloud Vertex AI laufen. Getrennt vom normalen AI Studio, da es eigene Abrechnungs- und Zugriffsregeln hat.
 /// </summary>
 public class DirectAiChatSessionVertex {
   private readonly string UploadFolderPath;
@@ -54,6 +55,10 @@ public class DirectAiChatSessionVertex {
     };
   }
 
+  /// <summary>
+  /// [AI Context] Asynchronous entry point for the Vertex session. Initializes clients and enforces rigorous bucket cleanup.
+  /// [Human] Startet die Vertex-Session, verbindet sich mit Google Cloud und stellt sicher, dass der GCS Bucket für Datei-Uploads komplett leer ist.
+  /// </summary>
   public async Task StartAsync() {
     while (true) {
       string selectedModel = SelectModel();
@@ -145,6 +150,10 @@ public class DirectAiChatSessionVertex {
     };
   }
 
+  /// <summary>
+  /// [AI Context] Main REPL loop for Vertex. Manages state, handles commands, and invokes streaming responses.
+  /// [Human] Hauptschleife für den Vertex-Chat. Nimmt Eingaben entgegen und verarbeitet sie fortlaufend.
+  /// </summary>
   private async Task RunChatSessionAsync(string selectedModel, string? initialInput) {
     var history = new List<Content>();
     var initialHistory = new List<Content>(history);
@@ -238,6 +247,10 @@ public class DirectAiChatSessionVertex {
     WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
   }
 
+  /// <summary>
+  /// [AI Context] Intercepts and executes local REPL commands (e.g., /clear, /set temp) to avoid sending them as prompts to the AI.
+  /// [Human] Fängt spezielle Befehle ab, bevor sie an die KI geschickt werden (z.B. zum Löschen der Historie).
+  /// </summary>
   private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText) {
     string normalizedInput = input.TrimStart('/');
 
@@ -309,6 +322,10 @@ public class DirectAiChatSessionVertex {
     return false;
   }
 
+  /// <summary>
+  /// [AI Context] Streams the response from Vertex AI back to the console and logs the output tokens.
+  /// [Human] Holt sich die Antwort Stück für Stück von der Vertex API und schreibt sie flüssig in die Konsole.
+  /// </summary>
   private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
     Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
     string fullResponse = "";
@@ -436,6 +453,10 @@ public class DirectAiChatSessionVertex {
     }
   }
 
+  /// <summary>
+  /// [AI Context] Scans history directories to automatically append context to the beginning of the chat session.
+  /// [Human] Sucht nach alten Chat-Verläufen, um sie gleich beim Start als Erinnerung für das Modell hochzuladen.
+  /// </summary>
   private string? GetInitialHistoryCommand(string selectedModel) {
     if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
       return null;
@@ -487,7 +508,8 @@ public class DirectAiChatSessionVertex {
   }
 
   /// <summary>
-  /// Deep cleans the assigned Vertex AI Bucket. Crucial for managing storage costs and cleaning up crashed sessions.
+  /// [AI Context] Deep cleans the assigned Vertex AI Bucket. Crucial for managing storage costs and cleaning up crashed sessions.
+  /// [Human] Löscht radikal alle Dateien aus dem Cloud Bucket. Das ist bei Vertex besonders wichtig, um horrende Speicherkosten zu vermeiden!
   /// </summary>
   private async Task ForcePurgeGcsBucketAsync() {
     if (string.IsNullOrWhiteSpace(GcsBucketName)) return;

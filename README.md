@@ -36,7 +36,7 @@ This pipeline solves a notoriously difficult problem that traditional closed-cap
 
 This project is built for human-AI collaboration. To ensure long-term maintainability, the codebase utilizes a strict dual-commenting paradigm:
 - **`[AI Context]` (English):** Explains the *why* to future LLMs (e.g., prompt engineering rationale, token-saving strategies, API constraints).
-- **`[Human]` (German/English):** Explains the *how* to human developers, keeping business logic clear and accessible.
+- **`[Human]` (German):** Explains the *how* to human developers, keeping business logic clear and accessible.
 
 ---
 

@@ -8,6 +8,15 @@ This document provides a deep dive into the architecture, configuration quirks, 
 
 ---
 
+## Codebase Philosophy: Dual-Commenting Paradigm
+
+The entire codebase strictly follows a dual-commenting paradigm to ensure seamless human-AI collaboration:
+- **`[AI Context]` (English):** Targeted at LLMs. Explains the *why* - including architectural decisions, prompt constraints, API mechanics, and token-saving strategies.
+- **`[Human]` (German):** Targeted at human developers. Explains the *how* - focusing on business logic, basic flow, and UI instructions.
+When modifying the code, developers and AI agents must maintain this separation of concerns.
+
+---
+
 ## 1. Configuration Hierarchy & The "Array Merge" Quirk
 
 The application uses the `Microsoft.Extensions.Configuration` binder to load settings from multiple sources. The hierarchy is as follows (last loaded wins):
@@ -182,6 +191,15 @@ The `ApiResilience` class wraps all calls to the Google API and handles transien
 ## 🇩🇪 Deutsch
 
 Dieses Dokument bietet einen tiefen Einblick in die Architektur, Konfigurations-Besonderheiten und API-Einschränkungen der AI Lecture Extraction & Processing Pipeline. Es richtet sich an Entwickler und fortgeschrittene Benutzer, die die inneren Abläufe des Systems verstehen möchten.
+
+---
+
+## Codebasis-Philosophie: Dual-Commenting Paradigma
+
+Die gesamte Codebasis folgt strikt einem Dual-Commenting-Paradigma, um die nahtlose Zusammenarbeit zwischen Mensch und KI zu gewährleisten:
+- **`[AI Context]` (Englisch):** Richtet sich an LLMs. Erklärt das *Warum* - einschließlich Architekturentscheidungen, Prompt-Einschränkungen, API-Mechaniken und Strategien zur Token-Einsparung.
+- **`[Human]` (Deutsch):** Richtet sich an menschliche Entwickler. Erklärt das *Wie* - fokussiert auf Geschäftslogik, grundlegenden Ablauf und UI-Anweisungen.
+Bei Änderungen am Code müssen Entwickler und KI-Agenten diese Trennung strikt beibehalten.
 
 ---
 

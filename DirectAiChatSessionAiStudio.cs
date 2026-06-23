@@ -174,8 +174,7 @@ public class DirectAiChatSessionAiStudio {
     /// <summary>
     /// [AI Context] Main REPL loop. 
     /// Mutates the 'history' list to maintain conversation state. Catches errors to prevent chat state corruption.
-    /// Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle,
-    /// sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
+    /// [Human] Hauptschleife des Chats: Liest kontinuierlich Benutzereingaben, verarbeitet Befehle, sendet Nachrichten an die Gemini-API und gibt die gestreamten Antworten in der Konsole aus.
     /// </summary>
     private async Task RunChatSessionAsync(string selectedModel, string? initialInput) {
         var history = new List<Content>();
@@ -289,8 +288,8 @@ public class DirectAiChatSessionAiStudio {
     }
 
     /// <summary>
-    /// Verarbeitet alle eingebauten /- oder Kommando-Befehle, um die Hauptschleife sauber zu halten.
-    /// Returns true, wenn der Input ein Befehl war und verarbeitet wurde.
+    /// [AI Context] Intercepts and executes local REPL commands (e.g., /clear, /set temp) to avoid sending them as prompts to the AI.
+    /// [Human] Verarbeitet alle eingebauten /- oder Kommando-Befehle, um die Hauptschleife sauber zu halten. Returns true, wenn der Input ein Befehl war.
     /// </summary>
     private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText) {
         string normalizedInput = input.TrimStart('/');
@@ -377,7 +376,7 @@ public class DirectAiChatSessionAiStudio {
     /// <summary>
     /// [AI Context] Response streaming & state update.
     /// Side-effects: Mutates 'history' list by appending the assistant's full response. Appends raw text to 'chat_log.md'.
-    /// Streamt die Antwort von Gemini asynchron in die Konsole und speichert das Ergebnis in der Historie und einem Logfile.
+    /// [Human] Streamt die Antwort von Gemini asynchron in die Konsole und speichert das Ergebnis in der Historie und einem Logfile.
     /// </summary>
     private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
         Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
@@ -511,8 +510,8 @@ public class DirectAiChatSessionAiStudio {
     }
 
     /// <summary>
-    /// Fragt den Nutzer, ob eine bestehende History geladen werden soll, 
-    /// und baut den entsprechenden /attach Befehl zusammen.
+    /// [AI Context] Searches configured directories for previous chat histories and prepares an attachment command to preload context.
+    /// [Human] Fragt den Nutzer, ob eine bestehende History geladen werden soll, und baut den entsprechenden /attach Befehl zusammen.
     /// </summary>
     private string? GetInitialHistoryCommand(string selectedModel) {
         if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
@@ -569,6 +568,10 @@ public class DirectAiChatSessionAiStudio {
         return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
     }
 
+    /// <summary>
+    /// [AI Context] Dynamically swaps the active API key profile during a session to manage quotas without restarting.
+    /// [Human] Wechselt den API-Key mitten in der Sitzung, falls das Limit für den aktuellen Key erreicht wurde.
+    /// </summary>
     private void HandleChangeKey(string input) {
         var match = System.Text.RegularExpressions.Regex.Match(input, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
@@ -597,8 +600,8 @@ public class DirectAiChatSessionAiStudio {
     }
 
     /// <summary>
-    /// [GCS] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket.
-    /// Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
+    /// [AI Context] Financial guardrail: Purges all files in the designated GCS bucket to prevent long-term storage billing.
+    /// [Human] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket. Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
     /// </summary>
     private async Task CleanupGcsBucketAsync() {
         if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;

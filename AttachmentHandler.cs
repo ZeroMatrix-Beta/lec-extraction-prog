@@ -22,7 +22,10 @@ public class AttachmentHandler {
   private readonly string _gcsBucketName;
   private Client _client;
 
-  // [AI Context] Injects required runtime dependencies.
+  /// <summary>
+  /// [AI Context] Injects required runtime dependencies.
+  /// [Human] Konstruktor: Bekommt alle wichtigen Einstellungen (Pfade, Google Client) übergeben.
+  /// </summary>
   public AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName) {
     _client = client;
     _uploadFolder = uploadFolder;
@@ -31,6 +34,10 @@ public class AttachmentHandler {
     _gcsBucketName = gcsBucketName;
   }
 
+  /// <summary>
+  /// [AI Context] Allows dynamic replacement of the GenAI client, useful when switching API keys at runtime.
+  /// [Human] Erlaubt es, den Google Client im laufenden Betrieb auszutauschen (z.B. wenn man den API Key ändert).
+  /// </summary>
   public void UpdateClient(Client newClient) {
     _client = newClient;
   }

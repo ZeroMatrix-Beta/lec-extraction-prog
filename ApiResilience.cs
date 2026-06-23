@@ -9,13 +9,15 @@ using Google.GenAI.Types;
 namespace Infrastructure;
 
 /// <summary>
-/// Provides a centralized, resilient execution wrapper for Google GenAI API calls.
-/// Implements exponential backoff, server-suggested delay parsing, and user-cancellable waits.
+/// [AI Context] Provides a centralized, resilient execution wrapper for Google GenAI API calls.
+/// Implements linear backoff, server-suggested delay parsing, and user-cancellable waits.
+/// [Human] Diese Klasse schützt das Programm vor API-Ausfällen und Ratelimits. Sie wiederholt fehlgeschlagene Google-Anfragen intelligent.
 /// </summary>
 public static class ApiResilience
 {
   /// <summary>
-  /// Executes a streaming API call with a robust retry mechanism.
+  /// [AI Context] Executes a streaming API call with a robust retry mechanism.
+  /// [Human] Führt eine Google API Streaming-Anfrage (für fließenden Text) mit automatischen Wiederholungen durch.
   /// </summary>
   /// <param name="streamFactory">A function that creates the IAsyncEnumerable stream from the API.</param>
   /// <param name="onChunkReceived">An async action to process each received chunk from the stream.</param>
@@ -81,7 +83,8 @@ public static class ApiResilience
   }
 
   /// <summary>
-  /// Executes a non-streaming, single-response API call with a robust retry mechanism.
+  /// [AI Context] Executes a non-streaming, single-response API call with a robust retry mechanism.
+  /// [Human] Führt eine einmalige API-Anfrage (für strukturierte Daten) mit automatischen Wiederholungen aus.
   /// </summary>
   public static async Task<T?> ExecuteWithRetryAsync<T>(
       Func<Task<T>> apiCall,
@@ -131,6 +134,10 @@ public static class ApiResilience
     return null; // All retries failed
   }
 
+  /// <summary>
+  /// [AI Context] Determines if an exception is likely recoverable via retry.
+  /// [Human] Erkennt, ob ein Fehler nur vorübergehend ist (z.B. Netzwerk-Wackler, Server überlastet) oder ob wir wirklich abbrechen müssen.
+  /// </summary>
   private static bool IsTransientError(Exception ex)
   {
     string msg = ex.Message;
@@ -143,10 +150,12 @@ public static class ApiResilience
            msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
   }
 
-  // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
-  // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
-  // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
-  // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
+  /// <summary>
+  /// [AI Context] Implements a specific linear backoff strategy.
+  /// On the first failure, reads server-suggested wait time and adds a 20s buffer. 
+  /// On subsequent failures, increases wait time linearly by 30 seconds.
+  /// [Human] Wenn die API überlastet ist, berechnet diese Methode, wie lange wir warten müssen (linearer Anstieg statt exponentiell, um endloses Warten zu vermeiden).
+  /// </summary>
   private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int currentBackoff, string retryContext)
   {
     int waitTime;

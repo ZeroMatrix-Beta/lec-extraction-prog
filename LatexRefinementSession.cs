@@ -13,6 +13,10 @@ using Google.Cloud.Storage.V1;
 
 namespace DirectChatAiInteraction;
 
+/// <summary>
+/// [AI Context] Post-processing pipeline that takes sequentially extracted LaTeX chunks and deterministically merges them into a single, cohesive document.
+/// [Human] Der letzte Schritt in der Pipeline. Fügt die überlappenden LaTeX-Fragmente nahtlos zu einem kompilierbaren PDF zusammen.
+/// </summary>
 public class LatexRefinementSession {
     private readonly Client _client;
     private readonly LatexRefinementSessionConfig _config;
@@ -57,6 +61,10 @@ public class LatexRefinementSession {
         _audioFilePath = audioFilePath;
     }
 
+    /// <summary>
+    /// [AI Context] Entry point for the refinement pipeline. Validates dependencies and starts the execution if prerequisites are met.
+    /// [Human] Startet die Refinement-Pipeline, prüft aber vorher, ob die Ziel-Ordner und Audio-Dateien überhaupt vorhanden sind.
+    /// </summary>
     public async Task StartAsync() {
         if (!_config.Enabled) {
             Console.WriteLine("\n[INFO] LaTeX Refinement ist in der Konfiguration (LatexRefinementSessionConfig) deaktiviert. Überspringe die Ausführung.");
@@ -87,6 +95,10 @@ public class LatexRefinementSession {
         await ExecutePipelineAsync();
     }
 
+    /// <summary>
+    /// [AI Context] Orchestrates the 4-step pipeline: Merge, Speech Refinement, Final Format, and PDF Compilation.
+    /// [Human] Steuert die einzelnen Schritte (Zusammenfügen, Sprach-Korrektur, Finale Formatierung und PDF-Erstellung).
+    /// </summary>
     private async Task ExecutePipelineAsync() {
         string[] currentFiles;
         string targetFolder;
@@ -157,6 +169,10 @@ public class LatexRefinementSession {
         Console.WriteLine("\n[AutoExtraction] LaTeX Refinement Pipeline erfolgreich abgeschlossen!");
     }
 
+    /// <summary>
+    /// [AI Context] Compiles the final merged LaTeX file into a PDF using local pdflatex. Uses a wrapper file to inject the preamble.
+    /// [Human] Baut das fertige LaTeX-Skript mithilfe einer Preamble (Design-Vorlage) zu einem PDF zusammen.
+    /// </summary>
     private async Task CompilePdfAsync(string finalTexFile, string baseName, string targetFolder) {
         if (!System.IO.File.Exists(finalTexFile)) {
             Console.WriteLine($"[FEHLER] Kann PDF nicht generieren: {finalTexFile} existiert nicht.");
@@ -259,7 +275,10 @@ public class LatexRefinementSession {
         return sb.ToString();
     }
 
-    // Overload that takes string array
+    /// <summary>
+    /// [AI Context] Step 1: Merges overlapping LaTeX chunks. If an audio file is provided, its metadata is attached to align timestamps correctly.
+    /// [Human] Schritt 1: Führt die einzelnen Video-Teile zusammen. Nutzt (falls vorhanden) die Audio-Spur, um kaputte Zeitstempel zu korrigieren.
+    /// </summary>
     private async Task<string?> ExecuteStep1MergeAsync(string[] inputFiles, string? audioFilePath, string baseName, string targetFolder) {
         if (inputFiles.Length == 0) return null;
         int partsCount = _extractionConfig?.NumberOfParts ?? inputFiles.Length;
@@ -333,6 +352,10 @@ public class LatexRefinementSession {
         return await ExecuteStep1MergeAsync([inputFile], audioFilePath, baseName, targetFolder);
     }
 
+    /// <summary>
+    /// [AI Context] Step 2: Focuses strictly on fixing transcription errors within the `spoken-clean` environments by listening to the full audio.
+    /// [Human] Schritt 2: Konzentriert sich nur auf den gesprochenen Text und verbessert ihn (Grammatik, Fehler), ohne den Mathe-Code kaputt zu machen.
+    /// </summary>
     private async Task<string?> ExecuteStep2SpeechRefinementAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
         var parts = new List<Part>();
 
@@ -365,6 +388,10 @@ public class LatexRefinementSession {
         return result;
     }
 
+    /// <summary>
+    /// [AI Context] Step 3: Final pass to fix general formatting issues or minor logical inconsistencies according to the system instructions.
+    /// [Human] Schritt 3: Der letzte Feinschliff für das LaTeX-Dokument, bevor es kompiliert wird.
+    /// </summary>
     private async Task<string?> ExecuteStep3LastRefinementAsync(string inputFile, string baseName, string targetFolder) {
         // Simplified using target‑typed new and collection literal; the compiler infers List<Part>.
         List<Part> parts = [new() { Text = "Perform the final refinement and formatting pass on this document according to the system instructions." }];
@@ -383,6 +410,10 @@ public class LatexRefinementSession {
         return result;
     }
 
+    /// <summary>
+    /// [AI Context] Generic method to execute a generative API call. Handles automated retries, thinking budgets, system instructions, and completion markers.
+    /// [Human] Die zentrale Funktion, um Prompts an Gemini zu senden. Behandelt auch Fehler, Warteschlangen und die "Thinking"-Modelle.
+    /// </summary>
     private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
@@ -556,6 +587,10 @@ public class LatexRefinementSession {
         }
     }
 
+    /// <summary>
+    /// [AI Context] Financial Guardrail: Ensures the GCS bucket is purged after processing to prevent long-term storage costs.
+    /// [Human] Löscht temporäre Dateien im Google Cloud Storage Bucket, damit am Ende des Monats keine überraschenden Kosten entstehen.
+    /// </summary>
     private async Task CleanupBucketAsync() {
         if (string.IsNullOrWhiteSpace(_config.VertexGcsBucketName)) return;
         try {
