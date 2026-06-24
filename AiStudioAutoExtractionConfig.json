@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 0,
+  "ActiveApiProfile": 1,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
@@ -20,7 +20,7 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.35,
+  "Temperature": 0.5,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,

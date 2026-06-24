@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Infrastructure;
 
 namespace AutoExtraction;
 
@@ -12,7 +13,12 @@ namespace AutoExtraction;
 /// </summary>
 public static partial class ExtractionHelpers {
     // [AI Context] Globale Flag, um Input-Intercepting-Tasks (z.B. im REPL) während eines Delays zu pausieren
-    public static volatile bool IsInSmartDelay = false;
+    // Fixed IDE warning: Non-constant fields should not be visible. Converted to a property with a volatile backing field for thread safety.
+    private static volatile bool _isInSmartDelay = false;
+    public static bool IsInSmartDelay {
+        get => _isInSmartDelay;
+        set => _isInSmartDelay = value;
+    }
 
     /// <summary>
     /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
@@ -63,13 +69,15 @@ public static partial class ExtractionHelpers {
         }
         else {
             // Fallback: just strip the markers if the regex fails to capture a clean block
-            cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```(?:latex|tex)?\r?\n?", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"```\r?\n?", "");
+            // Updated to use Source-Generated Regexes to improve performance and resolve IDE warnings
+            cleanTex = LatexBlockRegex().Replace(cleanTex, "");
+            cleanTex = CodeBlockRegex().Replace(cleanTex, "");
         }
 
         // Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
-        cleanTex = System.Text.RegularExpressions.Regex.Replace(cleanTex, @"(?im)^[ \t]*(?:\*|_|%)*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?", "");
-        return cleanTex.Trim();
+        // Updated to use Source-Generated Regex to improve performance and resolve IDE warnings
+        cleanTex = SystemMessageRegex().Replace(cleanTex, "");
+        return cleanTex.Trim().FixMalformedEndTags();
     }
 
     /// <summary>
@@ -108,4 +116,13 @@ public static partial class ExtractionHelpers {
 
     [GeneratedRegexAttribute(@"```(?:latex|tex)?\s*\n(.*?)\n```", RegexOptions.IgnoreCase | RegexOptions.Singleline, "de-CH")]
     private static partial System.Text.RegularExpressions.Regex MyRegex();
+
+    [GeneratedRegex(@"```(?:latex|tex)?\r?\n?", RegexOptions.IgnoreCase)]
+    private static partial Regex LatexBlockRegex();
+
+    [GeneratedRegex(@"```\r?\n?")]
+    private static partial Regex CodeBlockRegex();
+
+    [GeneratedRegex(@"(?im)^[ \t]*(?:\*|_|%)*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?")]
+    private static partial Regex SystemMessageRegex();
 }

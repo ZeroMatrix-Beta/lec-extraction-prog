@@ -6,9 +6,11 @@
    * ==========================================
   */
   "Enabled": true, // Optional: true = use this config, false = ignore this config
+  // ================================
   "UseVertex": false, // true = use Vertex AI, false = use Google AI Studio
+  // =============================== 
   "AiStudioApiKeyEnvName": "API_KEY-latex-refinement",
-  "AiStudioActiveApiProfile": 0, // 0 = Dedicated key (AiStudioApiKeyEnvName), 1-3 = General/Experimental profiles
+  "AiStudioActiveApiProfile": 2, // 0 = Dedicated key (AiStudioApiKeyEnvName), 1-3 = General/Experimental profiles
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global", // The region/location for Vertex AI
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
@@ -32,12 +34,12 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.35,
+      "Temperature": 0.5,
       "TopP": 0.95,
       "TopK": 40,
-      "MaxOutputTokens": 32768,
-      "Model": "gemini-3-flash-preview",
-      // "Model": gemini-3.5-flash
+      "MaxOutputTokens": 65536, // NEVER CHANGE THIS LINE!!!
+      //"Model": "gemini-3-flash-preview",
+      "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH"
     },
@@ -46,7 +48,7 @@
       "Temperature": 0.6,
       "TopP": 0.93,
       "TopK": 35,
-      "MaxOutputTokens": 32768,
+      "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
       "ThinkingLevel": "MEDIUM"
@@ -66,13 +68,13 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.35,
+      "Temperature": 0.5,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "MEDIUM"
+      "ThinkingLevel": "HIGH"
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
@@ -82,7 +84,7 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "MEDIUM"
+      "ThinkingLevel": "HIGH"
     }
   },
   /*
@@ -99,7 +101,7 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.35,
+      "Temperature": 0.5,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,

@@ -76,7 +76,7 @@ public class SessionLogger(SessionLoggerConfig config) {
                                $"% {formattedPrompt}\n" +
                                $"% ==========================================\n\n";
 
-            await File.WriteAllTextAsync(texFilePath, texHeader + fullResponse);
+            await File.WriteAllTextAsync(texFilePath, texHeader + fullResponse.FixMalformedEndTags());
             _responseCount++;
         }
     }
