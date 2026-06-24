@@ -238,9 +238,10 @@ public class LatexRefinementSession {
 
         foreach (var line in lines) {
             string tLine = line.Trim();
-            if (tLine.StartsWith("! ")) {
+            if (tLine.StartsWith("! ") || tLine.StartsWith("Runaway argument?")) {
                 sb.AppendLine();
-                sb.AppendLine("❌ ERROR: " + tLine[2..]);
+                string errMsg = tLine.StartsWith("! ") ? tLine[2..] : tLine;
+                sb.AppendLine("❌ ERROR: " + errMsg);
                 inError = true;
                 errorCount++;
             }
@@ -284,15 +285,14 @@ public class LatexRefinementSession {
         int partsCount = _extractionConfig?.NumberOfParts ?? inputFiles.Length;
         int overlapMin = (_extractionConfig?.OverlapSeconds ?? 180) / 60;
 
-        // Upload audio if available
-        var parts = new List<Part>();
         string audioLengthStr = "unknown";
         string partTimestampsStr = "";
 
         bool audioExists = audioFilePath != null && System.IO.File.Exists(audioFilePath);
-        if (audioExists && audioFilePath != null) {
-            var toolkit = new FfmpegUtilities.FfmpegToolkit();
-            double dur = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(audioFilePath);
+
+        List<Part> audioParts = [];
+        if (audioExists) {
+            double dur = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(audioFilePath!);
             TimeSpan t = TimeSpan.FromSeconds(dur);
             audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
 
@@ -315,30 +315,66 @@ public class LatexRefinementSession {
                 var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
                 var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                 if (success) {
-                    parts.AddRange(attached);
+                    audioParts.AddRange(attached);
                     Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
                 }
             }
         }
 
         bool audioAttached = audioExists && _config.Step1MergeAndTimestamp.AttachAudio;
-        string promptText = (audioAttached ? "Here is the generated audio file alongside with the combined file with all the offset parts together. " : "Here is the combined file with all the offset parts together. ") +
-                            $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
-                            $"The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
-                            (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
-                            (audioAttached ? $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio." :
-                                             $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please correct any misaligned timestamps using the expected part timestamps provided above.");
-
-        parts.Add(new Part { Text = promptText });
-
-        foreach (var file in inputFiles) {
-            Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
-            string content = await System.IO.File.ReadAllTextAsync(file);
-            parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
-        }
-
         string outputFileName = $"{baseName}-offset-merged.tex";
-        var result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName);
+        string? result;
+
+        if (audioAttached) {
+            // FAKE HISTORY (Prefilling) APPROACH
+            // Round 1 User Prompt (Tex Files)
+            var round1Parts = new List<Part>();
+            string round1Prompt = $"Here is the combined .tex file to process. It was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
+                                  (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"\nExpected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
+                                  "Please acknowledge you have read it. I will provide the audio file and final merge instructions in the next round.";
+            round1Parts.Add(new Part { Text = round1Prompt });
+            foreach (var file in inputFiles) {
+                Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
+                string content = await System.IO.File.ReadAllTextAsync(file);
+                round1Parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
+            }
+
+            // Fake History: User Turn
+            List<Content> history = [];
+            history.Add(new Content { Role = "user", Parts = round1Parts });
+
+            // Fake History: Model Acknowledgment Turn
+            history.Add(new Content { Role = "model", Parts = [new Part { Text = "Understood. I have read the .tex files and noted the expected timestamps. I am ready for the audio file and the merge instructions." }] });
+
+            // Round 2 User Prompt (Audio & Instructions)
+            var round2Parts = new List<Part>();
+            round2Parts.AddRange(audioParts);
+            string round2Prompt = $"Here is the generated audio file. The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
+                                  $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio. Please perform the merge and timestamp correction according to the system instructions.";
+            round2Parts.Add(new Part { Text = round2Prompt });
+
+            // Final User Turn
+            history.Add(new Content { Role = "user", Parts = round2Parts });
+
+            Console.WriteLine($"  [INFO] Verwende Fake-History Struktur für Step 1 (Round 1 + Round 2 simuliert).");
+            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName);
+        }
+        else {
+            // SINGLE TURN APPROACH (Fallback)
+            var parts = new List<Part>();
+            string promptText = "Here is the combined file with all the offset parts together. " +
+                                $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
+                                $"The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
+                                (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
+                                $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please correct any misaligned timestamps";
+            parts.Add(new Part { Text = promptText });
+            foreach (var file in inputFiles) {
+                Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
+                string content = await System.IO.File.ReadAllTextAsync(file);
+                parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
+            }
+            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName);
+        }
 
         if (_config.UseVertex) {
             await CleanupBucketAsync();
@@ -415,6 +451,12 @@ public class LatexRefinementSession {
     /// [Human] Die zentrale Funktion, um Prompts an Gemini zu senden. Behandelt auch Fehler, Warteschlangen und die "Thinking"-Modelle.
     /// </summary>
     private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName) {
+        var finalPromptParts = new List<Part>(userPromptParts);
+        var history = new List<Content> { new() { Role = "user", Parts = finalPromptParts } };
+        return await ExecuteGenerativeStepAsync(stepConfig, history, targetOutputFolder, outputFileName);
+    }
+
+    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
         string systemInstructionText = "";
@@ -463,13 +505,36 @@ public class LatexRefinementSession {
             }
         }
 
-        // Inject completion marker constraint
-        var finalPromptParts = new List<Part>(userPromptParts) {
-            new() { Text = "\n\nCRITICAL INSTRUCTION: When you have completely finished writing your response and there is nothing left to output, you MUST append the exact text '% [SYSTEM] Refinement complete' on a new line at the very end of your response. This is mandatory for the system to know you are done." }
-        };
+        // Inject completion marker constraint into the last user message
+        var lastUserMsg = history.LastOrDefault(c => c.Role == "user");
+        if (lastUserMsg != null && lastUserMsg.Parts != null) {
+            lastUserMsg.Parts.Add(new Part { Text = "\n\nCRITICAL INSTRUCTION: When you have completely finished writing your response and there is nothing left to output, you MUST append the exact text '% [SYSTEM] Refinement complete' on a new line at the very end of your response. This is mandatory for the system to know you are done." });
+        }
 
-        // Simplified using target‑typed new for the inner Content object.
-        var history = new List<Content> { new() { Role = "user", Parts = finalPromptParts } };
+        // Dump the full conversation history that Gemini will read into a log file
+        try {
+            var sbPrompt = new System.Text.StringBuilder();
+            sbPrompt.AppendLine("# SYSTEM INSTRUCTION");
+            sbPrompt.AppendLine(systemInstructionText);
+            sbPrompt.AppendLine("\n---\n");
+
+            foreach (var turn in history) {
+                sbPrompt.AppendLine($"# ROLE: {turn.Role}");
+                if (turn.Parts != null) {
+                    foreach (var part in turn.Parts) {
+                        sbPrompt.AppendLine(part.Text ?? "[Media Attachment]");
+                    }
+                }
+                sbPrompt.AppendLine("\n---\n");
+            }
+
+            string promptDumpPath = Path.Combine(targetOutputFolder, $"{outputFileName}-prompt-log.md");
+            await System.IO.File.WriteAllTextAsync(promptDumpPath, sbPrompt.ToString());
+            Console.WriteLine($"  [INFO] Gemini-Prompt-Log gespeichert unter: {promptDumpPath}");
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [WARNUNG] Konnte Prompt-Log nicht speichern: {ex.Message}");
+        }
 
         string fullResponseText = "";
         int currentRequest = 1;
@@ -538,7 +603,7 @@ public class LatexRefinementSession {
             // The '^' operator means "from the end", so '^300..' means "start 300 characters from the end, and go to the very end".
             string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
-                "Please \"continue\" exactly where you left off. Do not repeat what you already wrote. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
+                "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Do not open a new ```latex block, do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
 
             Console.WriteLine("\n  [Refinement] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
             Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
@@ -565,6 +630,18 @@ public class LatexRefinementSession {
         if (!string.IsNullOrEmpty(fullResponseText)) {
             if (!Directory.Exists(targetOutputFolder)) Directory.CreateDirectory(targetOutputFolder);
             string outPath = Path.Combine(targetOutputFolder, outputFileName);
+
+            if (System.IO.File.Exists(outPath)) {
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(outputFileName);
+                string ext = Path.GetExtension(outputFileName);
+                int copyIndex = 1;
+                while (System.IO.File.Exists(outPath)) {
+                    outPath = Path.Combine(targetOutputFolder, $"{fileNameWithoutExt}-copy{copyIndex}{ext}");
+                    copyIndex++;
+                }
+                outputFileName = Path.GetFileName(outPath);
+            }
+
             string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
 
             string fileHeader = $"% ==========================================\n" +

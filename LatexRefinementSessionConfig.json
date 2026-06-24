@@ -2,10 +2,11 @@
   /*
    * ==========================================
    * Global Configurations
+   TODO: add all API Keys.
    * ==========================================
   */
   "Enabled": true, // Optional: true = use this config, false = ignore this config
-  "UseVertex": true, // true = use Vertex AI, false = use Google AI Studio
+  "UseVertex": false, // true = use Vertex AI, false = use Google AI Studio
   "AiStudioApiKeyEnvName": "API_KEY-latex-refinement",
   "AiStudioActiveApiProfile": 0, // 0 = Dedicated key (AiStudioApiKeyEnvName), 1-3 = General/Experimental profiles
   "VertexProjectId": "vertex-ai-experiments-494320",
@@ -24,18 +25,19 @@
    */
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "AttachAudio": false,
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.1,
+      "Temperature": 0.35,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 32768,
-      "Model": "gemini-3.5-flash",
+      "Model": "gemini-3-flash-preview",
+      // "Model": gemini-3.5-flash
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH"
     },
@@ -47,7 +49,7 @@
       "MaxOutputTokens": 32768,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "MEDIUM"
     }
   },
   /*
@@ -64,13 +66,13 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.2,
+      "Temperature": 0.35,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "MEDIUM"
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
@@ -80,7 +82,7 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "MEDIUM"
     }
   },
   /*
@@ -97,7 +99,7 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.1,
+      "Temperature": 0.35,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
