@@ -9,12 +9,15 @@ namespace AutoExtraction;
 /// Helper class to parse date and weekday information from video filenames.
 /// Assumes a format like "YYYY-MM-DD-weekday.mp4" or "MM-DD-weekday.mp4".
 /// </summary>
-public static class VideoDateParser {
+public static partial class VideoDateParser {
     public class VideoDateInfo {
         public DateTime Date { get; init; }
         public string Weekday { get; init; } = "";
         public string DateString { get; init; } = "";
     }
+
+    [GeneratedRegex(@"^(?:(\d{4})-)?(\d{2})-(\d{2})-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:[-_.]|$)", RegexOptions.IgnoreCase)]
+    private static partial Regex DatePatternRegex();
 
     public static VideoDateInfo Parse(string filePath) {
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
@@ -24,14 +27,14 @@ public static class VideoDateParser {
         // Group 2: Month (MM)
         // Group 3: Day (DD)
         // Group 4: Weekday (German or English)
-        string pattern = @"^(?:(\d{4})-)?(\d{2})-(\d{2})-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)$";
-        Match match = Regex.Match(fileNameWithoutExtension, pattern, RegexOptions.IgnoreCase);
+        Match match = DatePatternRegex().Match(fileNameWithoutExtension);
 
         if (match.Success) {
             string yearGroup = match.Groups[1].Value; // YYYY if present
             int month = int.Parse(match.Groups[2].Value);
             int day = int.Parse(match.Groups[3].Value);
-            string weekday = match.Groups[4].Value;
+            string rawWeekday = match.Groups[4].Value;
+            string weekday = char.ToUpperInvariant(rawWeekday[0]) + rawWeekday.Substring(1).ToLowerInvariant();
 
             int year;
             string parsedDateStringForInfo; // Will store YYYY-MM-DD or MM-DD

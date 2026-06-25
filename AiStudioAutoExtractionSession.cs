@@ -512,7 +512,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
+        // Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
         int backoff = 45;
         int maxRetries = 10;
         bool success = false;
@@ -536,7 +536,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
                     if (cts.IsCancellationRequested) break;
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    Console.Write(txt);
+                    // Console.Write(txt);
                     fullResponse += txt;
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
@@ -548,10 +548,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 _sessionTotalOutputTokens += requestOutputTokens;
                 finalInputTokens = requestInputTokens;
                 finalOutputTokens = requestOutputTokens;
-                Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
-                Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+                // Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
+                // Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
-                Console.WriteLine();
+                // Console.WriteLine();
                 success = true;
                 break;
             }
