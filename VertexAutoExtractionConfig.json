@@ -5,7 +5,7 @@
   "ProjectId": "vertex-ai-experiments-494320",
   "Location": "global",
   "GcsBucketName": "test-latex-lecture-extraction-bucket",
-  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
+  "SourceFolder": "D:\\lecture-videos\\physik-I\\",
   "TargetFolder": "",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
@@ -19,7 +19,7 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.5,
+  "Temperature": 0.45,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
@@ -31,6 +31,7 @@
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 4,
-  "OverlapSeconds": 180
+  "NumberOfParts": 5,
+  "OverlapSeconds": 150,
+  "GoogleVideoFps": 0.3333333333333333
 }

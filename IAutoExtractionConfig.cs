@@ -8,4 +8,5 @@ public interface IAutoExtractionConfig {
     int OverlapSeconds { get; }
     string TargetFolder { get; }
     bool CreateLogFiles { get; }
+    double? GoogleVideoFps { get; }
 }

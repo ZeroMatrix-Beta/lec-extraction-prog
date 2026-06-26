@@ -72,4 +72,8 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Standard increment in minutes when prolonging the context cache via GUI.
     // [Human] Verlängerungsintervall in Minuten beim Verlängern über das GUI (z.B. 30).
     public int ContextCachingIncrementMinutes { get; set; } = 30;
+
+    // [AI Context] Optional framerate override for Google Gemini API video sampling.
+    // [Human] Optionale Bildwiederholrate für die Gemini-API (z.B. 0.333 für 1 Frame alle 3 Sekunden).
+    public double? GoogleVideoFps { get; set; }
 }

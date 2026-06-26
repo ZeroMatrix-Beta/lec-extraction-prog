@@ -77,4 +77,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Wenn aktiviert, wird die gesamte zusammengesetzte System Instruction als Datei geloggt.
     public bool CreateLogFiles { get; set; } = true;
 
+    // [AI Context] Optional framerate override for Google Gemini API video sampling.
+    // [Human] Optionale Bildwiederholrate für die Gemini-API (z.B. 0.333 für 1 Frame alle 3 Sekunden).
+    public double? GoogleVideoFps { get; set; }
 }

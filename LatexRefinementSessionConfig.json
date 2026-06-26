@@ -54,7 +54,7 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.1-pro-preview",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "MEDIUM",
+      "ThinkingLevel": "HIGH",
       "UseContextCaching": true,
       "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30
