@@ -19,4 +19,10 @@ public class DirectAiChatSessionVertexAIConfig {
     public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
     // [AI Context] Explicitly maps to Vertex Gemini 3.x reasoning effort.
     public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
+
+    // [AI Context] If true, system instructions are cached on Google Cloud servers.
+    // [Human] Wenn aktiviert, werden System Instructions im Cache gespeichert.
+    public bool UseContextCaching { get; set; } = false;
+    public int ContextCachingMinutes { get; set; } = 15;
+    public int ContextCachingIncrementMinutes { get; set; } = 30;
 }

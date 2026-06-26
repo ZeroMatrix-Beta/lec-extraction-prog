@@ -357,7 +357,7 @@ public class LatexRefinementSession {
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Console.WriteLine($"  [INFO] Verwende Fake-History Struktur für Step 1 (Round 1 + Round 2 simuliert).");
-            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName);
+            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
         else {
             // SINGLE TURN APPROACH (Fallback)
@@ -373,7 +373,7 @@ public class LatexRefinementSession {
                 string content = await System.IO.File.ReadAllTextAsync(file);
                 parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
             }
-            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName);
+            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
 
         if (_config.UseVertex) {
@@ -415,7 +415,7 @@ public class LatexRefinementSession {
         parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
         string outputFileName = $"{baseName}-offset-speech_refined.tex";
-        var result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName);
+        var result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
 
         if (_config.UseVertex) {
             await CleanupBucketAsync();
@@ -437,7 +437,7 @@ public class LatexRefinementSession {
         parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
         string outputFileName = $"{baseName}-offset-final.tex";
-        var result = await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName);
+        var result = await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
 
         if (_config.UseVertex) {
             await CleanupBucketAsync();
@@ -450,13 +450,13 @@ public class LatexRefinementSession {
     /// [AI Context] Generic method to execute a generative API call. Handles automated retries, thinking budgets, system instructions, and completion markers.
     /// [Human] Die zentrale Funktion, um Prompts an Gemini zu senden. Behandelt auch Fehler, Warteschlangen und die "Thinking"-Modelle.
     /// </summary>
-    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName) {
+    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         var finalPromptParts = new List<Part>(userPromptParts);
         var history = new List<Content> { new() { Role = "user", Parts = finalPromptParts } };
-        return await ExecuteGenerativeStepAsync(stepConfig, history, targetOutputFolder, outputFileName);
+        return await ExecuteGenerativeStepAsync(stepConfig, history, targetOutputFolder, outputFileName, cacheStateFileName);
     }
 
-    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName) {
+    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
         string systemInstructionText = "";
@@ -478,13 +478,81 @@ public class LatexRefinementSession {
             }
         }
 
+        // [AI Context] Context caching is Vertex AI only. AiStudio (Google API key) does not support caching.
+        string? cacheName = null;
+        if (_config.UseVertex && backendParams.UseContextCaching && !string.IsNullOrWhiteSpace(systemInstructionText)) {
+            string checksum = ContextCacheStateManager.ComputeChecksum(systemInstructionText);
+            var savedState = ContextCacheStateManager.LoadState(cacheStateFileName);
+            bool match = ContextCacheStateManager.MatchesConfig(
+                savedState,
+                backendParams.Model,
+                backendParams.Temperature,
+                backendParams.TopP,
+                backendParams.TopK,
+                backendParams.MaxOutputTokens,
+                backendParams.ThinkingBudget,
+                backendParams.ThinkingLevel,
+                checksum
+            );
+            if (match && await ContextCacheStateManager.IsValidRemoteAsync(_client, savedState.CacheName!)) {
+                cacheName = savedState.CacheName;
+                Console.WriteLine($"  [INFO] Nutze bestehenden Google Kontext-Cache für Refinement: {cacheName}");
+            }
+            else {
+                if (!string.IsNullOrEmpty(savedState.CacheName)) {
+                    await ContextCacheStateManager.DeleteRemoteAsync(_client, savedState.CacheName);
+                }
+                Console.WriteLine("  [INFO] Erstelle neuen Google Kontext-Cache für Refinement...");
+                try {
+                    var cacheConfig = new CreateCachedContentConfig {
+                        SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] },
+                        DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
+                        Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
+                    };
+                    var created = await _client.Caches.CreateAsync(backendParams.Model, cacheConfig);
+                    if (created != null && !string.IsNullOrEmpty(created.Name)) {
+                        cacheName = created.Name;
+                        savedState.CacheName = cacheName;
+                        savedState.Model = backendParams.Model;
+                        savedState.Temperature = backendParams.Temperature;
+                        savedState.TopP = backendParams.TopP;
+                        savedState.TopK = backendParams.TopK;
+                        savedState.MaxOutputTokens = backendParams.MaxOutputTokens;
+                        savedState.ThinkingBudget = backendParams.ThinkingBudget;
+                        savedState.ThinkingLevel = backendParams.ThinkingLevel;
+                        savedState.SystemInstructionChecksum = checksum;
+                        savedState.ExpireTimeUtc = DateTime.UtcNow.AddMinutes(backendParams.ContextCachingMinutes);
+                        if (created != null && created.ExpireTime.HasValue) {
+                            savedState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
+                        }
+                        ContextCacheStateManager.SaveState(savedState, cacheStateFileName);
+                        Console.WriteLine($"  [INFO] Refinement Kontext-Cache erstellt: {cacheName}");
+                    }
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"  [FEHLER] Refinement Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+                }
+            }
+        }
+        else if (_config.UseVertex && !backendParams.UseContextCaching) {
+            // [AI Context] If caching was previously active but is now disabled, clean up the remote cache.
+            var sState = ContextCacheStateManager.LoadState(cacheStateFileName);
+            if (!string.IsNullOrEmpty(sState.CacheName)) {
+                await ContextCacheStateManager.DeleteRemoteAsync(_client, sState.CacheName);
+                ContextCacheStateManager.ClearState(cacheStateFileName);
+            }
+        }
+
         var requestConfig = new GenerateContentConfig {
             Temperature = backendParams.Temperature,
             TopP = backendParams.TopP,
             TopK = backendParams.TopK,
             MaxOutputTokens = backendParams.MaxOutputTokens
         };
-        if (!string.IsNullOrWhiteSpace(systemInstructionText)) {
+        if (!string.IsNullOrEmpty(cacheName)) {
+            requestConfig.CachedContent = cacheName;
+        }
+        else if (!string.IsNullOrWhiteSpace(systemInstructionText)) {
             // Simplified using target‑typed new for both the Content and Part objects.
             requestConfig.SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] };
         }

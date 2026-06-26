@@ -76,4 +76,5 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] If true, logs the complete system instruction dump to disk.
     // [Human] Wenn aktiviert, wird die gesamte zusammengesetzte System Instruction als Datei geloggt.
     public bool CreateLogFiles { get; set; } = true;
+
 }

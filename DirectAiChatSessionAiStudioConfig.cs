@@ -19,6 +19,12 @@ public class DirectAiChatSessionAiStudioGenerationConfig {
     public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
     // [AI Context] Controls the internal reasoning time for the Gemini 3.x series (e.g., MINIMAL, LOW, MEDIUM, HIGH).
     public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
+
+    // [AI Context] If true, system instructions are cached on Google Cloud servers.
+    // [Human] Wenn aktiviert, werden System Instructions im Cache gespeichert.
+    public bool UseContextCaching { get; set; } = false;
+    public int ContextCachingMinutes { get; set; } = 15;
+    public int ContextCachingIncrementMinutes { get; set; } = 30;
 }
 
 /// <summary>

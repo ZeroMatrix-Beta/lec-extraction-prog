@@ -41,6 +41,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     private readonly List<Content> _debugChatHistory = [];
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
+    // [AI Context] Active Google Cloud Context Cache resource name if caching is active.
+    private string? _cachedContentName = null;
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
@@ -211,12 +213,121 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             _sessionLogger.InitializeSession();
             await _sessionLogger.LogSessionSetupAsync();
 
+            await InitializeContextCachingAsync();
+
             await ProcessFilesAsync(files);
         }
         finally {
             // [AI Context] Guarantee that the bucket is cleaned up even if an exception occurs during history upload or processing.
             await CleanupBucketAsync();
         }
+    }
+
+    /// <summary>
+    /// [AI Context] Initializes or validates the remote Google Cloud Context Cache for system instructions.
+    /// [Human] Prüft beim Start, ob der Google-Kontext-Cache noch gültig ist oder neu angelegt werden muss.
+    /// </summary>
+    private async Task InitializeContextCachingAsync() {
+        if (!_config.UseContextCaching) {
+            var state = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
+            if (!string.IsNullOrEmpty(state.CacheName)) {
+                Console.WriteLine("  [INFO] Context Caching wurde in Konfiguration deaktiviert. Lösche aktiven Cache bei Google...");
+                await ContextCacheStateManager.DeleteRemoteAsync(_client, state.CacheName);
+                ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileVertex);
+            }
+            return;
+        }
+
+        bool hasSys = !string.IsNullOrWhiteSpace(_systemInstructionText);
+        bool hasHist = _config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0;
+        if (!hasSys && !hasHist) return;
+
+        var sysParts = new List<Part>();
+        if (hasSys) sysParts.Add(new Part { Text = _systemInstructionText });
+        if (hasHist) sysParts.AddRange(_historyParts);
+
+        string combinedChecksum = ContextCacheStateManager.ComputeChecksum(_systemInstructionText + (hasHist ? $"_hist_{_historyParts.Count}" : ""));
+        var savedState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
+
+        bool match = ContextCacheStateManager.MatchesConfig(
+            savedState,
+            _config.Model,
+            _config.Temperature,
+            _config.TopP,
+            _config.TopK,
+            _config.MaxOutputTokens,
+            _config.ThinkingBudget,
+            _config.ThinkingLevel,
+            combinedChecksum
+        );
+
+        if (match && await ContextCacheStateManager.IsValidRemoteAsync(_client, savedState.CacheName!)) {
+            _cachedContentName = savedState.CacheName;
+            Console.WriteLine($"  [INFO] Nutze bestehenden Google Kontext-Cache: {_cachedContentName} (Gültig bis {savedState.ExpireTimeUtc.ToLocalTime():t})");
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(savedState.CacheName)) {
+            await ContextCacheStateManager.DeleteRemoteAsync(_client, savedState.CacheName);
+        }
+
+        Console.WriteLine("  [INFO] Erstelle neuen Kontext-Cache bei Google (dies kann einen Moment dauern)...");
+        try {
+            var cacheConfig = new CreateCachedContentConfig {
+                SystemInstruction = new Content { Role = "system", Parts = sysParts },
+                DisplayName = "vertex-sys-cache",
+                Ttl = $"{_config.ContextCachingMinutes * 60}s"
+            };
+            var created = await _client.Caches.CreateAsync(_config.Model, cacheConfig);
+            if (created != null && !string.IsNullOrEmpty(created.Name)) {
+                _cachedContentName = created.Name;
+                savedState.CacheName = _cachedContentName;
+                savedState.Model = _config.Model;
+                savedState.Temperature = _config.Temperature;
+                savedState.TopP = _config.TopP;
+                savedState.TopK = _config.TopK;
+                savedState.MaxOutputTokens = _config.MaxOutputTokens;
+                savedState.ThinkingBudget = _config.ThinkingBudget;
+                savedState.ThinkingLevel = _config.ThinkingLevel;
+                savedState.SystemInstructionChecksum = combinedChecksum;
+                savedState.ExpireTimeUtc = DateTime.UtcNow.AddMinutes(_config.ContextCachingMinutes);
+                if (created != null && created.ExpireTime.HasValue) {
+                    savedState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
+                }
+                ContextCacheStateManager.SaveState(savedState, ContextCacheStateManager.StateFileVertex);
+                Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich angelegt: {_cachedContentName} (Gültig bis {savedState.ExpireTimeUtc.ToLocalTime():t})");
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [FEHLER] Konnte Kontext-Cache nicht erstellen: {ex.GetType().Name} - {ex.Message}. Falle auf normalen Upload zurück.");
+            _cachedContentName = null;
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Interactive UI to adjust context caching defaults and persist them to json.
+    /// [Human] Interaktives Menü, um Caching-Dauer und Verlängerungsintervall anzupassen.
+    /// </summary>
+    private void ConfigureCachingSettings() {
+        Console.WriteLine("\n⚙️ Aktuelle Context Caching Einstellungen:");
+        Console.WriteLine($"  UseContextCaching:              {_config.UseContextCaching}");
+        Console.WriteLine($"  ContextCachingMinutes:          {_config.ContextCachingMinutes} min");
+        Console.WriteLine($"  ContextCachingIncrementMinutes: {_config.ContextCachingIncrementMinutes} min");
+        Console.Write("\nContext Caching aktivieren? (j/n oder Enter für keine Änderung): ");
+        string? toggle = Console.ReadLine()?.Trim().ToLower();
+        if (toggle == "j") _config.UseContextCaching = true;
+        else if (toggle == "n") _config.UseContextCaching = false;
+
+        Console.Write($"Neue Standarddauer in Minuten (aktuell {_config.ContextCachingMinutes}): ");
+        string? durInput = Console.ReadLine()?.Trim();
+        if (int.TryParse(durInput, out int d) && d > 0) _config.ContextCachingMinutes = d;
+
+        Console.Write($"Neues Verlängerungsintervall in Minuten (aktuell {_config.ContextCachingIncrementMinutes}): ");
+        string? incInput = Console.ReadLine()?.Trim();
+        if (int.TryParse(incInput, out int inc) && inc > 0) _config.ContextCachingIncrementMinutes = inc;
+
+        ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
+        Console.WriteLine("  [INFO] Einstellungen in VertexAutoExtractionConfig.json gespeichert.");
     }
 
     /// <summary>
@@ -233,6 +344,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
         Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.Model + ")");
         Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
+        Console.WriteLine($"  9) ⏳ Context Caching verlängern (+{_config.ContextCachingIncrementMinutes} min Standard)");
+        Console.WriteLine("  10) 🐷 Context Caching beenden (Save Money! Geld sparen)");
+        Console.WriteLine("  11) ⚙️ Standardwerte für Context Caching ändern");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\n💡 Hinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
     }
@@ -293,6 +407,32 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
                 _latexRefinementConfig.UseVertex = true;
                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
+            }
+            else if (normalizedInput == "9" || normalizedInput.Equals("prolong cache", StringComparison.OrdinalIgnoreCase)) {
+                if (string.IsNullOrEmpty(_cachedContentName)) {
+                    Console.WriteLine("  [WARNUNG] Es ist aktuell kein Google Kontext-Cache aktiv.");
+                }
+                else {
+                    var savedState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
+                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, savedState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
+                    if (updated != null) {
+                        Console.WriteLine($"  [INFO] Kontext-Cache '{_cachedContentName}' verlängert um {_config.ContextCachingIncrementMinutes} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                    }
+                }
+            }
+            else if (normalizedInput == "10" || normalizedInput.Equals("stop cache", StringComparison.OrdinalIgnoreCase)) {
+                if (string.IsNullOrEmpty(_cachedContentName)) {
+                    Console.WriteLine("  [WARNUNG] Es ist aktuell kein Google Kontext-Cache aktiv.");
+                }
+                else {
+                    await ContextCacheStateManager.DeleteRemoteAsync(_client, _cachedContentName);
+                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileVertex);
+                    _cachedContentName = null;
+                    Console.WriteLine("  [INFO] 🐷 Kontext-Cache vorzeitig beendet und bei Google gelöscht. (Geld gespart!)");
+                }
+            }
+            else if (normalizedInput == "11" || normalizedInput.Equals("config cache", StringComparison.OrdinalIgnoreCase)) {
+                ConfigureCachingSettings();
             }
             else {
                 await DebugChatAsync(input); // Chat erhält den originalen Input
@@ -512,10 +652,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens // Use config value, or hardcode a smaller value for acknowledgment? Let's use config.
         };
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+        if (!string.IsNullOrEmpty(_cachedContentName)) {
+            requestConfig.CachedContent = _cachedContentName;
+        }
+        else if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
             if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
@@ -1096,10 +1239,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+        if (!string.IsNullOrEmpty(_cachedContentName)) {
+            requestConfig.CachedContent = _cachedContentName;
+        }
+        else if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
             if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {

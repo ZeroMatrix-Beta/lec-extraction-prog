@@ -16,6 +16,9 @@
     "TopK": 10,
     "MaxOutputTokens": 65535,
     "ThinkingBudget": 4096,
-    "ThinkingLevel": "MEDIUM"
+    "ThinkingLevel": "MEDIUM",
+    "UseContextCaching": false,
+    "ContextCachingMinutes": 15,
+    "ContextCachingIncrementMinutes": 30
   }
 }

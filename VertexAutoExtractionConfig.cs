@@ -58,4 +58,16 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] If true, logs the complete system instruction dump to disk.
     // [Human] Wenn aktiviert, wird die gesamte zusammengesetzte System Instruction als Datei geloggt.
     public bool CreateLogFiles { get; set; } = true;
+
+    // [AI Context] If true, system instructions (>100k tokens) are cached on Google Cloud servers to reduce latency and token costs.
+    // [Human] Wenn aktiviert, werden System Instructions bei Google im Cache gespeichert (spart Tokens & Geld).
+    public bool UseContextCaching { get; set; } = true;
+
+    // [AI Context] Default caching duration in minutes on Google servers.
+    // [Human] Standard-Gültigkeitsdauer des Kontext-Caches in Minuten (z.B. 15).
+    public int ContextCachingMinutes { get; set; } = 15;
+
+    // [AI Context] Standard increment in minutes when prolonging the context cache via GUI.
+    // [Human] Verlängerungsintervall in Minuten beim Verlängern über das GUI (z.B. 30).
+    public int ContextCachingIncrementMinutes { get; set; } = 30;
 }

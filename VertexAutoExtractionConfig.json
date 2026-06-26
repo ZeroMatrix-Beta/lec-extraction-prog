@@ -1,4 +1,7 @@
 {
+  "UseContextCaching": true,
+  "ContextCachingMinutes": 15,
+  "ContextCachingIncrementMinutes": 30,
   "ProjectId": "vertex-ai-experiments-494320",
   "Location": "global",
   "GcsBucketName": "test-latex-lecture-extraction-bucket",

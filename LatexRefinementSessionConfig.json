@@ -41,7 +41,10 @@
       //"Model": "gemini-3-flash-preview",
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
@@ -51,7 +54,10 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "MEDIUM"
+      "ThinkingLevel": "MEDIUM",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30
     }
   },
   /*
@@ -74,7 +80,10 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
@@ -84,7 +93,10 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 32768,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30
     }
   },
   /*
@@ -107,7 +119,10 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-3.5-flash",
       "ThinkingBudget": 65535,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
@@ -117,7 +132,10 @@
       "MaxOutputTokens": 65535,
       "Model": "gemini-2.5-pro",
       "ThinkingBudget": 65535,
-      "ThinkingLevel": "HIGH"
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30
     }
   }
 }
