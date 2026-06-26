@@ -71,10 +71,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-        string filenamePatternRegex = @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$";
         foreach (var f in filesToProcess) {
             string fileName = Path.GetFileName(f).ToLowerInvariant();
-            if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, filenamePatternRegex)) {
+            if (!FilenamePatternRegex().IsMatch(fileName)) {
                 Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
                 Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
             }
@@ -105,25 +104,25 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     // Resolve all files from configured paths, handling directories
                     var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
-                    if (resolvedInstructionFiles.Any()) {
+                    if (resolvedInstructionFiles.Count > 0) {
                         ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
                         List<string> distinctHistoryFiles = [];
                         if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
                             distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-                            if (distinctHistoryFiles.Any()) {
+                            if (distinctHistoryFiles.Count > 0) {
                                 Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
                                 ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
                             }
                         }
 
-                        string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()
+                        string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0
                             ? "System Instructions und History laden? (j/n): "
                             : "System Instructions laden? (j/n): ";
                         Console.Write(promptText);
 
                         if (Console.ReadLine()?.Trim().ToLower() == "j") {
                             var allPathsForIndex = new List<string>(resolvedInstructionFiles);
-                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()) {
+                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                                 allPathsForIndex.AddRange(distinctHistoryFiles);
                             }
                             string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
@@ -133,7 +132,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             instructionBuilder.AppendLine("### System Instructions");
                             instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
 
-                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()) {
+                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                                 instructionBuilder.AppendLine("\n### Training History");
                                 instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
                             }
@@ -145,11 +144,11 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             }
                             _systemInstructionText = instructionBuilder.ToString();
 
-                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()) {
+                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                                 Console.WriteLine("\n  [INFO] Lade History-Dateien für System Instruction ein...");
                                 string fileList = string.Join(", ", distinctHistoryFiles.Select(p => $"\"{p}\""));
                                 var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
-                                if (success && attachmentParts.Any()) {
+                                if (success && attachmentParts.Count > 0) {
                                     _historyParts.AddRange(attachmentParts);
                                     _historyWasLoaded = true;
                                     Console.WriteLine("  [INFO] Dateien erfolgreich eingelesen und in die System Instruction eingebunden.");
@@ -172,7 +171,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
             if (!_historyWasLoaded) {
                 var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-                if (distinctFiles.Any()) {
+                if (distinctFiles.Count > 0) {
                     Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
                     ExtractionHelpers.PrintFileTree(distinctFiles);
                     if (_config.LoadHistoryIntoSystemInstruction) {
@@ -191,7 +190,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         }
                         string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
                         var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
-                        if (success && attachmentParts.Any()) {
+                        if (success && attachmentParts.Count > 0) {
                             _historyParts.AddRange(attachmentParts);
                             _historyWasLoaded = true;
                             if (_config.LoadHistoryIntoSystemInstruction) {
@@ -405,30 +404,102 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt und in Konfiguration gespeichert.");
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
-                _latexRefinementConfig.UseVertex = true;
-                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
+                if (_latexRefinementConfig != null) {
+                    _latexRefinementConfig.UseVertex = true;
+                }
+                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig!, _config);
             }
             else if (normalizedInput == "9" || normalizedInput.Equals("prolong cache", StringComparison.OrdinalIgnoreCase)) {
-                if (string.IsNullOrEmpty(_cachedContentName)) {
-                    Console.WriteLine("  [WARNUNG] Es ist aktuell kein Google Kontext-Cache aktiv.");
-                }
-                else {
+                bool extendedAny = false;
+
+                // 1) Vertex Main Extraction Cache
+                if (!string.IsNullOrEmpty(_cachedContentName)) {
                     var savedState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
                     var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, savedState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
                     if (updated != null) {
-                        Console.WriteLine($"  [INFO] Kontext-Cache '{_cachedContentName}' verlängert um {_config.ContextCachingIncrementMinutes} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        Console.WriteLine($"  [INFO] Video-Extraktions Kontext-Cache '{_cachedContentName}' verlängert um {_config.ContextCachingIncrementMinutes} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        extendedAny = true;
                     }
+                }
+
+                // 2) LaTeX Schritt 1 Cache
+                var step1State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep1);
+                if (!string.IsNullOrEmpty(step1State.CacheName)) {
+                    int incMin = _latexRefinementConfig?.Step1MergeAndTimestamp?.Vertex?.ContextCachingIncrementMinutes ?? 30;
+                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, step1State, incMin, ContextCacheStateManager.StateFileLatexStep1);
+                    if (updated != null) {
+                        Console.WriteLine($"  [INFO] LaTeX Schritt 1 Kontext-Cache '{step1State.CacheName}' verlängert um {incMin} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        extendedAny = true;
+                    }
+                }
+
+                // 3) LaTeX Schritt 2 Cache
+                var step2State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep2);
+                if (!string.IsNullOrEmpty(step2State.CacheName)) {
+                    int incMin = _latexRefinementConfig?.Step2SpeechRefinement?.Vertex?.ContextCachingIncrementMinutes ?? 30;
+                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, step2State, incMin, ContextCacheStateManager.StateFileLatexStep2);
+                    if (updated != null) {
+                        Console.WriteLine($"  [INFO] LaTeX Schritt 2 Kontext-Cache '{step2State.CacheName}' verlängert um {incMin} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        extendedAny = true;
+                    }
+                }
+
+                // 4) LaTeX Schritt 3 Cache
+                var step3State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep3);
+                if (!string.IsNullOrEmpty(step3State.CacheName)) {
+                    int incMin = _latexRefinementConfig?.Step3LastRefinement?.Vertex?.ContextCachingIncrementMinutes ?? 30;
+                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, step3State, incMin, ContextCacheStateManager.StateFileLatexStep3);
+                    if (updated != null) {
+                        Console.WriteLine($"  [INFO] LaTeX Schritt 3 Kontext-Cache '{step3State.CacheName}' verlängert um {incMin} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        extendedAny = true;
+                    }
+                }
+
+                if (!extendedAny) {
+                    Console.WriteLine("  [WARNUNG] Es sind aktuell keine aktiven Google Kontext-Caches vorhanden, die verlängert werden können.");
                 }
             }
             else if (normalizedInput == "10" || normalizedInput.Equals("stop cache", StringComparison.OrdinalIgnoreCase)) {
-                if (string.IsNullOrEmpty(_cachedContentName)) {
-                    Console.WriteLine("  [WARNUNG] Es ist aktuell kein Google Kontext-Cache aktiv.");
-                }
-                else {
+                bool clearedAny = false;
+
+                // 1) Vertex Main Extraction Cache
+                if (!string.IsNullOrEmpty(_cachedContentName)) {
                     await ContextCacheStateManager.DeleteRemoteAsync(_client, _cachedContentName);
                     ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileVertex);
                     _cachedContentName = null;
-                    Console.WriteLine("  [INFO] 🐷 Kontext-Cache vorzeitig beendet und bei Google gelöscht. (Geld gespart!)");
+                    Console.WriteLine("  [INFO] 🐷 Video-Extraktions Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
+                    clearedAny = true;
+                }
+
+                // 2) LaTeX Schritt 1 Cache
+                var step1State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep1);
+                if (!string.IsNullOrEmpty(step1State.CacheName)) {
+                    await ContextCacheStateManager.DeleteRemoteAsync(_client, step1State.CacheName);
+                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileLatexStep1);
+                    Console.WriteLine("  [INFO] 🐷 LaTeX Schritt 1 Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
+                    clearedAny = true;
+                }
+
+                // 3) LaTeX Schritt 2 Cache
+                var step2State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep2);
+                if (!string.IsNullOrEmpty(step2State.CacheName)) {
+                    await ContextCacheStateManager.DeleteRemoteAsync(_client, step2State.CacheName);
+                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileLatexStep2);
+                    Console.WriteLine("  [INFO] 🐷 LaTeX Schritt 2 Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
+                    clearedAny = true;
+                }
+
+                // 4) LaTeX Schritt 3 Cache
+                var step3State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep3);
+                if (!string.IsNullOrEmpty(step3State.CacheName)) {
+                    await ContextCacheStateManager.DeleteRemoteAsync(_client, step3State.CacheName);
+                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileLatexStep3);
+                    Console.WriteLine("  [INFO] 🐷 LaTeX Schritt 3 Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
+                    clearedAny = true;
+                }
+
+                if (!clearedAny) {
+                    Console.WriteLine("  [WARNUNG] Es sind aktuell keine aktiven Google Kontext-Caches vorhanden, die gelöscht werden können.");
                 }
             }
             else if (normalizedInput == "11" || normalizedInput.Equals("config cache", StringComparison.OrdinalIgnoreCase)) {
@@ -627,7 +698,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
             _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
         }
-        else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user") {
+        else if (_debugChatHistory.Count > 0 && _debugChatHistory.Last().Role == "user") {
             // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
             _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
         }
@@ -640,7 +711,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// </summary>
     private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
         var historyPromptParts = new List<Part>(_historyParts) {
-            new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
+            new() { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
         };
         var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
@@ -807,8 +878,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         var producerTask = Task.Run(async () => {
             foreach (var file in files) {
                 string baseName = Path.GetFileNameWithoutExtension(file);
-                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                baseName = SpeedCompressedSuffixRegex().Replace(baseName, "");
+                baseName = CompressedSuffixRegex().Replace(baseName, "");
                 // Create a file-specific output folder within the main target folder
                 string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
                 if (!Directory.Exists(fileSpecificOutputFolder)) {
@@ -859,7 +930,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
                     // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
                     double speedVideoDuration;
-                    bool wasInputFilePreCompressedWhenCached = System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file).ToLowerInvariant(), @"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    bool wasInputFilePreCompressedWhenCached = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
 
                     if (wasInputFilePreCompressedWhenCached) {
                         // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
@@ -883,7 +954,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
 
                 // Determine if the file is already in a "compressed" format
-                bool isPreCompressed = System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file).ToLowerInvariant(), @"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                bool isPreCompressed = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
 
                 string? videoToSplit;
                 if (isPreCompressed) {
@@ -902,7 +973,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
                 var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
 
-                if (rawPartsWithTimes.Any()) {
+                if (rawPartsWithTimes.Count > 0) {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = [];
                     for (int i = 0; i < rawPartsWithTimes.Count; i++) {
                         string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
@@ -934,8 +1005,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
             List<string> generatedTexFiles = [];
             string baseName = Path.GetFileNameWithoutExtension(file);
-            baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            baseName = SpeedCompressedSuffixRegex().Replace(baseName, "");
+            baseName = CompressedSuffixRegex().Replace(baseName, "");
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;
@@ -996,7 +1067,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
                     });
 
-                    var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, toolkit);
+                    var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
 
                     // Wait for both to complete. The upload will run concurrently with the delay.
                     await Task.WhenAll(delayTask, uploadTask);
@@ -1015,7 +1086,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
                 else {
                     // For the first part, no delay is needed, just upload and process.
-                    var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, toolkit);
+                    var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
                     if (!uploadSuccess) {
                         Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                         fileProcessingSuccess = false;
@@ -1179,7 +1250,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         return newPath;
     }
 
-    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, FfmpegUtilities.FfmpegToolkit toolkit) {
+    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
         prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
@@ -1203,7 +1274,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         prompt += "\n\nCRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
-        if (!uploadSuccess || !attachmentParts.Any()) return (false, null, new List<Part>());
+        if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
 
         return (true, parsedPrompt, attachmentParts);
     }
@@ -1211,7 +1282,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
-        if (previousTexFiles.Any()) {
+        if (previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
             string contextText = "Here are the context files from the previous parts of the lecture. Please note that these files might contain compilation errors from previous, incomplete, or flawed extractions. Treat them as contextual reference material, but do not assume perfect LaTeX syntax or content validity.\n\n";
             foreach (var texFile in previousTexFiles) {
@@ -1273,7 +1344,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         int interactionOutputTokens = 0;
 
         string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
-        if (previousTexFiles.Any()) {
+        if (previousTexFiles.Count > 0) {
             logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
         }
         logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
@@ -1399,4 +1470,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
     [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
     private static partial System.Text.RegularExpressions.Regex MyRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex FilenamePatternRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"-speed-[\d\.]+-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex SpeedCompressedSuffixRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex CompressedSuffixRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex PreCompressedFileRegex();
 }

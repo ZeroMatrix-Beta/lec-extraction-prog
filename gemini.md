@@ -32,12 +32,15 @@ Das Projekt verwendet ausgiebig `[AI Context]` und `[Human]` Tags in den C#-Summ
 - Wenn du neue komplexe Architekturen (wie Pipelines oder Manager-Klassen) erstellst, statte sie ebenfalls mit `[AI Context]`-Kommentaren aus.
 
 ## 3. IDE-Warnungen & C#-Performance Best Practices (VERBINDLICH)
-Um C#-Compiler- und Analyzer-Warnungen (z.B. Roslyn / Sonar / IDE0028 / SYSLIB1045) dauerhaft zu verhindern, sind folgende Regeln strikt einzuhalten:
-1. **Collections prüfen (`Count > 0` statt `Any()`):**
-   Sowohl aus Gründen der Klarheit als auch der Leistung ist bei Listen, Collections und Arrays der direkte Vergleich `.Count > 0` bzw. `.Length > 0` der LINQ-Methode `.Any()` vorzuziehen.
-2. **Target-typed `new()`:**
-   Vereinfache Instanziierungen konsequent zu `new()`, sofern der Zieldatentyp links eindeutig definiert ist (z.B. `List<string> list = [];` oder `new Part { Text = ... }` -> `new() { Text = ... }`).
-3. **Kompilierzeit-Regex (`[GeneratedRegex]`):**
-   Verwende keine dynamischen `Regex.Replace(...)` oder `Regex.IsMatch(...)` Aufrufe in Schleifen oder asynchronen Pfaden. Nutze stattdessen Source Generatoren (`[GeneratedRegex("...")]` an partiellen Methoden).
-4. **Keine toten Parameter:**
-   Methodensignaturen müssen sauber von ungenutzten Parametern befreit werden.
+Um C#-Compiler- und Analyzer-Warnungen (insbesondere `CA1860`, `SYSLIB1045`, `IDE0028`, `IDE0090`, `IDE0060`) dauerhaft zu verhindern, sind folgende Regeln von jeder KI strikt und proaktiv einzuhalten:
+
+1. **Collections prüfen (`CA1860` - `Count > 0` statt `Any()`):**
+   Sowohl aus Gründen der Klarheit als auch der Leistung ist bei Listen, Collections, Dictionaries und Arrays der direkte Vergleich `.Count > 0` bzw. `.Length > 0` der LINQ-Methode `.Any()` vorzuziehen. LINQ `.Any()` erzeugt unnötigen Enumerator-Overhead.
+2. **Target-typed `new()` (`IDE0028` / `IDE0090`):**
+   Vereinfache Instanziierungen konsequent zu `new()` oder Collection Expressions `[]`, sofern der Zieldatentyp links eindeutig definiert ist (z.B. `List<string> list = [];` oder `new Part { Text = ... }` -> `new() { Text = ... }`).
+3. **Kompilierzeit-Regex (`SYSLIB1045` - `[GeneratedRegex]`):**
+   Verwende niemals dynamische `new Regex(...)`, `Regex.Replace(...)` oder `Regex.IsMatch(...)` Aufrufe zur Laufzeit. Nutze stattdessen konsequent Source Generatoren (`[GeneratedRegex("...")]` an partiellen Methoden in partiellen Klassen).
+4. **Keine toten Parameter (`IDE0060`):**
+   Methodensignaturen müssen sauber von ungenutzten Parametern befreit werden. Wenn Helper-Methoden umgeschrieben werden, sind alte Parameter sofort zu löschen.
+5. **Verpflichtender Build-Check vor Abschluss der Aufgabe:**
+   Bevor eine KI ihre Arbeit an den Benutzer übergibt, **muss** zwingend `dotnet build` ausgeführt werden. Eine Aufgabe gilt erst dann als erledigt, wenn der Build exakt `0 Warnung(en)` und `0 Fehler` ausgibt. Jede auftretende Warnung ist sofort zu beheben.

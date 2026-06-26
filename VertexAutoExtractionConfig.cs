@@ -23,8 +23,8 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
     public string LogFolder { get; set; } = AppConfig.LogFolder;
 
-    public string Model { get; set; } = "gemini-2.5-pro";
-    public float Temperature { get; set; } = 0.65f; // Similar to AiStudioAutoExtractionConfig
+    public string Model { get; set; } = "gemini-3.1-pro-preview";
+    public float Temperature { get; set; } = 0.5f; // Similar to AiStudioAutoExtractionConfig
     public float TopP { get; set; } = AppConfig.DefaultTopP;
     public int TopK { get; set; } = AppConfig.DefaultTopK;
     public int MaxOutputTokens { get; set; } = 65535; // Similar to AiStudioAutoExtractionConfig
@@ -44,7 +44,9 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
 
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
-    public bool GenerateAudioFile { get; set; } = true; // Set to true to match AiStudio    // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
+    public bool GenerateAudioFile { get; set; } = true; // Set to true to match AiStudio
+    
+    // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
     public bool GoIntoLatexRefinement { get; set; } = true;
 
     // [AI Context] Number of overlapping parts to split the video into for processing to circumvent AI Studio context limits.

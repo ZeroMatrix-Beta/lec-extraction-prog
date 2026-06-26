@@ -1,6 +1,6 @@
 {
   "UseContextCaching": true,
-  "ContextCachingMinutes": 15,
+  "ContextCachingMinutes": 30,
   "ContextCachingIncrementMinutes": 30,
   "ProjectId": "vertex-ai-experiments-494320",
   "Location": "global",
@@ -19,11 +19,11 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.15,
+  "Temperature": 0.5,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
-  "Model": "gemini-2.5-pro",
+  "Model": "gemini-3.1-pro-preview",
   "ThinkingBudget": 32768,
   "ThinkingLevel": "HIGH",
   "LoadHistoryIntoSystemInstruction": false,

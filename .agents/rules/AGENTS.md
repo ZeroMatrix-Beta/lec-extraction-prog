@@ -13,3 +13,5 @@
    Never swallow exceptions silently. Log `ex.GetType().Name` and `ex.Message` to the console.
 6. **Preserve Architecture Comments**:
    Do not remove `[AI Context]` or `[Human]` summaries.
+7. **Mandatory Build Verification Before Task Completion**:
+   Before finishing any task or handing over to the user, you MUST run `dotnet build`. Ensure the output is exactly `0 Warning(s)` and `0 Error(s)`. Any warnings (e.g. `CA1860`, `SYSLIB1045`, `IDE0028`, `IDE0060`) must be fixed immediately.
