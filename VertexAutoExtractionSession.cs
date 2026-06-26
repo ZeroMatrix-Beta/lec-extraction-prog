@@ -128,19 +128,21 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
 
                             var instructionBuilder = new System.Text.StringBuilder();
-                            instructionBuilder.AppendLine("## Folder Structure of System Instructions\n");
-                            instructionBuilder.AppendLine("### System Instructions");
+                            instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
+                            instructionBuilder.AppendLine("## System Instructions");
                             instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
 
                             if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                                instructionBuilder.AppendLine("\n### Training History");
+                                instructionBuilder.AppendLine("\n## Training History");
                                 instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
                             }
                             instructionBuilder.AppendLine("\n---\n");
 
                             foreach (var filePath in resolvedInstructionFiles) {
+                                string fileName = Path.GetFileName(filePath);
+                                instructionBuilder.AppendLine($"\n---\nHere is the file `{fileName}`:\n");
                                 instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
-                                Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
+                                Console.WriteLine($"  [INFO] System Instruction geladen: {fileName}");
                             }
                             _systemInstructionText = instructionBuilder.ToString();
 
@@ -157,10 +159,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                                     Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
                                 }
                             }
-                        }
-
-                        if (_config.CreateLogFiles) {
-                            await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
                         }
                     }
                     else {
@@ -208,6 +206,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
             }
 
+            if (_config.CreateLogFiles) {
+                await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
+            }
+
             _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
             _sessionLogger.InitializeSession();
             await _sessionLogger.LogSessionSetupAsync();
@@ -242,8 +244,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         if (!hasSys && !hasHist) return;
 
         var sysParts = new List<Part>();
-        if (hasSys) sysParts.Add(new Part { Text = _systemInstructionText });
-        if (hasHist) sysParts.AddRange(_historyParts);
+        if (hasSys) sysParts.Add(new() { Text = _systemInstructionText });
+        var cacheContents = new List<Content>();
+        if (hasHist) {
+            var textOnly = _historyParts.Where(p => p.FileData == null && p.InlineData == null && !string.IsNullOrEmpty(p.Text)).ToList();
+            var nonText = _historyParts.Where(p => p.FileData != null || p.InlineData != null).ToList();
+            sysParts.AddRange(textOnly);
+            if (nonText.Count > 0) {
+                cacheContents.Add(new() { Role = "user", Parts = nonText });
+            }
+        }
 
         string combinedChecksum = ContextCacheStateManager.ComputeChecksum(_systemInstructionText + (hasHist ? $"_hist_{_historyParts.Count}" : ""));
         var savedState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
@@ -273,7 +283,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         Console.WriteLine("  [INFO] Erstelle neuen Kontext-Cache bei Google (dies kann einen Moment dauern)...");
         try {
             var cacheConfig = new CreateCachedContentConfig {
-                SystemInstruction = new Content { Role = "system", Parts = sysParts },
+                SystemInstruction = sysParts.Count > 0 ? new Content { Role = "system", Parts = sysParts } : null,
+                Contents = cacheContents.Count > 0 ? cacheContents : null,
                 DisplayName = "vertex-sys-cache",
                 Ttl = $"{_config.ContextCachingMinutes * 60}s"
             };
@@ -728,9 +739,18 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
         else if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
-            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+                var textOnly = _historyParts.Where(p => p.FileData == null && p.InlineData == null && !string.IsNullOrEmpty(p.Text)).ToList();
+                var nonText = _historyParts.Where(p => p.FileData != null || p.InlineData != null).ToList();
+                sysParts.AddRange(textOnly);
+                if (nonText.Count > 0 && _sessionPreamble.Count == 0) {
+                    _sessionPreamble.Add(new Content { Role = "user", Parts = nonText });
+                }
+            }
+            if (sysParts.Count > 0) {
+                requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+            }
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
@@ -1315,9 +1335,18 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
         else if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
-            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+                var textOnly = _historyParts.Where(p => p.FileData == null && p.InlineData == null && !string.IsNullOrEmpty(p.Text)).ToList();
+                var nonText = _historyParts.Where(p => p.FileData != null || p.InlineData != null).ToList();
+                sysParts.AddRange(textOnly);
+                if (nonText.Count > 0 && history.Count == 0) {
+                    history.Add(new Content { Role = "user", Parts = nonText });
+                }
+            }
+            if (sysParts.Count > 0) {
+                requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+            }
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);

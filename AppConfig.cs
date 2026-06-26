@@ -62,7 +62,7 @@ public class AppConfigOptions {
     public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
     public string LogFolder { get; set; } = @"D:\gemini-logs";
     public string[] HistoryPreloadPaths { get; set; } = [];
-    public string SystemInstructionPath { get; set; } = @"C:\Users\miche\latex\directors-cut-analysis2\gemini.md";
+    public string SystemInstructionPath { get; set; } = @"";
     public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
     public string VertexLocation { get; set; } = "global";
     public string VertexGcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";

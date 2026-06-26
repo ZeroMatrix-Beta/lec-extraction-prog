@@ -5,10 +5,10 @@
   "HistoryPreloadPaths": [],
   "LogFolder": "D:\\gemini-logs",
   "GcsBucketName": "vertex-ai-experiments-upload-bucket-us",
-  "SystemInstructionPath": "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
+  "SystemInstructionPath": "",
   "IncludePaths": [
-    "D:\\lecture-videos\\d-und-a/",
-    "D:\\lecture-videos\\d-und-a/new"
+    "",
+    ""
   ],
   "AI": {
     "Temperature": 0.1,

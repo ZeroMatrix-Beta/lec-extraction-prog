@@ -200,7 +200,6 @@ public class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(wrapperPath, wrapperContent);
             Console.WriteLine($"  [INFO] Wrapper-Datei erstellt: {wrapperPath}");
 
-            var latexToolkit = new LatexToolkit();
             var (success, log) = await LatexToolkit.CompilePdfAsync(wrapperPath);
 
             string logContent = FormatLatexLog(log, success);
@@ -217,10 +216,16 @@ public class LatexRefinementSession {
             }
             else {
                 Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Log gespeichert in: {logPath}");
+                Console.WriteLine("  [INFO] Sende fehlerhaftes LaTeX mitsamt Preamble in neuer Session zum Last-Refiner zurück (-final-attempt)...");
+                string finalTexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
+                string fullDocumentContent = preambleText + "\n\\begin{document}\n\n" + finalTexContent + "\n\\end{document}\n";
+                await ExecutePdfFixAttemptAsync(fullDocumentContent, logContent, baseName, targetFolder);
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [FEHLER] Unerwarteter Fehler bei PDF-Generierung: {ex.Message}");
+            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Console.WriteLine($"  [FEHLER] Unerwarteter Fehler bei PDF-Generierung.");
         }
     }
 
@@ -757,6 +762,140 @@ public class LatexRefinementSession {
             Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
             Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
             Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Fallback routine when initial PDF compilation fails. Sends the compile error log and the entire LaTeX document (preamble + body) back to Gemini in a clean session (no system instructions, no context cache) to fix LaTeX syntax errors.
+    /// [Human] Neuer Versuch bei PDF-Fehlern: Schickt das Fehlerlog und den gesamten LaTeX-Code (inklusive Design-Vorlage) an Gemini zurück, um die Fehler zu korrigieren.
+    /// </summary>
+    private async Task ExecutePdfFixAttemptAsync(string failedFullTex, string compileLog, string baseName, string targetFolder) {
+        Console.WriteLine("\n--- [Schritt 4 Retry: PDF LaTeX Fix (-final-attempt)] ---");
+        BackendParameters backendParams = _config.UseVertex ? _config.Step3LastRefinement.Vertex : _config.Step3LastRefinement.AiStudio;
+
+        string promptText = $"=== PDF LATEX COMPILE LOG (WITH ERRORS) ===\n{compileLog}\n=== END COMPILE LOG ===\n\n" +
+                            $"=== FULL LATEX DOCUMENT (INCLUDING PREAMBLE) ===\n{failedFullTex}\n=== END LATEX DOCUMENT ===\n\n" +
+                            "Please fix the LaTeX compilation errors in the document above. Note that the compile log error output might be incomplete or truncated, so carefully inspect the entire document for any potential LaTeX syntax errors, missing packages, unescaped characters, or broken math environments. Your ONLY job is to fix the LaTeX code so that it compiles cleanly into a PDF. Output the complete, fixed LaTeX document including preamble and document body.";
+
+        var promptParts = new List<Part> {
+            new() { Text = promptText },
+            new() { Text = "\n\nCRITICAL INSTRUCTION: When you have completely finished writing your response and there is nothing left to output, you MUST append the exact text '% [SYSTEM] Refinement complete' on a new line at the very end of your response. This is mandatory for the system to know you are done." }
+        };
+
+        var history = new List<Content> { new() { Role = "user", Parts = promptParts } };
+
+        var requestConfig = new GenerateContentConfig {
+            Temperature = backendParams.Temperature,
+            TopP = backendParams.TopP,
+            TopK = backendParams.TopK,
+            MaxOutputTokens = backendParams.MaxOutputTokens
+        };
+
+        if (backendParams.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+            bool isGemini3 = backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel) && isGemini3;
+            bool hasBudget = backendParams.ThinkingBudget.HasValue;
+
+            if (hasLevel || hasBudget) {
+                requestConfig.ThinkingConfig = new ThinkingConfig();
+                if (hasLevel) {
+                    requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel!;
+                }
+                else if (hasBudget) {
+                    int budget = backendParams.ThinkingBudget!.Value;
+                    if (budget > 32768) budget = 32768;
+                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
+                }
+            }
+        }
+
+        string outputFileName = $"{baseName}-final-attempt.tex";
+        string fullResponseText = "";
+        int currentRequest = 1;
+        int maxRequests = 5;
+
+        using var cts = new CancellationTokenSource();
+        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
+        Console.CancelKeyPress += CancelHandler;
+
+        while (true) {
+            Console.WriteLine($"\n  [API] Sende PDF-Fix-Anfrage an Gemini ({backendParams.Model}) (Request {currentRequest}/{maxRequests})...");
+            string chunkResp = "";
+            bool callSuccess = false;
+
+            try {
+                callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.Model, history, requestConfig),
+                  onChunkReceived: async (chunk) => {
+                      string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                      Console.Write(text);
+                      chunkResp += text;
+                      await Task.CompletedTask;
+                  },
+                  cancellationToken: cts.Token,
+                  retryContext: outputFileName
+                );
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                break;
+            }
+
+            if (!callSuccess) {
+                Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(chunkResp)) {
+                Console.WriteLine("\n[FEHLER] Das Modell hat eine leere Antwort zurückgegeben.");
+                break;
+            }
+
+            fullResponseText += chunkResp;
+            bool isComplete = chunkResp.Contains("% [SYSTEM] Refinement complete", StringComparison.OrdinalIgnoreCase);
+            if (isComplete) break;
+
+            if (currentRequest >= maxRequests) {
+                Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequests}) für PDF-Fix erreicht. Breche ab.");
+                break;
+            }
+
+            string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
+                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Just print the very next character.";
+
+            Console.WriteLine("\n  [PDF-Fix] Unerwartetes Ende der Antwort. Bereite Continue-Prompt vor...");
+            history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
+            history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
+
+            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung...");
+            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
+                break;
+            }
+            currentRequest++;
+        }
+
+        Console.CancelKeyPress -= CancelHandler;
+
+        if (!string.IsNullOrEmpty(fullResponseText)) {
+            string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
+            string fixedTexPath = Path.Combine(targetFolder, outputFileName);
+            await System.IO.File.WriteAllTextAsync(fixedTexPath, cleanedText);
+            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei gespeichert unter: {fixedTexPath}");
+
+            Console.WriteLine("  [INFO] Starte PDF-Kompilierung für -final-attempt...");
+            var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(fixedTexPath);
+            string retryLogContent = FormatLatexLog(retryLog, retrySuccess);
+            string retryLogPath = Path.Combine(targetFolder, "compile-log-final-attempt.txt");
+            await System.IO.File.WriteAllTextAsync(retryLogPath, retryLogContent);
+
+            if (retrySuccess) {
+                Console.WriteLine($"  [INFO] PDF erfolgreich im finalen Versuch (-final-attempt) erstellt: {targetFolder}");
+            }
+            else {
+                Console.WriteLine($"  [FEHLER] Auch der finale Versuch (-final-attempt) konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
+            }
         }
     }
 }

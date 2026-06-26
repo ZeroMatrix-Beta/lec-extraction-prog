@@ -121,19 +121,21 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
 
                         var instructionBuilder = new System.Text.StringBuilder();
-                        instructionBuilder.AppendLine("## Folder Structure of System Instructions\n");
-                        instructionBuilder.AppendLine("### System Instructions");
+                        instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
+                        instructionBuilder.AppendLine("## System Instructions");
                         instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
 
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                            instructionBuilder.AppendLine("\n### Training History");
+                            instructionBuilder.AppendLine("\n## Training History");
                             instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
                         }
                         instructionBuilder.AppendLine("\n---\n");
 
                         foreach (var filePath in resolvedInstructionFiles) {
+                            string fileName = Path.GetFileName(filePath);
+                            instructionBuilder.AppendLine($"\n---\nHere is the file `{fileName}`:\n");
                             instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
-                            Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
+                            Console.WriteLine($"  [INFO] System Instruction geladen: {fileName}");
                         }
                         _systemInstructionText = instructionBuilder.ToString();
 
@@ -149,10 +151,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                             else {
                                 Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
                             }
-                        }
-
-                        if (_config.CreateLogFiles) {
-                            await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
                         }
                     }
                 }
@@ -199,6 +197,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
                 }
             }
+        }
+
+        if (_config.CreateLogFiles) {
+            await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
         }
 
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);

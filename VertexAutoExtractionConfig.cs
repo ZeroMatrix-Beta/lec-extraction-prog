@@ -19,7 +19,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a\new";
     public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
 
-    public string[] SystemInstructionPaths { get; set; } = [@"C:\Users\miche\latex\directors-cut-analysis2\gemini.md"];
+    public string[] SystemInstructionPaths { get; set; } = [];
     public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
     public string LogFolder { get; set; } = AppConfig.LogFolder;
 

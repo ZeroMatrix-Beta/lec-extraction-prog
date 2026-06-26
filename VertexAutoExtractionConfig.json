@@ -24,12 +24,13 @@
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "Model": "gemini-3.1-pro-preview",
+  //"Model": "gemini-3-flash-preview",
   "ThinkingBudget": 32768,
   "ThinkingLevel": "HIGH",
-  "LoadHistoryIntoSystemInstruction": false,
+  "LoadHistoryIntoSystemInstruction": true,
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 3,
+  "NumberOfParts": 4,
   "OverlapSeconds": 180
 }

@@ -77,6 +77,33 @@ The pipeline supports both environments, but they handle payloads very different
 
 ---
 
+## 4.2 Modular System Prompt & Attention Map Priming
+
+### Modular File Injection
+Instead of relying on monolithic markdown blobs, the pipeline resolves multiple distinct instruction files (`transcription.md`, `hard-specs.md`, `environments.md`, etc.) via `SystemInstructionPaths`. Before injecting each file into the prompt payload, the application wraps it with clear delimiter headers (`---\nHere is the file 'filename.md':\n`). This explicit separation prevents LLM attention bleeding between distinct instructional domains.
+
+### Attention Map Priming
+To maximize orientation and logical hierarchy adherence, the application generates an ASCII folder tree structure of the loaded system instructions and injects it at the absolute beginning of the system prompt. By observing this structural "map" first, Gemini primes its internal attention mechanism on codebase orientation and logical category separation before parsing specific syntax rules.
+
+### Strict Multipart Separation (Vertex AI)
+Vertex AI enforces strict schema purity on the `SystemInstruction` field: it exclusively accepts pure `text` parts. If binary data (such as image attachments from `Training History`) is passed inside `SystemInstruction`, Vertex AI rejects the request with a `ClientError`. The pipeline intercepts binary history attachments and dynamically routes them to the user prompt `contents` payload, guaranteeing cross-tier compatibility.
+
+### Prompt Assembly & Dump Logging
+To verify exact prompt construction and ensure `Training History` metadata is captured, `ExtractionHelpers.LogSystemInstructionDumpAsync` executes strictly after all text instructions and binary attachments have been assembled. It writes the complete compiled prompt into a timestamped `system_instruction_dump.md` file inside the active log directory.
+
+---
+
+## 4.3 Intelligent Context Caching & MD5 Auto-Reload
+
+To optimize processing times and eliminate redundant prompt upload costs when transcribing sequential batches of lecture videos, `ContextCacheStateManager` implements automated remote caching across both AI Studio and Vertex AI.
+
+### MD5 Checksum Invalidation
+Whenever an auto-extraction session boots, the application computes a unified MD5 checksum across the combined text of all configured system instruction files and preloaded history attachments.
+- **Cache Match:** If a valid remote cache exists (`vertex_cache_state.json` / `aistudio_cache_state.json`), hasn't expired on Google's servers, and its stored MD5 checksum matches the newly computed checksum, the application reuses the remote cache instantly (`cachedContent/...`).
+- **Cache Mismatch (Auto-Reload):** If a developer edits even a single word inside any markdown instruction file (e.g., tweaking `hard-specs.md`), the newly computed MD5 checksum diverges from the saved state. The application detects this mismatch, issues a remote `Delete` command for the stale Google Cloud Cache, and generates a fresh remote cache for the subsequent video batch automatically.
+
+---
+
 ## 4.5 Authentication Setup
 
 Depending on which environment you are targeting, the application requires different authentication setups.
@@ -260,6 +287,33 @@ Die Pipeline unterstützt beide Umgebungen, aber sie behandeln Payloads intern s
 - Die Anwendung lädt lokale Dateien automatisch in deinen angegebenen `GcsBucketName` hoch und hängt die `gs://...` URI an den Gemini-Prompt an.
 - **Speicherkosten-Management:** Da die Verarbeitung von hunderten überlappenden Video-Chunks die Speicherkosten in die Höhe treiben kann, nutzt die Anwendung eine `CleanupBucketAsync()`-Routine. Nachdem ein Chunk erfolgreich verarbeitet wurde (oder wenn eine Ausnahme auftritt), löscht die Anwendung die temporären Dateien aggressiv aus dem GCS-Bucket.
 *Hinweis: Nicht gelöschte Dateien in einem Bucket verbrauchen bei zukünftigen Anfragen keine Prompt-Token, da die API nur die exakten `gs://`-URIs verarbeitet, die im jeweiligen Request-Payload gesendet werden.*
+
+---
+
+## 4.2 Modulares System-Prompt & Attention Map Priming
+
+### Modulare Dateiinjektion
+Statt monolithische Markdown-Blöcke zu nutzen, löst die Pipeline über `SystemInstructionPaths` mehrere getrennte Anweisungsdateien (`transcription.md`, `hard-specs.md`, `environments.md` etc.) auf. Vor der Injektion jeder Datei in den Prompt wird sie mit klaren Trenn-Headern versehen (`---\nHere is the file 'dateiname.md':\n`). Diese explizite Trennung verhindert Aufmerksamkeitssprünge (Attention Bleeding) der KI zwischen verschiedenen Domänen.
+
+### Attention Map Priming
+Um die Orientierung und Einhaltung logischer Hierarchien zu maximieren, erzeugt die Anwendung eine ASCII-Ordnerstruktur der geladenen Systemanweisungen und setzt diese an den absoluten Anfang des System-Prompts. Indem Gemini diese strukturelle "Landkarte" als Erstes sieht, wird der interne Attention-Mechanismus auf Orientierung und logische Kategorisierung getrimmt, bevor spezifische Syntaxregeln verarbeitet werden.
+
+### Strikte Multipart-Trennung (Vertex AI)
+Vertex AI erzwingt strikte Schemareinheit im `SystemInstruction`-Feld: Es akzeptiert ausschließlich reine `text`-Parts. Werden binäre Daten (wie Bildanhänge aus der `Training History`) in `SystemInstruction` übergeben, lehnt Vertex AI die Anfrage mit einem `ClientError` ab. Die Pipeline fängt binäre History-Anhänge ab und leitet sie dynamisch in den `contents`-Körper des User-Prompts weiter, was die Kompatibilität zwischen AI Studio und Vertex garantiert.
+
+### Prompt Assembly & Dump Logging
+Um den exakten Prompt-Aufbau zu verifizieren und sicherzustellen, dass Anhänge der `Training History` miterfasst werden, wird `ExtractionHelpers.LogSystemInstructionDumpAsync` erst ausgeführt, nachdem alle Texte und Bildanhänge verknüpft wurden. Der komplette Dump wird in eine mit Zeitstempel versehene `system_instruction_dump.md` im Log-Verzeichnis geschrieben.
+
+---
+
+## 4.3 Intelligentes Context Caching & MD5 Auto-Reload
+
+Um die Verarbeitungszeiten zu minimieren und redundante Upload-Kosten beim sequenziellen Batch-Verarbeiten von Vorlesungsvideos zu eliminieren, implementiert `ContextCacheStateManager` automatisiertes Remote Caching für AI Studio und Vertex AI.
+
+### MD5-Checksummen-Invalidierung
+Wann immer eine Auto-Extraktions-Session startet, berechnet die Anwendung eine MD5-Checksumme über den gesamten Text aller konfigurierten Systemanweisungen und vorverladenen History-Anhänge.
+- **Cache Match:** Existiert ein gültiger Remote-Cache (`vertex_cache_state.json` / `aistudio_cache_state.json`), ist er auf den Google-Servern nicht abgelaufen und stimmt seine MD5-Checksumme mit der frisch berechneten Checksumme überein, nutzt die App diesen Cache sofort wieder (`cachedContent/...`).
+- **Cache Mismatch (Auto-Reload):** Ändert ein Entwickler auch nur ein einziges Wort in einer Markdown-Datei (z. B. in `hard-specs.md`), weicht die neue MD5-Checksumme vom gespeicherten Zustand ab. Die Anwendung erkennt diese Abweichung, sendet einen `Delete`-Befehl für den alten Google Cloud Cache und erstellt vollautomatisch einen frischen Cache für den nächsten Video-Batch.
 
 ---
 
