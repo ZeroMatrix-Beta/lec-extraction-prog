@@ -72,4 +72,8 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Overlap duration in seconds between adjacent video parts to ensure context is not lost during transitions.
     // [Human] Überlappung in Sekunden zwischen den geschnittenen Video-Teilen. Standard: 180 (3 Minuten).
     public int OverlapSeconds { get; set; } = 180;
+
+    // [AI Context] If true, logs the complete system instruction dump to disk.
+    // [Human] Wenn aktiviert, wird die gesamte zusammengesetzte System Instruction als Datei geloggt.
+    public bool CreateLogFiles { get; set; } = true;
 }

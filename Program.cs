@@ -31,13 +31,13 @@ partial class Program {
                 Console.WriteLine("     Welcome to AI Extraction & Processing        ");
                 Console.WriteLine($" (Aktives AI Studio Profil für Auto-Extraktion: {autoExtProfileDisplay})");
                 Console.WriteLine("==================================================");
-                Console.WriteLine("Please choose your desired operational mode:");
-                Console.WriteLine(" 1) Google AI Studio (API Key / Developer endpoints)");
-                Console.WriteLine(" 2) Google Cloud Vertex AI (Enterprise / 'vertex-ai-experiments')");
-                Console.WriteLine(" 3) FFmpeg Interactive Manager (Local Audio/Video Processing)");
+                Console.WriteLine("Bitte gewünschten Modus auswählen:");
+                Console.WriteLine("  1) 🌐 Google AI Studio (API Key / Developer Endpoints)");
+                Console.WriteLine("  2) ☁️ Google Cloud Vertex AI (Enterprise)");
+                Console.WriteLine("  3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)");
                 Console.WriteLine("--------------------------------------------------");
-                Console.WriteLine(" 4) Automated Content Retrieval & Processing (Future Enhancement)");
-                Console.WriteLine(" 5) LaTeX Refinement & Post-Processing (Dedicated API Key)");
+                Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
+                Console.WriteLine("  5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)");
                 Console.Write("\nChoice (1-5) or 'exit': ");
 
                 string? mainChoice = Console.ReadLine()?.Trim().ToLower();

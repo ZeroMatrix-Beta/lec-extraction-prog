@@ -170,7 +170,7 @@ Beim Start der Anwendung stehen 5 Betriebsmodi zur Verfügung:
 
 If the application gets stuck with `[Exception Caught] Type: ServerError` (HTTP 500), it means the Google backend crashed while processing your specific prompt or video chunk.
 - **Do not use "Thinking" with Flash Models:** Combining `gemini-3.5-flash` with a high `ThinkingBudget` and a 30-minute video chunk is highly unstable. Switch to a "Pro" model (e.g., `gemini-2.5-pro` or `gemini-3.1-pro-preview`) if you want to use reasoning.
-- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` can crash the backend if the history is massive.
+- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` embeds history files and images directly into the System Instruction via XML framing and InlineData. While much more stable, massive history payloads can still exceed API limits.
 - **Skip the Error:** Press `Ctrl+C` during a retry delay to gracefully skip the corrupted video chunk and proceed to the next file.
 
 For more details on why cache-priming is used instead of single-prompt processing, see the Documentation.

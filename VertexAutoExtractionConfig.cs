@@ -44,9 +44,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
 
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
-    public bool GenerateAudioFile { get; set; } = true; // Set to true to match AiStudio
-
-    // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
+    public bool GenerateAudioFile { get; set; } = true; // Set to true to match AiStudio    // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
     public bool GoIntoLatexRefinement { get; set; } = true;
 
     // [AI Context] Number of overlapping parts to split the video into for processing to circumvent AI Studio context limits.
@@ -56,4 +54,8 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Overlap duration in seconds between adjacent video parts to ensure context is not lost during transitions.
     // [Human] Überlappung in Sekunden zwischen den geschnittenen Video-Teilen. Standard: 180 (3 Minuten).
     public int OverlapSeconds { get; set; } = 180;
+
+    // [AI Context] If true, logs the complete system instruction dump to disk.
+    // [Human] Wenn aktiviert, wird die gesamte zusammengesetzte System Instruction als Datei geloggt.
+    public bool CreateLogFiles { get; set; } = true;
 }

@@ -464,7 +464,9 @@ public class LatexRefinementSession {
         // For arrays, checking '.Length > 0' is a direct property lookup (O(1)).
         // Calling '.Any()' creates an enumerator object under the hood, which causes unnecessary memory allocation.
         if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Length > 0) {
+            Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
             var resolved = ExtractionHelpers.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
+            ExtractionHelpers.PrintFileTree(resolved);
             foreach (var path in resolved) {
                 if (System.IO.File.Exists(path)) {
                     Console.WriteLine($"  [INFO] Lade System-Instruktion: {path}");

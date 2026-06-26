@@ -30,3 +30,14 @@ Das Projekt verwendet ausgiebig `[AI Context]` und `[Human]` Tags in den C#-Summ
 - Diese Kommentare dienen dazu, den Sinn und Zweck von Klassen für KIs und Menschen sofort greifbar zu machen. 
 - Bei Refactorings dürfen diese Kommentare **unter keinen Umständen** gelöscht werden. 
 - Wenn du neue komplexe Architekturen (wie Pipelines oder Manager-Klassen) erstellst, statte sie ebenfalls mit `[AI Context]`-Kommentaren aus.
+
+## 3. IDE-Warnungen & C#-Performance Best Practices (VERBINDLICH)
+Um C#-Compiler- und Analyzer-Warnungen (z.B. Roslyn / Sonar / IDE0028 / SYSLIB1045) dauerhaft zu verhindern, sind folgende Regeln strikt einzuhalten:
+1. **Collections prüfen (`Count > 0` statt `Any()`):**
+   Sowohl aus Gründen der Klarheit als auch der Leistung ist bei Listen, Collections und Arrays der direkte Vergleich `.Count > 0` bzw. `.Length > 0` der LINQ-Methode `.Any()` vorzuziehen.
+2. **Target-typed `new()`:**
+   Vereinfache Instanziierungen konsequent zu `new()`, sofern der Zieldatentyp links eindeutig definiert ist (z.B. `List<string> list = [];` oder `new Part { Text = ... }` -> `new() { Text = ... }`).
+3. **Kompilierzeit-Regex (`[GeneratedRegex]`):**
+   Verwende keine dynamischen `Regex.Replace(...)` oder `Regex.IsMatch(...)` Aufrufe in Schleifen oder asynchronen Pfaden. Nutze stattdessen Source Generatoren (`[GeneratedRegex("...")]` an partiellen Methoden).
+4. **Keine toten Parameter:**
+   Methodensignaturen müssen sauber von ungenutzten Parametern befreit werden.

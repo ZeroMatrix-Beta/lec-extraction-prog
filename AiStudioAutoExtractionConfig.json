@@ -24,13 +24,15 @@
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
-  "Model": "gemini-3.5-flash",
+  //"Model": "gemini-3.5-flash",
+  "Model": "gemini-3-flash-preview",
   "ThinkingBudget": 65536,
   "ThinkingLevel": "HIGH",
-  "LoadHistoryIntoSystemInstruction": false,
+  "LoadHistoryIntoSystemInstruction": true,
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 3,
-  "OverlapSeconds": 180
+  "NumberOfParts": 4,
+  "OverlapSeconds": 180,
+  "CreateLogFiles": true
 }

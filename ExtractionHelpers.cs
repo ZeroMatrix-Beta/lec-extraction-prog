@@ -55,6 +55,70 @@ public static partial class ExtractionHelpers {
         }
     }
 
+    public static string? FindCommonBaseDirectory(List<string> allPaths) {
+        if (allPaths == null || allPaths.Count == 0) return null;
+        try {
+            string baseDir = Path.GetDirectoryName(Path.GetFullPath(allPaths[0])) ?? "";
+            foreach (var path in allPaths) {
+                string fullPath = Path.GetFullPath(path);
+                while (!fullPath.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(baseDir)) {
+                    baseDir = Path.GetDirectoryName(baseDir) ?? "";
+                }
+            }
+            return string.IsNullOrEmpty(baseDir) ? null : baseDir;
+        } catch {
+            return null;
+        }
+    }
+
+    public static string GenerateMarkdownFileTree(List<string> filePaths, string? baseDir) {
+        if (filePaths == null || filePaths.Count == 0) return "";
+
+        var sb = new System.Text.StringBuilder();
+        var grouped = filePaths
+            .Select(p => {
+                string rel = !string.IsNullOrEmpty(baseDir) ? Path.GetRelativePath(baseDir, p).Replace('\\', '/') : p.Replace('\\', '/');
+                string dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? "";
+                if (string.IsNullOrEmpty(dir)) dir = ".";
+                return new { FullPath = p, RelPath = rel, Dir = dir, FileName = Path.GetFileName(p) };
+            })
+            .OrderBy(x => x.Dir)
+            .ThenBy(x => x.FileName)
+            .GroupBy(x => x.Dir);
+
+        foreach (var group in grouped) {
+            sb.AppendLine($"  📁 {group.Key}");
+            var files = group.ToList();
+            for (int i = 0; i < files.Count; i++) {
+                string filename = files[i].FileName;
+                string prefix = (i == files.Count - 1) ? "└──" : "├──";
+                sb.AppendLine($"      {prefix} 📄 {filename}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    public static async Task LogSystemInstructionDumpAsync(string targetFolder, string systemInstructionText, List<Google.GenAI.Types.Part> historyParts) {
+        try {
+            var sb = new System.Text.StringBuilder(systemInstructionText);
+            if (historyParts != null && historyParts.Count > 0) {
+                sb.AppendLine("\n\n=== ATTACHED HISTORY & BENCHMARK PARTS ===");
+                foreach (var part in historyParts) {
+                    if (part.Text != null) sb.Append(part.Text);
+                    else if (part.InlineData != null) sb.AppendLine($"\n[BINARY IMAGE PAYLOAD: {part.InlineData.MimeType}, {part.InlineData.Data?.Length ?? 0} bytes]\n");
+                    else if (part.FileData != null) sb.AppendLine($"\n[REMOTE FILE URI: {part.FileData.FileUri}, {part.FileData.MimeType}]\n");
+                }
+            }
+            if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
+            string dumpPath = Path.Combine(targetFolder, "system_instruction_logged.md");
+            await System.IO.File.WriteAllTextAsync(dumpPath, sb.ToString());
+            Console.WriteLine($"\n  📄 [LOG] System Instruction vollständig auf Festplatte geloggt unter:\n           {dumpPath}");
+        } catch (Exception ex) {
+            Console.WriteLine($"  [WARNUNG] System Instruction Dump konnte nicht geschrieben werden: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// [AI Context] Regex-based cleanup ensures that even if the output is split across multiple continuation chunks,
     /// all markdown blocks and system messages are fully stripped, preventing compilation errors.
@@ -88,25 +152,64 @@ public static partial class ExtractionHelpers {
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
         Console.CancelKeyPress += cancelHandler;
         IsInSmartDelay = true;
+        using var cts = new CancellationTokenSource();
         try {
-            int delaySteps = seconds * 10;
-            for (int i = 0; i < delaySteps; i++) {
-                if (delayCanceled) return false;
-                await Task.Delay(100);
-                if (!Console.IsInputRedirected && Console.KeyAvailable) {
-                    bool enterPressed = false;
-                    while (Console.KeyAvailable) {
-                        var keyInfo = Console.ReadKey(intercept: true);
-                        if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
+            var delayTask = Task.Run(async () => {
+                int delaySteps = seconds * 10;
+                for (int i = 0; i < delaySteps; i++) {
+                    if (delayCanceled || cts.Token.IsCancellationRequested) return false;
+                    await Task.Delay(100, cts.Token);
+                    try {
+                        if (!Console.IsInputRedirected && Console.KeyAvailable) {
+                            bool enterPressed = false;
+                            while (Console.KeyAvailable) {
+                                var keyInfo = Console.ReadKey(intercept: true);
+                                if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
+                            }
+                            if (enterPressed) {
+                                Console.WriteLine("\n[Skip] Wartezeit durch Benutzer (Enter) übersprungen.");
+                                return true;
+                            }
+                            Console.WriteLine($"\n[AI-Model] {message} (Oder drücke Enter für sofortigen Retry/Skip)");
+                        }
                     }
-                    if (enterPressed) {
-                        Console.WriteLine("\n[Skip] Wartezeit durch Benutzer (Enter) übersprungen.");
+                    catch { }
+                }
+                return true;
+            }, cts.Token);
+
+            var inputTask = Task.Run(async () => {
+                try {
+                    while (!cts.Token.IsCancellationRequested) {
+                        bool isRedirected = false;
+                        try { isRedirected = Console.IsInputRedirected; } catch { }
+
+                        if (!isRedirected) {
+                            await Task.Delay(200, cts.Token);
+                            continue;
+                        }
+
+                        // [AI Context] When running inside redirected consoles (e.g., IDE terminal, pseudo-terminal),
+                        // Console.KeyAvailable throws or returns false. We use ReadLineAsync with cancellation.
+                        // [Human] In IDE-Terminals (wie VS Code oder Antigravity) ist die Konsole umgeleitet. Damit Enter trotzdem funktioniert, lesen wir hier asynchron die Eingabe.
+                        var lineTask = Console.In.ReadLineAsync(cts.Token).AsTask();
+                        await lineTask;
                         return true;
                     }
-                    Console.WriteLine($"\n[AI-Model] {message} (Oder drücke Enter für sofortigen Retry/Skip)");
                 }
+                catch { }
+                return false;
+            }, cts.Token);
+
+            var completedTask = await Task.WhenAny(delayTask, inputTask);
+            cts.Cancel(); // Cancel the other task
+
+            if (completedTask == inputTask && await inputTask) {
+                Console.WriteLine("\n[Skip] Wartezeit durch Benutzer (Enter) übersprungen.");
+                return true;
             }
-            return true;
+
+            return await delayTask;
         }
         finally {
             IsInSmartDelay = false;

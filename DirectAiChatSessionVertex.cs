@@ -72,7 +72,11 @@ public class DirectAiChatSessionVertex {
             _sessionLogger.InitializeSession();
 
             bool loadedSysPrompt = false;
-            string sysPromptChoice = PromptWithCommands($"\n[Setup] System Instruction laden? Pfad: '{SystemInstructionPath}' (j/n): ");
+            if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
+                WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
+                ExtractionHelpers.PrintFileTree([SystemInstructionPath]);
+            }
+            string sysPromptChoice = PromptWithCommands("[Setup] System Instruction laden? (j/n): ");
             if (sysPromptChoice == "__EXIT__") return;
 
             if (sysPromptChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase)) {
@@ -236,15 +240,15 @@ public class DirectAiChatSessionVertex {
     }
 
     private static void ShowCommands() {
-        WriteLine("\nBefehle:");
-        WriteLine("  help / commands           -> Zeigt diese Befehlsübersicht erneut an");
-        WriteLine("  exit / quit               -> Beendet den Chat");
-        WriteLine("  clear / reset             -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-        WriteLine("  attach datei1, datei2 | Frage  -> Hängt Dateien an und stellt eine Frage dazu.");
-        WriteLine("  set temp [wert]           -> Ändert die Temperatur dynamisch");
-        WriteLine("  set tokens [wert]         -> Ändert das MaxOutputTokens-Limit dynamisch");
-        WriteLine("  set thinking-budget [wert]  -> Setzt das Thinking Budget für Gemini 2.5 Modelle (z.B. 4096)");
-        WriteLine("  set thinking-level [level]  -> Setzt das Thinking Level für Gemini 3.x Modelle (z.B. HIGH)");
+        WriteLine("\n📋 Befehle:");
+        WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
+        WriteLine("  🚪 exit / quit             -> Beendet den Chat");
+        WriteLine("  🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+        WriteLine("  📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
+        WriteLine("  🌡️  set temp [wert]         -> Ändert die Temperatur dynamisch");
+        WriteLine("  🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch");
+        WriteLine("  🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");
+        WriteLine("  🧠 set thinking-level [l]  -> Setzt das Thinking Level für Gemini 3.x (z.B. HIGH)");
     }
 
     /// <summary>

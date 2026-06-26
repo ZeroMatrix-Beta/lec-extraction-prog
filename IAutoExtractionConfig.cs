@@ -7,4 +7,5 @@ public interface IAutoExtractionConfig {
     int NumberOfParts { get; }
     int OverlapSeconds { get; }
     string TargetFolder { get; }
+    bool CreateLogFiles { get; }
 }

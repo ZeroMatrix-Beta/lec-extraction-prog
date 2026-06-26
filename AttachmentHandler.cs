@@ -39,7 +39,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     /// Returning boolean flag dictates if the parent loop should proceed or halt.
     /// [Human] Nimmt den 'attach' Befehl auseinander, zerlegt ihn in Dateien und die eigentliche Text-Frage.
     /// </summary>
-    public async Task<(bool success, string promptText, List<Part> parts)> ProcessAttachmentsAsync(string input) {
+    public async Task<(bool success, string promptText, List<Part> parts)> ProcessAttachmentsAsync(string input, bool asSystemInstruction = false, string? baseDirectory = null) {
         var parts = new List<Part>();
 
         // [AI Context] Implements a custom syntax parser: "attach [file1, file2] | [prompt]"
@@ -60,7 +60,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             string? resolvedPath = ResolveFilePath(rawName, out List<string> searchedLocations);
 
             if (resolvedPath != null) {
-                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts);
+                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory);
                 if (loaded) {
                     anyFileLoaded = true;
                     loadedNames.Add(Path.GetFileName(resolvedPath));
@@ -131,14 +131,25 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     /// Local text files are embedded raw as strings to save upload bandwidth. Media is pushed via Google File API or GCS buckets.
     /// [Human] Entscheidet anhand der Dateiendung: Ist es Text, wird es direkt in den Chat kopiert. Ist es Media, wird es hochgeladen.
     /// </summary>
-    private async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts) {
+    private async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts, bool asSystemInstruction = false, string? baseDirectory = null) {
         string ext = Path.GetExtension(filePath).ToLower();
+        string displayPath = !string.IsNullOrEmpty(baseDirectory)
+            ? Path.GetRelativePath(baseDirectory, filePath).Replace('\\', '/')
+            : filePath.Replace('\\', '/');
 
         if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext)) {
-            WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
-            string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
-            parts.Add(new Part { Text = $"=== ATTACHED FILE: {Path.GetFileName(filePath)} ===\n{fileContent}\n=== END OF ATTACHED FILE ===\n\n" });
-            return true;
+            if (asSystemInstruction) {
+                WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...");
+                string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
+                parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n{fileContent}\n</file>\n" });
+                return true;
+            }
+            else {
+                WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
+                string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
+                parts.Add(new Part { Text = $"=== ATTACHED FILE: {Path.GetFileName(filePath)} ===\n{fileContent}\n=== END OF ATTACHED FILE ===\n\n" });
+                return true;
+            }
         }
 
         string? mimeType = ext switch {
@@ -156,6 +167,15 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
         if (mimeType == null) {
             WriteLine($"[Fehler] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
             return false;
+        }
+
+        if (asSystemInstruction && ext is ".jpg" or ".jpeg" or ".png" or ".webp") {
+            WriteLine($"  [Lokal] Lese Bilddatei '{Path.GetFileName(filePath)}' für Inline System Instruction ein...");
+            byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            parts.Add(new Part { Text = $"\n<image path=\"{displayPath}\">\n" });
+            parts.Add(new Part { InlineData = new Blob { Data = imageBytes, MimeType = mimeType } });
+            parts.Add(new Part { Text = "\n</image>\n" });
+            return true;
         }
 
         if (_isAiStudio) {
@@ -196,7 +216,15 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 }
 
                 WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
-                parts.Add(new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } });
+                var fileDataPart = new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } };
+                if (asSystemInstruction) {
+                    parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n" });
+                    parts.Add(fileDataPart);
+                    parts.Add(new Part { Text = "\n</file>\n" });
+                }
+                else {
+                    parts.Add(fileDataPart);
+                }
                 return true;
             }
             catch (Exception ex) {
@@ -226,7 +254,15 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 string gcsUri = $"gs://{_gcsBucketName}/{objectName}";
                 WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
 
-                parts.Add(new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } });
+                var fileDataPart = new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } };
+                if (asSystemInstruction) {
+                    parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n" });
+                    parts.Add(fileDataPart);
+                    parts.Add(new Part { Text = "\n</file>\n" });
+                }
+                else {
+                    parts.Add(fileDataPart);
+                }
                 return true;
             }
             catch (Exception ex) {

@@ -47,11 +47,11 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     /// </summary>
     public async Task StartAsync() {
-        Console.WriteLine($"\n[AutoExtraction] Starte Vertex AI Extraction Session...");
-        Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
-        Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
+        Console.WriteLine("\n🚀 [AutoExtraction] Starte Vertex AI Extraction Session...");
+        Console.WriteLine($"  📁 Quelle (Source): {_config.SourceFolder}");
+        Console.WriteLine($"  📁 Ziel (Target):   {_config.TargetFolder}");
         if (!string.IsNullOrWhiteSpace(_config.ProjectId)) {
-            Console.WriteLine($"[AutoExtraction] API-Projekt: {_config.ProjectId} ({_config.Location})");
+            Console.WriteLine($"  ☁️  API-Projekt:     {_config.ProjectId} ({_config.Location})");
         }
 
         if (!Directory.Exists(_config.SourceFolder)) {
@@ -104,17 +104,62 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
                     if (resolvedInstructionFiles.Any()) {
-                        foreach (var file in resolvedInstructionFiles) {
-                            Console.WriteLine($"  - {file}");
+                        ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
+                        List<string> distinctHistoryFiles = [];
+                        if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
+                            distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+                            if (distinctHistoryFiles.Any()) {
+                                Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
+                                ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
+                            }
                         }
-                        Console.Write("System Instructions laden? (j/n): ");
+
+                        string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()
+                            ? "System Instructions und History laden? (j/n): "
+                            : "System Instructions laden? (j/n): ";
+                        Console.Write(promptText);
+
                         if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                            var allPathsForIndex = new List<string>(resolvedInstructionFiles);
+                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()) {
+                                allPathsForIndex.AddRange(distinctHistoryFiles);
+                            }
+                            string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
+
                             var instructionBuilder = new System.Text.StringBuilder();
+                            instructionBuilder.AppendLine("## Folder Structure of System Instructions\n");
+                            instructionBuilder.AppendLine("### System Instructions");
+                            instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
+
+                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()) {
+                                instructionBuilder.AppendLine("\n### Training History");
+                                instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
+                            }
+                            instructionBuilder.AppendLine("\n---\n");
+
                             foreach (var filePath in resolvedInstructionFiles) {
                                 instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
                                 Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
                             }
                             _systemInstructionText = instructionBuilder.ToString();
+
+                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Any()) {
+                                Console.WriteLine("\n  [INFO] Lade History-Dateien für System Instruction ein...");
+                                string fileList = string.Join(", ", distinctHistoryFiles.Select(p => $"\"{p}\""));
+                                var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
+                                if (success && attachmentParts.Any()) {
+                                    _historyParts.AddRange(attachmentParts);
+                                    _historyWasLoaded = true;
+                                    Console.WriteLine("  [INFO] Dateien erfolgreich eingelesen und in die System Instruction eingebunden.");
+                                }
+                                else {
+                                    Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
+                                }
+                            }
+                        }
+
+                        if (_config.CreateLogFiles) {
+                            await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
                         }
                     }
                     else {
@@ -143,7 +188,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
                         }
                         string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
+                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
                         if (success && attachmentParts.Any()) {
                             _historyParts.AddRange(attachmentParts);
                             _historyWasLoaded = true;
@@ -179,18 +224,21 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
     /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
     /// </summary>
-    private async Task ReplLoopAsync() {
-        Console.WriteLine("\nBefehle:");
-        Console.WriteLine("  1) Befehle anzeigen");
-        Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
-        Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
-        Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
-        Console.WriteLine("  5) Beenden (exit/quit)");
-
-        Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
-        Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
+    private void PrintCommandsMenu() {
+        Console.WriteLine("\n📋 Befehle:");
+        Console.WriteLine("  1) 📜 Befehle anzeigen");
+        Console.WriteLine("  2) ⚡ Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
+        Console.WriteLine("  3) 🎬 Einzelnes Video interaktiv auswählen und konvertieren");
+        Console.WriteLine("  4) 🚀 Alle Videos im Quellordner konvertieren");
+        Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
+        Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.Model + ")");
+        Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
-        Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+        Console.WriteLine("\n💡 Hinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+    }
+
+    private async Task ReplLoopAsync() {
+        PrintCommandsMenu();
 
         while (true) {
             if (!Console.IsInputRedirected) {
@@ -204,17 +252,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
 
             if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-                Console.WriteLine("\nBefehle:");
-                Console.WriteLine("  1) Befehle anzeigen");
-                Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
-                Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
-                Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
-                Console.WriteLine("  5) Beenden (exit/quit)");
-
-                Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
-                Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
-                Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
-                Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+                PrintCommandsMenu();
             }
             else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";

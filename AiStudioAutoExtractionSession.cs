@@ -43,14 +43,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     /// </summary>
     public async Task StartAsync() {
-        Console.WriteLine($"\n[AutoExtraction] Starte AI Studio Extraction Session...");
-        Console.WriteLine($"[AutoExtraction] Quelle (Source): {_config.SourceFolder}");
-        Console.WriteLine($"[AutoExtraction] Ziel (Target): {_config.TargetFolder}");
+        Console.WriteLine("\n🚀 [AutoExtraction] Starte AI Studio Extraction Session...");
+        Console.WriteLine($"  📁 Quelle (Source): {_config.SourceFolder}");
+        Console.WriteLine($"  📁 Ziel (Target):   {_config.TargetFolder}");
         if (_config.ActiveApiProfile == 0) {
-            Console.WriteLine($"[AutoExtraction] API-Key: Dedizierter Key für automatisierte Extraktion (API_KEY-automated-content-extraction)");
+            Console.WriteLine("  🔑 API-Key:         Dedizierter Key für automatisierte Extraktion");
         }
         else {
-            Console.WriteLine($"[AutoExtraction] API-Key: Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
+            Console.WriteLine($"  🔑 API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
         }
 
         if (!Directory.Exists(_config.SourceFolder)) {
@@ -97,18 +97,63 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Resolve all files from configured paths, handling directories
                 var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
-                if (resolvedInstructionFiles.Any()) {
-                    foreach (var file in resolvedInstructionFiles) {
-                        Console.WriteLine($"  - {file}");
+                if (resolvedInstructionFiles.Count > 0) {
+                    ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
+                    List<string> distinctHistoryFiles = [];
+                    if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
+                        distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+                        if (distinctHistoryFiles.Count > 0) {
+                            Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
+                            ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
+                        }
                     }
-                    Console.Write("System Instructions laden? (j/n): ");
+
+                    string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0
+                        ? "System Instructions und History laden? (j/n): "
+                        : "System Instructions laden? (j/n): ";
+                    Console.Write(promptText);
+
                     if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                        var allPathsForIndex = new List<string>(resolvedInstructionFiles);
+                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
+                            allPathsForIndex.AddRange(distinctHistoryFiles);
+                        }
+                        string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
+
                         var instructionBuilder = new System.Text.StringBuilder();
+                        instructionBuilder.AppendLine("## Folder Structure of System Instructions\n");
+                        instructionBuilder.AppendLine("### System Instructions");
+                        instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
+
+                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
+                            instructionBuilder.AppendLine("\n### Training History");
+                            instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
+                        }
+                        instructionBuilder.AppendLine("\n---\n");
+
                         foreach (var filePath in resolvedInstructionFiles) {
                             instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
                             Console.WriteLine($"  [INFO] System Instruction geladen: {Path.GetFileName(filePath)}");
                         }
                         _systemInstructionText = instructionBuilder.ToString();
+
+                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
+                            Console.WriteLine("\n  [INFO] Lade History-Dateien für System Instruction ein...");
+                            string fileList = string.Join(", ", distinctHistoryFiles.Select(p => $"\"{p}\""));
+                            var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
+                            if (success && attachmentParts.Count > 0) {
+                                _historyParts.AddRange(attachmentParts);
+                                _historyWasLoaded = true;
+                                Console.WriteLine("  [INFO] Dateien erfolgreich eingelesen und in die System Instruction eingebunden.");
+                            }
+                            else {
+                                Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
+                            }
+                        }
+
+                        if (_config.CreateLogFiles) {
+                            await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
+                        }
                     }
                 }
                 else {
@@ -119,7 +164,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         if (!_historyWasLoaded) {
             var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-            if (distinctFiles.Any()) {
+            if (distinctFiles.Count > 0) {
                 Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
                 ExtractionHelpers.PrintFileTree(distinctFiles);
                 if (_config.LoadHistoryIntoSystemInstruction) {
@@ -137,8 +182,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
                     }
                     string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}");
-                    if (success && attachmentParts.Any()) {
+                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
+                    if (success && attachmentParts.Count > 0) {
                         _historyParts.AddRange(attachmentParts);
                         _historyWasLoaded = true;
                         if (_config.LoadHistoryIntoSystemInstruction) {
@@ -168,18 +213,22 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
     /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
     /// </summary>
-    private async Task ReplLoopAsync() {
-        Console.WriteLine("\nBefehle:");
-        Console.WriteLine("  1) Befehle anzeigen");
-        Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
-        Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
-        Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
-        Console.WriteLine("  5) Beenden (exit/quit)");
-        Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
-        Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
-        Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
+    private void PrintCommandsMenu() {
+        Console.WriteLine("\n📋 Befehle:");
+        Console.WriteLine("  1) 📜 Befehle anzeigen");
+        Console.WriteLine("  2) ⚡ Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
+        Console.WriteLine("  3) 🎬 Einzelnes Video interaktiv auswählen und konvertieren");
+        Console.WriteLine("  4) 🚀 Alle Videos im Quellordner konvertieren");
+        Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
+        Console.WriteLine("  6) 🔑 API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
+        Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.Model + ")");
+        Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
-        Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+        Console.WriteLine("\n💡 Hinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+    }
+
+    private async Task ReplLoopAsync() {
+        PrintCommandsMenu();
 
         while (true) {
             if (!Console.IsInputRedirected) {
@@ -193,17 +242,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
 
             if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-                Console.WriteLine("\nBefehle:");
-                Console.WriteLine("  1) Befehle anzeigen");
-                Console.WriteLine("  2) Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
-                Console.WriteLine("  3) Einzelnes Video interaktiv auswählen und konvertieren");
-                Console.WriteLine("  4) Alle Videos im Quellordner konvertieren");
-                Console.WriteLine("  5) Beenden (exit/quit)");
-                Console.WriteLine("  6) API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
-                Console.WriteLine("  7) Modell auswählen (aktuell: " + _config.Model + ")");
-                Console.WriteLine("  8) Latex Refinement interaktiv starten (Debugging)");
-                Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
-                Console.WriteLine("\nHinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
+                PrintCommandsMenu();
             }
             else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";
@@ -469,7 +508,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
             _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
         }
-        else if (_debugChatHistory.Any() && _debugChatHistory.Last().Role == "user") {
+        else if (_debugChatHistory.Count > 0 && _debugChatHistory.Last().Role == "user") {
             // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
             _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
         }
@@ -482,7 +521,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// </summary>
     private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
         var historyPromptParts = new List<Part>(_historyParts) {
-            new Part { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
+            new() { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
         };
         var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
@@ -494,10 +533,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens // Use config value, or hardcode a smaller value for acknowledgment? Let's use config.
         };
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
@@ -640,8 +679,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var producerTask = Task.Run(async () => {
             foreach (var file in files) {
                 string baseName = Path.GetFileNameWithoutExtension(file);
-                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                baseName = SpeedCompressedRegex().Replace(baseName, "");
+                baseName = CompressedRegex().Replace(baseName, "");
                 // Create a file-specific output folder within the main target folder
                 string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
                 if (!Directory.Exists(fileSpecificOutputFolder)) {
@@ -692,7 +731,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                     // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
                     double speedVideoDuration;
-                    bool wasInputFilePreCompressedWhenCached = System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file).ToLowerInvariant(), @"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    bool wasInputFilePreCompressedWhenCached = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
 
                     if (wasInputFilePreCompressedWhenCached) {
                         // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
@@ -716,7 +755,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
 
                 // Determine if the file is already in a "compressed" format
-                bool isPreCompressed = System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(file).ToLowerInvariant(), @"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                bool isPreCompressed = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
 
                 string? videoToSplit;
                 if (isPreCompressed) {
@@ -767,8 +806,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
             List<string> generatedTexFiles = [];
             string baseName = Path.GetFileNameWithoutExtension(file);
-            baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-speed-[\d\.]+-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            baseName = System.Text.RegularExpressions.Regex.Replace(baseName, @"-compressed$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            baseName = SpeedCompressedRegex().Replace(baseName, "");
+            baseName = CompressedRegex().Replace(baseName, "");
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;
@@ -829,7 +868,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
                     });
 
-                    var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, toolkit);
+                    var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
 
                     // Wait for both to complete. The upload will run concurrently with the delay.
                     await Task.WhenAll(delayTask, uploadTask);
@@ -842,13 +881,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         break;
                     }
 
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
+                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
                     startAudioTask();
                 }
                 else {
                     // For the first part, no delay is needed, just upload and process.
-                    var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, toolkit);
+                    var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
                     if (!uploadSuccess) {
                         Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                         fileProcessingSuccess = false;
@@ -858,7 +897,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                     startAudioTask();
 
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, partStartTimeSeconds);
+                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
                 }
 
                 fileTotalInputTokens += result.partInputTokens;
@@ -1016,7 +1055,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return newPath;
     }
 
-    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, FfmpegUtilities.FfmpegToolkit toolkit) {
+    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
         prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
@@ -1040,15 +1079,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         prompt += "\n\nCRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
-        if (!uploadSuccess || !attachmentParts.Any()) return (false, null, new List<Part>());
+        if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
 
         return (true, parsedPrompt, attachmentParts);
     }
 
-    private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, double partStartTimeSeconds) {
+    private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
-        if (previousTexFiles.Any()) {
+        if (previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
             string contextText = "Here are the context files from the previous parts of the lecture. Please note that these files might contain compilation errors from previous, incomplete, or flawed extractions. Treat them as contextual reference material, but do not assume perfect LaTeX syntax or content validity.\n\n";
             foreach (var texFile in previousTexFiles) {
@@ -1056,7 +1095,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string content = await System.IO.File.ReadAllTextAsync(texFile);
                 contextText += $"=== REFERENCE CONTEXT: {Path.GetFileName(texFile)} ===\n{content}\n=== END OF REFERENCE CONTEXT ===\n\n";
             }
-            userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
+            userPromptParts.Add(new() { Text = contextText.TrimEnd() });
         }
 
         userPromptParts.AddRange(attachmentParts);
@@ -1076,10 +1115,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any())) {
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new Part { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Any()) sysParts.AddRange(_historyParts);
+            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
@@ -1101,7 +1140,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         int interactionOutputTokens = 0;
 
         string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
-        if (previousTexFiles.Any()) {
+        if (previousTexFiles.Count > 0) {
             logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
         }
         logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
@@ -1158,8 +1197,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             fullResponse += chunkResp;
             await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens);
 
-            bool segmentComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            bool videoComplete = System.Text.RegularExpressions.Regex.IsMatch(chunkResp, @"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            bool segmentComplete = SegmentCompleteRegex().IsMatch(chunkResp);
+            bool videoComplete = VideoCompleteRegex().IsMatch(chunkResp);
 
             if (videoComplete) break;
 
@@ -1199,4 +1238,19 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
     private static partial System.Text.RegularExpressions.Regex MyRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"-speed-[\d\.]+-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex SpeedCompressedRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex CompressedRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex PreCompressedFileRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex SegmentCompleteRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
 }
