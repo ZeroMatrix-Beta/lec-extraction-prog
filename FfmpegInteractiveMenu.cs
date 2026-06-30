@@ -16,7 +16,6 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     // [AI Context] Configurable default fallback paths.
     private readonly string DefaultSourceFolder = config.SourceFolder;
     private readonly string DefaultDestinationFolder = config.TargetFolder;
-    private readonly FfmpegToolkit _toolkit = new FfmpegToolkit();
 
     public async Task StartAsync() {
         Console.WriteLine("======================================");
@@ -156,22 +155,22 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         switch (mode) {
             case "1":
             case "7":
-                await _toolkit.LegacyCodeProcessFast720pVideoAsync(inputFile, destFolder); break;
+                await FfmpegToolkit.LegacyCodeProcessFast720pVideoAsync(inputFile, destFolder); break;
             case "2":
             case "8":
-                await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.3, fps: 1, downmixToMono: true); break;
+                await FfmpegToolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.3, fps: 1, downmixToMono: true); break;
             case "3":
             case "9":
-                await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.2, fps: 1, downmixToMono: true); break;
+                await FfmpegToolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.2, fps: 1, downmixToMono: true); break;
             case "4":
             case "10":
-                await _toolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.0, fps: 1, downmixToMono: true); break;
+                await FfmpegToolkit.ProcessGeneralVideoAsync(inputFile, destFolder, speedMultiplier: 1.0, fps: 1, downmixToMono: true); break;
             case "5":
             case "11":
-                await _toolkit.ProcessSplitVideoAsync(inputFile, destFolder, downmixToMono: true, cacheFileNamePrefix: Path.GetFileNameWithoutExtension(inputFile)); break;
+                await FfmpegToolkit.ProcessSplitVideoAsync(inputFile, destFolder, downmixToMono: true, cacheFileNamePrefix: Path.GetFileNameWithoutExtension(inputFile)); break;
             case "6":
             case "12":
-                await _toolkit.ProcessCustomVideoAsync(inputFile, destFolder, customTemplate, customExt); break;
+                await FfmpegToolkit.ProcessCustomVideoAsync(inputFile, destFolder, customTemplate, customExt); break;
         }
     }
 }

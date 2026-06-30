@@ -37,6 +37,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private readonly List<Content> _debugChatHistory = [];
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
+    private int _sessionTotalCachedTokens = 0;
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
@@ -423,6 +424,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
                 int requestInputTokens = 0;
                 int requestOutputTokens = 0;
+                int requestCachedTokens = 0;
 
                 var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _debugChatHistory, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
@@ -433,13 +435,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                         if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) requestCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
                     }
                 }
 
                 _sessionTotalInputTokens += requestInputTokens;
                 _sessionTotalOutputTokens += requestOutputTokens;
-                Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
-                Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+                _sessionTotalCachedTokens += requestCachedTokens;
+                Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
+                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
 
                 Console.WriteLine();
                 isGenerating = false;
@@ -560,6 +564,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string fullResponse = "";
         int finalInputTokens = 0;
         int finalOutputTokens = 0;
+        int finalCachedTokens = 0;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             fullResponse = "";
@@ -572,6 +577,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 int requestInputTokens = 0;
                 int requestOutputTokens = 0;
+                int requestCachedTokens = 0;
 
                 var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _sessionPreamble, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
@@ -582,13 +588,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                         if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) requestCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
                     }
                 }
 
                 _sessionTotalInputTokens += requestInputTokens;
                 _sessionTotalOutputTokens += requestOutputTokens;
+                _sessionTotalCachedTokens += requestCachedTokens;
                 finalInputTokens = requestInputTokens;
                 finalOutputTokens = requestOutputTokens;
+                finalCachedTokens = requestCachedTokens;
                 // Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
                 // Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
@@ -649,7 +658,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
             _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             string logMsg = $"[History Acknowledgment] Angehängte Dateien: {loadedFiles}\n\nPrompt:\n{historyPromptParts.Last().Text}";
-            await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens);
+            await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens, finalCachedTokens);
             return true;
         }
         else {
@@ -668,8 +677,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private async Task ProcessFilesAsync(string[] files) {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens
         files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date)];
-
-        var toolkit = new FfmpegUtilities.FfmpegToolkit();
 
         // [AI Context] We use a bounded channel (capacity 1) to synchronize the FFmpeg Producer task and the Gemini Consumer task.
         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
@@ -766,7 +773,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
                 else {
                     Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
-                    videoToSplit = await toolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true);
+                    videoToSplit = await FfmpegUtilities.FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true);
                     if (videoToSplit == null) {
                         Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
                         continue;
@@ -774,7 +781,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
 
                 Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
-                var rawPartsWithTimes = await toolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
+                var rawPartsWithTimes = await FfmpegUtilities.FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
 
                 if (rawPartsWithTimes.Count > 0) {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = [];
@@ -814,6 +821,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;
             int fileTotalOutputTokens = 0;
+            int fileTotalCachedTokens = 0;
             bool fileProcessingSuccess = true;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
             Task? audioExtractionTask = null;
@@ -833,7 +841,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     else {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await new FfmpegUtilities.FfmpegToolkit().ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
+                            await FfmpegUtilities.FfmpegToolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
                             Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
                         });
                     }
@@ -859,7 +867,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     continue;
                 }
 
-                (string texOutput, int partInputTokens, int partOutputTokens) result;
+                (string texOutput, int partInputTokens, int partOutputTokens, int partCachedTokens) result;
 
                 if (i > 0) {
                     // Start delay and upload in parallel for subsequent parts
@@ -904,14 +912,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 fileTotalInputTokens += result.partInputTokens;
                 fileTotalOutputTokens += result.partOutputTokens;
+                fileTotalCachedTokens += result.partCachedTokens;
+                int partFreshTokens = Math.Max(0, result.partInputTokens - result.partCachedTokens);
 
                 if (!string.IsNullOrWhiteSpace(result.texOutput)) {
                     string cleanTex = ExtractionHelpers.CleanLatexResponse(result.texOutput);
 
                     // Store the raw output for the combined file without offset
-                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input {result.partInputTokens}, Output {result.partOutputTokens}) ---\n" + cleanTex;
+                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.partInputTokens:N0}, Gecacht {result.partCachedTokens:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.partOutputTokens:N0}) ---\n" + cleanTex;
                     if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input {result.partInputTokens}, Output {result.partOutputTokens}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.partInputTokens:N0}, Gecacht {result.partCachedTokens:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.partOutputTokens:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
                     }
 
                     // Prepend the start time to the individual part .tex file
@@ -926,7 +936,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                         (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
                                         $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                                         $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
-                                        $"% Tokens (Input: {result.partInputTokens}, Output: {result.partOutputTokens})\n" +
+                                        $"% ------------------------------------------\n" +
+                                        $"% Token Usage Analysis (Google GenAI):\n" +
+                                        $"%   - Total Prompt Tokens : {result.partInputTokens:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
+                                        $"%   - Cached Context      : {result.partCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
+                                        $"%   - Fresh Input Tokens  : {partFreshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
+                                        $"%   - Generated Output    : {result.partOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
                                         $"% ==========================================\n\n";
                     string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
@@ -961,9 +976,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string targetFilePath = Path.Combine(fileSpecificOutputFolder, baseName + ".tex");
                 string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-offset.tex");
 
+                int fileTotalFreshTokens = Math.Max(0, fileTotalInputTokens - fileTotalCachedTokens);
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
                 string header = $"% ==========================================\n" +
-                                $"% AutoExtraction Source: {Path.GetFileName(file)}\n" +
+                                $"% AutoExtraction Combined Source: {Path.GetFileName(file)}\n" +
                                 $"% Model: {_config.Model}\n" +
                                 $"% Temperature: {_config.Temperature}\n" +
                                 $"% TopP: {_config.TopP}\n" +
@@ -972,7 +988,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                 (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
                                 (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
                                 $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                $"% Total Tokens (Input: {fileTotalInputTokens}, Output: {fileTotalOutputTokens})\n" +
+                                $"% ------------------------------------------\n" +
+                                $"% Token Usage Summary across {partsWithTimes.Count} Part(s):\n" +
+                                $"%   - Total Prompt Tokens : {fileTotalInputTokens:N0} (Summe aller Prompts über alle Teile)\n" +
+                                $"%   - Cached Context      : {fileTotalCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
+                                $"%   - Fresh Input Tokens  : {fileTotalFreshTokens:N0} (Echter neuer Payload für alle Video-Teile)\n" +
+                                $"%   - Total Output Tokens : {fileTotalOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
                                 $"% ==========================================\n\n";
                 await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
                 Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
@@ -1086,7 +1107,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return (true, parsedPrompt, attachmentParts);
     }
 
-    private async Task<(string texOutput, int inputTokens, int outputTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+    private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
         if (previousTexFiles.Count > 0) {
@@ -1140,6 +1161,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         int maxRequestsPerPart = 6;
         int interactionInputTokens = 0;
         int interactionOutputTokens = 0;
+        int interactionCachedTokens = 0;
 
         string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
         if (previousTexFiles.Count > 0) {
@@ -1157,6 +1179,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string chunkResp = "";
             int requestInputTokens = 0;
             int requestOutputTokens = 0;
+            int requestCachedTokens = 0;
             bool callSuccess = false;
 
             try {
@@ -1169,6 +1192,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         if (chunk.UsageMetadata != null) {
                             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                            if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) requestCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
                         }
                         await Task.CompletedTask;
                     },
@@ -1189,15 +1213,21 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
             interactionInputTokens += requestInputTokens;
             interactionOutputTokens += requestOutputTokens;
+            interactionCachedTokens += requestCachedTokens;
             _sessionTotalInputTokens += requestInputTokens;
             _sessionTotalOutputTokens += requestOutputTokens;
+            _sessionTotalCachedTokens += requestCachedTokens;
 
-            Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Part Total Tokens] Input: {interactionInputTokens} | Output: {interactionOutputTokens} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+            int freshReqTokens = Math.Max(0, requestInputTokens - requestCachedTokens);
+            int freshPartTokens = Math.Max(0, interactionInputTokens - interactionCachedTokens);
+            int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
+
+            Console.WriteLine($"\n  [Request Tokens] Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
+            Console.WriteLine($"  [Part Total Tokens] Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
+            Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
 
             fullResponse += chunkResp;
-            await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens);
+            await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);
 
             bool segmentComplete = SegmentCompleteRegex().IsMatch(chunkResp);
             bool videoComplete = VideoCompleteRegex().IsMatch(chunkResp);
@@ -1235,7 +1265,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         Console.CancelKeyPress -= cancelHandler;
-        return (fullResponse, interactionInputTokens, interactionOutputTokens);
+        return (fullResponse, interactionInputTokens, interactionOutputTokens, interactionCachedTokens);
     }
 
     [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]

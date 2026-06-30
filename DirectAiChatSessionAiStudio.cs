@@ -51,6 +51,7 @@ public partial class DirectAiChatSessionAiStudio {
     private int _activeApiProfile;
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
+    private int _sessionTotalCachedTokens = 0;
 
     // [AI Context] Constructor injects config dependencies to isolate state.
     public DirectAiChatSessionAiStudio(Client client, DirectAiChatSessionAiStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
@@ -388,6 +389,7 @@ public partial class DirectAiChatSessionAiStudio {
 
         int inputTokens = 0;
         int outputTokens = 0;
+        int cachedTokens = 0;
 
         // [AI Context] Maps current dynamic AI params to the Request payload.
         // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
@@ -469,6 +471,7 @@ public partial class DirectAiChatSessionAiStudio {
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                         if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
                     }
                     await Task.CompletedTask;
                 },
@@ -489,8 +492,9 @@ public partial class DirectAiChatSessionAiStudio {
             if (inputTokens > 0 || outputTokens > 0) {
                 _sessionTotalInputTokens += inputTokens;
                 _sessionTotalOutputTokens += outputTokens;
-                WriteLine($"\n[Request Tokens] Input: {inputTokens} | Output: {outputTokens} (inkl. Thinking Tokens)");
-                WriteLine($"[Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
+                _sessionTotalCachedTokens += cachedTokens;
+                WriteLine($"\n[Request Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {(Math.Max(0, inputTokens - cachedTokens)):N0} | Output: {outputTokens:N0} (inkl. Thinking Tokens)");
+                WriteLine($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
             }
 
             if (exceptionCaught || cts.IsCancellationRequested) {
@@ -504,7 +508,7 @@ public partial class DirectAiChatSessionAiStudio {
         // 7. KI-Antwort in die Historie aufnehmen
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
             history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
-            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens);
+            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens, cachedTokens);
         }
         else {
             // [AI Context] Falls abgebrochen wurde, bevor die KI etwas gesagt hat, 

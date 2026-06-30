@@ -14,13 +14,13 @@ namespace FfmpegUtilities;
 /// Can be safely called from background tasks, DirectAIInteraction, or APIs.
 /// [Human] Hier passiert die wahre Magie! Diese Klasse baut die exakten FFmpeg-Befehle zusammen und führt sie aus.
 /// </summary>
-public class FfmpegToolkit {
+public static class FfmpegToolkit {
     /// <summary>
     /// [AI Context] Splits long lecture videos into smaller segments with overlapping audio/video.
     /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
     /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
     /// </summary>
-    public async Task<List<(string FilePath, double StartTime)>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false, string? cacheFileNamePrefix = null) {
+    public static async Task<List<(string FilePath, double StartTime)>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false, string? cacheFileNamePrefix = null) {
         var generatedFiles = new List<(string FilePath, double StartTime)>();
 
         if (!File.Exists(inputFile)) {
@@ -81,7 +81,7 @@ public class FfmpegToolkit {
     /// while preserving perfectly understandable speech and legible board states.
     /// [Human] Der Standard-Prozess: Macht das Video schneller, reduziert es auf 1 Bild pro Sekunde (reicht für Tafeln!) und macht Audio zu Mono.
     /// </summary>
-    public async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000, bool scaleTo720p = false, bool overwrite = false) {
+    public static async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000, bool scaleTo720p = false, bool overwrite = false) {
         if (!File.Exists(inputFile)) {
             Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
             return null;
@@ -143,7 +143,7 @@ public class FfmpegToolkit {
     /// Legacy/Hardcoded fast 720p profile for standard batch processing with strict bitrates.
     /// [Human] Alter, fester Code von früher. Eher für den menschlichen Gebrauch als für die KI gedacht.
     /// </summary>
-    public async Task<bool> LegacyCodeProcessFast720pVideoAsync(string inputFile, string destFolder) {
+    public static async Task<bool> LegacyCodeProcessFast720pVideoAsync(string inputFile, string destFolder) {
         if (!File.Exists(inputFile)) {
             Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
             return false;
@@ -168,7 +168,7 @@ public class FfmpegToolkit {
     /// Executes custom, raw FFmpeg commands supplied directly by the user.
     /// [Human] Führt komplett frei von dir eingetippte FFmpeg-Parameter aus.
     /// </summary>
-    public async Task<bool> ProcessCustomVideoAsync(string inputFile, string destFolder, string commandTemplate, string outputExtension) {
+    public static async Task<bool> ProcessCustomVideoAsync(string inputFile, string destFolder, string commandTemplate, string outputExtension) {
         if (!File.Exists(inputFile)) {
             Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
             return false;
@@ -192,7 +192,7 @@ public class FfmpegToolkit {
     //  (e.g., standard Whisper) or to provide the user with a standalone podcast version of the lecture.
     /// [Human] Extrahiert die reine Tonspur als AAC. Perfekt, wenn man sich die Vorlesung nur anhören möchte (Podcast-Style) oder reine Audio-KIs nutzt.
     /// </summary>
-    public async Task<bool> ExtractAudioAsAacAsync(string inputFile, string destFolder) {
+    public static async Task<bool> ExtractAudioAsAacAsync(string inputFile, string destFolder) {
         if (!File.Exists(inputFile)) {
             Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
             return false;
