@@ -24,6 +24,7 @@ public class LatexRefinementSession {
     private readonly string[]? _multipleFilesToProcess;
     private readonly IAutoExtractionConfig? _extractionConfig;
     private readonly string? _audioFilePath;
+    private readonly List<Part>? _preUploadedAudioAttachments;
 
     public LatexRefinementSession(Client client, LatexRefinementSessionConfig config) {
         _client = client;
@@ -32,6 +33,7 @@ public class LatexRefinementSession {
         _multipleFilesToProcess = null;
         _extractionConfig = null;
         _audioFilePath = null;
+        _preUploadedAudioAttachments = null;
     }
 
     public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess) {
@@ -41,24 +43,27 @@ public class LatexRefinementSession {
         _multipleFilesToProcess = null;
         _extractionConfig = null;
         _audioFilePath = null;
+        _preUploadedAudioAttachments = null;
     }
 
-    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
+    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null, List<Part>? preUploadedAudioAttachments = null) {
         _client = client;
         _config = config;
         _singleFilePathToProcess = singleFilePathToProcess;
         _multipleFilesToProcess = null;
         _extractionConfig = extractionConfig;
         _audioFilePath = audioFilePath;
+        _preUploadedAudioAttachments = preUploadedAudioAttachments;
     }
 
-    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null) {
+    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null, List<Part>? preUploadedAudioAttachments = null) {
         _client = client;
         _config = config;
         _singleFilePathToProcess = null;
         _multipleFilesToProcess = multipleFilesToProcess;
         _extractionConfig = extractionConfig;
         _audioFilePath = audioFilePath;
+        _preUploadedAudioAttachments = preUploadedAudioAttachments;
     }
 
     /// <summary>
@@ -317,11 +322,17 @@ public class LatexRefinementSession {
             partTimestampsStr = sb.ToString();
 
             if (_config.Step1MergeAndTimestamp.AttachAudio) {
-                var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
-                var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
-                if (success) {
-                    audioParts.AddRange(attached);
-                    Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+                if (_preUploadedAudioAttachments != null && _preUploadedAudioAttachments.Count > 0) {
+                    Console.WriteLine($"  [Pre-Upload] Verwende bereits parallel im Hintergrund hochgeladene Audio-Datei!");
+                    audioParts.AddRange(_preUploadedAudioAttachments);
+                }
+                else {
+                    var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+                    var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
+                    if (success) {
+                        audioParts.AddRange(attached);
+                        Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+                    }
                 }
             }
         }

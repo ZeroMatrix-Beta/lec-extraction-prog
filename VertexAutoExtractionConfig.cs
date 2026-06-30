@@ -78,6 +78,10 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Schwellenwert in Minuten: Wenn der Cache kürzer als dieser Wert gültig ist, wird er vor dem nächsten Videoteil automatisch verlängert.
     public int ContextCachingMinimumRemainingMinutes { get; set; } = 10;
 
+    // [AI Context] If true, uploads the next video part (and the audio file for refinement) in the background while Gemini is generating the current response.
+    // [Human] Wenn aktiviert, wird der nächste Videoteil (und die Audiodatei fürs Refinement) im Hintergrund hochgeladen, während die KI den aktuellen Teil generiert.
+    public bool EnableParallelFileUploads { get; set; } = true;
+
     // [AI Context] Optional framerate override for Google Gemini API video sampling.
     // [Human] Optionale Bildwiederholrate für die Gemini-API (z.B. 0.333 für 1 Frame alle 3 Sekunden).
     public double? GoogleVideoFps { get; set; }

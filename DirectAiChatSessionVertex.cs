@@ -210,7 +210,7 @@ public class DirectAiChatSessionVertex {
                     WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
                 }
 
-                if (history.Any() && history.Last().Role == "user") {
+                if (history.Count > 0 && history.Last().Role == "user") {
                     history.RemoveAt(history.Count - 1);
                 }
             }
@@ -485,7 +485,7 @@ public class DirectAiChatSessionVertex {
             }
         }
 
-        if (notFoundPaths.Any()) {
+        if (notFoundPaths.Count > 0) {
             WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
             foreach (var path in notFoundPaths) {
                 WriteLine($"  - {path}");

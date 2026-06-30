@@ -3,6 +3,7 @@
   "ContextCachingMinutes": 15,
   "ContextCachingIncrementMinutes": 15,
   "ContextCachingMinimumRemainingMinutes": 10,
+  "EnableParallelFileUploads": true,
   "ProjectId": "vertex-ai-experiments-494320",
   "Location": "global",
   "GcsBucketName": "test-latex-lecture-extraction-bucket",

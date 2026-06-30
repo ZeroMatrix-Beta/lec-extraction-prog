@@ -1076,6 +1076,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
             }
 
+            Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)>? pendingVideoUploadTask = null;
+            Task<List<Part>>? pendingAudioUploadTask = null;
+
             for (int i = 0; i < partsWithTimes.Count; i++) {
                 string safePartPath = partsWithTimes[i].FilePath;
                 double partStartTimeSeconds = partsWithTimes[i].StartTime;
@@ -1096,71 +1099,74 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
 
                 (string texOutput, int partInputTokens, int partOutputTokens, int partCachedTokens) result;
+                bool uploadSuccess;
+                string? parsedPrompt;
+                List<Part> attachmentParts;
 
-                if (i > 0) {
-                    // Start delay and upload in parallel for subsequent parts
-                    var delayTask = Task.Run(async () => {
-                        // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
-                        // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-                        Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
-                    });
+                Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> uploadTask;
 
-                    var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
-
-                    // Wait for both to complete. The upload will run concurrently with the delay.
-                    await Task.WhenAll(delayTask, uploadTask);
-
-                    var (uploadSuccess, parsedPrompt, attachmentParts) = uploadTask.Result;
-                    if (!uploadSuccess) {
-                        Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
-                        fileProcessingSuccess = false;
-                        hasErrors = true;
-                        break;
-                    }
-
-                    // [AI Context] Auto-extend context cache if remaining TTL drops below the configured minimum before sending this part.
-                    if (!string.IsNullOrEmpty(_cachedContentName) && _config.UseContextCaching) {
-                        var cacheState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
-                        double remainingMin = ContextCacheStateManager.GetRemainingMinutes(cacheState);
-                        if (remainingMin < _config.ContextCachingMinimumRemainingMinutes) {
-                            Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {_config.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {_config.ContextCachingIncrementMinutes} min...");
-                            var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
-                            if (updatedState != null)
-                                Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
-                        }
-                    }
-
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
-
-                    startAudioTask();
+                if (_config.EnableParallelFileUploads && pendingVideoUploadTask != null) {
+                    Console.WriteLine($"  [Pre-Upload] Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...");
+                    uploadTask = pendingVideoUploadTask;
                 }
                 else {
-                    // For the first part, no delay is needed, just upload and process.
-                    var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
-                    if (!uploadSuccess) {
-                        Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
-                        fileProcessingSuccess = false;
-                        hasErrors = true;
-                        break;
+                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
+                }
+
+                (uploadSuccess, parsedPrompt, attachmentParts) = await uploadTask;
+                if (!uploadSuccess) {
+                    Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+                    fileProcessingSuccess = false;
+                    hasErrors = true;
+                    break;
+                }
+
+                startAudioTask();
+
+                // [AI Context] Auto-extend context cache if remaining TTL drops below the configured minimum before sending the part.
+                if (!string.IsNullOrEmpty(_cachedContentName) && _config.UseContextCaching) {
+                    var cacheState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
+                    double remainingMin = ContextCacheStateManager.GetRemainingMinutes(cacheState);
+                    if (remainingMin < _config.ContextCachingMinimumRemainingMinutes) {
+                        Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {_config.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {_config.ContextCachingIncrementMinutes} min...");
+                        var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
+                        if (updatedState != null)
+                            Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
                     }
+                }
 
-                    startAudioTask();
-
-                    // [AI Context] Auto-extend context cache if remaining TTL drops below the configured minimum before sending the first part.
-                    if (!string.IsNullOrEmpty(_cachedContentName) && _config.UseContextCaching) {
-                        var cacheState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
-                        double remainingMin = ContextCacheStateManager.GetRemainingMinutes(cacheState);
-                        if (remainingMin < _config.ContextCachingMinimumRemainingMinutes) {
-                            Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {_config.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {_config.ContextCachingIncrementMinutes} min...");
-                            var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
-                            if (updatedState != null)
-                                Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+                // [AI Context] If EnableParallelFileUploads is enabled, start pre-uploading the next part (or the audio file if this is the last part) while Gemini processes the current part.
+                if (_config.EnableParallelFileUploads) {
+                    if (i + 1 < partsWithTimes.Count) {
+                        string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 2}.tex");
+                        if (!System.IO.File.Exists(nextTexPath)) {
+                            Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
+                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file);
+                        }
+                        else {
+                            pendingVideoUploadTask = null;
                         }
                     }
-
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+                    else if (i == partsWithTimes.Count - 1 && _config.GenerateAudioFile && _config.GoIntoLatexRefinement) {
+                        pendingAudioUploadTask = Task.Run(async () => {
+                            if (audioExtractionTask != null) {
+                                await audioExtractionTask;
+                            }
+                            var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
+                            string audioPath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
+                                               ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
+                            if (System.IO.File.Exists(audioPath)) {
+                                Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
+                                var handler = new AttachmentHandler(_client, fileSpecificOutputFolder, [fileSpecificOutputFolder], false, _config.GcsBucketName);
+                                var (s, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
+                                if (s) return attached;
+                            }
+                            return [];
+                        });
+                    }
                 }
+
+                result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
                 fileTotalInputTokens += result.partInputTokens;
                 fileTotalOutputTokens += result.partOutputTokens;
@@ -1282,6 +1288,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
                                        ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
+                List<Part>? preUploadedAudioParts = null;
+                if (_config.EnableParallelFileUploads && pendingAudioUploadTask != null) {
+                    Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss des parallelen Audio-Uploads...");
+                    preUploadedAudioParts = await pendingAudioUploadTask;
+                }
+
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the Vertex AI client for refinement, as VertexAutoExtractionSession requires an Vertex AI client for this
                 var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
@@ -1289,7 +1301,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     _latexRefinementConfig!,
                     refinementTargetFile,
                     _config,
-                    audioFilePath);
+                    audioFilePath,
+                    preUploadedAudioParts);
 
                 await refinementSession.StartAsync();
             }
