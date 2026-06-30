@@ -94,6 +94,14 @@ public static class ContextCacheStateManager {
     }
 
     /// <summary>
+    /// [AI Context] Returns the number of minutes remaining until the locally stored cache state expires.
+    /// Returns a negative value if already expired.
+    /// </summary>
+    public static double GetRemainingMinutes(ContextCacheState state) {
+        return (state.ExpireTimeUtc - DateTime.UtcNow).TotalMinutes;
+    }
+
+    /// <summary>
     /// [AI Context] Checks if local config generation parameters and system instructions match saved state.
     /// Returns false if any parameter differs, or if the local expiry time has passed.
     /// </summary>

@@ -548,6 +548,18 @@ public class LatexRefinementSession {
             }
         }
 
+        // [AI Context] Auto-extend context cache if remaining TTL drops below the configured minimum before this refinement step's API call.
+        if (!string.IsNullOrEmpty(cacheName) && backendParams.UseContextCaching) {
+            var cacheState = ContextCacheStateManager.LoadState(cacheStateFileName);
+            double remainingMin = ContextCacheStateManager.GetRemainingMinutes(cacheState);
+            if (remainingMin < backendParams.ContextCachingMinimumRemainingMinutes) {
+                Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {backendParams.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {backendParams.ContextCachingIncrementMinutes} min...");
+                var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, backendParams.ContextCachingIncrementMinutes, cacheStateFileName);
+                if (updatedState != null)
+                    Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+            }
+        }
+
         var requestConfig = new GenerateContentConfig {
             Temperature = backendParams.Temperature,
             TopP = backendParams.TopP,

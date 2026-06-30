@@ -73,6 +73,11 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Verlängerungsintervall in Minuten beim Verlängern über das GUI (z.B. 30).
     public int ContextCachingIncrementMinutes { get; set; } = 30;
 
+    // [AI Context] Minimum remaining TTL in minutes before the automatic pre-part cache extension is triggered.
+    // If the cache has fewer minutes remaining than this value before a video part is sent, the cache is automatically extended by ContextCachingIncrementMinutes.
+    // [Human] Schwellenwert in Minuten: Wenn der Cache kürzer als dieser Wert gültig ist, wird er vor dem nächsten Videoteil automatisch verlängert.
+    public int ContextCachingMinimumRemainingMinutes { get; set; } = 10;
+
     // [AI Context] Optional framerate override for Google Gemini API video sampling.
     // [Human] Optionale Bildwiederholrate für die Gemini-API (z.B. 0.333 für 1 Frame alle 3 Sekunden).
     public double? GoogleVideoFps { get; set; }

@@ -16,6 +16,10 @@ public class BackendParameters {
     public bool UseContextCaching { get; set; } = false;
     public int ContextCachingMinutes { get; set; } = 15;
     public int ContextCachingIncrementMinutes { get; set; } = 30;
+
+    // [AI Context] Minimum remaining TTL in minutes before automatic pre-step cache extension is triggered.
+    // [Human] Schwellenwert in Minuten: Wenn der Cache kürzer als dieser Wert gültig ist, wird er vor dem nächsten Schritt automatisch verlängert.
+    public int ContextCachingMinimumRemainingMinutes { get; set; } = 10;
 }
 
 public class RefinementStepConfig {
