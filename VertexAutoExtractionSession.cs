@@ -424,11 +424,18 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 bool extendedAny = false;
 
                 // 1) Vertex Main Extraction Cache
-                if (!string.IsNullOrEmpty(_cachedContentName)) {
+                string? mainCacheName = _cachedContentName;
+                if (string.IsNullOrEmpty(mainCacheName)) {
+                    var mainState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
+                    mainCacheName = mainState.CacheName;
+                }
+
+                if (!string.IsNullOrEmpty(mainCacheName)) {
                     var savedState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
                     var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, savedState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
                     if (updated != null) {
-                        Console.WriteLine($"  [INFO] Video-Extraktions Kontext-Cache '{_cachedContentName}' verlängert um {_config.ContextCachingIncrementMinutes} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        Console.WriteLine($"  [INFO] Video-Extraktions Kontext-Cache '{mainCacheName}' verlängert um {_config.ContextCachingIncrementMinutes} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
+                        _cachedContentName = mainCacheName;
                         extendedAny = true;
                     }
                 }
@@ -474,8 +481,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 bool clearedAny = false;
 
                 // 1) Vertex Main Extraction Cache
-                if (!string.IsNullOrEmpty(_cachedContentName)) {
-                    await ContextCacheStateManager.DeleteRemoteAsync(_client, _cachedContentName);
+                string? mainCacheName = _cachedContentName;
+                if (string.IsNullOrEmpty(mainCacheName)) {
+                    var mainState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
+                    mainCacheName = mainState.CacheName;
+                }
+
+                if (!string.IsNullOrEmpty(mainCacheName)) {
+                    await ContextCacheStateManager.DeleteRemoteAsync(_client, mainCacheName);
                     ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileVertex);
                     _cachedContentName = null;
                     Console.WriteLine("  [INFO] 🐷 Video-Extraktions Kontext-Cache vorzeitig beendet und bei Google gelöscht.");

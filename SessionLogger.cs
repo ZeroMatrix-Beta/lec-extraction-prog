@@ -53,10 +53,11 @@ public class SessionLogger(SessionLoggerConfig config) {
         await File.AppendAllTextAsync("chat_log.md", setupLog);
     }
 
-    public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName, int inputTokens = 0, int outputTokens = 0) {
+    public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName, int inputTokens = 0, int outputTokens = 0, int cachedTokens = 0) {
         // Markdown Verlauf mitprotokollieren
         string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
-        string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Input {inputTokens}, Output {outputTokens})*" : "";
+        int freshTokens = Math.Max(0, inputTokens - cachedTokens);
+        string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Total Prompt {inputTokens:N0}, Gecacht {cachedTokens:N0}, Frisch {freshTokens:N0}, Output {outputTokens:N0})*" : "";
         await File.AppendAllTextAsync("chat_log.md", $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
 
         // LaTeX Response speichern
@@ -70,7 +71,7 @@ public class SessionLogger(SessionLoggerConfig config) {
                                $"% Session Info:\n" +
                                $"% System Prompt loaded: {_loadedSystemInstruction}\n" +
                                $"% History loaded: {_loadedHistory}\n" +
-                               $"% Tokens: Input {inputTokens}, Output {outputTokens}\n" +
+                               $"% Tokens: Total Prompt {inputTokens:N0}, Gecacht {cachedTokens:N0}, Frisch {freshTokens:N0}, Output {outputTokens:N0}\n" +
                                $"% \n" +
                                $"% {userName} Prompt:\n" +
                                $"% {formattedPrompt}\n" +

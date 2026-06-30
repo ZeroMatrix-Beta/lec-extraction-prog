@@ -5,7 +5,7 @@
   "ProjectId": "vertex-ai-experiments-494320",
   "Location": "global",
   "GcsBucketName": "test-latex-lecture-extraction-bucket",
-  "SourceFolder": "D:\\lecture-videos\\physik-I\\",
+  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
   "TargetFolder": "",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
@@ -31,7 +31,7 @@
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 5,
-  "OverlapSeconds": 150,
-  "GoogleVideoFps": 0.3333333333333333
+  "NumberOfParts": 3,
+  "OverlapSeconds": 200,
+  "GoogleVideoFps": 0.3
 }

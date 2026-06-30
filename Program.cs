@@ -127,7 +127,7 @@ partial class Program {
         if (extChoice == "2") {
             var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName);
+            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
             var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
             var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
@@ -140,7 +140,7 @@ partial class Program {
                 : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
             string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "");
+            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps);
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
             var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load(); // Load config for refinement
             var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);

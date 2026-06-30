@@ -74,7 +74,7 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.5,
+      "Temperature": 0.55,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,

@@ -19,11 +19,12 @@ namespace Infrastructure;
 /// [AI Context] Injects required runtime dependencies.
 /// [Human] Konstruktor: Bekommt alle wichtigen Einstellungen (Pfade, Google Client) übergeben.
 /// </remarks>
-public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName) {
+public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null) {
     private readonly string _uploadFolder = uploadFolder;
     private readonly string[] _includePaths = includePaths ?? [];
     private readonly bool _isAiStudio = isAiStudio;
     private readonly string _gcsBucketName = gcsBucketName;
+    private readonly double? _googleVideoFps = googleVideoFps;
     private Client _client = client;
 
     /// <summary>
@@ -217,6 +218,9 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
 
                 WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
                 var fileDataPart = new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } };
+                if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) && _googleVideoFps.HasValue) {
+                    fileDataPart.VideoMetadata = new() { Fps = _googleVideoFps.Value };
+                }
                 if (asSystemInstruction) {
                     parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n" });
                     parts.Add(fileDataPart);
@@ -255,6 +259,9 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
 
                 var fileDataPart = new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } };
+                if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) && _googleVideoFps.HasValue) {
+                    fileDataPart.VideoMetadata = new() { Fps = _googleVideoFps.Value };
+                }
                 if (asSystemInstruction) {
                     parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n" });
                     parts.Add(fileDataPart);
