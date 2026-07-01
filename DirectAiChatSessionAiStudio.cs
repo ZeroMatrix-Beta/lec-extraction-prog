@@ -581,7 +581,7 @@ public partial class DirectAiChatSessionAiStudio {
     /// [Human] Wechselt den API-Key mitten in der Sitzung, falls das Limit für den aktuellen Key erreicht wurde.
     /// </summary>
     private void HandleChangeKey(string input) {
-        var match = System.Text.RegularExpressions.Regex.Match(input, @"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var match = ChangeKeyParamsRegex().Match(input);
         if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
             string? newApiKey;
             if (newProfile == 0) {
@@ -646,4 +646,7 @@ public partial class DirectAiChatSessionAiStudio {
 
     [System.Text.RegularExpressions.GeneratedRegex(@"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase, "de-CH")]
     private static partial System.Text.RegularExpressions.Regex MyRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex ChangeKeyParamsRegex();
 }

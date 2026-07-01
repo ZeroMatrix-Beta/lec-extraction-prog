@@ -1532,10 +1532,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
-            // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
-            // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] Under Vertex AI, we do not have strict RPM / TPM limits, but a small 10s delay provides a buffer to avoid transient concurrency limits or spikes.
+            // [Human] Unter Vertex AI sind die Rate-Limits höher, aber eine kleine Pause von 10s schützt vor temporären Server-Spikes. (Oder drücke Enter für sofortigen Skip)
+            Console.WriteLine($"\n  [Timer] Warte 10 Sekunden vor der Fortsetzung... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(10, "Warte auf Fortsetzung (Sicherheits-Puffer)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

@@ -21,7 +21,7 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.45,
+  "Temperature": 0.5,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,

@@ -91,7 +91,25 @@ Vertex AI enforces strict schema purity on the `SystemInstruction` field: it exc
 ### Prompt Assembly & Dump Logging
 To verify exact prompt construction and ensure `Training History` metadata is captured, `ExtractionHelpers.LogSystemInstructionDumpAsync` executes strictly after all text instructions and binary attachments have been assembled. It writes the complete compiled prompt into a timestamped `system_instruction_dump.md` file inside the active log directory.
 
+```
++---------------------------------------------------------------------------------+
+|                         PROMPT PAYLOAD ASSEMBLY MATRIX                          |
++---------------------------------------------------------------------------------+
+|                                                                                 |
+|  [SystemInstruction Payload (Strict Pure Text)]                                 |
+|  ├── 1. Attention Map Priming (ASCII Folder Tree of Instruction Hierarchy)      |
+|  ├── 2. transcription.md (Framed with delimiter headers)                        |
+|  ├── 3. hard-specs.md (Framed with delimiter headers)                           |
+|  └── 4. environments.md (Framed with delimiter headers)                         |
+|                                                                                 |
+|  [User Content Payload (Multimodal)]                                            |
+|  ├── Binary Attachments (e.g., Training History Images / Handwriting Samples)   |
+|  └── Video Segment Chunk (gs://... or File API URI)                             |
++---------------------------------------------------------------------------------+
+```
+
 ---
+
 
 ## 4.3 Intelligent Context Caching & MD5 Auto-Reload
 
@@ -102,7 +120,29 @@ Whenever an auto-extraction session boots, the application computes a unified MD
 - **Cache Match:** If a valid remote cache exists (`vertex_cache_state.json` / `aistudio_cache_state.json`), hasn't expired on Google's servers, and its stored MD5 checksum matches the newly computed checksum, the application reuses the remote cache instantly (`cachedContent/...`).
 - **Cache Mismatch (Auto-Reload):** If a developer edits even a single word inside any markdown instruction file (e.g., tweaking `hard-specs.md`), the newly computed MD5 checksum diverges from the saved state. The application detects this mismatch, issues a remote `Delete` command for the stale Google Cloud Cache, and generates a fresh remote cache for the subsequent video batch automatically.
 
+```
++---------------------------------------------------------------------------------+
+|                         REMOTE CONTEXT CACHE LIFECYCLE                          |
++---------------------------------------------------------------------------------+
+|  Start Auto-Extraction Session                                                  |
+|         │                                                                       |
+|         ▼                                                                       |
+|  Compute Local MD5 Hash (All System Instructions + Preloaded History)           |
+|         │                                                                       |
+|         ├─────────────────────────────────────────┐                             |
+|         ▼                                         ▼                             |
+|  [Cache File Exists & Active?]             [No Cache / Expired / Hash Mismatch] |
+|         │                                         │                             |
+|  (MD5 Matches Exactly)                            ▼                             |
+|         │                                  Purge Stale Remote Cache (if any)    |
+|         ▼                                         │                             |
+|  ✅ Reuse cachedContent/URI                       ▼                             |
+|     (0 Prompt Upload Cost)                 Upload New Context & Save MD5        |
++---------------------------------------------------------------------------------+
+```
+
 ---
+
 
 ## 4.5 Authentication Setup
 
@@ -143,7 +183,26 @@ To transcribe a 90-minute lecture, sending the entire video at once often leads 
 3. **Audio Downmixing:** Audio is compressed and downmixed to mono (`-ac 1`).
 4. **Latex Refinement:** Because of the overlaps, the extracted LaTeX chunks will contain duplicated sentences or formulas at the boundaries. The `LatexRefinementSession` passes these chunks to a deterministic AI (Temperature 0.0) with instructions to seamlessly merge them into a single, continuous LaTeX document.
 
+```
++---------------------------------------------------------------------------------+
+|                       SLIDING WINDOW CHUNK SCRIPT MERGER                        |
++---------------------------------------------------------------------------------+
+|                                                                                 |
+|  Lecture Timeline:  0m ---------- 3m ---------- 6m ---------- 9m                |
+|                                                                                 |
+|  Chunk 1 [0m - 3m]:   [======= Transcribed Text A =======]                      |
+|                                    ▲                                            |
+|                               Overlapping Boundary (e.g. 180s overlap)          |
+|                                    ▼                                            |
+|  Chunk 2 [1.5m - 4.5m]:            [======= Transcribed Text B =======]         |
+|                                                                                 |
+|  LatexRefinementSession (Temp = 0.0):                                           |
+|  Fuses boundary duplicate formulas -> Outputs clean unified LaTeX stream        |
++---------------------------------------------------------------------------------+
+```
+
 ---
+
 
 ## 6. Architecture Breakdown: Namespaces & Core Classes
 
@@ -304,7 +363,25 @@ Vertex AI erzwingt strikte Schemareinheit im `SystemInstruction`-Feld: Es akzept
 ### Prompt Assembly & Dump Logging
 Um den exakten Prompt-Aufbau zu verifizieren und sicherzustellen, dass Anhänge der `Training History` miterfasst werden, wird `ExtractionHelpers.LogSystemInstructionDumpAsync` erst ausgeführt, nachdem alle Texte und Bildanhänge verknüpft wurden. Der komplette Dump wird in eine mit Zeitstempel versehene `system_instruction_dump.md` im Log-Verzeichnis geschrieben.
 
+```
++---------------------------------------------------------------------------------+
+|                         PROMPT PAYLOAD ASSEMBLY MATRIX                          |
++---------------------------------------------------------------------------------+
+|                                                                                 |
+|  [SystemInstruction Payload (Strikt reiner Text)]                               |
+|  ├── 1. Attention Map Priming (ASCII-Ordnerbaum der Instruktionshierarchie)     |
+|  ├── 2. transcription.md (Eingefasst mit Trenn-Headern)                         |
+|  ├── 3. hard-specs.md (Eingefasst mit Trenn-Headern)                            |
+|  └── 4. environments.md (Eingefasst mit Trenn-Headern)                          |
+|                                                                                 |
+|  [User Content Payload (Multimodal)]                                            |
+|  ├── Binäre Anhänge (z. B. Training History Bilder / Handschrift-Proben)        |
+|  └── Videosegment-Chunk (gs://... oder File API URI)                            |
++---------------------------------------------------------------------------------+
+```
+
 ---
+
 
 ## 4.3 Intelligentes Context Caching & MD5 Auto-Reload
 
@@ -315,7 +392,29 @@ Wann immer eine Auto-Extraktions-Session startet, berechnet die Anwendung eine M
 - **Cache Match:** Existiert ein gültiger Remote-Cache (`vertex_cache_state.json` / `aistudio_cache_state.json`), ist er auf den Google-Servern nicht abgelaufen und stimmt seine MD5-Checksumme mit der frisch berechneten Checksumme überein, nutzt die App diesen Cache sofort wieder (`cachedContent/...`).
 - **Cache Mismatch (Auto-Reload):** Ändert ein Entwickler auch nur ein einziges Wort in einer Markdown-Datei (z. B. in `hard-specs.md`), weicht die neue MD5-Checksumme vom gespeicherten Zustand ab. Die Anwendung erkennt diese Abweichung, sendet einen `Delete`-Befehl für den alten Google Cloud Cache und erstellt vollautomatisch einen frischen Cache für den nächsten Video-Batch.
 
+```
++---------------------------------------------------------------------------------+
+|                         REMOTE CONTEXT CACHE LEBENSZYKLUS                       |
++---------------------------------------------------------------------------------+
+|  Start Auto-Extraction Session                                                  |
+|         │                                                                       |
+|         ▼                                                                       |
+|  Berechnung lokaler MD5-Hash (Alle System-Instruktionen + Vorverladene History) |
+|         │                                                                       |
+|         ├─────────────────────────────────────────┐                             |
+|         ▼                                         ▼                             |
+|  [Cache-Datei existiert & aktiv?]          [Kein Cache / Abgelaufen / Mismatch] |
+|         │                                         │                             |
+|  (MD5 stimmt exakt überein)                       ▼                             |
+|         │                                  Löschen alter Remote Cache           |
+|         ▼                                         │                             |
+|  ✅ Wiederverwendung cachedContent/URI            ▼                             |
+|     (0 Prompt Upload Kosten)               Upload neuer Kontext & MD5 speichern |
++---------------------------------------------------------------------------------+
+```
+
 ---
+
 
 ## 4.5 Authentifizierungs-Setup
 
@@ -356,7 +455,26 @@ Um eine 90-minütige Vorlesung zu transkribieren, führt das Senden des gesamten
 3. **Audio-Downmixing:** Audio wird komprimiert und auf Mono heruntergemischt (`-ac 1`).
 4. **Latex Refinement:** Aufgrund der Überlappungen enthalten die extrahierten LaTeX-Chunks duplizierte Sätze oder Formeln an den Rändern. Die `LatexRefinementSession` übergibt diese Chunks an eine deterministische KI (Temperature 0.0) mit der Anweisung, sie nahtlos zu einem einzigen, kontinuierlichen LaTeX-Dokument zusammenzuführen.
 
+```
++---------------------------------------------------------------------------------+
+|                       SLIDING WINDOW CHUNK SCRIPT MERGER                        |
++---------------------------------------------------------------------------------+
+|                                                                                 |
+|  Vorlesungs-Zeitachse: 0m ---------- 3m ---------- 6m ---------- 9m             |
+|                                                                                 |
+|  Chunk 1 [0m - 3m]:      [======= Transkribierter Text A =======]               |
+|                                       ▲                                         |
+|                                  Überlappungszone (z.B. 180s)                   |
+|                                       ▼                                         |
+|  Chunk 2 [1.5m - 4.5m]:               [======= Transkribierter Text B =======]  |
+|                                                                                 |
+|  LatexRefinementSession (Temp = 0.0):                                           |
+|  Verschmilzt Formel-Duplikate -> Gibt nahtlosen LaTeX-Stream aus                |
++---------------------------------------------------------------------------------+
+```
+
 ---
+
 
 ## 6. Architektur-Übersicht: Namespaces & Kernklassen
 

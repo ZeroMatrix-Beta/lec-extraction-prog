@@ -1,12 +1,69 @@
 # 🤖🎥 AI Lecture Extraction & Processing Pipeline
 
+[![.NET 10.0](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-Multimodal%20AI-4285F4?style=flat-square&logo=google)](https://ai.google.dev/)
+[![Vertex AI](https://img.shields.io/badge/Google%20Cloud-Vertex%20AI-4285F4?style=flat-square&logo=googlecloud)](https://cloud.google.com/vertex-ai)
+[![FFmpeg](https://img.shields.io/badge/FFmpeg-Audio%2FVideo-007808?style=flat-square&logo=ffmpeg)](https://ffmpeg.org/)
+
 *(See below for the German version / Deutsche Version unten)*
 
+<p align="center">
+  <a href="#-english"><b>🇬🇧 English</b></a> •
+  <a href="#-deutsch"><b>🇩🇪 Deutsch</b></a> •
+  <a href="Documentation.md"><b>📖 Detailed Documentation</b></a>
+</p>
+
+---
+
+<a id="-english"></a>
 ## 🇬🇧 English
 
 This project is a C# console utility designed to automate the transcription and translation of academic lecture videos into LaTeX documents using Google Gemini's multimodal capabilities.
 
 It bridges the gap between local video preprocessing (FFmpeg) and cloud-based AI inference, supporting both an **Interactive Chat Mode** and an **Automated Batch Extraction Pipeline**. It supports free/developer environments via **Google AI Studio** and enterprise workloads via **Google Cloud Vertex AI**.
+
+---
+
+### 📐 System Architecture & Workflow
+
+```
++------------------------------------------------------------------------------------+
+|                                 INPUT VIDEO FOLDER                                 |
++------------------------------------------------------------------------------------+
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  🎬 FfmpegUtilities: Preprocessing & Token Optimization                            |
+|  • Compress Video -> 1 FPS (Ideal for blackboard/formula capture)                  |
+|  • Downmix Audio -> Mono AAC (Reduces bandwidth & upload latency)                  |
+|  • Slice into overlapping 3-minute segments (Prevents boundary context loss)       |
++------------------------------------------------------------------------------------+
+                                           │
+               ┌───────────────────────────┴───────────────────────────┐
+               ▼                                                       ▼
++-------------------------------------+ +--------------------------------------------+
+| 🌐 Google AI Studio (File API)      | | ☁️ Google Cloud Vertex AI (Enterprise)     |
+| • Producer-Consumer Channel Pipeline| | • Managed GCS Bucket Uploads               |
+| • Automated Context Caching         | | • Auto-Purging after each chunk            |
++-------------------------------------+ +--------------------------------------------+
+               └───────────────────────────┬───────────────────────────┘
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  📝 Fragmented LaTeX Transcripts (.tex chunks with custom spoken/formula tags)     |
++------------------------------------------------------------------------------------+
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  ✍️ DirectChatAiInteraction: LaTeX Refinement Merger                               |
+|  • Deterministic AI Pass (Temp = 0.0) | Merges overlaps & resolves syntax errors   |
++------------------------------------------------------------------------------------+
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  📄 COMPILABLE ACADEMIC LATEX DOCUMENT & FINAL PDF                                 |
++------------------------------------------------------------------------------------+
+```
 
 ---
 
@@ -64,7 +121,15 @@ Responsible for local audio and video processing prior to AI upload.
 
 - **`FfmpegToolkit`**: Headless FFmpeg command builder. Used for `ProcessSplitVideoAsync` (cutting lectures into exactly 3-minute overlapping segments to prevent sentence truncation) and `ProcessGeneralVideoAsync`.
 
-#### 🚀 4. Main Menu Workflow (`Program.cs`)
+#### 📦 4. Additional Namespaces & Infrastructure
+Supporting modules that ensure reliability and clean modularization.
+
+- **`Infrastructure`**: Houses core utilities like `AttachmentHandler`, `SessionLogger`, and `ApiResilience` (exponential backoff & retry mechanisms).
+- **`DocumentUtilities`**: Tools like `LatexToolkit` and `LatexTimestampHelper` for cleaning and synchronizing timestamps across `.tex` chunks.
+- **`Config`**: Type-safe JSON configuration models (`AppConfig`, `VertexAutoExtractionConfig`, etc.).
+- **`GoogleGenAi`**: Client builders and connection management (`GeminiClientBuilder`).
+
+#### 🚀 5. Main Menu Workflow (`Program.cs`)
 Upon starting the application, you are presented with 5 operational modes:
 1. **Google AI Studio Chat:** Interactive developer endpoint session.
 2. **Vertex AI Chat:** Interactive enterprise endpoint session.
@@ -84,15 +149,76 @@ Upon starting the application, you are presented with 5 operational modes:
 3. **Google Cloud Vertex AI:** Requires the Google Cloud CLI (`gcloud`) to be installed and authenticated via `gcloud auth application-default login`. The linked project must have an active Billing Account.
 4. **System Instruction (`gemini.md`):** The application relies on a comprehensive system prompt file that dictates the strict LaTeX formatting rules and custom environments (e.g., `\begin{spoken-clean}`). You must configure the absolute path to this file in the application's configuration classes before running.
 
+---
+
+### 🚨 Troubleshooting: HTTP 500 & Retry Loops
+
+If the application gets stuck with `[Exception Caught] Type: ServerError` (HTTP 500), it means the Google backend crashed while processing your specific prompt or video chunk.
+- **Do not use "Thinking" with Flash Models:** Combining `gemini-3.5-flash` with a high `ThinkingBudget` and a 30-minute video chunk is highly unstable. Switch to a "Pro" model (e.g., `gemini-2.5-pro` or `gemini-3.1-pro-preview`) if you want to use reasoning.
+- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` embeds history files and images directly into the System Instruction via XML framing and InlineData. While much more stable, massive history payloads can still exceed API limits.
+- **Skip the Error:** Press `Ctrl+C` during a retry delay to gracefully skip the corrupted video chunk and proceed to the next file.
+
+For more details on why cache-priming is used instead of single-prompt processing, see the Documentation.
+
+---
+
+### 📖 Detailed Documentation / Detail-Dokumentation
+
+For a deeper dive into the system's architecture, including configuration quirks (Array Merging), API constraints, multimodal tokenization differences between Gemini versions, and advanced reasoning parameters (`ThinkingBudget`, `ThinkingLevel`), please refer to the **[Detailed System Documentation](Documentation.md)**.
+
 <br>
 
 ---
 
+<a id="-deutsch"></a>
 ## 🇩🇪 Deutsch
 
 Dieses Projekt ist ein C#-Konsolenwerkzeug, das entwickelt wurde, um die Transkription und Übersetzung von akademischen Vorlesungsvideos in LaTeX-Skripte mithilfe von Google Geminis multimodalen Fähigkeiten zu automatisieren.
 
 Es schlägt die Brücke zwischen lokaler Videovorverarbeitung (FFmpeg) und cloudbasierter KI-Inferenz und unterstützt sowohl einen **interaktiven Chat-Modus** als auch eine **automatisierte Batch-Extraktions-Pipeline**. Es unterstützt kostenlose/Developer-Umgebungen via **Google AI Studio** sowie Enterprise-Workloads via **Google Cloud Vertex AI**.
+
+---
+
+### 📐 Systemarchitektur & Ablauf
+
+```
++------------------------------------------------------------------------------------+
+|                                 EINGABE-VIDEOORDNER                                |
++------------------------------------------------------------------------------------+
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  🎬 FfmpegUtilities: Vorverarbeitung & Token-Optimierung                           |
+|  • Videokomprimierung auf 1 FPS (Perfekt für Tafelbilder und Formelentwicklung)    |
+|  • Audio-Downmix auf Mono AAC (Minimiert Upload-Zeit und Bandbreite)               |
+|  • Schnitt in überlappende 3-Minuten-Segmente (Verhindert Satzabbruch an Grenzen)  |
++------------------------------------------------------------------------------------+
+                                           │
+               ┌───────────────────────────┴───────────────────────────┐
+               ▼                                                       ▼
++-------------------------------------+ +--------------------------------------------+
+| 🌐 Google AI Studio (File API)      | | ☁️ Google Cloud Vertex AI (Enterprise)     |
+| • Producer-Consumer Channel Pipeline| | • Verwaltete GCS Bucket Uploads            |
+| • Automatisches Context Caching     | | • Automatische Bereinigung pro Segment     |
++-------------------------------------+ +--------------------------------------------+
+               └───────────────────────────┬───────────────────────────┘
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  📝 Fragmentierte LaTeX-Transkripte (.tex Fragmente mit Spoken-/Formel-Tags)       |
++------------------------------------------------------------------------------------+
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  ✍️ DirectChatAiInteraction: LaTeX Refinement Merger                               |
+|  • Deterministischer KI-Durchlauf (Temp = 0.0) | Verschmelzung & Syntaxkorrektur   |
++------------------------------------------------------------------------------------+
+                                           │
+                                           ▼
++------------------------------------------------------------------------------------+
+|  📄 KOMPILIERBARES AKADEMISCHES LATEX-DOKUMENT & FINALES PDF                       |
++------------------------------------------------------------------------------------+
+```
 
 ---
 
@@ -150,7 +276,15 @@ Verantwortlich für die lokale Videoverarbeitung vor dem KI-Upload.
 
 - **`FfmpegToolkit`**: Headless FFmpeg Builder. Essenziell für `ProcessSplitVideoAsync` (schneidet Vorlesungen in überlappende 3-Minuten-Fragmente, damit Sätze nicht in der Mitte abbrechen).
 
-#### 🚀 4. Hauptmenü Workflow (`Program.cs`)
+#### 📦 4. Weitere Namespaces & Infrastruktur
+Ergänzende Module für Stabilität, Logging und saubere Modularisierung.
+
+- **`Infrastructure`**: Beinhaltet Basis-Werkzeuge wie `AttachmentHandler`, `SessionLogger` und `ApiResilience` (Exponential Backoff & Wiederholungsmechanismen).
+- **`DocumentUtilities`**: Tools wie `LatexToolkit` und `LatexTimestampHelper` zur Bereinigung und Zeitstempelsynchronisation.
+- **`Config`**: Typensichere JSON-Konfigurationsmodelle (`AppConfig`, `VertexAutoExtractionConfig` u.a.).
+- **`GoogleGenAi`**: Client-Builder und Endpunktverbindungen (`GeminiClientBuilder`).
+
+#### 🚀 5. Hauptmenü Workflow (`Program.cs`)
 Beim Start der Anwendung stehen 5 Betriebsmodi zur Verfügung:
 1. **Google AI Studio Chat:** Interaktive Chat-Sitzung (Developer Endpoint).
 2. **Vertex AI Chat:** Interaktive Chat-Sitzung (Enterprise Endpoint).
@@ -174,15 +308,15 @@ Beim Start der Anwendung stehen 5 Betriebsmodi zur Verfügung:
 
 ### 🚨 Troubleshooting: HTTP 500 & Retry Loops
 
-If the application gets stuck with `[Exception Caught] Type: ServerError` (HTTP 500), it means the Google backend crashed while processing your specific prompt or video chunk.
-- **Do not use "Thinking" with Flash Models:** Combining `gemini-3.5-flash` with a high `ThinkingBudget` and a 30-minute video chunk is highly unstable. Switch to a "Pro" model (e.g., `gemini-2.5-pro` or `gemini-3.1-pro-preview`) if you want to use reasoning.
-- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` embeds history files and images directly into the System Instruction via XML framing and InlineData. While much more stable, massive history payloads can still exceed API limits.
-- **Skip the Error:** Press `Ctrl+C` during a retry delay to gracefully skip the corrupted video chunk and proceed to the next file.
+Wenn die Anwendung mit `[Exception Caught] Type: ServerError` (HTTP 500) stehen bleibt, bedeutet das meist, dass das Google-Backend bei einem spezifischen Prompt oder Video-Segment ins Stocken geraten ist:
+- **Kein "Thinking" bei Flash-Modellen:** Die Kombination aus `gemini-3.5-flash` mit einem hohen `ThinkingBudget` und 30 Minuten langen Videos ist instabil. Wechsle für intensives Reasoning lieber auf ein "Pro"-Modell (z. B. `gemini-2.5-pro` oder `gemini-3.1-pro-preview`).
+- **System Instructions nicht überladen:** Wenn `LoadHistoryIntoSystemInstruction` auf `true` gesetzt ist, werden Historie und Bilder direkt eingebettet. Das läuft generell stabil, aber zu riesige Payloads können die API-Limits überschreiten.
+- **Fehler überspringen:** Drücke einfach `Strg+C` während der Wartezeit (Retry Delay), um das betroffene Video-Segment sauber zu überspringen und mit der nächsten Datei weiterzumachen.
 
-For more details on why cache-priming is used instead of single-prompt processing, see the Documentation.
+Weitere Details dazu, warum wir Cache-Priming statt einzelner Riesen-Prompts nutzen, findest du in der ausführlichen Dokumentation.
 
 ---
 
 ### 📖 Detailed Documentation / Detail-Dokumentation
 
-For a deeper dive into the system's architecture, including configuration quirks (Array Merging), API constraints, multimodal tokenization differences between Gemini versions, and advanced reasoning parameters (`ThinkingBudget`, `ThinkingLevel`), please refer to the **[Detailed System Documentation](Documentation.md)**.
+Weiterführende Informationen zur Systemarchitektur, den Konfigurations-Besonderheiten (Array Merging), API-Einschränkungen und den Reasoning-Parametern (`ThinkingBudget`, `ThinkingLevel`) findest du in der **[Ausführlichen System-Dokumentation](Documentation.md)**.

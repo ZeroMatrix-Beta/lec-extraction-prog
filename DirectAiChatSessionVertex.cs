@@ -113,7 +113,7 @@ public class DirectAiChatSessionVertex {
     /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
     /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
     /// </summary>
-    private string SelectModel() {
+    private static string SelectModel() {
         WriteLine("\n=== Model Selection (Vertex AI) ===");
         WriteLine("Wähle ein Modell:");
         WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");

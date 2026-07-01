@@ -634,6 +634,10 @@ public class LatexRefinementSession {
             Console.WriteLine($"  [WARNUNG] Konnte Prompt-Log nicht speichern: {ex.Message}");
         }
 
+        int totalInputTokens = 0;
+        int totalOutputTokens = 0;
+        int totalCachedTokens = 0;
+
         string fullResponseText = "";
         int currentRequest = 1;
         int maxRequests = 5;
@@ -659,6 +663,16 @@ public class LatexRefinementSession {
 
                       Console.Write(text);
                       chunkResp += text;
+
+                      if (chunk.UsageMetadata != null) {
+                          if (chunk.UsageMetadata.PromptTokenCount.HasValue) 
+                              totalInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+                          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) 
+                              totalOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                          if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) 
+                              totalCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
+                      }
+
                       await Task.CompletedTask;
                   },
                   cancellationToken: cts.Token,
@@ -751,6 +765,9 @@ public class LatexRefinementSession {
                                 $"% MaxOutputTokens: {backendParams.MaxOutputTokens}\n" +
                                 (backendParams.ThinkingBudget.HasValue ? $"% ThinkingBudget: {backendParams.ThinkingBudget.Value}\n" : "") +
                                 (!string.IsNullOrEmpty(backendParams.ThinkingLevel) ? $"% ThinkingLevel: {backendParams.ThinkingLevel}\n" : "") +
+                                $"% Prompt Tokens: {totalInputTokens:N0}\n" +
+                                $"% Candidates Tokens: {totalOutputTokens:N0} (inkl. Thinking Tokens)\n" +
+                                $"% Cached Tokens: {totalCachedTokens:N0}\n" +
                                 $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                                 $"% ==========================================\n\n";
 
