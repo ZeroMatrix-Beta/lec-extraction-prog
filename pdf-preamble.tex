@@ -1,131 +1,166 @@
 \documentclass[11pt,a4paper]{report}
 
 % ==========================================
-% NEW ELEGANT MINIMAL B/W PREAMBLE
+% NEW VIBRANT SHADOW PREAMBLE
 % ==========================================
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[german]{babel}
-\usepackage{amsmath, amssymb, amsthm, mathtools, environ}
-\usepackage{booktabs} % Required for \toprule, \midrule, and \bottomrule
-\usepackage{fontawesome5} % For the environment symbols
+\usepackage[ngerman]{babel} % Geändert von german zu ngerman
+\usepackage{amsmath, amssymb, amsthm, mathtools, environ, etoolbox} % etoolbox für robustere Abfragen hinzugefügt
+\usepackage{booktabs}
+\usepackage{fontawesome5}
+
+% Setzt global "Woche" anstelle von "Kapitel" (angepasst an ngerman)
+\addto\captionsngerman{\renewcommand{\chaptername}{Woche}}
 
 % --- FONT CONFIGURATION ---
-\usepackage{mathpazo} % Elegant Palatino font
+\usepackage{mathpazo}
 
 % --- EMPHASIS STYLE OVERRIDE ---
-\DeclareTextFontCommand{\emph}{\textbf} % Redefine \emph to use \textbf
+% KORREKTUR: \DeclareTextFontCommand benötigt Schalter (wie \bfseries), keine Befehle mit Argument.
+\DeclareTextFontCommand{\emph}{\sffamily\bfseries}
 
 \usepackage[margin=1in, headheight=35pt]{geometry}
-\usepackage[dvipsnames]{xcolor} % Keeping xcolor for grayscale definitions
+\usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
 \usepackage[nameinlink, capitalize]{cleveref}
 
 % --- HYPERREF AESTHETICS ---
 \hypersetup{
-    colorlinks=true,
-    linkcolor=black,
-    filecolor=darkgray,      
-    urlcolor=black,
-    citecolor=black,
-    bookmarksopen=true
+colorlinks=true,
+linkcolor=MidnightBlue,
+filecolor=Magenta,
+urlcolor=MidnightBlue,
+citecolor=MidnightBlue,
+bookmarksopen=true
 }
 
 \usepackage{tcolorbox}
 \tcbuselibrary{skins, breakable, theorems}
 
 % --- TYPOGRAPHY & LAYOUT ENHANCEMENTS ---
-\usepackage{parskip} 
-\linespread{1.05}    
+\linespread{1.05}
 
-% --- LIST SPACING FIX ---
+% Define standard paragraph indent for reference inside specific environments
+\newlength{\standardparindent}
+\setlength{\standardparindent}{17pt} % Standard LaTeX indent for 11pt report
+
+% Define a subtle, consistent paragraph spacing (with a tiny bit more space)
+\newlength{\customparskip}
+\setlength{\customparskip}{3pt plus 1.5pt minus 0.5pt}
+
+% Global paragraph settings: standard LaTeX distance with custom tiny gap, no indentation
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{\customparskip}
+
+% Consistent spacing parameter for environments (theorems and lists) under 1.05 linespread
+\newlength{\customenvspace}
+\setlength{\customenvspace}{0.9ex plus 0.2ex minus 0.1ex}
+
+% --- LIST SPACING FIX & VIBRANT COLORS ---
 \usepackage{enumitem}
+\setlist[itemize]{
+topsep=\customenvspace,
+itemsep=0.4ex plus 0.1ex,
+parsep=\parskip,
+partopsep=0pt,
+label=\textcolor{BurntOrange}{\textbullet}
+}
 \setlist[enumerate]{
-    topsep=0.5ex,
-    itemsep=0.5ex,
-    parsep=\parskip,
-    partopsep=0pt,
-    label=\textbf{(\alph*)},
-    ref=(\alph*)
+topsep=\customenvspace,
+itemsep=0.4ex plus 0.1ex,
+parsep=\parskip,
+partopsep=0pt,
+label=\textbf{\textcolor{MidnightBlue}{(\alph*)}},
+ref=(\alph*)
+}
+\setlist[description]{
+style=unboxed,
+topsep=\customenvspace,
+itemsep=0.4ex plus 0.1ex,
+parsep=\parskip,
+labelsep=0.333em plus 0.167em minus 0.111em
 }
 
-\setlist[description]{
-    style=unboxed,
-    labelsep=0.333em plus 0.167em minus 0.111em
-}
+% --- HEADER & FOOTER CONFIGURATION ---
+% Mix a faint, muted RoyalPurple using standard dvipsnames
+\colorlet{FaintRoyalPurple}{RoyalPurple!45!Gray}
 
 \usepackage{fancyhdr}
 \usepackage{extramarks}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\sffamily\color{black}\makebox[0.4\textwidth][l]{\leftmark}}
-\fancyhead[R]{\sffamily\color{black}\makebox[0.4\textwidth][r]{\thepage}}
-\fancyfoot[L]{\sffamily\color{black}\makebox[0.4\textwidth][l]{\rightmark}}
-\fancyfoot[R]{\sffamily\color{black}\makebox[0.4\textwidth][r]{\lastxmark}}
-\renewcommand{\headrule}{\hbox to\headwidth{\color{gray!50}\leaders\hrule height 0.5pt\hfill}}
-\renewcommand{\footrule}{\hbox to\headwidth{\color{gray!50}\leaders\hrule height 0.5pt\hfill}}
+% Header: Linksbündiger Kapiteltitel (obenbündig, 80% Breite), Rechtsbündige Seitenzahl (fett, 18% Breite)
+\fancyhead[L]{\parbox[t]{0.8\textwidth}{\raggedright\sffamily\color{FaintRoyalPurple}\leftmark}}
+\fancyhead[R]{\parbox[t]{0.18\textwidth}{\raggedleft\sffamily\bfseries\color{FaintRoyalPurple}\thepage}}
+% Footer: Beide Seiten obenbündig (top-aligned, je 47% Breite)
+\fancyfoot[L]{\parbox[t]{0.47\textwidth}{\raggedright\sffamily\color{FaintRoyalPurple}\rightmark}}
+\fancyfoot[R]{\parbox[t]{0.47\textwidth}{\raggedleft\sffamily\color{FaintRoyalPurple}\lastxmark}}
+% Subtle rule lines
+\renewcommand{\headrule}{\hbox to\headwidth{\color{FaintRoyalPurple!50}\leaders\hrule height 0.5pt\hfill}}
+\renewcommand{\footrule}{\hbox to\headwidth{\color{FaintRoyalPurple!50}\leaders\hrule height 0.5pt\hfill}}
 
 \renewcommand{\sectionmark}[1]{%
-    \markright{\MakeUppercase{\thesection.\ #1}}%
-    \extramarks{}{}%
+\markright{\MakeUppercase{\thesection.\ #1}}%
+\extramarks{}{}%
 }
 \renewcommand{\subsectionmark}[1]{%
-    \extramarks{\MakeUppercase{\thesubsection.\ #1}}{\MakeUppercase{\thesubsection.\ #1}}%
+\extramarks{\MakeUppercase{\thesubsection.\ #1}}{\MakeUppercase{\thesubsection.\ #1}}%
 }
 
 % Fail-Safe TikZ Configuration
 \usepackage{tikz}
-\usetikzlibrary{calc, arrows.meta, positioning, 3d, shapes.geometric, decorations.pathreplacing, patterns}
+\usetikzlibrary{calc, arrows.meta, positioning, 3d, shapes.geometric, decorations.pathreplacing, patterns, shadows}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 
 \usepackage{titlesec}
-
-\definecolor{bglight}{HTML}{F8F9FA}    
+\definecolor{bglight}{HTML}{F8F9FA}
 
 % Math operators
 \DeclareMathOperator{\id}{id}
 \DeclareMathOperator{\Vol}{Vol}
 \newcommand{\newterm}[1]{\emph{#1}}
-\newcommand{\inlinemetanote}[1]{\textit{[\textcolor{gray}{#1}]}}
+\newcommand{\inlinemetanote}[1]{\textit{[\textcolor{Gray}{#1}]}}
 
-\renewcommand{\textbf}[1]{{\bfseries\sffamily#1}}
+% KORREKTUR: Dies ist die saubere native Methode in LaTeX, um Text-Font-Kommandos robust neu zu deklarieren (verhindert u.a. Bugs im Mathe-Modus)
+\DeclareTextFontCommand{\textbf}{\sffamily\bfseries} 
 
 % Custom Theorem Style
-\newtheoremstyle{bwthm}%
-  {\topsep}{\topsep}{\normalfont}{}{\sffamily\bfseries\color{black}}{:}{0.5em}%
-  {\thmname{#1}\thmnumber{ #2}\thmnote{ \textbf{(}{\normalfont\sffamily\textit{#3}}\textbf{)}}}
+\newtheoremstyle{royalpurplethm}%
+{\customenvspace}{\customenvspace}{\normalfont}{}{\color{RoyalPurple}\sffamily\bfseries}{:}{0.5em}%
+{\thmname{#1}\thmnumber{ #2}\thmnote{ \textcolor{RoyalPurple}{\bfseries(}{\normalfont\sffamily\textit{#3}}\textcolor{RoyalPurple}{\bfseries)}}}
 
-\theoremstyle{bwthm}
+\theoremstyle{royalpurplethm}
 
-% Standard Math Environments
-\newtheorem{theorem}{Theorem}[chapter]
+% Standard Math Environments (Deutsch)
+\newtheorem{theorem}{Satz}[chapter]
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{definition}[theorem]{Definition}
-\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{corollary}[theorem]{Korollar}
 \newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{example}[theorem]{Example}
-\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{example}[theorem]{Beispiel}
+\newtheorem{exercise}[theorem]{Übung}
 
-% Unnumbered Environments
-\newtheorem*{theorem*}{Theorem}
+% Unnumbered Environments (Deutsch)
+\newtheorem*{theorem*}{Satz}
 \newtheorem*{lemma*}{Lemma}
 \newtheorem*{proposition*}{Proposition}
 \newtheorem*{definition*}{Definition}
-\newtheorem*{corollary*}{Corollary}
-\newtheorem*{claim*}{Claim}
-\newtheorem*{example*}{Example}
-\newtheorem*{exercise*}{Exercise}
+\newtheorem*{corollary*}{Korollar}
+\newtheorem*{claim*}{Behauptung}
+\newtheorem*{example*}{Beispiel}
+\newtheorem*{exercise*}{Übung}
 
 \newtheorem*{notation}{Notation}
-\newtheorem*{remark}{Remark}
-\newtheorem*{summary}{Summary}
-\newtheorem*{warmup}{Warm up}
-\newtheorem*{question}{Question}
+\newtheorem*{remark}{Bemerkung}
+\newtheorem*{summary}{Zusammenfassung}
+\newtheorem*{warmup}{Einstieg}
+\newtheorem*{question}{Frage}
 \newcommand{\qt}[1]{\textit{``#1''}}
-\newtheorem*{answer}{Answer}
-\newtheorem*{importantremark}{Important remark}
-\newtheorem*{goals}{Goals}
+\newtheorem*{answer}{Antwort}
+\newtheorem*{importantremark}{Wichtige Bemerkung}
+\newtheorem*{goals}{Ziele}
 
 \crefalias{lemma}{lemma}
 \crefalias{theorem}{theorem}
@@ -133,231 +168,242 @@
 \crefalias{proposition}{proposition}
 
 % ==========================================
-% REDESIGNED MINIMAL B/W ENVIRONMENTS
+% VIBRANT SHADOW META-ENVIRONMENTS (Deutsch)
 % ==========================================
 
-% 1. Clean Spoken Protocol
+% 1. Clean Spoken Protocol (Optionales Argument wird jetzt sauber ohne leere Klammern ausgegeben)
 \newtcolorbox{spoken-clean}[1][]{
-    enhanced,
-    frame hidden,
-    colback=gray!5,
-    borderline west={3pt}{0pt}{black},
-    title={\sffamily\bfseries\textcolor{black}{\faMicrophone\ \ Spoken Protocol [#1]}},
-    attach title to upper=\par\vspace{1ex},
-    breakable
+enhanced,
+frame hidden,
+colback=MidnightBlue!5,
+borderline west={3pt}{0pt}{MidnightBlue},
+drop fuzzy shadow,
+title={\sffamily\bfseries\textcolor{MidnightBlue}{\faMicrophone\ \ Mündliches Protokoll\ifblank{#1}{}{ [#1]}}},
+attach title to upper={\par\setlength{\parindent}{\standardparindent}\setlength{\parskip}{\customparskip}\vspace{1ex}},
+breakable
 }
 
 % 2. AI Stroke-by-Stroke Note
 \newtcolorbox{nice-box}[1][]{
-    enhanced,
-    colback=white,
-    colframe=black,
-    boxrule=0.5pt,
-    drop fuzzy shadow,
-    title={\sffamily\bfseries\faStickyNote\ \ #1},
-    coltitle=black,
-    attach boxed title to top left={xshift=10pt, yshift=-10pt},
-    boxed title style={colback=gray!20, colframe=black, boxrule=0.5pt},
-    top=14pt,
-    breakable
+enhanced,
+colback=white,
+colframe=BurntOrange,
+boxrule=0.5pt,
+drop fuzzy shadow,
+title={\sffamily\bfseries\faStickyNote\ \ #1},
+coltitle=black,
+attach boxed title to top left={xshift=10pt, yshift=-10pt},
+boxed title style={colback=BurntOrange!20, colframe=BurntOrange, boxrule=0.5pt},
+top=14pt,
+breakable
 }
 
 % 3. Best Teacher / Didactic Insight
-\newtcolorbox{didactic-insight}[1][Pedagogical Concept]{
-    enhanced,
-    arc=3mm,
-    frame hidden,
-    colback=gray!5,
-    borderline west={2pt}{0pt}{gray!80},
-    title={\sffamily\bfseries\textcolor{black}{\textit{\faLightbulb\ \ Insight:} #1}},
-    attach title to upper=\par\vspace{0.5ex},
-    breakable
+\newtcolorbox{didactic-insight}[1][Didaktisches Konzept]{
+enhanced,
+arc=3mm,
+frame hidden,
+colback=ForestGreen!5,
+borderline west={2pt}{0pt}{ForestGreen!80!black},
+drop fuzzy shadow,
+title={\sffamily\bfseries\textcolor{ForestGreen!80!black}{\textit{\faLightbulb\ \ Einblick:} #1}},
+attach title to upper=\par\vspace{0.5ex},
+breakable
 }
 
-% 4a. Modular Visual Blackboard Replication Box
-\NewTColorBox{color-box}{ m O{} }{
-    enhanced,
-    colframe=black,
-    colback=white,
-    colupper=black,
-    fonttitle=\bfseries\sffamily,
-    coltitle=black,
-    title={\faBox\ \ #2},
-    boxrule=1.5pt,
-    arc=4pt,
-    drop fuzzy shadow=gray!30,
-    attach boxed title to top left={xshift=10pt, yshift=-10pt},
-    boxed title style={colback=white, colframe=black, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt},
-    if empty title={notitle}
+% 4a. Modular Visual Blackboard Replication Box (Fehlerhafter empty-Check korrigiert)
+\NewTColorBox{color-box}{ m o }{
+enhanced,
+colframe=#1,
+colback=white,
+colupper=black,
+fonttitle=\bfseries\sffamily,
+coltitle=black,
+boxrule=1.5pt,
+arc=4pt,
+drop fuzzy shadow=#1!30,
+IfValueTF={#2}{
+  title={\faBox\ \ #2},
+  attach boxed title to top left={xshift=10pt, yshift=-10pt},
+  boxed title style={colback=white, colframe=#1, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt},
+}{
+  notitle
+}
 }
 
-% 4b. Legacy Visual Blackboard Replication Boxes (Backward Compatibility)
+% 4b. Legacy Visual Blackboard Replication Boxes
 \newcommand{\NewChalkBox}[3]{%
-    \newtcolorbox{#1}[1][Highlighted Board Formula]{%
-        enhanced,
-        colback=white,
-        colframe=black,
-        fonttitle=\bfseries\sffamily,
-        coltitle=black,
-        title=\faBox\ \ ##1,
-        boxrule=1.5pt,
-        arc=4pt,
-        drop fuzzy shadow=gray!30,
-        attach boxed title to top left={xshift=10pt, yshift=-10pt},
-        boxed title style={colback=white, colframe=black, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
-    }%
+\newtcolorbox{#1}[1][Hervorgehobene Tafelformel]{%
+enhanced,
+colback=white,
+colframe=#2,
+fonttitle=\bfseries\sffamily,
+coltitle=black,
+title=\faBox\ \ ##1,
+boxrule=1.5pt,
+arc=4pt,
+drop fuzzy shadow=#3,
+attach boxed title to top left={xshift=10pt, yshift=-10pt},
+boxed title style={colback=white, colframe=#2, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+}%
 }
 
-% Alias all colors to the minimal black box to maintain compilation compatibility
-\NewChalkBox{orange-box}{black}{gray!30}
-\NewChalkBox{blue-box}{black}{gray!30}
-\NewChalkBox{dark-green-box}{black}{gray!30}
-\NewChalkBox{apple-green-box}{black}{gray!30}
-\NewChalkBox{yellow-box}{black}{gray!30}
-\NewChalkBox{violet-box}{black}{gray!30}
-\NewChalkBox{red-box}{black}{gray!30}
-\NewChalkBox{green-box}{black}{gray!30}
-\NewChalkBox{purple-box}{black}{gray!30}
-\NewChalkBox{gray-box}{black}{gray!30}
-\NewChalkBox{apricot-box}{black}{gray!30}
-\NewChalkBox{bittersweet-box}{black}{gray!30}
-\NewChalkBox{teal-blue-box}{black}{gray!30}
-\NewChalkBox{cyan-box}{black}{gray!30}
-\NewChalkBox{magenta-box}{black}{gray!30}
-\NewChalkBox{brown-box}{black}{gray!30}
-\NewChalkBox{pink-box}{black}{gray!30}
+\NewChalkBox{orange-box}{BurntOrange}{BurntOrange!30}
+\NewChalkBox{blue-box}{MidnightBlue}{MidnightBlue!30}
+\NewChalkBox{dark-green-box}{ForestGreen}{ForestGreen!30}
+\NewChalkBox{apple-green-box}{LimeGreen}{LimeGreen!30}
+\NewChalkBox{yellow-box}{Goldenrod!90!black}{Goldenrod!30}
+\NewChalkBox{violet-box}{Violet}{Violet!30}
+\NewChalkBox{red-box}{BrickRed}{BrickRed!30}
+\NewChalkBox{green-box}{Green}{Green!30}
+\NewChalkBox{purple-box}{Purple}{Purple!30}
+\NewChalkBox{gray-box}{Gray}{Gray!30}
+\NewChalkBox{apricot-box}{Apricot}{Apricot!30}
+\NewChalkBox{bittersweet-box}{Bittersweet}{Bittersweet!30}
+\NewChalkBox{teal-blue-box}{TealBlue}{TealBlue!30}
+\NewChalkBox{cyan-box}{Cyan}{Cyan!30}
+\NewChalkBox{magenta-box}{Magenta}{Magenta!30}
+\NewChalkBox{brown-box}{Brown}{Brown!30}
+\NewChalkBox{pink-box}{Pink}{Pink!30}
 
-\NewChalkBox{orange-formula}{black}{gray!30}
-\NewChalkBox{blue-formula}{black}{gray!30}
-\NewChalkBox{dark-green-formula}{black}{gray!30}
-\NewChalkBox{apple-green-formula}{black}{gray!30}
-\NewChalkBox{yellow-formula}{black}{gray!30}
-\NewChalkBox{violet-formula}{black}{gray!30}
-\NewChalkBox{red-formula}{black}{gray!30}
+\NewChalkBox{orange-formula}{BurntOrange}{BurntOrange!30}
+\NewChalkBox{blue-formula}{MidnightBlue}{MidnightBlue!30}
+\NewChalkBox{dark-green-formula}{ForestGreen}{ForestGreen!30}
+\NewChalkBox{apple-green-formula}{LimeGreen}{LimeGreen!30}
+\NewChalkBox{yellow-formula}{Goldenrod!90!black}{Goldenrod!30}
+\NewChalkBox{violet-formula}{Violet}{Violet!30}
+\NewChalkBox{red-formula}{BrickRed}{BrickRed!30}
 
 % 5. Mathematical Setup (Stroke-by-Stroke)
-\newtcolorbox{math-stroke}[1][Mathematical Setup]{
-    enhanced,
-    frame hidden,
-    colback=white,
-    opacityback=0,
-    borderline west={2pt}{0pt}{gray!40},
-    title={\sffamily\bfseries\textcolor{black}{\faChalkboard\ \ #1}},
-    attach title to upper=\par\vspace{1ex},
-    breakable
+\newtcolorbox{math-stroke}[1][Mathematischer Aufbau (Schritt für Schritt)]{
+enhanced,
+frame hidden,
+colback=white,
+opacityback=0,
+borderline west={2pt}{0pt}{MidnightBlue!50},
+title={\sffamily\bfseries\textcolor{MidnightBlue}{\faChalkboard\ \ #1}},
+attach title to upper=\par\vspace{1ex},
+breakable
 }
 
 % 6. Redundant Explanation
-\newtcolorbox{redundant-explanation}[1][Redundant Explanation of Step]{
-    enhanced,
-    arc=2mm,
-    colback=gray!15,
-    colframe=black,
-    title={\sffamily\bfseries\faHistory\ \ #1},
-    breakable
+\newtcolorbox{redundant-explanation}[1][Redundante Erklärung des Schritts]{
+enhanced,
+arc=2mm,
+colback=Purple!5,
+colframe=Purple,
+drop fuzzy shadow,
+title={\sffamily\bfseries\textcolor{white}{\faHistory\ \ #1}},
+fonttitle=\sffamily\bfseries,
+coltitle=white,
+breakable
 }
 
 % 7. Meta-Note
-\newtcolorbox{meta-note}[1][Administrative Meta-Note]{
-    enhanced,
-    frame hidden,
-    colback=white,
-    borderline={0.5pt}{0pt}{gray, dashed},
-    title={\sffamily\bfseries\textcolor{gray}{\faEye\ \ #1}},
-    attach title to upper=\par\vspace{1ex},
-    breakable
+\newtcolorbox{meta-note}[1][Administrative Metanote]{
+enhanced,
+frame hidden,
+colback=white,
+borderline={0.5pt}{0pt}{TealBlue, dashed},
+drop fuzzy shadow,
+title={\sffamily\bfseries\textcolor{TealBlue}{\faEye\ \ #1}},
+attach title to upper=\par\vspace{1ex},
+breakable
 }
 
 % 8. AI Observational Note
-\newtcolorbox{ai-note}[1][AI Note]{
-    enhanced,
-    colback=gray!20,
-    colframe=black,
-    fonttitle=\bfseries\sffamily,
-    coltitle=black,
-    title=\faRobot\ \ #1,
-    boxrule=1pt,
-    arc=3pt,
-    breakable
+\newtcolorbox{ai-note}[1][KI-Notiz]{
+enhanced,
+colback=Goldenrod!10,
+colframe=Goldenrod!90!black,
+drop fuzzy shadow,
+fonttitle=\bfseries\sffamily,
+coltitle=black,
+title=\faRobot\ \ #1,
+boxrule=1pt,
+arc=3pt,
+breakable
 }
 
-% 9. Student Question / Interaction
-\newtcolorbox{student-interaction}[1][Student Interaction]{
-    enhanced,
-    frame hidden,
-    colback=gray!10,
-    borderline west={3pt}{0pt}{gray!60},
-    title={\sffamily\bfseries\textcolor{black}{\faUserGraduate\ \ #1}},
-    attach title to upper=\par\vspace{1ex},
-    left skip=20pt,
-    right skip=20pt,
-    breakable
+% 9. Student Question, Student Interaction, or Common Confusion.
+\newtcolorbox{student-interaction}[1][Studentische Interaktion]{
+enhanced,
+frame hidden,
+colback=Violet!5,
+borderline west={3pt}{0pt}{Violet},
+drop fuzzy shadow,
+title={\sffamily\bfseries\textcolor{Violet}{\faUserGraduate\ \ #1}},
+attach title to upper=\par\vspace{1ex},
+left skip=20pt,
+right skip=20pt,
+breakable
 }
 
 % 10. Explanation of Steps
-\newenvironment{explanation-of-steps}[1][Explanation of Steps]{
-    \par\vspace{1ex}\noindent\textbf{\faListUl\ \ #1:}
+\newenvironment{explanation-of-steps}[1][Erklärung der Schritte]{
+\par\vspace{1ex}\noindent\textbf{\textcolor{MidnightBlue}{\faListUl\ \ #1:}}
 }{
-    \par\vspace{1ex}
+\par\vspace{1ex}
 }
 
 % 10.5 Short Inline Proof
-\newenvironment{short-proof}[1][Proof]{
-    \par\vspace{1ex}\noindent
-    \tikz[baseline=(A.base)]\node[fill=gray!80, text=white, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small] (A) {\faPenNib\ \ #1};
-    \par\vspace{1ex}\noindent
+\newenvironment{short-proof}[1][Beweis]{
+\par\vspace{1ex}\noindent
+\tikz[baseline=(A.base)]\node[fill=ForestGreen!50!gray, text=white, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, drop shadow] (A) {\faPenNib\ \ #1};
+\par\vspace{1ex}\noindent
 }{
-    \hfill\tikz[baseline=(Q.base)]\node[draw=gray!80, fill=white, line width=0.8pt, rounded corners=1.5pt, inner xsep=3pt, inner ysep=1.5pt, font=\sffamily\bfseries\scriptsize, text=gray!80] (Q) {Q.E.D.};\par\vspace{1ex}
+\hfill\tikz[baseline=(Q.base)]\node[draw=ForestGreen!50!gray, fill=white, line width=0.8pt, rounded corners=1.5pt, inner xsep=3pt, inner ysep=1.5pt, font=\sffamily\bfseries\scriptsize, text=ForestGreen!50!gray, drop shadow] (Q) {Q.E.D.};\par\vspace{1ex}
 }
 
 % 10.75 Subsection-like heading for proofs
 \newenvironment{proof-subsection}[1]{
-    \par\vspace{1ex}\noindent
-    \tikz[baseline=(A.base)]\node[fill=gray!30, text=black, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries] (A) {#1};
-    \vspace{0.5ex}\par 
+\par\vspace{1ex}\noindent
+\tikz[baseline=(A.base)]\node[fill=MidnightBlue!30, text=MidnightBlue!80!black, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries, drop shadow] (A) {#1};
+\vspace{0.5ex}\par
 }{
-    \par\vspace{1ex}
+\par\vspace{1ex}
 }
 
-% 11. Proof Wrapper
+% 11. Proof Wrapper (Verschachtelte TikZ-Knoten korrigiert)
 \let\proof\relax
 \let\endproof\relax
-\newtcolorbox{proof}[1][Proof]{
-    enhanced,
-    breakable,
-    frame hidden,
-    colback=white,
-    opacityback=0,
-    borderline west={3pt}{0pt}{gray!80},
-    title={\tikz[baseline=(A.base)]\node[fill=gray!80, text=white, rounded corners=2pt, inner xsep=6pt, inner ysep=3pt, font=\sffamily\bfseries\large] (A) {\faPenNib\ \ #1};},
-    attach title to upper=\par\vspace{1.5ex},
-    finish unbroken={%
-        \node[rotate=35, scale=5, text=gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {PROOF};
-        \node[anchor=south east, xshift=-4pt, yshift=4pt] at (frame.south east) {\tikz\node[draw=gray!80, fill=white, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=gray!80] {Q.E.D.};};
-    },
-    finish first={%
-        \node[rotate=35, scale=5, text=gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {PROOF};
-    },
-    finish middle={%
-        \node[rotate=35, scale=5, text=gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {PROOF};
-    },
-    finish last={%
-        \node[rotate=35, scale=5, text=gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {PROOF};
-        \node[anchor=south east, xshift=-4pt, yshift=4pt] at (frame.south east) {\tikz\node[draw=gray!80, fill=white, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=gray!80] {Q.E.D.};};
-    }
+\newtcolorbox{proof}[1][Beweis]{
+enhanced,
+breakable,
+frame hidden,
+colback=white,
+borderline west={3pt}{0pt}{ForestGreen!50!gray},
+drop fuzzy shadow,
+title={\tikz[baseline=(A.base)]\node[fill=ForestGreen!50!gray, text=white, rounded corners=2pt, inner xsep=6pt, inner ysep=3pt, font=\sffamily\bfseries\large, drop shadow] (A) {\faPenNib\ \ #1};},
+attach title to upper=\par\vspace{1.5ex},
+finish unbroken={%
+\node[rotate=35, scale=5, text=ForestGreen!50!gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {BEWEIS};
+\node[anchor=south east, xshift=-4pt, yshift=4pt, draw=ForestGreen!50!gray, fill=white, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ForestGreen!50!gray, drop shadow] at (frame.south east) {Q.E.D.};
+},
+finish first={%
+\node[rotate=35, scale=5, text=ForestGreen!50!gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {BEWEIS};
+},
+finish middle={%
+\node[rotate=35, scale=5, text=ForestGreen!50!gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {BEWEIS};
+},
+finish last={%
+\node[rotate=35, scale=5, text=ForestGreen!50!gray, opacity=0.12, font=\sffamily\bfseries] at (frame.center) {BEWEIS};
+\node[anchor=south east, xshift=-4pt, yshift=4pt, draw=ForestGreen!50!gray, fill=white, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ForestGreen!50!gray, drop shadow] at (frame.south east) {Q.E.D.};
+}
 }
 
 % 12. Lecture Break
-\newtcolorbox{lecture-break}[1][Lecture Break]{
-    enhanced,
-    frame hidden,
-    colback=white,
-    borderline north={0.5pt}{0pt}{gray, dashed},
-    borderline south={0.5pt}{0pt}{gray, dashed},
-    title={\sffamily\bfseries\centering\textcolor{gray}{\faCoffee\ \ #1}},
-    attach title to upper=\par\vspace{1ex},
-    fontupper=\centering\itshape\color{gray},
-    breakable
+\newtcolorbox{lecture-break}[1][Vorlesungspause]{
+enhanced,
+frame hidden,
+colback=white,
+borderline north={0.5pt}{0pt}{BrickRed, dashed},
+borderline south={0.5pt}{0pt}{BrickRed, dashed},
+drop fuzzy shadow,
+title={\sffamily\bfseries\centering\textcolor{BrickRed}{\faCoffee\ \ #1}},
+attach title to upper=\par\vspace{1ex},
+fontupper=\centering\itshape\color{BrickRed},
+breakable
 }
 
 % ==========================================
@@ -371,18 +417,19 @@
 \NewEnviron{ai-retroactive-patch}[1][]{}
 \NewEnviron{ai-global-state-checkpoint-invisible-content}{}
 
-% Data Integrity Fallbacks (Grayscale error boxes)
+% Data Integrity Fallbacks
 \newcommand{\NewFallbackBox}[1]{
-    \newtcolorbox{#1}[1][Fallback]{
-        enhanced,
-        colback=gray!15,
-        colframe=black,
-        title={\sffamily\bfseries\textcolor{white}{\faExclamationTriangle\ \ ##1}},
-        fonttitle=\sffamily\bfseries,
-        coltitle=black,
-        title={##1},
-        breakable
-    }
+\newtcolorbox{#1}[1][Fallback]{
+enhanced,
+colback=BrickRed!5,
+colframe=BrickRed,
+drop fuzzy shadow,
+title={\sffamily\bfseries\textcolor{white}{\faExclamationTriangle\ \ ##1}},
+fonttitle=\sffamily\bfseries,
+coltitle=BrickRed!75!black,
+title={##1},
+breakable
+}
 }
 \NewFallbackBox{ai-logical-gap}
 \NewFallbackBox{ai-generation-loop-fallback}
@@ -393,62 +440,53 @@
 \NewFallbackBox{ai-async-board-update}
 \NewFallbackBox{ai-kinetic-emphasis}
 
-% Custom Lecture Chapter Command
+% Custom Lecture Chapter Command (Robust mit etoolbox-Check und korrigierter Parameterlogik)
 \newcommand{\lecturechapter}[4]{%
-  \chapter[#1, #2: #4]{{\Large\color{black}#1: #3} \texorpdfstring{\\[1ex]}{-- } {\LARGE #4}}%
+  \chapter[#1, #2: #4]{{\Large\color{RoyalPurple}#1: #3} \texorpdfstring{\\[1ex]}{-- } {\LARGE #4}}%
+  \ifblank{#2}{%
+    \markboth{\chaptername\ \thechapter\ --- #1\ --- #4}{}%
+  }{%
+    \markboth{\chaptername\ \thechapter\ --- #1\ #2\ --- #4}{}%
+  }%
 }
 
 \titlespacing*{\chapter}{0pt}{-20pt}{40pt}
 
+% KORREKTUR: \par in titlesec Argumenten ist streng verboten und verursacht die Compile-Errors. Hier wurde es durch \endgraf ersetzt.
 \titleformat{\chapter}[display]
-  {\normalfont\sffamily\Large\bfseries\color{black}}
-  {\raggedleft\large\color{gray}\MakeUppercase{\chaptertitlename}\ \thechapter}
-  {1ex}
-  {\color{black}\rule{\textwidth}{1.5pt}\vspace{2ex}\raggedleft \break}
-  [\vspace{1ex}\color{black}\rule{\textwidth}{1.5pt}]
+{\normalfont\sffamily\Large\bfseries\color{MidnightBlue!90!black}}
+{\raggedleft\large\color{RoyalPurple!80!black}\MakeUppercase{\chaptertitlename}\ \thechapter}
+{1ex}
+{\color{MidnightBlue!80!black}\rule{\textwidth}{1.5pt}\endgraf\nopagebreak\vspace{2ex}\raggedleft} 
+[\endgraf\nopagebreak\vspace{1ex}\color{MidnightBlue!80!black}\rule{\textwidth}{1.5pt}]
 
-\titleformat{\section}
-  {\normalfont\sffamily\Large\bfseries\color{black}} 
-  {\thesection}{1em}{}
-
-\titleformat{\subsection}
-  {\normalfont\sffamily\large\bfseries\color{black}}
-  {\thesubsection}{1em}{}
-
-\titleformat{\subsubsection}
-  {\normalfont\sffamily\normalsize\bfseries\color{darkgray}}
-  {\thesubsubsection}{1em}{}
-
-% Level 1: Section
 \newcommand{\sectionbar}{%
-  \tikz[baseline=0pt]{
-     \fill[black] (0,0) rectangle (3.5pt, 0.72em);
-    \fill[darkgray] (4.8pt,0) rectangle (6.3pt, 0.72em);
-    \fill[gray] (7.6pt,0) rectangle (8.1pt, 0.72em);
-  }%
-  \hspace{10pt}%
+\tikz[baseline=0pt]{
+\fill[RoyalPurple] (0,0) rectangle (3.5pt, 0.72em);
+\fill[BrickRed!90!black] (4.8pt,0) rectangle (6.3pt, 0.72em);
+\fill[LimeGreen!80!black] (7.6pt,0) rectangle (8.1pt, 0.72em);
+}%
+\hspace{10pt}%
 }
 
-% Level 2: Subsection
 \newcommand{\subsectionbar}{%
-  \tikz[baseline=0pt]{
-    \shade[left color=black, right color=gray] (0,0) rectangle (2.8pt, 0.72em);
-    \fill[lightgray] (4.1pt,0) rectangle (4.8pt, 0.72em);
-  }%
-  \hspace{10pt}%
+\tikz[baseline=0pt]{
+\shade[left color=RoyalPurple!85!black, right color=BrickRed!85!black] (0,0) rectangle (2.8pt, 0.72em);
+\fill[LimeGreen!80!black] (4.1pt,0) rectangle (4.8pt, 0.72em);
+}%
+\hspace{10pt}%
 }
 
-% Level 3: Subsubsection
 \newcommand{\subsubsectionbar}{%
-  \tikz[baseline=0pt]{
-    \fill[gray] (0,0) rectangle (2.2pt, 0.72em);
-  }%
-  \hspace{10pt}%
+\tikz[baseline=0pt]{
+\fill[LimeGreen!75!black] (0,0) rectangle (2.2pt, 0.72em);
+}%
+\hspace{10pt}%
 }
 
-\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{black}}{}{0pt}{\makebox[0pt][r]{\sectionbar}}
-\titleformat{\subsection}{\normalfont\sffamily\large\bfseries\color{darkgray}}{}{0pt}{\makebox[0pt][r]{\subsectionbar}}
-\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries\color{gray}}{}{0pt}{\makebox[0pt][r]{\subsubsectionbar}}
+\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{RoyalPurple}}{}{0pt}{\makebox[0pt][r]{\sectionbar}}
+\titleformat{\subsection}{\normalfont\sffamily\large\bfseries\color{RoyalPurple!90!black}}{}{0pt}{\makebox[0pt][r]{\subsectionbar}}
+\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries\color{RoyalPurple!85!black}}{}{0pt}{\makebox[0pt][r]{\subsubsectionbar}}
 
 \titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 \titlespacing*{\subsection}{0pt}{3ex plus 1ex minus .2ex}{1.2ex plus .2ex}

@@ -112,12 +112,12 @@ public class LatexRefinementSession {
         if (_multipleFilesToProcess != null && _multipleFilesToProcess.Length > 0) {
             currentFiles = _multipleFilesToProcess;
             targetFolder = Path.GetDirectoryName(currentFiles[0]) ?? _config.TargetFolder;
-            baseName = Path.GetFileNameWithoutExtension(currentFiles[0]).Replace("-part1", "").Replace("-offset", "");
+            baseName = Path.GetFileNameWithoutExtension(currentFiles[0]).Replace("-part1", "").Replace("-all-offset", "").Replace("-all", "").Replace("-offset", "");
         }
         else if (_singleFilePathToProcess != null) {
             currentFiles = [_singleFilePathToProcess];
             targetFolder = Path.GetDirectoryName(_singleFilePathToProcess) ?? _config.TargetFolder;
-            baseName = Path.GetFileNameWithoutExtension(_singleFilePathToProcess).Replace("-offset", "");
+            baseName = Path.GetFileNameWithoutExtension(_singleFilePathToProcess).Replace("-all-offset", "").Replace("-all", "").Replace("-offset", "");
         }
         else {
             string sourceFolder = _config.SourceFolder;

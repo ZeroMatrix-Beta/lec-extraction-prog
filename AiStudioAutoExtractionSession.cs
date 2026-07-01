@@ -973,8 +973,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
 
             if (fileProcessingSuccess) {
-                string targetFilePath = Path.Combine(fileSpecificOutputFolder, baseName + ".tex");
-                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-offset.tex");
+                string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
+                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
                 int fileTotalFreshTokens = Math.Max(0, fileTotalInputTokens - fileTotalCachedTokens);
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
@@ -1021,6 +1021,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
                 if (_latexRefinementConfig != null) {
                     _latexRefinementConfig.UseVertex = false;
+                    if (_config.NumberOfParts <= 1) {
+                        Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
+                        _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
+                    }
                 }
                 string envName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
                     ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]

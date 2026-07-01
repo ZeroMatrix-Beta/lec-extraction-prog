@@ -1231,8 +1231,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
 
             if (fileProcessingSuccess) {
-                string targetFilePath = Path.Combine(fileSpecificOutputFolder, baseName + ".tex");
-                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-offset.tex");
+                string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
+                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
                 int fileTotalFreshTokens = Math.Max(0, fileTotalInputTokens - fileTotalCachedTokens);
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
@@ -1279,6 +1279,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
                 if (_latexRefinementConfig != null) {
                     _latexRefinementConfig.UseVertex = true;
+                    if (_config.NumberOfParts <= 1) {
+                        Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
+                        _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
+                    }
                 }
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildVertexClient(_latexRefinementConfig?.VertexProjectId ?? "", _latexRefinementConfig?.VertexLocation ?? "");
 

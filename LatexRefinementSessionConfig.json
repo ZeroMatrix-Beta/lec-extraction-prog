@@ -34,7 +34,7 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.5,
+      "Temperature": 0.45,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65536, // NEVER CHANGE THIS LINE!!!
@@ -49,7 +49,7 @@
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
-      "Temperature": 0.5,
+      "Temperature": 0.3, // old 0.5
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
@@ -76,7 +76,7 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.55,
+      "Temperature": 0.4, // old 0.5
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -90,7 +90,7 @@
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
-      "Temperature": 0.5,
+      "Temperature": 0.4, // old 0.5,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
@@ -117,7 +117,7 @@
     "HistoryPreloadPaths": [],
     // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.5,
+      "Temperature": 0.4,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
