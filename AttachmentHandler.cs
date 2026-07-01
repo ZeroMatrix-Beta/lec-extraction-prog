@@ -20,6 +20,7 @@ namespace Infrastructure;
 /// [Human] Konstruktor: Bekommt alle wichtigen Einstellungen (Pfade, Google Client) übergeben.
 /// </remarks>
 public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null) {
+    private static readonly HashSet<string> s_textExtensions = [".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex"];
     private readonly string _uploadFolder = uploadFolder;
     private readonly string[] _includePaths = includePaths ?? [];
     private readonly bool _isAiStudio = isAiStudio;
@@ -138,7 +139,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             ? Path.GetRelativePath(baseDirectory, filePath).Replace('\\', '/')
             : filePath.Replace('\\', '/');
 
-        if (new[] { ".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex" }.Contains(ext)) {
+        if (s_textExtensions.Contains(ext)) {
             if (asSystemInstruction) {
                 WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...");
                 string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
@@ -250,6 +251,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
             try {
                 var storageClient = await StorageClient.CreateAsync();
+                storageClient.Service.HttpClient.Timeout = TimeSpan.FromMinutes(20);
                 string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}";
 
                 using var fileStream = System.IO.File.OpenRead(filePath);

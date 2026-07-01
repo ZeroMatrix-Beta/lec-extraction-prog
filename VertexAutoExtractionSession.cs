@@ -1123,15 +1123,31 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
                 startAudioTask();
 
-                // [AI Context] Auto-extend context cache if remaining TTL drops below the configured minimum before sending the part.
-                if (!string.IsNullOrEmpty(_cachedContentName) && _config.UseContextCaching) {
+                // [AI Context] Validate context cache and auto-extend or re-create if expired or missing before sending each part.
+                if (_config.UseContextCaching) {
                     var cacheState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
                     double remainingMin = ContextCacheStateManager.GetRemainingMinutes(cacheState);
-                    if (remainingMin < _config.ContextCachingMinimumRemainingMinutes) {
-                        Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {_config.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {_config.ContextCachingIncrementMinutes} min...");
-                        var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
-                        if (updatedState != null)
-                            Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+                    bool cacheValid = false;
+
+                    if (!string.IsNullOrEmpty(_cachedContentName) && remainingMin > 0) {
+                        if (remainingMin < _config.ContextCachingMinimumRemainingMinutes) {
+                            Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {_config.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {_config.ContextCachingIncrementMinutes} min...");
+                            var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
+                            if (updatedState != null) {
+                                Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+                                cacheValid = true;
+                            }
+                        }
+                        else {
+                            cacheValid = await ContextCacheStateManager.IsValidRemoteAsync(_client, _cachedContentName);
+                        }
+                    }
+
+                    if (!cacheValid) {
+                        Console.WriteLine("  [Cache] Kein gültiger Cache aktiv oder Cache abgelaufen. Erstelle neuen Google Kontext-Cache für diesen Teil...");
+                        ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileVertex);
+                        _cachedContentName = null;
+                        await InitializeContextCachingAsync();
                     }
                 }
 

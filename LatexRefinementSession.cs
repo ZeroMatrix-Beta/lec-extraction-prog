@@ -132,14 +132,21 @@ public class LatexRefinementSession {
         }
 
         // Step 1: Merge and Timestamp Control
+        int partsCount = _extractionConfig?.NumberOfParts ?? currentFiles.Length;
         if (_config.Step1MergeAndTimestamp.Enabled) {
-            Console.WriteLine("\n--- [Schritt 1: Merge & Timestamp Control] ---");
-            string? step1Output = await ExecuteStep1MergeAsync(currentFiles, _audioFilePath, baseName, targetFolder);
-            if (step1Output == null) {
-                Console.WriteLine("[FEHLER] Schritt 1 fehlgeschlagen. Breche Pipeline ab.");
-                return;
+            if (partsCount <= 1) {
+                Console.WriteLine("\n--- [Schritt 1: Merge & Timestamp Control] ---");
+                Console.WriteLine($"  [INFO] NumberOfParts = {partsCount} (<= 1). Ein Merger ist nicht erforderlich. Überspringe Schritt 1.");
             }
-            currentFiles = [step1Output];
+            else {
+                Console.WriteLine("\n--- [Schritt 1: Merge & Timestamp Control] ---");
+                string? step1Output = await ExecuteStep1MergeAsync(currentFiles, _audioFilePath, baseName, targetFolder);
+                if (step1Output == null) {
+                    Console.WriteLine("[FEHLER] Schritt 1 fehlgeschlagen. Breche Pipeline ab.");
+                    return;
+                }
+                currentFiles = [step1Output];
+            }
         }
 
         // Step 2: Speech Refinement
@@ -380,9 +387,9 @@ public class LatexRefinementSession {
             var parts = new List<Part>();
             string promptText = "Here is the combined file with all the offset parts together. " +
                                 $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
-                                $"The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
+                                $"The actual audio/lecture length is roughly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
                                 (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
-                                $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please correct any misaligned timestamps";
+                                "Important: Since no audio file is attached, the timestamps in subsequent parts have already been pre-adjusted to global lecture time. Please eliminate redundant overlapping blocks at the part seams and only fix timestamps that look completely out of order or severely broken across boundaries. Otherwise, trust and preserve the existing pre-calibrated timestamps.";
             parts.Add(new Part { Text = promptText });
             foreach (var file in inputFiles) {
                 Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
@@ -559,15 +566,62 @@ public class LatexRefinementSession {
             }
         }
 
-        // [AI Context] Auto-extend context cache if remaining TTL drops below the configured minimum before this refinement step's API call.
-        if (!string.IsNullOrEmpty(cacheName) && backendParams.UseContextCaching) {
+        // [AI Context] Validate context cache and auto-extend or re-create if expired or missing before this refinement step's API call.
+        if (!string.IsNullOrEmpty(cacheName) && backendParams.UseContextCaching && !string.IsNullOrWhiteSpace(systemInstructionText)) {
             var cacheState = ContextCacheStateManager.LoadState(cacheStateFileName);
             double remainingMin = ContextCacheStateManager.GetRemainingMinutes(cacheState);
-            if (remainingMin < backendParams.ContextCachingMinimumRemainingMinutes) {
-                Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {backendParams.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {backendParams.ContextCachingIncrementMinutes} min...");
-                var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, backendParams.ContextCachingIncrementMinutes, cacheStateFileName);
-                if (updatedState != null)
-                    Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+            bool cacheValid = false;
+
+            if (remainingMin > 0) {
+                if (remainingMin < backendParams.ContextCachingMinimumRemainingMinutes) {
+                    Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {backendParams.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {backendParams.ContextCachingIncrementMinutes} min...");
+                    var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, backendParams.ContextCachingIncrementMinutes, cacheStateFileName);
+                    if (updatedState != null) {
+                        Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+                        cacheValid = true;
+                    }
+                }
+                else {
+                    cacheValid = await ContextCacheStateManager.IsValidRemoteAsync(_client, cacheName);
+                }
+            }
+
+            if (!cacheValid) {
+                Console.WriteLine("  [Cache] Refinement Cache abgelaufen oder nicht gefunden. Erstelle neuen Google Kontext-Cache...");
+                ContextCacheStateManager.ClearState(cacheStateFileName);
+                cacheName = null;
+                try {
+                    string checksum = ContextCacheStateManager.ComputeChecksum(systemInstructionText);
+                    var cacheConfig = new CreateCachedContentConfig {
+                        SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] },
+                        DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
+                        Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
+                    };
+                    var created = await _client.Caches.CreateAsync(backendParams.Model, cacheConfig);
+                    if (created != null && !string.IsNullOrEmpty(created.Name)) {
+                        cacheName = created.Name;
+                        var newState = new ContextCacheState {
+                            CacheName = cacheName,
+                            Model = backendParams.Model,
+                            Temperature = backendParams.Temperature,
+                            TopP = backendParams.TopP,
+                            TopK = backendParams.TopK,
+                            MaxOutputTokens = backendParams.MaxOutputTokens,
+                            ThinkingBudget = backendParams.ThinkingBudget,
+                            ThinkingLevel = backendParams.ThinkingLevel,
+                            SystemInstructionChecksum = checksum,
+                            ExpireTimeUtc = DateTime.UtcNow.AddMinutes(backendParams.ContextCachingMinutes)
+                        };
+                        if (created.ExpireTime.HasValue) {
+                            newState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
+                        }
+                        ContextCacheStateManager.SaveState(newState, cacheStateFileName);
+                        Console.WriteLine($"  [INFO] Refinement Kontext-Cache neu erstellt: {cacheName}");
+                    }
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"  [FEHLER] Refinement Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+                }
             }
         }
 

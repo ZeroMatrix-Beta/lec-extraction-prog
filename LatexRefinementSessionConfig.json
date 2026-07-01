@@ -27,7 +27,7 @@
    */
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "AttachAudio": true,
+    "AttachAudio": false,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
@@ -39,7 +39,8 @@
       "TopK": 40,
       "MaxOutputTokens": 65536, // NEVER CHANGE THIS LINE!!!
       //"Model": "gemini-3-flash-preview",
-      "Model": "gemini-3.5-flash",
+      //"Model": "gemini-3.5-flash",
+      "Model": "gemini-3.1-pro-preview",
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
@@ -49,7 +50,7 @@
     },
     // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
-      "Temperature": 0.3, // old 0.5
+      "Temperature": 0.35, // old 0.5
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
