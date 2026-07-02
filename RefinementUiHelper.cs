@@ -105,21 +105,10 @@ namespace AutoExtraction {
 
             var uiConfig = ConfigLoader<RefinementUiHelperConfig>.Load();
 
-            Console.WriteLine($"\nVerzeichnis auswählen:");
-            Console.WriteLine($" 1) Voreingestellter Pfad: {uiConfig.PredefinedPath}");
-            Console.WriteLine($" 2) Eigenen Pfad eingeben");
-            Console.Write("Auswahl (1-2, Standard: 1): ");
-            string pathChoice = Console.ReadLine()?.Trim() ?? "1";
-
-            string searchFolder;
-            if (pathChoice == "2") {
-                Console.Write($"\nVerzeichnis eingeben (Standard: {extractionConfig.TargetFolder}): ");
-                string folderInput = Console.ReadLine()?.Trim() ?? "";
-                searchFolder = string.IsNullOrEmpty(folderInput) ? extractionConfig.TargetFolder : folderInput;
-            }
-            else {
-                searchFolder = uiConfig.PredefinedPath;
-            }
+            string searchFolder = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeSourceFolder(uiConfig.PredefinedPath, newFolder => {
+                uiConfig.PredefinedPath = newFolder;
+                ConfigLoader<RefinementUiHelperConfig>.Save(uiConfig);
+            });
 
             if (!Directory.Exists(searchFolder)) {
                 Console.WriteLine($"[FEHLER] Verzeichnis {searchFolder} nicht gefunden.");

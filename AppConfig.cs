@@ -47,10 +47,23 @@ public static class ConfigLoader<T> where T : class, new() {
 
     public static void Save(T config) {
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
-        string filePath = Path.Combine(basePath, $"{typeof(T).Name}.json");
+        string fileName = $"{typeof(T).Name}.json";
+        string filePath = Path.Combine(basePath, fileName);
 
         string jsonString = System.Text.Json.JsonSerializer.Serialize(config, _jsonOptions);
         File.WriteAllText(filePath, jsonString);
+
+        try {
+            string currentDirFile = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+            if (!string.Equals(Path.GetFullPath(filePath), Path.GetFullPath(currentDirFile), StringComparison.OrdinalIgnoreCase)
+                && File.Exists(currentDirFile)) {
+                File.WriteAllText(currentDirFile, jsonString);
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+        }
     }
 }
 

@@ -6,7 +6,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "SourceFolder": "D:\\lecture-videos\\physik-I",
+  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
   "TargetFolder": "",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
@@ -20,20 +20,20 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.5,
+  "Temperature": 0.35,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
   //"Model": "gemini-3.5-flash",
   "Model": "gemini-3-flash-preview",
-  "ThinkingBudget": 65536,
+  "ThinkingBudget": 32768,
   "ThinkingLevel": "HIGH",
   "LoadHistoryIntoSystemInstruction": true,
   "GenerateOffsetFiles": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 4,
-  "OverlapSeconds": 180,
+  "NumberOfParts": 2,
+  "OverlapSeconds": 240,
   "CreateLogFiles": true,
-  "GoogleVideoFps": 0.3333333333333333
+  "GoogleVideoFps": 0.3
 }

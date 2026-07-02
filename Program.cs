@@ -36,9 +36,10 @@ partial class Program {
                 Console.WriteLine("  2) ☁️ Google Cloud Vertex AI (Enterprise)");
                 Console.WriteLine("  3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)");
                 Console.WriteLine("--------------------------------------------------");
-                Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
+                 Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
                 Console.WriteLine("  5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)");
-                Console.Write("\nChoice (1-5) or 'exit': ");
+                Console.WriteLine("  6) ⚙️ Quellordner (Source Folders) verwalten & ändern");
+                Console.Write("\nChoice (1-6) or 'exit': ");
 
                 string? mainChoice = Console.ReadLine()?.Trim().ToLower();
 
@@ -62,6 +63,9 @@ partial class Program {
                         break;
                     case "5":
                         await RunLatexRefinementAsync();
+                        break;
+                    case "6":
+                        ConfigureSourceFoldersMenu();
                         break;
                     default:
                         Console.WriteLine("Invalid choice.");
@@ -126,6 +130,10 @@ partial class Program {
 
         if (extChoice == "2") {
             var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
+            config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
+                config.SourceFolder = newFolder;
+                ConfigLoader<VertexAutoExtractionConfig>.Save(config);
+            });
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
@@ -135,6 +143,10 @@ partial class Program {
         }
         else {
             var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
+            config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
+                config.SourceFolder = newFolder;
+                ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
+            });
             string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
                 ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
                 : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
@@ -153,5 +165,60 @@ partial class Program {
         config.UseVertex = false;
         var extractionConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
         await AutoExtraction.RefinementUiHelper.StartInteractiveRefinementAsync(config, extractionConfig);
+    }
+
+    // [AI Context] Interactive menu enabling users to inspect and update source folders across all session profiles.
+    private static void ConfigureSourceFoldersMenu() {
+        while (true) {
+            var aiStudioConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
+            var vertexConfig = ConfigLoader<VertexAutoExtractionConfig>.Load();
+            var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
+            var latexConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
+
+            Console.WriteLine("\n==================================================");
+            Console.WriteLine("      ⚙️ Quellordner-Konfiguration (JSON)         ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine($" 1) Google AI Studio Auto-Extraktion: {aiStudioConfig.SourceFolder}");
+            Console.WriteLine($" 2) Google Cloud Vertex AI Auto-Extraktion: {vertexConfig.SourceFolder}");
+            Console.WriteLine($" 3) FFmpeg Converter: {ffmpegConfig.SourceFolder}");
+            Console.WriteLine($" 4) LaTeX Refinement Session Source: {latexConfig.SourceFolder}");
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine(" 5) Zurück zum Hauptmenü");
+            Console.Write("\nWelchen Quellordner möchten Sie ansehen / ändern? (1-5): ");
+
+            string? choice = Console.ReadLine()?.Trim();
+            if (choice == "5" || choice == "exit" || choice == "quit") break;
+
+            switch (choice) {
+                case "1":
+                    aiStudioConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
+                        aiStudioConfig.SourceFolder = newFolder;
+                        ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
+                    });
+                    break;
+                case "2":
+                    vertexConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(vertexConfig.SourceFolder, newFolder => {
+                        vertexConfig.SourceFolder = newFolder;
+                        ConfigLoader<VertexAutoExtractionConfig>.Save(vertexConfig);
+                    });
+                    break;
+                case "3":
+                    ffmpegConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(ffmpegConfig.SourceFolder, newFolder => {
+                        ffmpegConfig.SourceFolder = newFolder;
+                        ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
+                    });
+                    break;
+                case "4":
+                    string currentLatexSource = string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder;
+                    latexConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(currentLatexSource, newFolder => {
+                        latexConfig.SourceFolder = newFolder;
+                        ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
+                    });
+                    break;
+                default:
+                    Console.WriteLine("Ungültige Auswahl.");
+                    break;
+            }
+        }
     }
 }

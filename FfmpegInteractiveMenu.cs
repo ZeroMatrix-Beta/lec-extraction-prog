@@ -66,20 +66,20 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     private bool SetupDirectories(out string sourceFolder, out string destFolder) {
         // [Human] Interactive prompt to easily override the default hardcoded paths on the fly.
         // [AI Context] Enables runtime overriding of configured static defaults without recompilation.
-        sourceFolder = DefaultSourceFolder;
+        var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
+        string currentSource = string.IsNullOrEmpty(DefaultSourceFolder) ? ffmpegConfig.SourceFolder : DefaultSourceFolder;
+
+        sourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(currentSource, newFolder => {
+            ffmpegConfig.SourceFolder = newFolder;
+            ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
+        });
+
         destFolder = DefaultDestinationFolder;
-
-        Console.WriteLine($"\nDefault Source Folder: {DefaultSourceFolder}");
-        Console.WriteLine($"Default Destination Folder: {DefaultDestinationFolder}");
-        Console.Write("\nDo you want to use the designated destination and source folders? (Y/N): ");
-        string? useDefault = Console.ReadLine()?.Trim().ToUpper();
-
-        if (useDefault != "Y") {
-            Console.Write("Set custom Source folder: ");
-            sourceFolder = Console.ReadLine() ?? sourceFolder;
-
-            Console.Write("Set custom Destination folder: ");
-            destFolder = Console.ReadLine() ?? destFolder;
+        Console.Write($"\nAktueller Zielordner (Destination): {destFolder}\nMöchten Sie diesen Zielordner beibehalten? (j/n, Standard: j): ");
+        string? destChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
+        if (destChoice == "n" || destChoice == "nein" || destChoice == "no") {
+            Console.Write("Neuen Zielordner eingeben: ");
+            destFolder = Console.ReadLine()?.Trim() ?? destFolder;
         }
 
         if (!Directory.Exists(sourceFolder)) {
