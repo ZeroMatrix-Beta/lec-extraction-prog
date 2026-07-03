@@ -27,7 +27,7 @@
    */
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "AttachAudio": false,
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
@@ -57,7 +57,7 @@
       "Model": "gemini-3.1-pro-preview",
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
-      "UseContextCaching": true,
+      "UseContextCaching": false,
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 10

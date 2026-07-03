@@ -1145,7 +1145,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = string.IsNullOrEmpty(dateInfo.Weekday) ? dateInfo.DateString : $"{dateInfo.Weekday}, {dateInfo.DateString}";
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
-        prompt = $"The lecture being transcribed is from {dateContext}. " + prompt;
+        
+        if (partNumber == 1) {
+            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the date of the lecture is important since this is part 1 of the lecture. " + prompt;
+        }
+        else {
+            prompt = $"The lecture took place on {dateContext}. This is not so important since this is part {partNumber} of the lecture. " + prompt;
+        }
 
         double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);

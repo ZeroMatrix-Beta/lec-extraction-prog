@@ -1,0 +1,23 @@
+{
+  "ActiveApiProfile": 1,
+  "UploadFolder": "D:\\gemini-upload-folder",
+  "HistoryPreloadPaths": [],
+  "LogFolder": "D:\\gemini-logs",
+  "GcsBucketName": "biran-linalg-source-material",
+  "SystemInstructionPath": "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
+  "IncludePaths": [
+    "D:\\lecture-videos\\d-und-a/",
+    "D:\\lecture-videos\\d-und-a/new"
+  ],
+  "AI": {
+    "Temperature": 0.1,
+    "TopP": 0.9,
+    "TopK": 10,
+    "MaxOutputTokens": 65535,
+    "ThinkingBudget": 4096,
+    "ThinkingLevel": "HIGH",
+    "UseContextCaching": false,
+    "ContextCachingMinutes": 15,
+    "ContextCachingIncrementMinutes": 30
+  }
+}

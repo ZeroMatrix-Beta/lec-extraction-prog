@@ -1,0 +1,39 @@
+{
+  "ActiveApiProfile": 1,
+  "AiStudioApiKeyEnvNames": [
+    "API_KEY-automated-content-extraction",
+    "API_KEY-ai-studio-test-project-1",
+    "API_KEY-ai-studio-test-project-2",
+    "API_KEY-ai-studio-test-project-3"
+  ],
+  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
+  "TargetFolder": "",
+  "SystemInstructionPaths": [
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\hard-specs.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples2.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples3.md"
+  ],
+  "HistoryPreloadPaths": [
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
+  ],
+  "LogFolder": "D:\\gemini-logs",
+  "Temperature": 0.35,
+  "TopP": 0.95,
+  "TopK": 40,
+  "MaxOutputTokens": 65535,
+  "Model": "gemini-3.5-flash",
+  //"Model": "gemini-3-flash-preview",
+  "ThinkingBudget": 32768,
+  "ThinkingLevel": "HIGH",
+  "LoadHistoryIntoSystemInstruction": true,
+  "GenerateOffsetFiles": true,
+  "GenerateAudioFile": true,
+  "GoIntoLatexRefinement": true,
+  "NumberOfParts": 3,
+  "OverlapSeconds": 240,
+  "CreateLogFiles": true,
+  "GoogleVideoFps": 0.3
+}

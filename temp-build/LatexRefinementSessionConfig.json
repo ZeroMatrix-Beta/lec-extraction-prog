@@ -1,0 +1,148 @@
+{
+  /*
+   * ==========================================
+   * Global Configurations
+   TODO: add all API Keys.
+   * ==========================================
+  */
+  "Enabled": true, // Optional: true = use this config, false = ignore this config
+  // ================================
+  "UseVertex": false, // true = use Vertex AI, false = use Google AI Studio
+  // =============================== 
+  "AiStudioApiKeyEnvName": "API_KEY-latex-refinement",
+  "AiStudioActiveApiProfile": 2, // 0 = Dedicated key (AiStudioApiKeyEnvName), 1-3 = General/Experimental profiles
+  "VertexProjectId": "vertex-ai-experiments-494320",
+  "VertexLocation": "global", // The region/location for Vertex AI
+  "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
+  "SourceFolder": "",
+  "TargetFolder": "",
+  "PdfCompilation": {
+    "Enabled": true,
+    "PreamblePath": "pdf-preamble.tex"
+  },
+  /*
+   * ==========================================
+   * Configurations for the Merging Step
+   * ==========================================
+   */
+  "Step1MergeAndTimestamp": {
+    "Enabled": true,
+    "AttachAudio": true,
+    "SystemInstructionPaths": [
+      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
+    ],
+    "HistoryPreloadPaths": [],
+    // AI Studio API configurations if using the AI Studio ecosystem:
+    "AiStudio": {
+      "Temperature": 0.35,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65536, // NEVER CHANGE THIS LINE!!!
+      //"Model": "gemini-3-flash-preview",
+      "Model": "gemini-3.5-flash",
+      //"Model": "gemini-3.1-pro-preview",
+      "ThinkingBudget": 32768,
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30,
+      "ContextCachingMinimumRemainingMinutes": 10
+    },
+    // Vertex AI configurations if using the Vertex AI ecosystem:
+    "Vertex": {
+      "Temperature": 0.35, // old 0.5
+      "TopP": 0.93,
+      "TopK": 35,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.1-pro-preview",
+      "ThinkingBudget": 32768,
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": true,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30,
+      "ContextCachingMinimumRemainingMinutes": 10
+    }
+  },
+  /*
+   * ==========================================
+   * Configurations for the Speech Refinement Step
+   * ==========================================
+   */
+  "Step2SpeechRefinement": {
+    "Enabled": true,
+    "AttachAudio": true,
+    "SystemInstructionPaths": [
+      "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
+    ],
+    "HistoryPreloadPaths": [],
+    // AI Studio API configurations if using the AI Studio ecosystem:
+    "AiStudio": {
+      "Temperature": 0.35, // old 0.5
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.5-flash",
+      "ThinkingBudget": 32768,
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30,
+      "ContextCachingMinimumRemainingMinutes": 10
+    },
+    // Vertex AI configurations if using the Vertex AI ecosystem:
+    "Vertex": {
+      "Temperature": 0.35, // old 0.5,
+      "TopP": 0.93,
+      "TopK": 35,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.1-pro-preview",
+      "ThinkingBudget": 32768,
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30,
+      "ContextCachingMinimumRemainingMinutes": 10
+    }
+  },
+  /*
+   * ==========================================
+   * Configurations for the Last Refinement Step
+   * ==========================================
+   */
+  "Step3LastRefinement": {
+    "Enabled": true,
+    "AttachAudio": true,
+    "SystemInstructionPaths": [
+      "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
+    ],
+    "HistoryPreloadPaths": [],
+    // AI Studio API configurations if using the AI Studio ecosystem:
+    "AiStudio": {
+      "Temperature": 0.35,
+      "TopP": 0.95,
+      "TopK": 40,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.5-flash",
+      "ThinkingBudget": 32768,
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30,
+      "ContextCachingMinimumRemainingMinutes": 10
+    },
+    // Vertex AI configurations if using the Vertex AI ecosystem:
+    "Vertex": {
+      "Temperature": 0.35,
+      "TopP": 0.93,
+      "TopK": 35,
+      "MaxOutputTokens": 65535,
+      "Model": "gemini-3.1-pro-preview",
+      "ThinkingBudget": 32768,
+      "ThinkingLevel": "HIGH",
+      "UseContextCaching": false,
+      "ContextCachingMinutes": 15,
+      "ContextCachingIncrementMinutes": 30,
+      "ContextCachingMinimumRemainingMinutes": 10
+    }
+  }
+}

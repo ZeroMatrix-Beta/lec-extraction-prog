@@ -1,0 +1,24 @@
+{
+  "ProjectId": "vertex-ai-experiments-494320",
+  "Location": "global",
+  "UploadFolder": "D:\\gemini-upload-folder",
+  "HistoryPreloadPaths": [],
+  "LogFolder": "D:\\gemini-logs",
+  "GcsBucketName": "vertex-ai-experiments-upload-bucket-us",
+  "SystemInstructionPath": "",
+  "IncludePaths": [
+    "",
+    ""
+  ],
+  "AI": {
+    "Temperature": 0.1,
+    "TopP": 0.9,
+    "TopK": 10,
+    "MaxOutputTokens": 65535,
+    "ThinkingBudget": 4096,
+    "ThinkingLevel": "MEDIUM",
+    "UseContextCaching": false,
+    "ContextCachingMinutes": 15,
+    "ContextCachingIncrementMinutes": 30
+  }
+}
