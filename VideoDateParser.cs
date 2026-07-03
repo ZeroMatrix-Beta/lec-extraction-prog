@@ -6,78 +6,99 @@ using System.Text.RegularExpressions;
 namespace AutoExtraction;
 
 /// <summary>
-/// Helper class to parse date and weekday information from video filenames.
-/// Assumes a format like "YYYY-MM-DD-weekday.mp4" or "MM-DD-weekday.mp4".
+/// [AI Context] Helper class to parse date and weekday information from video filenames.
+/// Supports flexible formats like "MM-DD-YYYY-weekday...", "MM-DD-YY-...", and "YYYY-MM-DD-...".
 /// </summary>
 public static partial class VideoDateParser {
     public class VideoDateInfo {
         public DateTime Date { get; init; }
-        public string Weekday { get; init; } = "";
+        public string? Weekday { get; init; }
         public string DateString { get; init; } = "";
     }
 
-    [GeneratedRegex(@"^(?:(\d{4})-)?(\d{2})-(\d{2})-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:[-_.]|$)", RegexOptions.IgnoreCase)]
-    private static partial Regex DatePatternRegex();
+    // Matches MM-DD-YYYY or MM-DD-YY followed by optional token
+    [GeneratedRegex(@"^(\d{2})-(\d{2})-(\d{4}|\d{2})(?:[-_]([a-zA-Z]+))?(?:[-_.]|$)", RegexOptions.IgnoreCase)]
+    private static partial Regex MmDdYyyyRegex();
+
+    // Matches YYYY-MM-DD followed by optional token
+    [GeneratedRegex(@"^(\d{4})-(\d{2})-(\d{2})(?:[-_]([a-zA-Z]+))?(?:[-_.]|$)", RegexOptions.IgnoreCase)]
+    private static partial Regex YyyyMmDdRegex();
 
     public static VideoDateInfo Parse(string filePath) {
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
 
-        // Regex to match "YYYY-MM-DD-weekday" or "MM-DD-weekday"
-        // Group 1: Optional Year (YYYY)
-        // Group 2: Month (MM)
-        // Group 3: Day (DD)
-        // Group 4: Weekday (German or English)
-        Match match = DatePatternRegex().Match(fileNameWithoutExtension);
+        int year, month, day;
+        string? token = null;
 
-        if (match.Success) {
-            string yearGroup = match.Groups[1].Value; // YYYY if present
-            int month = int.Parse(match.Groups[2].Value);
-            int day = int.Parse(match.Groups[3].Value);
-            string rawWeekday = match.Groups[4].Value;
-            string weekday = char.ToUpperInvariant(rawWeekday[0]) + rawWeekday.Substring(1).ToLowerInvariant();
+        Match matchYyyy = YyyyMmDdRegex().Match(fileNameWithoutExtension);
+        Match matchMmDd = MmDdYyyyRegex().Match(fileNameWithoutExtension);
 
-            int year;
-            string parsedDateStringForInfo; // Will store YYYY-MM-DD or MM-DD
-
-            if (!string.IsNullOrEmpty(yearGroup)) {
-                year = int.Parse(yearGroup);
-                parsedDateStringForInfo = $"{year:D4}-{month:D2}-{day:D2}";
+        if (matchYyyy.Success) {
+            year = int.Parse(matchYyyy.Groups[1].Value);
+            month = int.Parse(matchYyyy.Groups[2].Value);
+            day = int.Parse(matchYyyy.Groups[3].Value);
+            if (matchYyyy.Groups[4].Success) {
+                token = matchYyyy.Groups[4].Value;
             }
-            else {
-                // Infer year for MM-DD format
-                year = DateTime.Now.Year;
-                parsedDateStringForInfo = $"{month:D2}-{day:D2}";
+        }
+        else if (matchMmDd.Success) {
+            month = int.Parse(matchMmDd.Groups[1].Value);
+            day = int.Parse(matchMmDd.Groups[2].Value);
+            int rawYear = int.Parse(matchMmDd.Groups[3].Value);
+            year = rawYear < 100 ? 2000 + rawYear : rawYear;
+            if (matchMmDd.Groups[4].Success) {
+                token = matchMmDd.Groups[4].Value;
             }
-
-            DateTime parsedDate;
-            try {
-                parsedDate = new DateTime(year, month, day);
-
-                // Heuristic for MM-DD format: if the date is in the future, assume it's from the previous year.
-                // This makes more sense for lecture videos that are typically historical or current.
-                if (string.IsNullOrEmpty(yearGroup) && parsedDate > DateTime.Today) {
-                    parsedDate = parsedDate.AddYears(-1);
-                }
-            }
-            catch (ArgumentOutOfRangeException) {
-                // Date is genuinely invalid (e.g., Feb 30).
-                return new VideoDateInfo { Date = DateTime.MinValue, Weekday = weekday, DateString = fileNameWithoutExtension };
-            }
-
-            return new VideoDateInfo {
-                Date = parsedDate,
-                Weekday = weekday,
-                DateString = parsedDateStringForInfo
+        }
+        else {
+            Console.WriteLine($"[Warning] Date format mismatch for file '{fileNameWithoutExtension}': Expected format MM-DD-YYYY or YYYY-MM-DD at the beginning.");
+            return new() {
+                Date = DateTime.MinValue,
+                Weekday = null,
+                DateString = fileNameWithoutExtension
             };
         }
 
-        // Fallback if regex doesn't match
-        // Return MinValue to ensure consistent sorting for unparseable filenames,
-        // placing them at the beginning.
-        return new VideoDateInfo {
-            Date = DateTime.MinValue,
-            Weekday = "", // Unknown
-            DateString = fileNameWithoutExtension // Use full filename as date string for debug
+        TryParseWeekday(token, out string? weekday);
+
+        DateTime parsedDate;
+        try {
+            parsedDate = new DateTime(year, month, day);
+        }
+        catch (ArgumentOutOfRangeException ex) {
+            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Console.WriteLine($"[Warning] Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'.");
+            return new() {
+                Date = DateTime.MinValue,
+                Weekday = weekday,
+                DateString = fileNameWithoutExtension
+            };
+        }
+
+        string parsedDateStringForInfo = $"{year:D4}-{month:D2}-{day:D2}";
+
+        return new() {
+            Date = parsedDate,
+            Weekday = weekday,
+            DateString = parsedDateStringForInfo
         };
+    }
+
+    private static bool TryParseWeekday(string? token, out string? normalizedWeekday) {
+        if (string.IsNullOrWhiteSpace(token)) {
+            normalizedWeekday = null;
+            return false;
+        }
+
+        string lower = token.ToLowerInvariant();
+        if (lower is "monday" or "tuesday" or "wednesday" or "thursday" or "friday" or "saturday" or "sunday" or
+                     "montag" or "dienstag" or "mittwoch" or "donnerstag" or "freitag" or "samstag" or "sonntag") {
+            normalizedWeekday = char.ToUpperInvariant(lower[0]) + lower.Substring(1);
+            return true;
+        }
+
+        normalizedWeekday = null;
+        return false;
     }
 }

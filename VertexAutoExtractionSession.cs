@@ -1380,8 +1380,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
     private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
+        string dateContext = string.IsNullOrEmpty(dateInfo.Weekday) ? dateInfo.DateString : $"{dateInfo.Weekday}, {dateInfo.DateString}";
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
-        prompt = $"The lecture being transcribed is from {dateInfo.Weekday}, {dateInfo.DateString}. " + prompt;
+        prompt = $"The lecture being transcribed is from {dateContext}. " + prompt;
 
         double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
