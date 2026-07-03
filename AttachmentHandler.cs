@@ -186,10 +186,14 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
             try {
                 var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
-                var uploadedFile = await _client.Files.UploadAsync(filePath, config: uploadConfig);
+                var uploadedFile = await ApiResilience.ExecuteWithRetryAsync(
+                    () => _client.Files.UploadAsync(filePath, config: uploadConfig),
+                    maxRetries: 10,
+                    retryContext: $"File API Upload: {Path.GetFileName(filePath)}"
+                );
 
-                if (uploadedFile.Name == null) {
-                    WriteLine($"  [Fehler] Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null.");
+                if (uploadedFile?.Name == null) {
+                    WriteLine($"  [Fehler] Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null oder Upload nach mehreren Versuchen fehlgeschlagen.");
                     return false;
                 }
 
@@ -198,7 +202,11 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
                 Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
 
-                var fileInfo = await _client.Files.GetAsync(remoteFileName);
+                var fileInfo = await ApiResilience.ExecuteWithRetryAsync(
+                    () => _client.Files.GetAsync(remoteFileName),
+                    maxRetries: 10,
+                    retryContext: $"Check File State: {Path.GetFileName(filePath)}"
+                );
                 while (string.Equals(fileInfo?.State?.ToString(), "PROCESSING", StringComparison.OrdinalIgnoreCase)) {
                     Write(".");
                     for (int i = 0; i < 50; i++) {
@@ -208,11 +216,15 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                             Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
                         }
                     }
-                    fileInfo = await _client.Files.GetAsync(remoteFileName);
+                    fileInfo = await ApiResilience.ExecuteWithRetryAsync(
+                        () => _client.Files.GetAsync(remoteFileName),
+                        maxRetries: 10,
+                        retryContext: $"Check File State: {Path.GetFileName(filePath)}"
+                    );
                 }
                 WriteLine();
 
-                if (string.Equals(fileInfo?.State?.ToString(), "FAILED", StringComparison.OrdinalIgnoreCase)) {
+                if (fileInfo == null || string.Equals(fileInfo?.State?.ToString(), "FAILED", StringComparison.OrdinalIgnoreCase)) {
                     WriteLine($"  [Fehler] Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
                     return false;
                 }
@@ -236,12 +248,12 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException || ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase)) {
+                if (ApiResilience.IsNetworkConnectionError(ex)) {
                     WriteLine("  [Netzwerk-Fehler] Der Google-Server konnte nicht erreicht werden.");
                     WriteLine("  Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
                 }
 
-                WriteLine($"  [Fehler] Upload über File API fehlgeschlagen.");
+                WriteLine($"  [Fehler] Upload über File API endgültig fehlgeschlagen.");
                 return false;
             }
         }
@@ -250,14 +262,22 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             // [Human] Das ist der Upload in deinen (ggf. kostenpflichtigen) Google Cloud Storage Bucket.
             WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
             try {
-                var storageClient = await StorageClient.CreateAsync();
-                storageClient.Service.HttpClient.Timeout = TimeSpan.FromMinutes(20);
-                string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}";
+                var uploadResult = await ApiResilience.ExecuteWithRetryAsync(async () => {
+                    var storageClient = await StorageClient.CreateAsync();
+                    storageClient.Service.HttpClient.Timeout = TimeSpan.FromMinutes(20);
+                    string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}";
 
-                using var fileStream = System.IO.File.OpenRead(filePath);
-                await storageClient.UploadObjectAsync(_gcsBucketName, objectName, mimeType, fileStream);
+                    using var fileStream = System.IO.File.OpenRead(filePath);
+                    await storageClient.UploadObjectAsync(_gcsBucketName, objectName, mimeType, fileStream);
+                    return $"gs://{_gcsBucketName}/{objectName}";
+                }, maxRetries: 10, retryContext: $"GCS Upload: {Path.GetFileName(filePath)}");
 
-                string gcsUri = $"gs://{_gcsBucketName}/{objectName}";
+                if (uploadResult == null) {
+                    WriteLine($"  [Fehler] Upload in GCS nach mehreren Versuchen fehlgeschlagen.");
+                    return false;
+                }
+
+                string gcsUri = uploadResult;
                 WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
 
                 var fileDataPart = new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } };
@@ -278,12 +298,12 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException || ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase)) {
+                if (ApiResilience.IsNetworkConnectionError(ex)) {
                     WriteLine("  [Netzwerk-Fehler] Der Google Cloud Storage konnte nicht erreicht werden.");
                     WriteLine("  Bitte prüfe deine Internetverbindung.");
                 }
 
-                WriteLine($"  [Fehler] Upload in GCS fehlgeschlagen.");
+                WriteLine($"  [Fehler] Upload in GCS endgültig fehlgeschlagen.");
                 return false;
             }
         }

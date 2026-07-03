@@ -463,7 +463,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+                bool isOverloaded = ApiResilience.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -471,8 +471,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
                     int waitTime;
                     string contextMsg = " [Debug Chat]";
-                    // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-                    if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+                    string delayMessage = "Still waiting for the acknowledgment / processing...";
+
+                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                        waitTime = 300; // 5 Minuten
+                        Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
+                        Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+                        Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
+                        delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
+                    }
+                    else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
                         waitTime = 180; // 3 Minuten
                         Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                         backoff = waitTime;
@@ -494,7 +502,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
+                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -612,7 +620,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             catch (Exception ex) {
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+                bool isOverloaded = ApiResilience.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -620,8 +628,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
                     int waitTime;
                     string contextMsg = " [History Bestätigung]";
-                    // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-                    if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+                    string delayMessage = "Still waiting for the acknowledgment / processing...";
+
+                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                        waitTime = 300; // 5 Minuten
+                        Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
+                        Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+                        Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
+                        delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
+                    }
+                    else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
                         waitTime = 180; // 3 Minuten
                         Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                         backoff = waitTime;
@@ -643,7 +659,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
+                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -817,12 +833,18 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string baseName = Path.GetFileNameWithoutExtension(file);
             baseName = SpeedCompressedRegex().Replace(baseName, "");
             baseName = CompressedRegex().Replace(baseName, "");
+            if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
+                baseName = "step1-" + baseName;
+            }
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;
             int fileTotalOutputTokens = 0;
             int fileTotalCachedTokens = 0;
             bool fileProcessingSuccess = true;
+            Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)>? pendingVideoUploadTask = null;
+            Task<List<Part>>? pendingAudioUploadTask = null;
+            Task? rateLimitDelayTask = null;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
             Task? audioExtractionTask = null;
             void startAudioTask() {
@@ -868,51 +890,81 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
 
                 (string texOutput, int partInputTokens, int partOutputTokens, int partCachedTokens) result;
+                bool uploadSuccess;
+                string? parsedPrompt;
+                List<Part> attachmentParts;
 
-                if (i > 0) {
-                    // Start delay and upload in parallel for subsequent parts
-                    var delayTask = Task.Run(async () => {
+                Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> uploadTask;
+
+                if (_config.EnableParallelFileUploads && pendingVideoUploadTask != null) {
+                    Console.WriteLine($"  [Pre-Upload] Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...");
+                    uploadTask = pendingVideoUploadTask;
+                }
+                else {
+                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
+                }
+
+                (uploadSuccess, parsedPrompt, attachmentParts) = await uploadTask;
+                if (!uploadSuccess) {
+                    Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+                    fileProcessingSuccess = false;
+                    hasErrors = true;
+                    break;
+                }
+
+                startAudioTask();
+
+                if (rateLimitDelayTask != null) {
+                    Console.WriteLine("  [Rate-Limit] Warte auf Freigabe des vorherigen Timers...");
+                    await rateLimitDelayTask;
+                    rateLimitDelayTask = null;
+                }
+
+                // If EnableParallelFileUploads is enabled, start pre-uploading the next part (or the audio file if this is the last part) while Gemini processes the current part.
+                if (_config.EnableParallelFileUploads) {
+                    if (i + 1 < partsWithTimes.Count) {
+                        string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 2}.tex");
+                        if (!System.IO.File.Exists(nextTexPath)) {
+                            Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
+                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file);
+                        }
+                        else {
+                            pendingVideoUploadTask = null;
+                        }
+                    }
+                    else if (i == partsWithTimes.Count - 1 && _config.GenerateAudioFile && _config.GoIntoLatexRefinement) {
+                        pendingAudioUploadTask = Task.Run(async () => {
+                            if (audioExtractionTask != null) {
+                                await audioExtractionTask;
+                            }
+                            var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
+                            string audioPath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
+                                               ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
+                            if (System.IO.File.Exists(audioPath)) {
+                                Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
+                                var handler = new AttachmentHandler(_client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "");
+                                var (s, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
+                                if (s) return attached;
+                            }
+                            return [];
+                        });
+                    }
+                }
+
+                result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+
+                fileTotalInputTokens += result.partInputTokens;
+                fileTotalOutputTokens += result.partOutputTokens;
+                fileTotalCachedTokens += result.partCachedTokens;
+
+                if (i + 1 < partsWithTimes.Count) {
+                    rateLimitDelayTask = Task.Run(async () => {
                         // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
                         // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
                         Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
                         await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
                     });
-
-                    var uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
-
-                    // Wait for both to complete. The upload will run concurrently with the delay.
-                    await Task.WhenAll(delayTask, uploadTask);
-
-                    var (uploadSuccess, parsedPrompt, attachmentParts) = uploadTask.Result;
-                    if (!uploadSuccess) {
-                        Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
-                        fileProcessingSuccess = false;
-                        hasErrors = true;
-                        break;
-                    }
-
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
-
-                    startAudioTask();
                 }
-                else {
-                    // For the first part, no delay is needed, just upload and process.
-                    var (uploadSuccess, parsedPrompt, attachmentParts) = await PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
-                    if (!uploadSuccess) {
-                        Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
-                        fileProcessingSuccess = false;
-                        hasErrors = true;
-                        break;
-                    }
-
-                    startAudioTask();
-
-                    result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
-                }
-
-                fileTotalInputTokens += result.partInputTokens;
-                fileTotalOutputTokens += result.partOutputTokens;
-                fileTotalCachedTokens += result.partCachedTokens;
                 int partFreshTokens = Math.Max(0, result.partInputTokens - result.partCachedTokens);
 
                 if (!string.IsNullOrWhiteSpace(result.texOutput)) {
@@ -1032,6 +1084,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
                 Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
 
+                List<Part>? preUploadedAudioParts = null;
+                if (_config.EnableParallelFileUploads && pendingAudioUploadTask != null) {
+                    Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss des parallelen Audio-Uploads...");
+                    preUploadedAudioParts = await pendingAudioUploadTask;
+                }
+
                 // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
                 // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
                 var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
@@ -1045,7 +1103,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     _latexRefinementConfig!,
                     refinementTargetFile,
                     _config,
-                    audioFilePath);
+                    audioFilePath,
+                    preUploadedAudioParts);
 
                 await refinementSession.StartAsync();
             }

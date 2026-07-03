@@ -115,16 +115,44 @@ public static partial class ApiResilience {
     }
 
     /// <summary>
+    /// [AI Context] Identifies network connectivity drops (e.g. Wi-Fi disconnection, mobile hotspot drop).
+    /// [Human] Erkennt, ob die Internetverbindung unterbrochen wurde (z.B. Hotspot ausgefallen).
+    /// </summary>
+    public static bool IsNetworkConnectionError(Exception ex) {
+        string msg = ex.Message;
+        string exStr = ex.ToString();
+
+        // Explicit rate limit or server error HTTP status codes should be handled by regular backoff, not network pause.
+        if (msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
+            msg.Contains("quota", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+
+        return ex is System.Net.Http.HttpRequestException ||
+               ex is System.Net.Sockets.SocketException ||
+               ex is System.IO.IOException ||
+               ex.InnerException is System.Net.Sockets.SocketException ||
+               ex.InnerException is System.Net.Http.HttpRequestException ||
+               msg.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("No such host is known", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("Error while copying content to a stream", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("A connection attempt failed", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("Unable to read data from the transport connection", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("An error occurred while sending the request", StringComparison.OrdinalIgnoreCase) ||
+               exStr.Contains("SocketException");
+    }
+
+    /// <summary>
     /// [AI Context] Determines if an exception is likely recoverable via retry.
     /// [Human] Erkennt, ob ein Fehler nur vorübergehend ist (z.B. Netzwerk-Wackler, Server überlastet) oder ob wir wirklich abbrechen müssen.
     /// </summary>
-    private static bool IsTransientError(Exception ex) {
+    public static bool IsTransientError(Exception ex) {
+        if (IsNetworkConnectionError(ex)) return true;
         string msg = ex.Message;
         string exStr = ex.ToString();
-        // Explicitly treat HttpRequestException as transient, as they often indicate network hiccups or issues during content streaming.
-        // These are typically recoverable with a retry.
-        return ex is System.Net.Http.HttpRequestException ||
-               msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
+        return msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
                exStr.Contains("ServerError") || msg.Contains("quota", StringComparison.OrdinalIgnoreCase) ||
                msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
     }
@@ -133,19 +161,27 @@ public static partial class ApiResilience {
     /// [AI Context] Implements a specific linear backoff strategy.
     /// On the first failure, reads server-suggested wait time and adds a 20s buffer. 
     /// On subsequent failures, increases wait time linearly by 30 seconds.
-    /// [Human] Wenn die API überlastet ist, berechnet diese Methode, wie lange wir warten müssen (linearer Anstieg statt exponentiell, um endloses Warten zu vermeiden).
+    /// [Human] Wenn die API überlastet ist oder das Netzwerk abgreißt, berechnet diese Methode, wie lange wir warten müssen.
     /// </summary>
     private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int currentBackoff, string retryContext) {
         int waitTime;
         int nextBackoff;
 
         string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
+        string delayMessage = "Still waiting for the acknowledgment / processing...";
 
-        // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-        if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+        if (IsNetworkConnectionError(ex)) {
+            waitTime = 300; // 5 Minuten
+            Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.GetType().Name}: {ex.Message}).");
+            Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+            Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
+            delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
+            nextBackoff = currentBackoff;
+        }
+        else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
             waitTime = 180; // 3 Minuten
             Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
-            nextBackoff = waitTime; // Behält diesen Zustand für den nächsten Versuch bei, falls der Fehler ein anderer ist.
+            nextBackoff = waitTime;
         }
         else {
             // On the very first failure, check for a server-suggested delay.
@@ -168,7 +204,7 @@ public static partial class ApiResilience {
             }
         }
 
-        bool waitSuccess = await ExtractionHelpers.SmartDelayAsync(waitTime);
+        bool waitSuccess = await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage);
         return (waitSuccess, nextBackoff);
     }
 

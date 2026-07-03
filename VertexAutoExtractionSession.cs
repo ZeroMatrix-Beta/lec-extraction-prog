@@ -673,7 +673,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+                bool isOverloaded = ApiResilience.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -681,8 +681,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
                     int waitTime;
                     string contextMsg = " [Debug Chat]";
-                    // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-                    if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+                    string delayMessage = "Still waiting for the acknowledgment / processing...";
+
+                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                        waitTime = 300; // 5 Minuten
+                        Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
+                        Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+                        Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
+                        delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
+                    }
+                    else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
                         waitTime = 180; // 3 Minuten
                         Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                         backoff = waitTime;
@@ -704,7 +712,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { exceptionCaught = true; break; }
+                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -840,7 +848,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             catch (Exception ex) {
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                bool isOverloaded = ex.Message.Contains("429") || ex.Message.Contains("503") || ex.Message.Contains("502") || ex.Message.Contains("500") || ex.ToString().Contains("ServerError") || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+                bool isOverloaded = ApiResilience.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -848,8 +856,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
                     int waitTime;
                     string contextMsg = " [History Bestätigung]";
-                    // [Human] Sonderbehandlung für "high demand"-Fehler: Feste Wartezeit von 3 Minuten.
-                    if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+                    string delayMessage = "Still waiting for the acknowledgment / processing...";
+
+                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                        waitTime = 300; // 5 Minuten
+                        Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
+                        Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+                        Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
+                        delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
+                    }
+                    else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
                         waitTime = 180; // 3 Minuten
                         Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                         backoff = waitTime;
@@ -871,7 +887,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime)) { break; }
+                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -1045,6 +1061,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             string baseName = Path.GetFileNameWithoutExtension(file);
             baseName = SpeedCompressedSuffixRegex().Replace(baseName, "");
             baseName = CompressedSuffixRegex().Replace(baseName, "");
+            if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
+                baseName = "step1-" + baseName;
+            }
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;

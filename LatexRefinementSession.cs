@@ -112,12 +112,12 @@ public class LatexRefinementSession {
         if (_multipleFilesToProcess != null && _multipleFilesToProcess.Length > 0) {
             currentFiles = _multipleFilesToProcess;
             targetFolder = Path.GetDirectoryName(currentFiles[0]) ?? _config.TargetFolder;
-            baseName = Path.GetFileNameWithoutExtension(currentFiles[0]).Replace("-part1", "").Replace("-all-offset", "").Replace("-all", "").Replace("-offset", "");
+            baseName = GetCleanBaseName(currentFiles[0]);
         }
         else if (_singleFilePathToProcess != null) {
             currentFiles = [_singleFilePathToProcess];
             targetFolder = Path.GetDirectoryName(_singleFilePathToProcess) ?? _config.TargetFolder;
-            baseName = Path.GetFileNameWithoutExtension(_singleFilePathToProcess).Replace("-all-offset", "").Replace("-all", "").Replace("-offset", "");
+            baseName = GetCleanBaseName(_singleFilePathToProcess);
         }
         else {
             string sourceFolder = _config.SourceFolder;
@@ -202,7 +202,7 @@ public class LatexRefinementSession {
             string finalFileName = Path.GetFileName(finalTexFile);
 
             // Create the wrapper .tex file
-            string wrapperFileName = $"{baseName}-offset-main.tex";
+            string wrapperFileName = $"step4-{baseName}-offset-main.tex";
             string wrapperPath = Path.Combine(targetFolder, wrapperFileName);
 
             string wrapperContent = preambleText + "\n\\begin{document}\n\n" +
@@ -345,7 +345,7 @@ public class LatexRefinementSession {
         }
 
         bool audioAttached = audioExists && _config.Step1MergeAndTimestamp.AttachAudio;
-        string outputFileName = $"{baseName}-offset-merged.tex";
+        string outputFileName = $"step2-{baseName}-offset-merged.tex";
         string? result;
 
         if (audioAttached) {
@@ -437,7 +437,7 @@ public class LatexRefinementSession {
         string content = await System.IO.File.ReadAllTextAsync(inputFile);
         parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
-        string outputFileName = $"{baseName}-offset-speech_refined.tex";
+        string outputFileName = $"step3-{baseName}-offset-speech_refined.tex";
         var result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
 
         if (_config.UseVertex) {
@@ -459,7 +459,7 @@ public class LatexRefinementSession {
         string content = await System.IO.File.ReadAllTextAsync(inputFile);
         parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
-        string outputFileName = $"{baseName}-offset-final.tex";
+        string outputFileName = $"step4-{baseName}-offset-final.tex";
         var result = await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
 
         if (_config.UseVertex) {
@@ -903,7 +903,9 @@ public class LatexRefinementSession {
             }
         }
 
-        string outputFileName = $"{baseName}-final-attempt.tex";
+        string noPreambleFileName = $"step5-{baseName}-offset-last-fix.tex";
+        string standaloneFileName = $"step5-{baseName}-offset-last-fix-standalone.tex";
+        string outputFileName = standaloneFileName;
         string fullResponseText = "";
         int currentRequest = 1;
         int maxRequests = 5;
@@ -974,22 +976,57 @@ public class LatexRefinementSession {
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
             string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
-            string fixedTexPath = Path.Combine(targetFolder, outputFileName);
-            await System.IO.File.WriteAllTextAsync(fixedTexPath, cleanedText);
-            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei gespeichert unter: {fixedTexPath}");
 
-            Console.WriteLine("  [INFO] Starte PDF-Kompilierung für -final-attempt...");
-            var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(fixedTexPath);
+            // Version mit Preamble (kompilierbar)
+            string standalonePath = Path.Combine(targetFolder, standaloneFileName);
+            await System.IO.File.WriteAllTextAsync(standalonePath, cleanedText);
+            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei (mit Preamble) gespeichert unter: {standalonePath}");
+
+            // Version ohne Preamble
+            string bodyOnlyText = cleanedText;
+            int beginDocIdx = cleanedText.IndexOf("\\begin{document}", StringComparison.OrdinalIgnoreCase);
+            int endDocIdx = cleanedText.IndexOf("\\end{document}", StringComparison.OrdinalIgnoreCase);
+            if (beginDocIdx >= 0 && endDocIdx > beginDocIdx) {
+                beginDocIdx += "\\begin{document}".Length;
+                bodyOnlyText = cleanedText[beginDocIdx..endDocIdx].Trim();
+            }
+            string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
+            await System.IO.File.WriteAllTextAsync(noPreamblePath, bodyOnlyText);
+            Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (ohne Preamble) gespeichert unter: {noPreamblePath}");
+
+            Console.WriteLine("  [INFO] Starte PDF-Kompilierung für step5 (last fix)...");
+            var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);
             string retryLogContent = FormatLatexLog(retryLog, retrySuccess);
-            string retryLogPath = Path.Combine(targetFolder, "compile-log-final-attempt.txt");
+            string retryLogPath = Path.Combine(targetFolder, "compile-log-step5-last-fix.txt");
             await System.IO.File.WriteAllTextAsync(retryLogPath, retryLogContent);
 
             if (retrySuccess) {
-                Console.WriteLine($"  [INFO] PDF erfolgreich im finalen Versuch (-final-attempt) erstellt: {targetFolder}");
+                Console.WriteLine($"  [INFO] PDF erfolgreich im finalen Versuch (step5) erstellt: {targetFolder}");
             }
             else {
-                Console.WriteLine($"  [FEHLER] Auch der finale Versuch (-final-attempt) konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
+                Console.WriteLine($"  [FEHLER] Auch step5 konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
             }
         }
+    }
+
+    private static string GetCleanBaseName(string filePath) {
+        string name = Path.GetFileNameWithoutExtension(filePath);
+        if (name.Length > 6 && name.StartsWith("step", StringComparison.OrdinalIgnoreCase) && char.IsDigit(name[4]) && name[5] == '-') {
+            name = name[6..];
+        }
+        string[] suffixes = ["-merged", "-speech_refined", "-final", "-last-fix", "-last-fix-standalone", "-final-attempt"];
+        foreach (var suffix in suffixes) {
+            if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
+                name = name[..^suffix.Length];
+            }
+        }
+        int partIdx = name.IndexOf("-part", StringComparison.OrdinalIgnoreCase);
+        if (partIdx >= 0) {
+            name = name[..partIdx];
+        }
+        if (name.EndsWith("-offset", StringComparison.OrdinalIgnoreCase)) {
+            name = name[..^"-offset".Length];
+        }
+        return name;
     }
 }
