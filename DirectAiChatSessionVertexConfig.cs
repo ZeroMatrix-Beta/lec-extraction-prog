@@ -22,5 +22,6 @@ public class DirectAiChatSessionVertexConfig {
     @"D:\lecture-videos\d-und-a/",
     @"D:\lecture-videos\d-und-a/new"
   ];
+    public string Model { get; set; } = "gemini-2.5-flash";
     public DirectAiChatSessionVertexAIConfig AI { get; set; } = new DirectAiChatSessionVertexAIConfig();
 }

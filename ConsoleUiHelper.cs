@@ -174,13 +174,86 @@ namespace FfmpegUtilities {
                     DisplayDirectoryPreview(currentFolder);
 
                     if (onFolderChanged != null) {
-                        onFolderChanged.Invoke(currentFolder);
-                        Console.WriteLine("  💾 [INFO] Der neue Pfad wurde in der Konfiguration (JSON) gespeichert.");
+                        Console.Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+                        string? saveChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
+                        if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+                            onFolderChanged.Invoke(currentFolder);
+                            Console.WriteLine("  💾 [INFO] Der neue Pfad wurde in der Konfiguration (JSON) gespeichert.");
+                        } else {
+                            Console.WriteLine("  [INFO] Die Änderung ist nur vorübergehend (wird nicht in JSON gespeichert).");
+                        }
                     }
                 }
             }
 
             return currentFolder;
+        }
+
+        /// <summary>
+        /// [AI Context] Interactive prompt verifying or updating the configured model.
+        /// Allows persisting the new model to configuration JSON.
+        /// </summary>
+        public static string ConfirmOrChangeModel(string currentModel, string apiType, Action<string>? onModelChanged = null) {
+            Console.WriteLine($"\n==================================================");
+            Console.WriteLine($" 🤖 Voreingestelltes Modell ({apiType}): {currentModel}");
+            Console.WriteLine($"==================================================");
+            
+            Console.Write("\nMöchten Sie dieses voreingestellte Modell verwenden? (j/n, Standard: j): ");
+            string? choice = Console.ReadLine()?.Trim().ToLowerInvariant();
+            
+            if (choice == "n" || choice == "nein" || choice == "no") {
+                Console.WriteLine("\nVerfügbare Modelle:");
+                Console.WriteLine(" 1) gemini-3.5-flash");
+                Console.WriteLine(" 2) gemini-3.1-flash-lite-preview");
+                Console.WriteLine(" 3) gemini-3-flash-preview");
+                Console.WriteLine(" 4) gemini-3.1-pro-preview");
+                Console.WriteLine(" 5) gemini-2.5-flash");
+                Console.WriteLine(" 6) gemini-2.5-flash-lite");
+                Console.WriteLine(" 7) gemini-2.5-pro");
+                Console.WriteLine(" 8) gemma-3-27b-it");
+                Console.WriteLine(" 9) gemini-1.5-flash");
+                Console.WriteLine("10) gemini-1.5-pro");
+                Console.WriteLine("11) gemini-robotics-er-1.5-preview");
+                Console.WriteLine("12) gemini-robotics-er-1.6-preview");
+                
+                Console.Write("\nBitte Modell auswählen (1-12) [Standard: 5 (gemini-2.5-flash)]: ");
+                string? modelChoice = Console.ReadLine()?.Trim();
+                
+                if (modelChoice == "exit" || modelChoice == "quit") return "__EXIT__";
+                
+                string newModel = modelChoice switch {
+                    "1" => "gemini-3.5-flash",
+                    "2" => "gemini-3.1-flash-lite-preview",
+                    "3" => "gemini-3-flash-preview",
+                    "4" => "gemini-3.1-pro-preview",
+                    "5" => "gemini-2.5-flash",
+                    "6" => "gemini-2.5-flash-lite",
+                    "7" => "gemini-2.5-pro",
+                    "8" => "gemma-3-27b-it",
+                    "9" => "gemini-1.5-flash",
+                    "10" => "gemini-1.5-pro",
+                    "11" => "gemini-robotics-er-1.5-preview",
+                    "12" => "gemini-robotics-er-1.6-preview",
+                    _ => "gemini-2.5-flash"
+                };
+                
+                Console.WriteLine($"\n  🎯 Neues Modell ausgewählt: {newModel}");
+                
+                if (onModelChanged != null) {
+                    Console.Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+                    string? saveChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+                        onModelChanged.Invoke(newModel);
+                        Console.WriteLine("  💾 [INFO] Das neue Modell wurde in der Konfiguration (JSON) gespeichert.");
+                    } else {
+                        Console.WriteLine("  [INFO] Die Änderung ist nur vorübergehend (wird nicht in JSON gespeichert).");
+                    }
+                }
+                
+                return newModel;
+            }
+            
+            return currentModel;
         }
     }
 }

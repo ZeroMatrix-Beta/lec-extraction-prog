@@ -134,6 +134,13 @@ partial class Program {
                 config.SourceFolder = newFolder;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             });
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "Vertex AI Auto-Extraktion", newModel => {
+                config.Model = newModel;
+                ConfigLoader<VertexAutoExtractionConfig>.Save(config);
+            });
+            if (selectedModel == "__EXIT__") return;
+            config.Model = selectedModel;
+
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
@@ -147,6 +154,13 @@ partial class Program {
                 config.SourceFolder = newFolder;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             });
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "AI Studio Auto-Extraktion", newModel => {
+                config.Model = newModel;
+                ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
+            });
+            if (selectedModel == "__EXIT__") return;
+            config.Model = selectedModel;
+
             string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
                 ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
                 : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");

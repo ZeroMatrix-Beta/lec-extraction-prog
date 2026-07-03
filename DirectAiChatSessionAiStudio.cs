@@ -22,6 +22,8 @@ namespace DirectChatAiInteraction.AiStudio;
 /// [Human] Das Herzstück des Chatbots. Hier werden deine Eingaben gelesen, an Google gesendet und die Antworten in der Konsole ausgegeben.
 /// </summary> 
 public partial class DirectAiChatSessionAiStudio {
+    private readonly DirectAiChatSessionAiStudioConfig _config;
+
     // [AI Context] Global state for file resolution. 
     // UploadFolderPath is the base dir for relative paths. HistoryFolderPath is an absolute path.
     // Konfigurierbarer Basis-Pfad für deine Uploads. 
@@ -55,6 +57,7 @@ public partial class DirectAiChatSessionAiStudio {
 
     // [AI Context] Constructor injects config dependencies to isolate state.
     public DirectAiChatSessionAiStudio(Client client, DirectAiChatSessionAiStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
+        _config = config;
         _client = client;
         _sessionLogger = logger;
         _attachmentHandler = attachmentHandler;
@@ -83,7 +86,10 @@ public partial class DirectAiChatSessionAiStudio {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = SelectModel();
+            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.Model, "AI Studio", newModel => {
+                _config.Model = newModel;
+                ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
+            });
             if (selectedModel == "__EXIT__") return;
             if (selectedModel == "__CHANGED_KEY__") continue;
 
@@ -132,46 +138,6 @@ public partial class DirectAiChatSessionAiStudio {
             await RunChatSessionAsync(selectedModel, initialInput);
             break; // Beendet den aktuellen Setup-Loop und geht komplett ins Hauptmenü zurück
         }
-    }
-
-    /// <summary>
-    /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
-    /// RULE: If you add, modify, or remove a model in the switch expression below, you MUST synchronously update the WriteLine menu text here!
-    /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
-    /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
-    /// </summary>
-    private string SelectModel() {
-        WriteLine($"\n=== Model Selection (AI Studio) ===");
-        WriteLine("Wähle ein Modell:");
-        WriteLine(" 1) gemini-3.1-flash-lite-preview");
-        WriteLine(" 2) gemini-3-flash-preview");
-        WriteLine(" 3) gemini-3.1-pro-preview");
-        WriteLine(" 4) gemini-2.5-flash");
-        WriteLine(" 5) gemini-2.5-flash-lite");
-        WriteLine(" 6) gemini-2.5-pro");
-        WriteLine(" 7) gemma-3-27b-it                || (Open Model, 27B Parameter)");
-        WriteLine(" 8) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
-        WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
-        WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
-        WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
-
-        string choice = PromptWithCommands("Auswahl (1-11) [Standard: 4]: ");
-        if (choice == "__EXIT__" || choice == "__CHANGED_KEY__") return choice;
-
-        return choice switch {
-            "1" => "gemini-3.1-flash-lite-preview",
-            "2" => "gemini-3-flash-preview",
-            "3" => "gemini-3.1-pro-preview",
-            "4" => "gemini-2.5-flash",
-            "5" => "gemini-2.5-flash-lite",
-            "6" => "gemini-2.5-pro",
-            "7" => "gemma-3-27b-it",
-            "8" => "gemini-1.5-flash",
-            "9" => "gemini-1.5-pro",
-            "10" => "gemini-robotics-er-1.5-preview",
-            "11" => "gemini-robotics-er-1.6-preview",
-            _ => "gemini-2.5-flash"
-        };
     }
 
     // --- Ausgelagerte Methoden ---

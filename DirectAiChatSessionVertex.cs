@@ -22,6 +22,7 @@ namespace DirectChatAiInteraction.Vertex;
 /// [Human] Der Manager für Chat-Sitzungen, die über Google Cloud Vertex AI laufen. Getrennt vom normalen AI Studio, da es eigene Abrechnungs- und Zugriffsregeln hat.
 /// </summary>
 public class DirectAiChatSessionVertex {
+    private readonly DirectAiChatSessionVertexConfig _config;
     private readonly string UploadFolderPath;
     private readonly string[] HistoryPreloadPaths;
     private readonly string InitialHistoryPrompt = "Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {0}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards.";
@@ -39,6 +40,7 @@ public class DirectAiChatSessionVertex {
 
     // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
     public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentHandler attachmentHandler) {
+        _config = config;
         _client = client;
         _sessionLogger = logger;
         _attachmentHandler = attachmentHandler;
@@ -62,7 +64,10 @@ public class DirectAiChatSessionVertex {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = SelectModel();
+            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.Model, "Vertex AI", newModel => {
+                _config.Model = newModel;
+                ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
+            });
             if (selectedModel == "__EXIT__") return;
 
             WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
@@ -105,54 +110,6 @@ public class DirectAiChatSessionVertex {
             await RunChatSessionAsync(selectedModel, initialInput);
             break; // Session beendet, zurück zu Program.cs
         }
-    }
-
-    /// <summary>
-    /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
-    /// RULE: If you add, modify, or remove a model in the switch expression below, you MUST synchronously update the WriteLine menu text here!
-    /// The UI representation and the underlying switch logic must ALWAYS perfectly mirror each other.
-    /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
-    /// </summary>
-    private static string SelectModel() {
-        WriteLine("\n=== Model Selection (Vertex AI) ===");
-        WriteLine("Wähle ein Modell:");
-        WriteLine(" 1) gemini-3.1-flash-lite-preview || Input:  $0.25 (text / image / video), $0.50 (audio)");
-        WriteLine("                                  || Output: $1.50 (<== Claimed to be the most cost-efficient, optimized)");
-        WriteLine(" 2) gemini-3-flash-preview        || Input:  $0.50 (text / image / video), $1.00 (audio)");
-        WriteLine("                                  || Output: $3.0");
-        WriteLine(" 3) gemini-3.1-pro-preview        || Input:  $2.00, prompts <= 200k tokens, $4.00, prompts > 200k tokens");
-        WriteLine("                                  || Output: $12.00, prompts <= 200k tokens, $18.00, prompts > 200k");
-        WriteLine(" 4) gemini-2.5-flash              || Input:  $0.30  (text / image / video) $1.00 (audio). ");
-        WriteLine("                                  || Output: $2.50");
-        WriteLine(" 5) gemini-2.5-flash-lite         || Input:  $0.10  (text / image / video). ");
-        WriteLine("                                  || Output: $0.40");
-        WriteLine(" 6) gemini-2.5-pro                || Input:  $1.25, prompts <= 200k tokens, $2.50, prompts > 200k tokens.");
-        WriteLine("                                  || Output: $10.00, prompts <= 200k tokens $15.00, prompts > 200k");
-        WriteLine(" 7) gemma-3-27b-it                || (Open Model, 27B Parameter)");
-        WriteLine(" 8) gemini-1.5-flash              || (Schnelles Fallback für Video/Audio)");
-        WriteLine(" 9) gemini-1.5-pro                || (Mächtiges Fallback für Video/Audio)");
-        WriteLine("10) gemini-robotics-er-1.5-preview|| (Free Tier, Multimodal)");
-        WriteLine("11) gemini-robotics-er-1.6-preview|| (Neues Robotics Modell)");
-        WriteLine("12) gemini-3.5-flash"); // Added Gemini 3.5 Flash
-
-        string choice = PromptWithCommands("Auswahl (1-12) [Standard: 4]: ");
-        if (choice == "__EXIT__") return choice;
-
-        return choice switch {
-            "1" => "gemini-3.1-flash-lite-preview",
-            "2" => "gemini-3-flash-preview",
-            "3" => "gemini-3.1-pro-preview",
-            "4" => "gemini-2.5-flash",
-            "5" => "gemini-2.5-flash-lite",
-            "6" => "gemini-2.5-pro",
-            "7" => "gemma-3-27b-it",
-            "8" => "gemini-1.5-flash",
-            "9" => "gemini-1.5-pro",
-            "10" => "gemini-robotics-er-1.5-preview",
-            "11" => "gemini-robotics-er-1.6-preview",
-            "12" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
-            _ => "gemini-2.5-flash"
-        };
     }
 
     /// <summary>
