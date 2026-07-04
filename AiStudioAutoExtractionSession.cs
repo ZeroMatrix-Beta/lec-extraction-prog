@@ -21,6 +21,21 @@ namespace AutoExtraction;
 /// Schau bitte auch das entsprechende .json-File an!
 /// </summary>
 public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+    public static readonly string[] AvailableModels = [
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemma-3-27b-it",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-robotics-er-1.5-preview",
+        "gemini-robotics-er-1.6-preview"
+    ];
+
     private Client _client = client;
     private readonly AiStudioAutoExtractionConfig _config = config;
     private readonly AttachmentHandler _attachmentHandler = attachmentHandler;
@@ -91,6 +106,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             return;
         }
 
+        if (!await EnsureSessionSetupAsync()) return;
+        await ProcessFilesAsync(files);
+    }
+
+    private async Task<bool> EnsureSessionSetupAsync() {
         if (string.IsNullOrEmpty(_systemInstructionText)) {
             if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Length != 0) {
                 Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
@@ -122,6 +142,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
 
                         var instructionBuilder = new System.Text.StringBuilder();
+                        instructionBuilder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS");
+                        instructionBuilder.AppendLine("IMPORTANT: You must read every single file provided in this system instruction completely and thoroughly for the protocol to work properly. Do not skip any files or parts under any circumstances.\n");
                         instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
                         instructionBuilder.AppendLine("## System Instructions");
                         instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
@@ -133,10 +155,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         instructionBuilder.AppendLine("\n---\n");
 
                         foreach (var filePath in resolvedInstructionFiles) {
-                            string fileName = Path.GetFileName(filePath);
-                            instructionBuilder.AppendLine($"\n---\nHere is the file `{fileName}`:\n");
+                            string rawRelPath = !string.IsNullOrEmpty(commonBase)
+                                ? Path.GetRelativePath(commonBase, filePath)
+                                : Path.GetFileName(filePath);
+                            string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                            instructionBuilder.AppendLine($"\n---\nHere is the file `{relPath}`:\n");
                             instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
-                            Console.WriteLine($"  [INFO] System Instruction geladen: {fileName}");
+                            Console.WriteLine($"  [INFO] System Instruction geladen: {relPath}");
                         }
                         _systemInstructionText = instructionBuilder.ToString();
 
@@ -190,7 +215,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         }
                         else {
                             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-                            if (!await AcknowledgeHistoryAsync(fileList)) return;
+                            if (!await AcknowledgeHistoryAsync(fileList)) return false;
                         }
                     }
                     else {
@@ -200,15 +225,87 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        if (_config.CreateLogFiles) {
-            await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
-        }
-
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();
-        await _sessionLogger.LogSessionSetupAsync();
 
-        await ProcessFilesAsync(files);
+        if (_config.CreateLogFiles) {
+            string logDest = !string.IsNullOrWhiteSpace(_sessionLogger.CurrentSessionLogPath)
+                ? _sessionLogger.CurrentSessionLogPath
+                : _config.LogFolder;
+            await ExtractionHelpers.LogSystemInstructionDumpAsync(logDest, _systemInstructionText, _historyParts);
+        }
+
+        await _sessionLogger.LogSessionSetupAsync();
+        return true;
+    }
+
+    private async Task ProcessYouTubeTasksAsync() {
+        if (_config.YouTubeTasks == null || _config.YouTubeTasks.Length == 0) {
+            Console.WriteLine("[INFO] Keine YouTube-Videos in der Konfiguration (YouTubeTasks) gefunden.");
+            return;
+        }
+
+        Console.WriteLine($"\n[YouTube Mode] Starte Transkription für {_config.YouTubeTasks.Length} konfigurierte YouTube-Video(s)...");
+
+        if (!await EnsureSessionSetupAsync()) return;
+
+        foreach (var task in _config.YouTubeTasks) {
+            if (string.IsNullOrWhiteSpace(task.VideoUrl)) continue;
+
+            string baseName = string.IsNullOrWhiteSpace(task.OutputName) ? "youtube-lecture" : task.OutputName;
+            if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
+                baseName = "step1-" + baseName;
+            }
+
+            string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
+            if (!Directory.Exists(fileSpecificOutputFolder)) {
+                Directory.CreateDirectory(fileSpecificOutputFolder);
+            }
+
+            Console.WriteLine($"\n[YouTube Consumer] === Starte API-Extraktion für URL: {task.VideoUrl} ({baseName}) ===");
+            List<string> generatedTexFiles = [];
+            string fullOutputTextRaw = "";
+
+            for (int i = 0; i < task.Fragments.Count; i++) {
+                var frag = task.Fragments[i];
+                int partNum = i + 1;
+                Console.WriteLine($"\n--- Verarbeite Fragment {partNum}/{task.Fragments.Count}: {frag.StartTime} bis {frag.EndTime} ({frag.PartTitle}) ---");
+
+                string dateNotice = (partNum == 1)
+                    ? "Please note that since this is part 1 of the lecture, the date of the transcription is important."
+                    : $"The lecture took place... Please note that since this is part {partNum} of the lecture, the date is not so important (but tell it anyway).";
+
+                string parsedPrompt = $"{_config.Prompt}\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}";
+
+                var attachmentParts = new List<Part> {
+                    Part.FromUri(task.VideoUrl, "video/mp4")
+                };
+
+                var (texOutput, _, _, _) = await GenerateTexFromUploadedPartAsync(
+                    task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
+                );
+
+                if (!string.IsNullOrWhiteSpace(texOutput)) {
+                    string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
+                    fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
+
+                    string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
+                    string partContent = cleanTex;
+                    if (!partContent.StartsWith("% Startzeit:") && !partContent.StartsWith("% Zeitstempel:")) {
+                        partContent = $"% Startzeit: {frag.StartTime} | Ende: {frag.EndTime}\n\n" + partContent;
+                    }
+                    await System.IO.File.WriteAllTextAsync(targetPartPath, partContent);
+                    generatedTexFiles.Add(targetPartPath);
+                    Console.WriteLine($"  [Erfolg] Teildatei gespeichert unter: {targetPartPath}");
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(fullOutputTextRaw)) {
+                string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
+                await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
+                Console.WriteLine($"\n🎉 Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
+            }
+        }
     }
 
     /// <summary>
@@ -271,8 +368,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
             }
             else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
-                var files = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-                await SetupContextAndProcessAsync(files);
+                var files = ExtractionHelpers.SelectAndFilterVideosForBatch(_config.SourceFolder);
+                if (files.Length > 0) {
+                    await SetupContextAndProcessAsync(files);
+                }
             }
             else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
                 _debugChatHistory.Clear();
@@ -383,6 +482,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens
         };
+
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+        }
 
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -547,6 +650,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens // Use config value, or hardcode a smaller value for acknowledgment? Let's use config.
         };
+
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+        }
         if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
             if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
@@ -789,7 +896,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
                 else {
                     Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
-                    videoToSplit = await FfmpegUtilities.FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true);
+                    videoToSplit = await FfmpegUtilities.FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true, preset: _config.FfmpegPreset);
                     if (videoToSplit == null) {
                         Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
                         continue;
@@ -797,7 +904,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
 
                 Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
-                var rawPartsWithTimes = await FfmpegUtilities.FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
+                var rawPartsWithTimes = await FfmpegUtilities.FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: _config.FfmpegPreset);
 
                 if (rawPartsWithTimes.Count > 0) {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = [];
@@ -1159,17 +1266,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.";
 
-        if (partNumber == 1) {
-            prompt += "\n\nNote: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.";
-        }
-        else {
+        if (partNumber != 1) {
             prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
         }
 
         prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.";
-        prompt += "\n\nWhen in doubt, transcribe more content into the 'math-stroke' rather than less. Everything that is written on the blackboard must be present there. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
-
-        prompt += "\n\nCRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.";
+        prompt += "\n\nWhen in doubt, transcribe more content into the 'math-stroke' rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
@@ -1207,6 +1309,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens
         };
+
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+        }
 
         if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
@@ -1246,6 +1352,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         while (true) {
             Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
+            GroundingMetadata? accumulatedGrounding = null;
             string chunkResp = "";
             int requestInputTokens = 0;
             int requestOutputTokens = 0;
@@ -1259,6 +1366,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                         Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
                         chunkResp += txt;
+
+                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+                        if (metadata != null) {
+                            accumulatedGrounding = metadata;
+                        }
+
                         if (chunk.UsageMetadata != null) {
                             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -1274,6 +1387,22 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
                 Console.WriteLine($"Finaler Fehler: {ex.Message}");
                 break;
+            }
+
+            if (accumulatedGrounding != null) {
+                Console.WriteLine("\n\n  🔍 [Google Search Grounding] Quellen:");
+                if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
+                    Console.WriteLine($"    Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+                }
+                if (accumulatedGrounding.GroundingChunks != null) {
+                    int refIdx = 1;
+                    foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
+                        if (chunkRef.Web != null) {
+                            Console.WriteLine($"     [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri}");
+                            refIdx++;
+                        }
+                    }
+                }
             }
 
             if (!callSuccess) {

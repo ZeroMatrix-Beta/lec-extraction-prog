@@ -172,6 +172,56 @@ Vertex AI uses Google Cloud IAM (Identity and Access Management) instead of stat
    gcloud config set project your-vertex-project-id
    ```
 
+## 4.6 Running the Program (Local Console & Parallel Execution)
+
+You can run the program directly from your own Windows Command Prompt (cmd) or PowerShell terminal while you are still working on it in Antigravity or Visual Studio Code.
+
+### How to Navigate and Start the Program
+1. **Open your Terminal:** Open Windows Command Prompt (`cmd`) or PowerShell.
+2. **Navigate to the Project Directory:**
+   Run the following change directory command:
+   ```powershell
+   cd "C:\Users\miche\programming\lec-extraction-prog"
+   ```
+3. **Compile and Run the Program:**
+   To build and start the program from the current directory, run:
+   ```powershell
+   dotnet run
+   ```
+   *Note: If the application is already running or the executable is locked, the build might fail to overwrite the executable. See below.*
+
+### Running Multiple Instances Concurrently
+You can execute multiple instances of the program in parallel to process different videos at the same time:
+1. **Build the binary once:**
+   ```powershell
+   dotnet build
+   ```
+2. **Launch multiple instances via direct executable:**
+   Open separate terminal windows, navigate to the project root directory:
+   ```powershell
+   cd "C:\Users\miche\programming\lec-extraction-prog"
+   ```
+   And run the executable directly using its relative path:
+   ```powershell
+   .\bin\Debug\net10.0\lec-extraction-prog.exe
+   ```
+   Using the direct `.exe` avoids concurrent build compilation conflicts.
+3. **Isolate Configurations (Optional but Recommended):**
+   To let each instance have its own permanent configuration:
+   - Copy the `bin/Debug/net10.0/` folder to separate directories (e.g., `bin/Debug/instance1/` and `bin/Debug/instance2/`).
+   - In your terminal windows, navigate directly into those folders:
+     - Window 1:
+       ```powershell
+       cd "C:\Users\miche\programming\lec-extraction-prog\bin\Debug\instance1"
+       .\lec-extraction-prog.exe
+       ```
+     - Window 2:
+       ```powershell
+       cd "C:\Users\miche\programming\lec-extraction-prog\bin\Debug\instance2"
+       .\lec-extraction-prog.exe
+       ```
+     Each instance will load and save its settings independently within its own folder.
+
 ---
 
 ## 5. Pipeline Mechanics: FFmpeg & Overlapping Segments
@@ -443,6 +493,56 @@ Vertex AI verwendet Google Cloud IAM (Identity and Access Management) anstelle v
    ```powershell
    gcloud config set project deine-vertex-projekt-id
    ```
+
+## 4.6 Programm ausführen (Lokale Konsole & Parallele Ausführung)
+
+Du kannst das Programm direkt in der Windows Eingabeaufforderung (`cmd`) oder der PowerShell starten, während du gleichzeitig in Antigravity oder Visual Studio Code daran arbeitest.
+
+### Navigieren und Starten des Programms
+1. **Terminal öffnen:** Öffne die Windows Eingabeaufforderung (`cmd`) oder die PowerShell.
+2. **In das Projektverzeichnis wechseln:**
+   Führe den folgenden Befehl aus:
+   ```powershell
+   cd "C:\Users\miche\programming\lec-extraction-prog"
+   ```
+3. **Kompilieren und Starten:**
+   Um das Projekt zu bauen und direkt auszuführen, verwende:
+   ```powershell
+   dotnet run
+   ```
+   *Hinweis: Wenn das Programm bereits läuft oder die Executable blockiert ist, kann der Kopiervorgang fehlschlagen. Verwende in diesem Fall die unten stehende Methode.*
+
+### Ausführen mehrerer Instanzen (Parallel)
+Du kannst mehrere Instanzen parallel laufen lassen, um verschiedene Videos zeitgleich zu verarbeiten:
+1. **Projekt einmalig bauen:**
+   ```powershell
+   dotnet build
+   ```
+2. **Mehrere Instanzen per Direktstart ausführen:**
+   Öffne separate Terminal-Fenster, navigiere in das Projekt-Hauptverzeichnis:
+   ```powershell
+   cd "C:\Users\miche\programming\lec-extraction-prog"
+   ```
+   Und starte direkt die ausführbare Datei über ihren relativen Pfad:
+   ```powershell
+   .\bin\Debug\net10.0\lec-extraction-prog.exe
+   ```
+   Der direkte Start der `.exe` verhindert Build-Konflikte bei gleichzeitigem Start.
+3. **Konfigurationen isolieren (Empfohlen):**
+   Damit jede Instanz ihre eigenen dauerhaften Einstellungen verwenden kann:
+   - Kopiere den Ordner `bin/Debug/net10.0/` in separate Verzeichnisse (z. B. `bin/Debug/instance1/` und `bin/Debug/instance2/`).
+   - Navigiere in deinen Terminal-Fenstern direkt in diese Unterordner:
+     - Fenster 1:
+       ```powershell
+       cd "C:\Users\miche\programming\lec-extraction-prog\bin\Debug\instance1"
+       .\lec-extraction-prog.exe
+       ```
+     - Fenster 2:
+       ```powershell
+       cd "C:\Users\miche\programming\lec-extraction-prog\bin\Debug\instance2"
+       .\lec-extraction-prog.exe
+       ```
+     Jede Instanz lädt und speichert ihre Konfiguration nun absolut unabhängig in ihrem jeweiligen Ordner.
 
 ---
 

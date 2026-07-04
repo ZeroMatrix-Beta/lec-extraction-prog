@@ -80,47 +80,12 @@ namespace FfmpegUtilities {
 
                 if (totalItems <= maxSmallLimit) {
                     Console.WriteLine($"\n  📁 Verzeichnis-Vorschau: {folderPath} ({files.Length} Datei(en), {subDirs.Length} Ordner)");
-                    for (int i = 0; i < subDirs.Length; i++) {
-                        string dirName = Path.GetFileName(subDirs[i]);
-                        Console.WriteLine($"    📁 {dirName}/");
-                    }
-                    for (int i = 0; i < files.Length; i++) {
-                        string fileName = Path.GetFileName(files[i]);
-                        string ext = Path.GetExtension(files[i]).ToLowerInvariant();
-                        string icon = GetFileIcon(ext);
-                        Console.WriteLine($"    {icon} {fileName}");
-                    }
                 }
                 else {
                     Console.WriteLine($"\n  📁 Verzeichnis-Übersicht: {folderPath} (Insgesamt {files.Length} Datei(en), {subDirs.Length} Ordner)");
-
-                    int maxDirsToShow = Math.Min(subDirs.Length, 8);
-                    for (int i = 0; i < maxDirsToShow; i++) {
-                        string dirName = Path.GetFileName(subDirs[i]);
-                        try {
-                            int innerFiles = Directory.GetFiles(subDirs[i]).Length;
-                            int innerDirs = Directory.GetDirectories(subDirs[i]).Length;
-                            Console.WriteLine($"    📁 {dirName}/ ({innerFiles} Datei(en), {innerDirs} Ordner)");
-                        }
-                        catch {
-                            Console.WriteLine($"    📁 {dirName}/");
-                        }
-                    }
-                    if (subDirs.Length > maxDirsToShow) {
-                        Console.WriteLine($"    ... und {subDirs.Length - maxDirsToShow} weitere Unterordner");
-                    }
-
-                    int maxFilesToShow = Math.Min(files.Length, 10);
-                    for (int i = 0; i < maxFilesToShow; i++) {
-                        string fileName = Path.GetFileName(files[i]);
-                        string ext = Path.GetExtension(files[i]).ToLowerInvariant();
-                        string icon = GetFileIcon(ext);
-                        Console.WriteLine($"    {icon} {fileName}");
-                    }
-                    if (files.Length > maxFilesToShow) {
-                        Console.WriteLine($"    ... und {files.Length - maxFilesToShow} weitere Datei(en)");
-                    }
                 }
+
+                RenderDirectoryTree(folderPath, folderPath, "    ", 0, maxDepth: 4, maxSmallLimit);
             }
             catch (Exception ex) {
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
@@ -129,59 +94,226 @@ namespace FfmpegUtilities {
         }
 
         /// <summary>
-        /// [AI Context] Interactive prompt verifying or updating the configured source directory.
-        /// Displays a visual preview with icons and allows persisting the new path to configuration JSON.
-        /// [Human] Fragt den Benutzer interaktiv (mit j/n), ob der voreingestellte Quellordner genutzt werden soll, zeigt Vorschau-Icons und speichert Änderungen auf Wunsch in der JSON-Konfiguration.
+        /// [AI Context] Internal representation of a directory tree item for rendering previews.
         /// </summary>
-        public static string ConfirmOrChangeSourceFolder(string currentFolder, Action<string>? onFolderChanged = null) {
+        private readonly struct TreePreviewItem {
+            public bool IsDir { get; init; }
+            public bool IsMsg { get; init; }
+            public string Name { get; init; }
+            public string Path { get; init; }
+        }
+
+        /// <summary>
+        /// [AI Context] Recursively renders files and folders in a clean hierarchical tree view.
+        /// Limits depth and item counts dynamically based on current folder density and depth level.
+        /// </summary>
+        private static void RenderDirectoryTree(string rootFolder, string currentDir, string indent, int currentDepth, int maxDepth, int maxSmallLimit) {
+            string[] files;
+            string[] subDirs;
+            try {
+                files = Directory.GetFiles(currentDir);
+                subDirs = Directory.GetDirectories(currentDir);
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"{indent}⚠️ [Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                Console.WriteLine($"{indent}Originaler Fehlertext: {ex.Message}");
+                return;
+            }
+
+            Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+            Array.Sort(subDirs, StringComparer.OrdinalIgnoreCase);
+
+            int total = files.Length + subDirs.Length;
+            if (total == 0) return;
+
+            int maxFilesToShow = (currentDepth == 0)
+                ? (total <= maxSmallLimit ? 50 : 15)
+                : 10;
+            int maxDirsToShow = (currentDepth == 0)
+                ? (total <= maxSmallLimit ? 50 : 10)
+                : 5;
+
+            int shownFiles = Math.Min(files.Length, maxFilesToShow);
+            bool hasMoreFiles = files.Length > shownFiles;
+            int shownDirs = Math.Min(subDirs.Length, maxDirsToShow);
+            bool hasMoreDirs = subDirs.Length > shownDirs;
+
+            System.Collections.Generic.List<TreePreviewItem> items = [];
+
+            // 1. Files first
+            for (int i = 0; i < shownFiles; i++) {
+                string fileName = Path.GetFileName(files[i]);
+                string cleanedFileName = AutoExtraction.ExtractionHelpers.CleanCopySuffix(fileName);
+                items.Add(new() { IsDir = false, IsMsg = false, Name = cleanedFileName, Path = files[i] });
+            }
+            if (hasMoreFiles) {
+                items.Add(new() { IsDir = false, IsMsg = true, Name = $"... und {files.Length - shownFiles} weitere Datei(en)", Path = "" });
+            }
+
+            // 2. Folders next
+            if (currentDepth < maxDepth) {
+                for (int i = 0; i < shownDirs; i++) {
+                    string dirName = Path.GetFileName(subDirs[i]);
+                    string cleanedDirName = AutoExtraction.ExtractionHelpers.CleanCopySuffix(dirName);
+                    items.Add(new() { IsDir = true, IsMsg = false, Name = cleanedDirName, Path = subDirs[i] });
+                }
+                if (hasMoreDirs) {
+                    items.Add(new() { IsDir = true, IsMsg = true, Name = $"... und {subDirs.Length - shownDirs} weitere Unterordner", Path = "" });
+                }
+            }
+            else if (subDirs.Length > 0) {
+                items.Add(new() { IsDir = true, IsMsg = true, Name = $"... ({subDirs.Length} Unterordner)", Path = "" });
+            }
+
+            for (int i = 0; i < items.Count; i++) {
+                var item = items[i];
+                bool isLast = (i == items.Count - 1);
+                string branch = isLast ? "└── " : "├── ";
+
+                if (item.IsMsg) {
+                    if (item.IsDir) {
+                        Console.WriteLine($"{indent}{branch}📁 {item.Name}");
+                    }
+                    else {
+                        Console.WriteLine($"{indent}{branch}💬 {item.Name}");
+                    }
+                }
+                else if (item.IsDir) {
+                    Console.WriteLine($"{indent}{branch}📁 {item.Name}/");
+                    string childIndent = indent + (isLast ? "    " : "│   ");
+                    RenderDirectoryTree(rootFolder, item.Path, childIndent, currentDepth + 1, maxDepth, maxSmallLimit);
+                }
+                else {
+                    string ext = Path.GetExtension(item.Path).ToLowerInvariant();
+                    string icon = GetFileIcon(ext);
+                    string rawRelPath = Path.GetRelativePath(rootFolder, item.Path);
+                    string relPath = AutoExtraction.ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                    string label = (!string.IsNullOrEmpty(relPath) && !string.Equals(relPath, item.Name, StringComparison.OrdinalIgnoreCase))
+                        ? $"{item.Name} ({relPath})"
+                        : item.Name;
+                    Console.WriteLine($"{indent}{branch}{icon} {label}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// <summary>
+        /// [AI Context] Interactive prompt verifying or updating the configured source directory.
+        /// Displays predefined folders if configured, launches the folder explorer, or allows direct path input.
+        /// </summary>
+        public static string ConfirmOrChangeSourceFolder(string currentFolder, Action<string>? onFolderChanged = null, string[]? predefinedFolders = null) {
             Console.WriteLine($"\n==================================================");
-            Console.WriteLine($" 📁 Voreingestellter Quellordner: {currentFolder}");
+            Console.WriteLine($" 📁 Quellordner-Auswahl");
             Console.WriteLine($"==================================================");
+            Console.WriteLine($" Aktueller Quellordner: {currentFolder}");
 
-            DisplayDirectoryPreview(currentFolder);
+            if (predefinedFolders != null && predefinedFolders.Length > 0) {
+                Console.WriteLine("\nVordefinierte Quellordner:");
+                for (int i = 0; i < predefinedFolders.Length; i++) {
+                    Console.WriteLine($"  {i + 1}) {predefinedFolders[i]}");
+                }
+                Console.WriteLine($"  {predefinedFolders.Length + 1}) 🔍 Interaktiver Ordner-Explorer");
+                Console.WriteLine($"  {predefinedFolders.Length + 2}) ✍️ Pfad manuell eingeben");
+                Console.WriteLine($"  [ENTER]          => Bisherigen Ordner '{currentFolder}' verwenden");
 
-            Console.Write("\nMöchten Sie diesen voreingestellten Quellordner verwenden? (j/n, Standard: j): ");
-            string? choice = Console.ReadLine()?.Trim().ToLowerInvariant();
+                Console.Write($"\nAuswahl (1-{predefinedFolders.Length + 2}) [Standard: ENTER]: ");
+                string choice = Console.ReadLine()?.Trim() ?? "";
 
-            if (choice == "n" || choice == "nein" || choice == "no") {
-                Console.Write("\nBitte neuen Pfad für den Quellordner eingeben: ");
-                string? newPath = Console.ReadLine()?.Trim();
-                if (!string.IsNullOrWhiteSpace(newPath)) {
-                    newPath = newPath.Trim('\"', '\'');
+                if (string.IsNullOrEmpty(choice)) {
+                    DisplayDirectoryPreview(currentFolder);
+                    return currentFolder;
+                }
 
-                    if (!Directory.Exists(newPath)) {
-                        Console.Write($"Der Ordner '{newPath}' existiert nicht. Möchten Sie ihn erstellen? (j/n, Standard: j): ");
-                        string? createChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
-                        if (createChoice != "n" && createChoice != "nein") {
-                            try {
-                                Directory.CreateDirectory(newPath);
-                                Console.WriteLine($"  [OK] Ordner erstellt: {newPath}");
-                            }
-                            catch (Exception ex) {
-                                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                                return currentFolder;
-                            }
+                if (int.TryParse(choice, out int choiceNum)) {
+                    if (choiceNum >= 1 && choiceNum <= predefinedFolders.Length) {
+                        currentFolder = predefinedFolders[choiceNum - 1];
+                        Console.WriteLine($"\n  🎯 Quellordner ausgewählt: {currentFolder}");
+                        DisplayDirectoryPreview(currentFolder);
+                        onFolderChanged?.Invoke(currentFolder);
+                        return currentFolder;
+                    }
+                    else if (choiceNum == predefinedFolders.Length + 1) {
+                        currentFolder = NavigateDirectory(currentFolder);
+                        Console.WriteLine($"\n  🎯 Quellordner ausgewählt: {currentFolder}");
+                        DisplayDirectoryPreview(currentFolder);
+                        onFolderChanged?.Invoke(currentFolder);
+                        return currentFolder;
+                    }
+                    else if (choiceNum == predefinedFolders.Length + 2) {
+                        // Proceed to manual input
+                    }
+                    else {
+                        Console.WriteLine("  [INFO] Ungültige Auswahl. Behalte bisherigen Ordner bei.");
+                        DisplayDirectoryPreview(currentFolder);
+                        return currentFolder;
+                    }
+                }
+                else {
+                    Console.WriteLine("  [INFO] Ungültige Auswahl. Behalte bisherigen Ordner bei.");
+                    DisplayDirectoryPreview(currentFolder);
+                    return currentFolder;
+                }
+            }
+            else {
+                Console.WriteLine($"  1) Bisherigen Ordner '{currentFolder}' verwenden");
+                Console.WriteLine("  2) 🔍 Interaktiver Ordner-Explorer");
+                Console.WriteLine("  3) ✍️ Pfad manuell eingeben");
+                Console.Write("\nAuswahl (1-3) [Standard: 1]: ");
+                string choice = Console.ReadLine()?.Trim() ?? "";
+
+                if (choice == "2") {
+                    currentFolder = NavigateDirectory(currentFolder);
+                    Console.WriteLine($"\n  🎯 Quellordner ausgewählt: {currentFolder}");
+                    DisplayDirectoryPreview(currentFolder);
+                    onFolderChanged?.Invoke(currentFolder);
+                    return currentFolder;
+                }
+                else if (choice == "3") {
+                    // Proceed to manual input
+                }
+                else {
+                    DisplayDirectoryPreview(currentFolder);
+                    return currentFolder;
+                }
+            }
+
+            Console.Write("\nBitte neuen Pfad für den Quellordner eingeben: ");
+            string? newPath = Console.ReadLine()?.Trim();
+            if (!string.IsNullOrWhiteSpace(newPath)) {
+                newPath = newPath.Trim('\"', '\'');
+
+                if (!Directory.Exists(newPath)) {
+                    Console.Write($"Der Ordner '{newPath}' existiert nicht. Möchten Sie ihn erstellen? (j/n, Standard: j): ");
+                    string? createChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    if (createChoice != "n" && createChoice != "nein") {
+                        try {
+                            Directory.CreateDirectory(newPath);
+                            Console.WriteLine($"  [OK] Ordner erstellt: {newPath}");
                         }
-                        else {
-                            Console.WriteLine("  [INFO] Behalte bisherigen Ordner bei.");
+                        catch (Exception ex) {
+                            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
                             return currentFolder;
                         }
                     }
+                    else {
+                        Console.WriteLine("  [INFO] Behalte bisherigen Ordner bei.");
+                        return currentFolder;
+                    }
+                }
 
-                    currentFolder = newPath;
-                    Console.WriteLine($"\n  🎯 Neuer Quellordner ausgewählt: {currentFolder}");
-                    DisplayDirectoryPreview(currentFolder);
+                currentFolder = newPath;
+                Console.WriteLine($"\n  🎯 Neuer Quellordner ausgewählt: {currentFolder}");
+                DisplayDirectoryPreview(currentFolder);
 
-                    if (onFolderChanged != null) {
-                        Console.Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
-                        string? saveChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
-                        if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
-                            onFolderChanged.Invoke(currentFolder);
-                            Console.WriteLine("  💾 [INFO] Der neue Pfad wurde in der Konfiguration (JSON) gespeichert.");
-                        } else {
-                            Console.WriteLine("  [INFO] Die Änderung ist nur vorübergehend (wird nicht in JSON gespeichert).");
-                        }
+                if (onFolderChanged != null) {
+                    Console.Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+                    string? saveChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+                        onFolderChanged.Invoke(currentFolder);
+                        Console.WriteLine("  💾 [INFO] Der neue Pfad wurde in der Konfiguration (JSON) gespeichert.");
+                    } else {
+                        Console.WriteLine("  [INFO] Die Änderung ist nur vorübergehend (wird nicht in JSON gespeichert).");
                     }
                 }
             }
@@ -190,10 +322,107 @@ namespace FfmpegUtilities {
         }
 
         /// <summary>
+        /// [AI Context] Interactive CLI folder browser allowing the user to descend into subfolders, switch drives, or select directories.
+        /// </summary>
+        public static string NavigateDirectory(string startingDir) {
+            string currentPath = startingDir;
+            if (!Directory.Exists(currentPath)) {
+                currentPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            }
+
+            while (true) {
+                Console.WriteLine($"\n--------------------------------------------------");
+                Console.WriteLine($" 📂 Aktueller Pfad: {currentPath}");
+                Console.WriteLine($"--------------------------------------------------");
+
+                string[] subDirs = [];
+                try {
+                    subDirs = Directory.GetDirectories(currentPath);
+                }
+                catch (Exception ex) {
+                    Console.WriteLine($"  [WARNUNG] Fehler beim Lesen des Ordners: {ex.Message}");
+                }
+
+                Array.Sort(subDirs, StringComparer.OrdinalIgnoreCase);
+
+                Console.WriteLine(" Navigationstipps:");
+                Console.WriteLine("  [ENTER] / [s]  => Diesen Ordner auswählen");
+                Console.WriteLine("  [..]           => Einen Ordner nach oben gehen");
+                Console.WriteLine("  [d:] / [c:]    => Laufwerk wechseln (z. B. 'd:' eingeben)");
+                Console.WriteLine("  [Pfadname]     => Unterordner-Name direkt eingeben");
+
+                int shownLimit = 50;
+                int count = Math.Min(subDirs.Length, shownLimit);
+                if (count > 0) {
+                    Console.WriteLine($"\nUnterordner (1-{count}):");
+                    for (int i = 0; i < count; i++) {
+                        string name = Path.GetFileName(subDirs[i]);
+                        string cleaned = AutoExtraction.ExtractionHelpers.CleanCopySuffix(name);
+                        Console.WriteLine($"  {i + 1}) {cleaned}/");
+                    }
+                    if (subDirs.Length > shownLimit) {
+                        Console.WriteLine($"  ... und {subDirs.Length - shownLimit} weitere Unterordner");
+                    }
+                }
+                else {
+                    Console.WriteLine("\n(Keine Unterordner vorhanden)");
+                }
+
+                Console.Write("\nEingabe (Nummer, Befehl oder Pfad): ");
+                string input = Console.ReadLine()?.Trim() ?? "";
+
+                if (string.IsNullOrEmpty(input) || input.Equals("s", StringComparison.OrdinalIgnoreCase)) {
+                    return currentPath;
+                }
+
+                if (input == "..") {
+                    var parent = Directory.GetParent(currentPath);
+                    if (parent != null) {
+                        currentPath = parent.FullName;
+                    }
+                    else {
+                        Console.WriteLine("  [INFO] Übergeordneter Ordner nicht vorhanden (Root erreicht).");
+                    }
+                    continue;
+                }
+
+                if (input.Length == 2 && input[1] == ':' && char.IsLetter(input[0])) {
+                    string drivePath = input.ToUpper() + "\\";
+                    if (Directory.Exists(drivePath)) {
+                        currentPath = drivePath;
+                    }
+                    else {
+                        Console.WriteLine($"  [WARNUNG] Laufwerk '{input}' ist nicht bereit.");
+                    }
+                    continue;
+                }
+
+                if (int.TryParse(input, out int num) && num >= 1 && num <= count) {
+                    currentPath = subDirs[num - 1];
+                    continue;
+                }
+
+                string cleanInputPath = input.Trim('\"', '\'');
+                if (Directory.Exists(cleanInputPath)) {
+                    currentPath = Path.GetFullPath(cleanInputPath);
+                }
+                else {
+                    string combined = Path.Combine(currentPath, cleanInputPath);
+                    if (Directory.Exists(combined)) {
+                        currentPath = Path.GetFullPath(combined);
+                    }
+                    else {
+                        Console.WriteLine($"  [WARNUNG] Der Pfad '{input}' wurde nicht gefunden.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// [AI Context] Interactive prompt verifying or updating the configured model.
         /// Allows persisting the new model to configuration JSON.
         /// </summary>
-        public static string ConfirmOrChangeModel(string currentModel, string apiType, Action<string>? onModelChanged = null) {
+        public static string ConfirmOrChangeModel(string currentModel, string apiType, string[] availableModels, Action<string>? onModelChanged = null) {
             Console.WriteLine($"\n==================================================");
             Console.WriteLine($" 🤖 Voreingestelltes Modell ({apiType}): {currentModel}");
             Console.WriteLine($"==================================================");
@@ -203,39 +432,22 @@ namespace FfmpegUtilities {
             
             if (choice == "n" || choice == "nein" || choice == "no") {
                 Console.WriteLine("\nVerfügbare Modelle:");
-                Console.WriteLine(" 1) gemini-3.5-flash");
-                Console.WriteLine(" 2) gemini-3.1-flash-lite-preview");
-                Console.WriteLine(" 3) gemini-3-flash-preview");
-                Console.WriteLine(" 4) gemini-3.1-pro-preview");
-                Console.WriteLine(" 5) gemini-2.5-flash");
-                Console.WriteLine(" 6) gemini-2.5-flash-lite");
-                Console.WriteLine(" 7) gemini-2.5-pro");
-                Console.WriteLine(" 8) gemma-3-27b-it");
-                Console.WriteLine(" 9) gemini-1.5-flash");
-                Console.WriteLine("10) gemini-1.5-pro");
-                Console.WriteLine("11) gemini-robotics-er-1.5-preview");
-                Console.WriteLine("12) gemini-robotics-er-1.6-preview");
+                for (int i = 0; i < availableModels.Length; i++) {
+                    Console.WriteLine($" {i + 1}) {availableModels[i]}");
+                }
                 
-                Console.Write("\nBitte Modell auswählen (1-12) [Standard: 5 (gemini-2.5-flash)]: ");
+                Console.Write($"\nBitte Modell auswählen (1-{availableModels.Length}) [Standard: gemini-2.5-flash]: ");
                 string? modelChoice = Console.ReadLine()?.Trim();
                 
                 if (modelChoice == "exit" || modelChoice == "quit") return "__EXIT__";
                 
-                string newModel = modelChoice switch {
-                    "1" => "gemini-3.5-flash",
-                    "2" => "gemini-3.1-flash-lite-preview",
-                    "3" => "gemini-3-flash-preview",
-                    "4" => "gemini-3.1-pro-preview",
-                    "5" => "gemini-2.5-flash",
-                    "6" => "gemini-2.5-flash-lite",
-                    "7" => "gemini-2.5-pro",
-                    "8" => "gemma-3-27b-it",
-                    "9" => "gemini-1.5-flash",
-                    "10" => "gemini-1.5-pro",
-                    "11" => "gemini-robotics-er-1.5-preview",
-                    "12" => "gemini-robotics-er-1.6-preview",
-                    _ => "gemini-2.5-flash"
-                };
+                string newModel;
+                if (int.TryParse(modelChoice, out int index) && index >= 1 && index <= availableModels.Length) {
+                    newModel = availableModels[index - 1];
+                }
+                else {
+                    newModel = "gemini-2.5-flash";
+                }
                 
                 Console.WriteLine($"\n  🎯 Neues Modell ausgewählt: {newModel}");
                 

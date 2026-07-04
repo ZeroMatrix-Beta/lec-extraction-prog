@@ -44,3 +44,7 @@ Um C#-Compiler- und Analyzer-Warnungen (insbesondere `CA1860`, `SYSLIB1045`, `ID
    Methodensignaturen müssen sauber von ungenutzten Parametern befreit werden. Wenn Helper-Methoden umgeschrieben werden, sind alte Parameter sofort zu löschen.
 5. **Verpflichtender Build-Check vor Abschluss der Aufgabe:**
    Bevor eine KI ihre Arbeit an den Benutzer übergibt, **muss** zwingend `dotnet build` ausgeführt werden. Eine Aufgabe gilt erst dann als erledigt, wenn der Build exakt `0 Warnung(en)` und `0 Fehler` ausgibt. Jede auftretende Warnung ist sofort zu beheben.
+
+## 4. Zugriff auf externe Verzeichnisse
+**Regel:** Die KI benötigt keinen Lese- oder Schreibzugriff auf das externe Verzeichnis `C:\Users\miche\latex\prompt-engineering` oder dessen Unterordner. Die dortigen Prompt-Vorlagen werden außerhalb dieses Projekts verwaltet. Fordere niemals Berechtigungen für diesen Pfad an.
+

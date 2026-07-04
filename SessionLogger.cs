@@ -11,6 +11,7 @@ namespace Infrastructure;
 public class SessionLogger(SessionLoggerConfig config) {
     private readonly string _logFolderPath = config.LogFolderPath;
     private string _currentSessionLogPath = "";
+    public string CurrentSessionLogPath => _currentSessionLogPath;
     private string _currentSessionDateSuffix = "";
     private int _responseCount = 1;
     private bool _loadedSystemInstruction;

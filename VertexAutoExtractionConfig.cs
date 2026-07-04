@@ -17,6 +17,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string GcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
 
     public string SourceFolder { get; set; } = @"D:\lecture-videos\d-und-a\new";
+    public string[] PredefinedSourceFolders { get; set; } = [];
     public string TargetFolder { get; set; } = @"D:\lecture-videos\d-und-a\extracted";
 
     public string[] SystemInstructionPaths { get; set; } = [];
@@ -85,4 +86,8 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Optional framerate override for Google Gemini API video sampling.
     // [Human] Optionale Bildwiederholrate für die Gemini-API (z.B. 0.333 für 1 Frame alle 3 Sekunden).
     public double? GoogleVideoFps { get; set; }
+
+    public bool UseGoogleSearch { get; set; } = false;
+    public string FfmpegPreset { get; set; } = "fast";
+    public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

@@ -8,7 +8,7 @@ namespace DirectChatAiInteraction.AiStudio;
 /// </summary>
 public class DirectAiChatSessionAiStudioGenerationConfig {
     // [AI Context] Temperature (0.0 - 2.0). 0.0 = purely deterministic (best for strict code/math/transcripts). 1.0+ = highly creative (risk of hallucinations).
-    public float Temperature { get; set; } = 0.1f;
+    public float Temperature { get; set; } = 0.375f;
     // [AI Context] TopP (Nucleus Sampling). 0.0 - 1.0. Lower values restrict vocabulary to the most probable tokens, cutting off the "long tail" of creative/random words.
     public float TopP { get; set; } = 0.9f;
     // [AI Context] TopK. Limits the vocabulary to the top K most likely next tokens. TopK=1 is greedy decoding (perfect for LaTeX generation).
@@ -25,6 +25,7 @@ public class DirectAiChatSessionAiStudioGenerationConfig {
     public bool UseContextCaching { get; set; } = false;
     public int ContextCachingMinutes { get; set; } = 15;
     public int ContextCachingIncrementMinutes { get; set; } = 30;
+    public bool UseGoogleSearch { get; set; } = false;
 }
 
 /// <summary>
@@ -50,5 +51,6 @@ public class DirectAiChatSessionAiStudioConfig {
         @"D:\lecture-videos\d-und-a/new"
     ];
     public string Model { get; set; } = "gemini-2.5-flash";
+    public bool UseGoogleSearch { get; set; } = false;
     public DirectAiChatSessionAiStudioGenerationConfig AI { get; set; } = new DirectAiChatSessionAiStudioGenerationConfig();
 }

@@ -202,7 +202,7 @@ public class LatexRefinementSession {
             string finalFileName = Path.GetFileName(finalTexFile);
 
             // Create the wrapper .tex file
-            string wrapperFileName = $"step4-{baseName}-offset-main.tex";
+            string wrapperFileName = $"step4-{baseName}-offset-final-main.tex";
             string wrapperPath = Path.Combine(targetFolder, wrapperFileName);
 
             string wrapperContent = preambleText + "\n\\begin{document}\n\n" +
@@ -903,8 +903,8 @@ public class LatexRefinementSession {
             }
         }
 
-        string noPreambleFileName = $"step5-{baseName}-offset-last-fix.tex";
-        string standaloneFileName = $"step5-{baseName}-offset-last-fix-standalone.tex";
+        string noPreambleFileName = $"step5-{baseName}-offset-last_try.tex";
+        string standaloneFileName = $"step5-{baseName}-offset-last_try-main.tex";
         string outputFileName = standaloneFileName;
         string fullResponseText = "";
         int currentRequest = 1;
@@ -994,10 +994,10 @@ public class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(noPreamblePath, bodyOnlyText);
             Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (ohne Preamble) gespeichert unter: {noPreamblePath}");
 
-            Console.WriteLine("  [INFO] Starte PDF-Kompilierung für step5 (last fix)...");
+            Console.WriteLine("  [INFO] Starte PDF-Kompilierung für step5 (last try)...");
             var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);
             string retryLogContent = FormatLatexLog(retryLog, retrySuccess);
-            string retryLogPath = Path.Combine(targetFolder, "compile-log-step5-last-fix.txt");
+            string retryLogPath = Path.Combine(targetFolder, "compile-log-step5-last_try.txt");
             await System.IO.File.WriteAllTextAsync(retryLogPath, retryLogContent);
 
             if (retrySuccess) {
@@ -1014,7 +1014,7 @@ public class LatexRefinementSession {
         if (name.Length > 6 && name.StartsWith("step", StringComparison.OrdinalIgnoreCase) && char.IsDigit(name[4]) && name[5] == '-') {
             name = name[6..];
         }
-        string[] suffixes = ["-merged", "-speech_refined", "-final", "-last-fix", "-last-fix-standalone", "-final-attempt"];
+        string[] suffixes = ["-merged", "-speech_refined", "-final", "-last-fix", "-last-fix-standalone", "-final-attempt", "-final-main", "-last_try-main", "-last_try"];
         foreach (var suffix in suffixes) {
             if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
                 name = name[..^suffix.Length];

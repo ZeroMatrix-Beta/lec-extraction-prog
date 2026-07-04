@@ -41,7 +41,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     /// Returning boolean flag dictates if the parent loop should proceed or halt.
     /// [Human] Nimmt den 'attach' Befehl auseinander, zerlegt ihn in Dateien und die eigentliche Text-Frage.
     /// </summary>
-    public async Task<(bool success, string promptText, List<Part> parts)> ProcessAttachmentsAsync(string input, bool asSystemInstruction = false, string? baseDirectory = null) {
+    public async Task<(bool success, string promptText, List<Part> parts)> ProcessAttachmentsAsync(string input, bool asSystemInstruction = false, string? baseDirectory = null, CancellationToken cancellationToken = default) {
         var parts = new List<Part>();
 
         // [AI Context] Implements a custom syntax parser: "attach [file1, file2] | [prompt]"
@@ -62,7 +62,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             string? resolvedPath = ResolveFilePath(rawName, out List<string> searchedLocations);
 
             if (resolvedPath != null) {
-                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory);
+                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory, cancellationToken);
                 if (loaded) {
                     anyFileLoaded = true;
                     loadedNames.Add(Path.GetFileName(resolvedPath));
@@ -133,22 +133,23 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     /// Local text files are embedded raw as strings to save upload bandwidth. Media is pushed via Google File API or GCS buckets.
     /// [Human] Entscheidet anhand der Dateiendung: Ist es Text, wird es direkt in den Chat kopiert. Ist es Media, wird es hochgeladen.
     /// </summary>
-    private async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts, bool asSystemInstruction = false, string? baseDirectory = null) {
+    private async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts, bool asSystemInstruction = false, string? baseDirectory = null, CancellationToken cancellationToken = default) {
         string ext = Path.GetExtension(filePath).ToLower();
-        string displayPath = !string.IsNullOrEmpty(baseDirectory)
-            ? Path.GetRelativePath(baseDirectory, filePath).Replace('\\', '/')
-            : filePath.Replace('\\', '/');
+        string rawDisplayPath = !string.IsNullOrEmpty(baseDirectory)
+            ? Path.GetRelativePath(baseDirectory, filePath)
+            : filePath;
+        string displayPath = AutoExtraction.ExtractionHelpers.NormalizeRelativePath(rawDisplayPath);
 
         if (s_textExtensions.Contains(ext)) {
             if (asSystemInstruction) {
                 WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...");
-                string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
+                string fileContent = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
                 parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n{fileContent}\n</file>\n" });
                 return true;
             }
             else {
                 WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
-                string fileContent = await System.IO.File.ReadAllTextAsync(filePath);
+                string fileContent = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
                 parts.Add(new Part { Text = $"=== ATTACHED FILE: {Path.GetFileName(filePath)} ===\n{fileContent}\n=== END OF ATTACHED FILE ===\n\n" });
                 return true;
             }
@@ -173,7 +174,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
 
         if (asSystemInstruction && ext is ".jpg" or ".jpeg" or ".png" or ".webp") {
             WriteLine($"  [Lokal] Lese Bilddatei '{Path.GetFileName(filePath)}' für Inline System Instruction ein...");
-            byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath, cancellationToken);
             parts.Add(new Part { Text = $"\n<image path=\"{displayPath}\">\n" });
             parts.Add(new Part { InlineData = new Blob { Data = imageBytes, MimeType = mimeType } });
             parts.Add(new Part { Text = "\n</image>\n" });
@@ -187,7 +188,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             try {
                 var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
                 var uploadedFile = await ApiResilience.ExecuteWithRetryAsync(
-                    () => _client.Files.UploadAsync(filePath, config: uploadConfig),
+                    () => _client.Files.UploadAsync(filePath, config: uploadConfig, cancellationToken: cancellationToken),
                     maxRetries: 10,
                     retryContext: $"File API Upload: {Path.GetFileName(filePath)}"
                 );
@@ -203,21 +204,21 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
 
                 var fileInfo = await ApiResilience.ExecuteWithRetryAsync(
-                    () => _client.Files.GetAsync(remoteFileName),
+                    () => _client.Files.GetAsync(remoteFileName, config: null, cancellationToken: cancellationToken),
                     maxRetries: 10,
                     retryContext: $"Check File State: {Path.GetFileName(filePath)}"
                 );
                 while (string.Equals(fileInfo?.State?.ToString(), "PROCESSING", StringComparison.OrdinalIgnoreCase)) {
                     Write(".");
                     for (int i = 0; i < 50; i++) {
-                        await Task.Delay(100);
+                        await Task.Delay(100, cancellationToken);
                         if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                             Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
                         }
                     }
                     fileInfo = await ApiResilience.ExecuteWithRetryAsync(
-                        () => _client.Files.GetAsync(remoteFileName),
+                        () => _client.Files.GetAsync(remoteFileName, config: null, cancellationToken: cancellationToken),
                         maxRetries: 10,
                         retryContext: $"Check File State: {Path.GetFileName(filePath)}"
                     );
@@ -245,6 +246,11 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 return true;
             }
             catch (Exception ex) {
+                if (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
+                    WriteLine("\n[INFO] Datei-Upload vom Benutzer abgebrochen.");
+                    return false;
+                }
+
                 WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 WriteLine($"Originaler Fehlertext: {ex.Message}");
 
@@ -268,7 +274,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                     string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}";
 
                     using var fileStream = System.IO.File.OpenRead(filePath);
-                    await storageClient.UploadObjectAsync(_gcsBucketName, objectName, mimeType, fileStream);
+                    await storageClient.UploadObjectAsync(_gcsBucketName, objectName, mimeType, fileStream, cancellationToken: cancellationToken);
                     return $"gs://{_gcsBucketName}/{objectName}";
                 }, maxRetries: 10, retryContext: $"GCS Upload: {Path.GetFileName(filePath)}");
 
@@ -295,6 +301,11 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 return true;
             }
             catch (Exception ex) {
+                if (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
+                    WriteLine("\n[INFO] GCS Datei-Upload vom Benutzer abgebrochen.");
+                    return false;
+                }
+
                 WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 WriteLine($"Originaler Fehlertext: {ex.Message}");
 

@@ -7,6 +7,11 @@
     "API_KEY-ai-studio-test-project-3"
   ],
   "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
+  "PredefinedSourceFolders": [
+    "D:\\lecture-videos\\analysis2",
+    "D:\\lecture-videos\\grundstrukturen",
+    "D:\\lecture-videos\\d-und-a"
+  ],
   "TargetFolder": "",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
@@ -20,7 +25,7 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.35,
+  "Temperature": 0.375,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
@@ -35,5 +40,6 @@
   "NumberOfParts": 3,
   "OverlapSeconds": 240,
   "CreateLogFiles": true,
-  "GoogleVideoFps": 0.3
+  "GoogleVideoFps": 0.3,
+  "FfmpegPreset": "fast"
 }

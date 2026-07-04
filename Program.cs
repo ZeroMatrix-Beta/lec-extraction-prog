@@ -133,8 +133,8 @@ partial class Program {
             config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
-            });
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "Vertex AI Auto-Extraktion", newModel => {
+            }, config.PredefinedSourceFolders);
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "Vertex AI Auto-Extraktion", VertexAutoExtractionSession.AvailableModels, newModel => {
                 config.Model = newModel;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             });
@@ -153,8 +153,8 @@ partial class Program {
             config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
-            });
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "AI Studio Auto-Extraktion", newModel => {
+            }, config.PredefinedSourceFolders);
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "AI Studio Auto-Extraktion", AiStudioAutoExtractionSession.AvailableModels, newModel => {
                 config.Model = newModel;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             });
@@ -176,7 +176,6 @@ partial class Program {
 
     private static async Task RunLatexRefinementAsync() {
         var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
-        config.UseVertex = false;
         var extractionConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
         await AutoExtraction.RefinementUiHelper.StartInteractiveRefinementAsync(config, extractionConfig);
     }
@@ -208,13 +207,13 @@ partial class Program {
                     aiStudioConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
                         aiStudioConfig.SourceFolder = newFolder;
                         ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
-                    });
+                    }, aiStudioConfig.PredefinedSourceFolders);
                     break;
                 case "2":
                     vertexConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(vertexConfig.SourceFolder, newFolder => {
                         vertexConfig.SourceFolder = newFolder;
                         ConfigLoader<VertexAutoExtractionConfig>.Save(vertexConfig);
-                    });
+                    }, vertexConfig.PredefinedSourceFolders);
                     break;
                 case "3":
                     ffmpegConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(ffmpegConfig.SourceFolder, newFolder => {

@@ -21,6 +21,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     ];
     // [AI Context] Directory containing the raw, unprocessed lecture .mp4 files.
     public string SourceFolder { get; set; } = @"D:\lecture-videos\grundstrukturen";
+    public string[] PredefinedSourceFolders { get; set; } = [];
     // [AI Context] Directory where intermediate video chunks and final .tex files will be saved.
     public string TargetFolder { get; set; } = @"";
     // [AI Context] Absolute paths to the overarching Director's Cut persona and instruction markdown files.
@@ -84,4 +85,9 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Optional framerate override for Google Gemini API video sampling.
     // [Human] Optionale Bildwiederholrate für die Gemini-API (z.B. 0.333 für 1 Frame alle 3 Sekunden).
     public double? GoogleVideoFps { get; set; }
+
+    public bool UseGoogleSearch { get; set; } = false;
+    public string FfmpegPreset { get; set; } = "fast";
+    public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
+    public object Prompt { get; internal set; } = string.Empty;
 }

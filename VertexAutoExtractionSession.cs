@@ -25,6 +25,21 @@ namespace AutoExtraction;
 /// at the bottom of the file for compile-time regex generation (SYSLIB1045).
 /// </remarks>
 public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+    public static readonly string[] AvailableModels = [
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-3-flash-preview",
+        "gemini-3.1-pro-preview",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemma-3-27b-it",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-robotics-er-1.5-preview",
+        "gemini-robotics-er-1.6-preview"
+    ];
+
     private readonly Client _client = client;
     private readonly VertexAutoExtractionConfig _config = config;
     private readonly AttachmentHandler _attachmentHandler = attachmentHandler;
@@ -97,130 +112,219 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         await CleanupBucketAsync();
 
         try {
-
-            if (string.IsNullOrEmpty(_systemInstructionText)) {
-                if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Length != 0) {
-                    Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
-
-                    // Resolve all files from configured paths, handling directories
-                    var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
-
-                    if (resolvedInstructionFiles.Count > 0) {
-                        ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
-                        List<string> distinctHistoryFiles = [];
-                        if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
-                            distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-                            if (distinctHistoryFiles.Count > 0) {
-                                Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
-                                ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
-                            }
-                        }
-
-                        string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0
-                            ? "System Instructions und History laden? (j/n): "
-                            : "System Instructions laden? (j/n): ";
-                        Console.Write(promptText);
-
-                        if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                            var allPathsForIndex = new List<string>(resolvedInstructionFiles);
-                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                                allPathsForIndex.AddRange(distinctHistoryFiles);
-                            }
-                            string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
-
-                            var instructionBuilder = new System.Text.StringBuilder();
-                            instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
-                            instructionBuilder.AppendLine("## System Instructions");
-                            instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
-
-                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                                instructionBuilder.AppendLine("\n## Training History");
-                                instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
-                            }
-                            instructionBuilder.AppendLine("\n---\n");
-
-                            foreach (var filePath in resolvedInstructionFiles) {
-                                string fileName = Path.GetFileName(filePath);
-                                instructionBuilder.AppendLine($"\n---\nHere is the file `{fileName}`:\n");
-                                instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
-                                Console.WriteLine($"  [INFO] System Instruction geladen: {fileName}");
-                            }
-                            _systemInstructionText = instructionBuilder.ToString();
-
-                            if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                                Console.WriteLine("\n  [INFO] Lade History-Dateien für System Instruction ein...");
-                                string fileList = string.Join(", ", distinctHistoryFiles.Select(p => $"\"{p}\""));
-                                var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
-                                if (success && attachmentParts.Count > 0) {
-                                    _historyParts.AddRange(attachmentParts);
-                                    _historyWasLoaded = true;
-                                    Console.WriteLine("  [INFO] Dateien erfolgreich eingelesen und in die System Instruction eingebunden.");
-                                }
-                                else {
-                                    Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
-                    }
-                }
-            }
-
-            if (!_historyWasLoaded) {
-                var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-                if (distinctFiles.Count > 0) {
-                    Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-                    ExtractionHelpers.PrintFileTree(distinctFiles);
-                    if (_config.LoadHistoryIntoSystemInstruction) {
-                        Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
-                    }
-                    else {
-                        Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
-                    }
-
-                    if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                        if (_config.LoadHistoryIntoSystemInstruction) {
-                            Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
-                        }
-                        else {
-                            Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
-                        }
-                        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
-                        if (success && attachmentParts.Count > 0) {
-                            _historyParts.AddRange(attachmentParts);
-                            _historyWasLoaded = true;
-                            if (_config.LoadHistoryIntoSystemInstruction) {
-                                Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
-                            }
-                            else {
-                                Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-                                if (!await AcknowledgeHistoryAsync(fileList)) return;
-                            }
-                        }
-                        else {
-                            Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
-                        }
-                    }
-                }
-            }
-
-            if (_config.CreateLogFiles) {
-                await ExtractionHelpers.LogSystemInstructionDumpAsync(_config.TargetFolder, _systemInstructionText, _historyParts);
-            }
-
-            _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
-            _sessionLogger.InitializeSession();
-            await _sessionLogger.LogSessionSetupAsync();
-
-            await InitializeContextCachingAsync();
-
+            if (!await EnsureSessionSetupAsync()) return;
             await ProcessFilesAsync(files);
         }
         finally {
             // [AI Context] Guarantee that the bucket is cleaned up even if an exception occurs during history upload or processing.
+            await CleanupBucketAsync();
+        }
+    }
+
+    private async Task<bool> EnsureSessionSetupAsync() {
+        if (string.IsNullOrEmpty(_systemInstructionText)) {
+            if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Length != 0) {
+                Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
+
+                // Resolve all files from configured paths, handling directories
+                var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
+
+                if (resolvedInstructionFiles.Count > 0) {
+                    ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
+                    List<string> distinctHistoryFiles = [];
+                    if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
+                        distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+                        if (distinctHistoryFiles.Count > 0) {
+                            Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
+                            ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
+                        }
+                    }
+
+                    string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0
+                        ? "System Instructions und History laden? (j/n): "
+                        : "System Instructions laden? (j/n): ";
+                    Console.Write(promptText);
+
+                    if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                        var allPathsForIndex = new List<string>(resolvedInstructionFiles);
+                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
+                            allPathsForIndex.AddRange(distinctHistoryFiles);
+                        }
+                        string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
+
+                        var instructionBuilder = new System.Text.StringBuilder();
+                        instructionBuilder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS");
+                        instructionBuilder.AppendLine("IMPORTANT: You must read every single file provided in this system instruction completely and thoroughly for the protocol to work properly. Do not skip any files or parts under any circumstances.\n");
+                        instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
+                        instructionBuilder.AppendLine("## System Instructions");
+                        instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
+
+                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
+                            instructionBuilder.AppendLine("\n## Training History");
+                            instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
+                        }
+                        instructionBuilder.AppendLine("\n---\n");
+
+                        foreach (var filePath in resolvedInstructionFiles) {
+                            string rawRelPath = !string.IsNullOrEmpty(commonBase)
+                                ? Path.GetRelativePath(commonBase, filePath)
+                                : Path.GetFileName(filePath);
+                            string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                            instructionBuilder.AppendLine($"\n---\nHere is the file `{relPath}`:\n");
+                            instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
+                            Console.WriteLine($"  [INFO] System Instruction geladen: {relPath}");
+                        }
+                        _systemInstructionText = instructionBuilder.ToString();
+
+                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
+                            Console.WriteLine("\n  [INFO] Lade History-Dateien für System Instruction ein...");
+                            string fileList = string.Join(", ", distinctHistoryFiles.Select(p => $"\"{p}\""));
+                            var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
+                            if (success && attachmentParts.Count > 0) {
+                                _historyParts.AddRange(attachmentParts);
+                                _historyWasLoaded = true;
+                                Console.WriteLine("  [INFO] Dateien erfolgreich eingelesen und in die System Instruction eingebunden.");
+                            }
+                            else {
+                                Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
+                            }
+                        }
+                    }
+                }
+                else {
+                    Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
+                }
+            }
+        }
+
+        if (!_historyWasLoaded) {
+            var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+            if (distinctFiles.Count > 0) {
+                Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+                ExtractionHelpers.PrintFileTree(distinctFiles);
+                if (_config.LoadHistoryIntoSystemInstruction) {
+                    Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
+                }
+                else {
+                    Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
+                }
+
+                if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                    if (_config.LoadHistoryIntoSystemInstruction) {
+                        Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
+                    }
+                    else {
+                        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
+                    }
+                    string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
+                    if (success && attachmentParts.Count > 0) {
+                        _historyParts.AddRange(attachmentParts);
+                        _historyWasLoaded = true;
+                        if (_config.LoadHistoryIntoSystemInstruction) {
+                            Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
+                        }
+                        else {
+                            Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
+                            if (!await AcknowledgeHistoryAsync(fileList)) return false;
+                        }
+                    }
+                    else {
+                        Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+                    }
+                }
+            }
+        }
+
+        _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
+        _sessionLogger.InitializeSession();
+
+        if (_config.CreateLogFiles) {
+            string logDest = !string.IsNullOrWhiteSpace(_sessionLogger.CurrentSessionLogPath)
+                ? _sessionLogger.CurrentSessionLogPath
+                : _config.LogFolder;
+            await ExtractionHelpers.LogSystemInstructionDumpAsync(logDest, _systemInstructionText, _historyParts);
+        }
+
+        await _sessionLogger.LogSessionSetupAsync();
+        return true;
+    }
+
+    private async Task ProcessYouTubeTasksAsync() {
+        if (_config.YouTubeTasks == null || _config.YouTubeTasks.Length == 0) {
+            Console.WriteLine("[INFO] Keine YouTube-Videos in der Konfiguration (YouTubeTasks) gefunden.");
+            return;
+        }
+
+        Console.WriteLine($"\n[YouTube Mode] Starte Transkription für {_config.YouTubeTasks.Length} konfigurierte YouTube-Video(s)...");
+
+        await CleanupBucketAsync();
+        try {
+            if (!await EnsureSessionSetupAsync()) return;
+
+            if (_config.UseContextCaching) {
+                await InitializeContextCachingAsync();
+            }
+
+            foreach (var task in _config.YouTubeTasks) {
+                if (string.IsNullOrWhiteSpace(task.VideoUrl)) continue;
+
+                string baseName = string.IsNullOrWhiteSpace(task.OutputName) ? "youtube-lecture" : task.OutputName;
+                if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
+                    baseName = "step1-" + baseName;
+                }
+
+                string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
+                if (!Directory.Exists(fileSpecificOutputFolder)) {
+                    Directory.CreateDirectory(fileSpecificOutputFolder);
+                }
+
+                Console.WriteLine($"\n[YouTube Consumer] === Starte API-Extraktion für URL: {task.VideoUrl} ({baseName}) ===");
+                List<string> generatedTexFiles = [];
+                string fullOutputTextRaw = "";
+
+                for (int i = 0; i < task.Fragments.Count; i++) {
+                    var frag = task.Fragments[i];
+                    int partNum = i + 1;
+                    Console.WriteLine($"\n--- Verarbeite Fragment {partNum}/{task.Fragments.Count}: {frag.StartTime} bis {frag.EndTime} ({frag.PartTitle}) ---");
+
+                    string dateNotice = (partNum == 1)
+                        ? "Please note that since this is part 1 of the lecture, the date of the transcription is important."
+                        : $"The lecture took place... Please note that since this is part {partNum} of the lecture, the date is not so important (but tell it anyway).";
+
+                    string parsedPrompt = $"{_config.Prompt}\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}";
+
+                    var attachmentParts = new List<Part> {
+                        Part.FromUri(task.VideoUrl, "video/mp4")
+                    };
+
+                    var (texOutput, _, _, _) = await GenerateTexFromUploadedPartAsync(
+                        task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
+                    );
+
+                    if (!string.IsNullOrWhiteSpace(texOutput)) {
+                        string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
+                        fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
+
+                        string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
+                        string partContent = cleanTex;
+                        if (!partContent.StartsWith("% Startzeit:") && !partContent.StartsWith("% Zeitstempel:")) {
+                            partContent = $"% Startzeit: {frag.StartTime} | Ende: {frag.EndTime}\n\n" + partContent;
+                        }
+                        await System.IO.File.WriteAllTextAsync(targetPartPath, partContent);
+                        generatedTexFiles.Add(targetPartPath);
+                        Console.WriteLine($"  [Erfolg] Teildatei gespeichert unter: {targetPartPath}");
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(fullOutputTextRaw)) {
+                    string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
+                    await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
+                    Console.WriteLine($"\n🎉 Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
+                }
+            }
+        }
+        finally {
             await CleanupBucketAsync();
         }
     }
@@ -353,6 +457,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         Console.WriteLine("  3) 🎬 Einzelnes Video interaktiv auswählen und konvertieren");
         Console.WriteLine("  4) 🚀 Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
+        Console.WriteLine("  6) 📺 Konfigurierte YouTube-Videos transkribieren");
         Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.Model + ")");
         Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
         Console.WriteLine($"  9) ⏳ Context Caching verlängern (+{_config.ContextCachingIncrementMinutes} min Standard)");
@@ -403,8 +508,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
             }
             else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
-                var files = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-                await SetupContextAndProcessAsync(files);
+                var files = ExtractionHelpers.SelectAndFilterVideosForBatch(_config.SourceFolder);
+                if (files.Length > 0) {
+                    await SetupContextAndProcessAsync(files);
+                }
+            }
+            else if (normalizedInput == "6" || normalizedInput.Equals("youtube", StringComparison.OrdinalIgnoreCase)) {
+                await ProcessYouTubeTasksAsync();
             }
             else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
                 _debugChatHistory.Clear();
@@ -590,6 +700,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+        }
+
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             bool isGemini3 = _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
@@ -757,6 +871,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens // Use config value, or hardcode a smaller value for acknowledgment? Let's use config.
         };
+
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+        }
         if (!string.IsNullOrEmpty(_cachedContentName)) {
             requestConfig.CachedContent = _cachedContentName;
         }
@@ -1017,7 +1135,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
                 else {
                     Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
-                    videoToSplit = await FfmpegUtilities.FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true);
+                    videoToSplit = await FfmpegUtilities.FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true, preset: _config.FfmpegPreset);
                     if (videoToSplit == null) {
                         Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
                         continue;
@@ -1025,7 +1143,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
 
                 Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
-                var rawPartsWithTimes = await FfmpegUtilities.FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true);
+                var rawPartsWithTimes = await FfmpegUtilities.FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: _config.FfmpegPreset);
 
                 if (rawPartsWithTimes.Count > 0) {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = [];
@@ -1048,8 +1166,15 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
         bool hasErrors = false;
+        bool isFirstVideo = true;
 
         await foreach (var (file, fileSpecificOutputFolder, tmpFolderForFile, partsWithTimes, isCached, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
+            if (isFirstVideo) {
+                isFirstVideo = false;
+                Console.WriteLine("\n[Optimierung] Erstes Video wurde gesplittet. Erstelle jetzt Google Cloud Context Cache...");
+                await InitializeContextCachingAsync();
+            }
+
             // Ensure the file-specific output folder exists before starting processing
             if (!Directory.Exists(fileSpecificOutputFolder)) {
                 Directory.CreateDirectory(fileSpecificOutputFolder);
@@ -1396,17 +1521,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.";
 
-        if (partNumber == 1) {
-            prompt += "\n\nNote: 'Part 1' simply refers to the first video chunk of this specific recording, NOT necessarily the very first lecture of the entire course. Do NOT hallucinate introductory speeches or course overviews if they are not actually spoken in the video.";
-        }
-        else {
+        if (partNumber != 1) {
             prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
         }
 
         prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.";
-        prompt += "\n\nWhen in doubt, transcribe more content into the 'math-stroke' rather than less. Everything that is written on the blackboard must be present there. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
-
-        prompt += "\n\nCRITICAL RULE: The video is your primary source of truth. You are strongly encouraged to enrich the transcription by improving sentence structure, clarifying the professor's explanations, and logically formatting mathematical derivations. However, do NOT invent completely new topics or theorems that are entirely unprompted by the video content.";
+        prompt += "\n\nWhen in doubt, transcribe more content into the 'math-stroke' rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
@@ -1444,6 +1564,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             TopK = _config.TopK,
             MaxOutputTokens = _config.MaxOutputTokens
         };
+
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+        }
 
         if (!string.IsNullOrEmpty(_cachedContentName)) {
             requestConfig.CachedContent = _cachedContentName;
@@ -1501,6 +1625,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         while (true) {
             Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
+            GroundingMetadata? accumulatedGrounding = null;
             string chunkResp = "";
             int requestInputTokens = 0;
             int requestOutputTokens = 0;
@@ -1514,6 +1639,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                         Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
                         chunkResp += txt;
+
+                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+                        if (metadata != null) {
+                            accumulatedGrounding = metadata;
+                        }
+
                         if (chunk.UsageMetadata != null) {
                             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -1529,6 +1660,22 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
                 Console.WriteLine($"Finaler Fehler: {ex.Message}");
                 break;
+            }
+
+            if (accumulatedGrounding != null) {
+                Console.WriteLine("\n\n  🔍 [Google Search Grounding] Quellen:");
+                if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
+                    Console.WriteLine($"    Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+                }
+                if (accumulatedGrounding.GroundingChunks != null) {
+                    int refIdx = 1;
+                    foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
+                        if (chunkRef.Web != null) {
+                            Console.WriteLine($"     [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri}");
+                            refIdx++;
+                        }
+                    }
+                }
             }
 
             if (!callSuccess) {
