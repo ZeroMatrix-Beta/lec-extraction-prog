@@ -43,7 +43,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
   ];
     public string LogFolder { get; set; } = @"D:\gemini-logs";
     // [AI Context] Default model selection for developer-tier batch processing.
-    public float Temperature { get; set; } = 0.35f; // 1.0f is default.5  
+    public float Temperature { get; set; } = AppConfig.DefaultTemperature;
     public float TopP { get; set; } = 0.8f;
     public int TopK { get; set; } = 10;
     public int MaxOutputTokens { get; set; } = 65535; // Hardcoded for maximum output length
@@ -89,5 +89,4 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool UseGoogleSearch { get; set; } = false;
     public string FfmpegPreset { get; set; } = "fast";
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
-    public object Prompt { get; internal set; } = string.Empty;
 }

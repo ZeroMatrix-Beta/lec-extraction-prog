@@ -81,7 +81,18 @@ public static class FfmpegToolkit {
     /// while preserving perfectly understandable speech and legible board states.
     /// [Human] Der Standard-Prozess: Macht das Video schneller, reduziert es auf 1 Bild pro Sekunde (reicht für Tafeln!) und macht Audio zu Mono.
     /// </summary>
-    public static async Task<string?> ProcessGeneralVideoAsync(string inputFile, string destFolder, double speedMultiplier = 1.0, int fps = 1, bool downmixToMono = true, int? audioSampleRate = 48000, bool scaleTo720p = false, bool overwrite = false, string preset = "fast") {
+    public static async Task<string?> ProcessGeneralVideoAsync(
+        string inputFile, 
+        string destFolder, 
+        double speedMultiplier = 1.0, 
+        int fps = 1, 
+        bool downmixToMono = true, 
+        int? audioSampleRate = 48000, 
+        bool scaleTo720p = false, 
+        bool overwrite = false, 
+        string preset = "fast",
+        double? startTimeSeconds = null,
+        double? durationSeconds = null) {
         if (!File.Exists(inputFile)) {
             Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
             return null;
@@ -89,7 +100,15 @@ public static class FfmpegToolkit {
 
         string fileName = Path.GetFileNameWithoutExtension(inputFile);
         string speedStr = speedMultiplier.ToString(CultureInfo.InvariantCulture);
-        string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}-speed-{speedStr}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}-speed-{speedStr}-compressed", ".mp4");
+        
+        string rangeSuffix = "";
+        if (startTimeSeconds.HasValue || durationSeconds.HasValue) {
+            string startStr = startTimeSeconds.HasValue ? startTimeSeconds.Value.ToString(CultureInfo.InvariantCulture) : "0";
+            string durStr = durationSeconds.HasValue ? durationSeconds.Value.ToString(CultureInfo.InvariantCulture) : "full";
+            rangeSuffix = $"-range-{startStr}-{durStr}";
+        }
+        
+        string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}-speed-{speedStr}{rangeSuffix}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}-speed-{speedStr}{rangeSuffix}-compressed", ".mp4");
 
         // 1. Video Filter zusammenbauen
         // [AI Context] fps=1 is optimal for lectures; AI doesn't need 30fps to read a blackboard.
@@ -127,11 +146,23 @@ public static class FfmpegToolkit {
             if (!string.IsNullOrEmpty(audioFilter)) audioArgs += $" -af \"{audioFilter}\"";
         }
 
+        string rangeArgs = "";
+        if (startTimeSeconds.HasValue) {
+            rangeArgs += $"-ss {startTimeSeconds.Value.ToString(CultureInfo.InvariantCulture)} ";
+        }
+        if (durationSeconds.HasValue) {
+            rangeArgs += $"-t {durationSeconds.Value.ToString(CultureInfo.InvariantCulture)} ";
+        }
+
         // [AI Context] -g 30 allows for efficient inter-frame compression.
         // -crf 28, -preset veryslow and -tune stillimage drastically reduce file size for static lecture recordings.
-        string ffmpegArgs = $"-i \"{inputFile}\" -vf \"{videoFilter}\" -c:v libx264 -preset {preset} -crf 28 -tune stillimage -g 120 {audioArgs} -r {fps} \"{outputFile}\"";
+        string ffmpegArgs = $"{rangeArgs}-i \"{inputFile}\" -vf \"{videoFilter}\" -c:v libx264 -preset {preset} -crf 28 -tune stillimage -g 120 {audioArgs} -r {fps} \"{outputFile}\"";
 
-        Console.WriteLine($"\n  [FFmpegToolkit] Processing AI Video ({speedMultiplier}x Speed, {fps} FPS): {Path.GetFileName(inputFile)}...");
+        Console.WriteLine($"\n  [FFmpegToolkit] Processing AI Video ({speedMultiplier}x Speed, {fps} FPS, Preset={preset}): {Path.GetFileName(inputFile)}...");
+        if (startTimeSeconds.HasValue || durationSeconds.HasValue) {
+            Console.WriteLine($"                  Time Range: Start={startTimeSeconds ?? 0}s, Duration={durationSeconds?.ToString() ?? "Remainder"}s");
+        }
+        
         if (await RunFfmpegAsync(ffmpegArgs)) {
             Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
             return outputFile;

@@ -3,7 +3,7 @@ using System;
 namespace Config;
 
 public class BackendParameters {
-    public float Temperature { get; set; } = 0.375f;
+    public float Temperature { get; set; } = AppConfig.DefaultTemperature;
     public float TopP { get; set; } = 1.0f;
     public int TopK { get; set; } = 10;
     public int MaxOutputTokens { get; set; } = 65535;

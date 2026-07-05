@@ -25,14 +25,12 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string LogFolder { get; set; } = AppConfig.LogFolder;
 
     public string Model { get; set; } = "gemini-3.1-pro-preview";
-    public float Temperature { get; set; } = 0.5f; // Similar to AiStudioAutoExtractionConfig
+    public float Temperature { get; set; } = AppConfig.DefaultTemperature;
     public float TopP { get; set; } = AppConfig.DefaultTopP;
     public int TopK { get; set; } = AppConfig.DefaultTopK;
     public int MaxOutputTokens { get; set; } = 65535; // Similar to AiStudioAutoExtractionConfig
     public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
     public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
-
-    public string Prompt { get; set; } = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
     public double SpeedMultiplier { get; set; } = 1.2;
 
     // [AI Context] If true, generates parallel '-offset.tex' files where timestamps in the extracted LaTeX 

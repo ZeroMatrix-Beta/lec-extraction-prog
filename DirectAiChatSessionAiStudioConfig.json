@@ -10,7 +10,7 @@
     "D:\\lecture-videos\\d-und-a/new"
   ],
   "AI": {
-    "Temperature": 0.375,
+    "Temperature": 0.35,
     "TopP": 0.9,
     "TopK": 10,
     "MaxOutputTokens": 65535,

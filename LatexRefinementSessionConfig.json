@@ -1,30 +1,22 @@
 {
-  /*
-   * ==========================================
-   * Global Configurations
-   TODO: add all API Keys.
-   * ==========================================
-  */
-  "Enabled": true, // Optional: true = use this config, false = ignore this config
-  // ================================
-  "UseVertex": false, // true = use Vertex AI, false = use Google AI Studio
-  // =============================== 
-  "AiStudioApiKeyEnvName": "API_KEY-latex-refinement",
-  "AiStudioActiveApiProfile": 2, // 0 = Dedicated key (AiStudioApiKeyEnvName), 1-3 = General/Experimental profiles
+  "Enabled": true,
+  "UseVertex": false,
+  "AiStudioApiKeyEnvNames": [
+    "API_KEY-latex-refinement",
+    "API_KEY-ai-studio-test-project-1",
+    "API_KEY-ai-studio-test-project-2",
+    "API_KEY-ai-studio-test-project-3"
+  ],
+  "AiStudioActiveApiProfile": 0,
   "VertexProjectId": "vertex-ai-experiments-494320",
-  "VertexLocation": "global", // The region/location for Vertex AI
+  "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
-  "SourceFolder": "",
   "TargetFolder": "",
+  "SourceFolder": "",
   "PdfCompilation": {
     "Enabled": true,
     "PreamblePath": "pdf-preamble.tex"
   },
-  /*
-   * ==========================================
-   * Configurations for the Merging Step
-   * ==========================================
-   */
   "Step1MergeAndTimestamp": {
     "Enabled": true,
     "AttachAudio": true,
@@ -32,25 +24,21 @@
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
     "HistoryPreloadPaths": [],
-    // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.375,
+      "Temperature": 0.35,
       "TopP": 0.95,
       "TopK": 40,
-      "MaxOutputTokens": 65536, // NEVER CHANGE THIS LINE!!!
-      //"Model": "gemini-3-flash-preview",
+      "MaxOutputTokens": 65536,
       "Model": "gemini-3.5-flash",
-      //"Model": "gemini-3.1-pro-preview",
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
-      "UseContextCaching": false,
-      "ContextCachingMinutes": 15,
+      "UseContextCaching": true,
+      "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 10
+      "ContextCachingMinimumRemainingMinutes": 15
     },
-    // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
-      "Temperature": 0.375, // old 0.5
+      "Temperature": 0.35,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
@@ -58,26 +46,20 @@
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
-      "ContextCachingMinutes": 15,
+      "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 10
+      "ContextCachingMinimumRemainingMinutes": 15
     }
   },
-  /*
-   * ==========================================
-   * Configurations for the Speech Refinement Step
-   * ==========================================
-   */
   "Step2SpeechRefinement": {
     "Enabled": true,
-    "AttachAudio": true,
+    "AttachAudio": false,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
     "HistoryPreloadPaths": [],
-    // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.375, // old 0.5
+      "Temperature": 0.35,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -89,9 +71,8 @@
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 10
     },
-    // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
-      "Temperature": 0.375, // old 0.5,
+      "Temperature": 0.35,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
@@ -104,21 +85,15 @@
       "ContextCachingMinimumRemainingMinutes": 10
     }
   },
-  /*
-   * ==========================================
-   * Configurations for the Last Refinement Step
-   * ==========================================
-   */
   "Step3LastRefinement": {
     "Enabled": true,
-    "AttachAudio": true,
+    "AttachAudio": false,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
     ],
     "HistoryPreloadPaths": [],
-    // AI Studio API configurations if using the AI Studio ecosystem:
     "AiStudio": {
-      "Temperature": 0.375,
+      "Temperature": 0.35,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -130,9 +105,8 @@
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 10
     },
-    // Vertex AI configurations if using the Vertex AI ecosystem:
     "Vertex": {
-      "Temperature": 0.375,
+      "Temperature": 0.35,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,

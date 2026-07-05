@@ -1,12 +1,12 @@
 {
-  "CacheName": "projects/741173222859/locations/global/cachedContents/5339623747500376064",
+  "CacheName": "projects/741173222859/locations/global/cachedContents/3562094701043515392",
   "Model": "gemini-3.1-pro-preview",
-  "Temperature": 0.375,
+  "Temperature": 0.325,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "ThinkingBudget": 32768,
   "ThinkingLevel": "HIGH",
-  "SystemInstructionChecksum": "4474143AEEE92781AE98E466F68FCB86010117099D7BE8DDD29C52480CB8E140",
-  "ExpireTimeUtc": "2026-07-04T14:06:40.414399Z"
+  "SystemInstructionChecksum": "6A118692F279DD46569E764C77B7AD8EA208BFF76A516EBB55224DE4033F9665",
+  "ExpireTimeUtc": "2026-07-05T10:36:42.93165Z"
 }

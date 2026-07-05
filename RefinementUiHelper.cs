@@ -14,6 +14,11 @@ namespace AutoExtraction {
 
             // Hot-reload the config from disk so manual edits to the .json file are picked up immediately
             refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
+            if (!global::Program.Activate_Vertex && refinementConfig.UseVertex) {
+                Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false)! Wechsle für LaTeX Refinement automatisch auf AI Studio.");
+                refinementConfig.UseVertex = false;
+                ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
+            }
 
             while (true) {
                 string backendDisplay = refinementConfig.UseVertex ? "Vertex AI" : "AI Studio";
@@ -44,6 +49,10 @@ namespace AutoExtraction {
                 if (string.IsNullOrEmpty(menuChoice)) menuChoice = "1";
 
                 if (menuChoice == "2") {
+                    if (!global::Program.Activate_Vertex && !refinementConfig.UseVertex) {
+                        Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false). Wechsel auf Vertex nicht möglich.");
+                        continue;
+                    }
                     refinementConfig.UseVertex = !refinementConfig.UseVertex;
                     ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
                     Console.WriteLine($"  [INFO] Backend gewechselt auf: {(refinementConfig.UseVertex ? "Vertex AI" : "AI Studio")}");
@@ -191,7 +200,7 @@ namespace AutoExtraction {
             Console.WriteLine($"\n[INFO] Starte Refinement für: {Path.GetFileName(selectedTex)}");
 
             Client refinementClient;
-            if (refinementConfig.UseVertex) {
+            if (refinementConfig.UseVertex && global::Program.Activate_Vertex) {
                 refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildVertexClient(
                     refinementConfig.VertexProjectId,
                     refinementConfig.VertexLocation

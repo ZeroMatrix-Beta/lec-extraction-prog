@@ -15,7 +15,11 @@ using Infrastructure;
 /// either to the FFmpeg processing toolkit or the Gemini chat session based on user input.
 /// [Human] Die Hauptklasse, die beim Start des Programms als erstes aufgerufen wird.
 /// </summary>
-partial class Program {
+public partial class Program {
+    // [AI Context] Master kill switch for Google Cloud Vertex AI to prevent accidental billing/costs.
+    // [Human] Wenn auf false gesetzt, sind sämtliche Vertex AI Funktionen in der App (Chat, Extraktion, Refinement) strikt deaktiviert.
+    public static bool Activate_Vertex { get; set; } = false;
+
     static async Task Main() {
         try {
             // [AI Context] Bootstrapper. Demonstrates manual Dependency Injection (DI) pattern.
@@ -33,7 +37,8 @@ partial class Program {
                 Console.WriteLine("==================================================");
                 Console.WriteLine("Bitte gewünschten Modus auswählen:");
                 Console.WriteLine("  1) 🌐 Google AI Studio (API Key / Developer Endpoints)");
-                Console.WriteLine("  2) ☁️ Google Cloud Vertex AI (Enterprise)");
+                string vertexDisplay = Activate_Vertex ? "2) ☁️ Google Cloud Vertex AI (Enterprise)" : "2) ☁️ Google Cloud Vertex AI [DEAKTIVIERT - Kostenschutz]";
+                Console.WriteLine($"  {vertexDisplay}");
                 Console.WriteLine("  3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)");
                 Console.WriteLine("--------------------------------------------------");
                  Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
@@ -53,6 +58,10 @@ partial class Program {
                         await RunDirectAiStudioChatAsync();
                         break;
                     case "2":
+                        if (!Activate_Vertex) {
+                            Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false). Bitte nutze Google AI Studio (Option 1).");
+                            break;
+                        }
                         await RunDirectVertexChatAsync();
                         break;
                     case "3":
@@ -120,15 +129,20 @@ partial class Program {
     }
 
     private static async Task RunAutoExtractionAsync() {
-        Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
-        Console.WriteLine(" 1) Google AI Studio");
-        Console.WriteLine(" 2) Google Cloud Vertex AI");
-        Console.Write("Wahl (1-2) oder 'exit': ");
-        string? extChoice = Console.ReadLine()?.Trim().ToLower();
+        string? extChoice = "1";
+        if (Activate_Vertex) {
+            Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
+            Console.WriteLine(" 1) Google AI Studio");
+            Console.WriteLine(" 2) Google Cloud Vertex AI");
+            Console.Write("Wahl (1-2) oder 'exit': ");
+            extChoice = Console.ReadLine()?.Trim().ToLower();
+            if (extChoice == "exit" || extChoice == "quit") return;
+        }
+        else {
+            Console.WriteLine("\n[Kostenschutz] Vertex AI ist deaktiviert (Activate_Vertex = false). Starte automatisch mit Google AI Studio...");
+        }
 
-        if (extChoice == "exit" || extChoice == "quit") return;
-
-        if (extChoice == "2") {
+        if (extChoice == "2" && Activate_Vertex) {
             var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
             config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;

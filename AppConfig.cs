@@ -1,7 +1,8 @@
 using System;
 using System.IO;
 using Microsoft.Extensions.Configuration;
-
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using DirectChatAiInteraction.AiStudio;
 
 
@@ -39,25 +40,39 @@ public static class ConfigLoader<T> where T : class, new() {
         return config;
     }
 
-    // [AI Context] Note on JsonSerializerOptions Caching:
-    // Instantiating JsonSerializerOptions is surprisingly expensive.
-    // By creating it once as a 'static readonly' field, we avoid creating a new instance
-    // every time the config is saved, significantly improving performance (fixes CA1869).
-    private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+    private static string SerializePreservingComments(string filePath, T config) {
+        if (File.Exists(filePath)) {
+            try {
+                string existingJson = File.ReadAllText(filePath);
+                var job = JObject.Parse(existingJson, new JsonLoadSettings { CommentHandling = CommentHandling.Load });
+                var updatedJob = JObject.FromObject(config);
+                job.Merge(updatedJob, new JsonMergeSettings {
+                    MergeArrayHandling = MergeArrayHandling.Replace,
+                    MergeNullValueHandling = MergeNullValueHandling.Merge
+                });
+                return job.ToString(Formatting.Indented);
+            }
+            catch {
+                // Fallback if existing JSON was malformed
+            }
+        }
+        return JsonConvert.SerializeObject(config, Formatting.Indented);
+    }
 
     public static void Save(T config) {
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
         string fileName = $"{typeof(T).Name}.json";
         string filePath = Path.Combine(basePath, fileName);
 
-        string jsonString = System.Text.Json.JsonSerializer.Serialize(config, _jsonOptions);
+        string jsonString = SerializePreservingComments(filePath, config);
         File.WriteAllText(filePath, jsonString);
 
         try {
             string currentDirFile = Path.Combine(Directory.GetCurrentDirectory(), fileName);
             if (!string.Equals(Path.GetFullPath(filePath), Path.GetFullPath(currentDirFile), StringComparison.OrdinalIgnoreCase)
                 && File.Exists(currentDirFile)) {
-                File.WriteAllText(currentDirFile, jsonString);
+                string currentDirJson = SerializePreservingComments(currentDirFile, config);
+                File.WriteAllText(currentDirFile, currentDirJson);
             }
         }
         catch (Exception ex) {
@@ -81,7 +96,7 @@ public class AppConfigOptions {
     public string VertexGcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
     public string DefaultModel { get; set; } = "gemini-3.5-flash"; // This is for other sessions
     public string RefinementModel { get; set; } = "gemini-3.5-flash"; // This is for LatexRefinement
-    public float DefaultTemperature { get; set; } = 0.65f;
+    public float DefaultTemperature { get; set; } = 0.35f;
     public float DefaultTopP { get; set; } = 0.90f;
     public int DefaultTopK { get; set; } = 40;
     public int DefaultMaxOutputTokens { get; set; } = 65535;

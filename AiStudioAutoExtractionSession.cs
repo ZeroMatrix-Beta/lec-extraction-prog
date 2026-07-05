@@ -142,8 +142,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
 
                         var instructionBuilder = new System.Text.StringBuilder();
-                        instructionBuilder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS");
-                        instructionBuilder.AppendLine("IMPORTANT: You must read every single file provided in this system instruction completely and thoroughly for the protocol to work properly. Do not skip any files or parts under any circumstances.\n");
+                        instructionBuilder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
+                        instructionBuilder.AppendLine("IMPORTANT: The guidelines, formatting specifications, and syntax instructions contained in these system instruction files are absolute and strictly non-negotiable. They must take absolute precedence over any prompt guidelines or inputs. Do not skip any files or parts under any circumstances.\n");
+                        instructionBuilder.AppendLine("In order to fulfill the job of creating a high-value educational masterpiece that safely compiles, you need to know the file structure of the system prompt and read all of those files carefully.\n");
                         instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
                         instructionBuilder.AppendLine("## System Instructions");
                         instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
@@ -152,14 +153,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                             instructionBuilder.AppendLine("\n## Training History");
                             instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
                         }
-                        instructionBuilder.AppendLine("\n---\n");
+                        instructionBuilder.AppendLine("\n******\n------\n******\n");
 
                         foreach (var filePath in resolvedInstructionFiles) {
                             string rawRelPath = !string.IsNullOrEmpty(commonBase)
                                 ? Path.GetRelativePath(commonBase, filePath)
                                 : Path.GetFileName(filePath);
                             string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
-                            instructionBuilder.AppendLine($"\n---\nHere is the file `{relPath}`:\n");
+                            instructionBuilder.AppendLine($"\n******\n------\n******\nHere is the file `{relPath}`:\n");
                             instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
                             Console.WriteLine($"  [INFO] System Instruction geladen: {relPath}");
                         }
@@ -240,16 +241,40 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     }
 
     private async Task ProcessYouTubeTasksAsync() {
-        if (_config.YouTubeTasks == null || _config.YouTubeTasks.Length == 0) {
-            Console.WriteLine("[INFO] Keine YouTube-Videos in der Konfiguration (YouTubeTasks) gefunden.");
+        List<YouTubeTranscriptionTask> tasksToProcess = [];
+
+        if (_config.YouTubeTasks != null && _config.YouTubeTasks.Length > 0) {
+            Console.WriteLine($"\n[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
+            Console.Write("Möchtest du diese ausführen (j/y) oder interaktiv eine neue YouTube-URL eingeben (u/url)? [Standard: j]: ");
+            string choice = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
+            if (choice == "u" || choice == "url" || choice == "n") {
+                var interactiveTask = ExtractionHelpers.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
+                if (interactiveTask != null) {
+                    tasksToProcess.Add(interactiveTask);
+                }
+            }
+            else {
+                tasksToProcess.AddRange(_config.YouTubeTasks);
+            }
+        }
+        else {
+            Console.WriteLine("\n[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration gefunden.");
+            var interactiveTask = ExtractionHelpers.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
+            if (interactiveTask != null) {
+                tasksToProcess.Add(interactiveTask);
+            }
+        }
+
+        if (tasksToProcess.Count == 0) {
+            Console.WriteLine("[INFO] Keine YouTube-Aufgaben zum Verarbeiten.");
             return;
         }
 
-        Console.WriteLine($"\n[YouTube Mode] Starte Transkription für {_config.YouTubeTasks.Length} konfigurierte YouTube-Video(s)...");
+        Console.WriteLine($"\n[YouTube Mode] Starte Transkription für {tasksToProcess.Count} YouTube-Video(s)...");
 
         if (!await EnsureSessionSetupAsync()) return;
 
-        foreach (var task in _config.YouTubeTasks) {
+        foreach (var task in tasksToProcess) {
             if (string.IsNullOrWhiteSpace(task.VideoUrl)) continue;
 
             string baseName = string.IsNullOrWhiteSpace(task.OutputName) ? "youtube-lecture" : task.OutputName;
@@ -275,7 +300,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     ? "Please note that since this is part 1 of the lecture, the date of the transcription is important."
                     : $"The lecture took place... Please note that since this is part {partNum} of the lecture, the date is not so important (but tell it anyway).";
 
-                string parsedPrompt = $"{_config.Prompt}\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}";
+                string parsedPrompt = $"Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}";
 
                 var attachmentParts = new List<Part> {
                     Part.FromUri(task.VideoUrl, "video/mp4")
@@ -320,9 +345,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         Console.WriteLine("  3) 🎬 Einzelnes Video interaktiv auswählen und konvertieren");
         Console.WriteLine("  4) 🚀 Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
-        Console.WriteLine("  6) 🔑 API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
+        Console.WriteLine("  6) 📺 YouTube-Video transkribieren (per URL oder Config)");
         Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.Model + ")");
         Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
+        Console.WriteLine("  9) 🔑 API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
         Console.WriteLine("\n💡 Hinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
     }
@@ -377,7 +403,18 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 _debugChatHistory.Clear();
                 Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
             }
-            else if (normalizedInput == "6" || normalizedInput.StartsWith("6 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
+            else if (normalizedInput == "6" || normalizedInput.Equals("youtube", StringComparison.OrdinalIgnoreCase)) {
+                await ProcessYouTubeTasksAsync();
+            }
+            else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
+                _config.Model = SelectModel();
+                ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt und in Konfiguration gespeichert.");
+            }
+            else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
+                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
+            }
+            else if (normalizedInput == "9" || normalizedInput.StartsWith("9 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";
                 if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
                     val = normalizedInput["change-key".Length..].Trim();
@@ -385,7 +422,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
                     val = normalizedInput["change key".Length..].Trim();
                 }
-                else if (normalizedInput.StartsWith("6 ")) {
+                else if (normalizedInput.StartsWith("9 ")) {
                     val = normalizedInput[2..].Trim();
                 }
 
@@ -414,14 +451,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 else {
                     Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
                 }
-            }
-            else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
-                _config.Model = SelectModel();
-                ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
-                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt und in Konfiguration gespeichert.");
-            }
-            else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
-                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
             }
             else {
                 await DebugChatAsync(input); // Chat erhält den originalen Input
@@ -484,7 +513,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         };
 
         if (_config.UseGoogleSearch) {
-            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+            requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
         if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
@@ -652,7 +681,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         };
 
         if (_config.UseGoogleSearch) {
-            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+            requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
         if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
             var sysParts = new List<Part>();
@@ -1252,7 +1281,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = string.IsNullOrEmpty(dateInfo.Weekday) ? dateInfo.DateString : $"{dateInfo.Weekday}, {dateInfo.DateString}";
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
-        
+
         if (partNumber == 1) {
             prompt = $"The lecture being transcribed is from {dateContext}. Please note that the date of the lecture is important since this is part 1 of the lecture. " + prompt;
         }
@@ -1264,14 +1293,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
 
-        prompt += $"\n\nAs a reminder: You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.";
+        prompt += "\n\n========================================= CONTEXT & PARAMETERS =========================================\n" +
+                  "IMPORTANT: The System Instructions (System Prompt) contain the absolute rules, syntax specifications, and constraints for this transcription and MUST be followed strictly. The parameters below only specify details for this video fragment:\n\n" +
+                  $"* You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.\n" +
+                  $"* Duration & Timestamps: Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).\n";
 
         if (partNumber != 1) {
-            prompt += "\n\nNote: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.";
+            prompt += "* Segment Start: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.\n";
         }
 
-        prompt += $"\n\nIMPORTANT: Do NOT calculate any time offset for the 'spoken-clean' environment. You may start normally at 00:00:00. Ensure that the final timestamp in your very last `spoken-clean` block perfectly matches the {durationString} length of this video segment! Just transcribe the timestamps exactly as they appear in the video player.";
-        prompt += "\n\nWhen in doubt, transcribe more content into the 'math-stroke' rather than less. Do NOT attempt to merge the current part with the previous parts. A dedicated post-processing AI-routine will handle the final merging and duplicate removal later. Just focus on transcribing the currently uploaded video. Ensure that related mathematical derivations and explanations are grouped together within a single 'math-stroke' environment to keep the logical flow cohesive, self-contained and unbroken.";
+        prompt += "* Merging & Scope: Do NOT attempt to merge the current part with the previous parts. Focus solely on transcribing this fragment. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.\n" +
+                  "========================================================================================================";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
@@ -1311,7 +1343,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         };
 
         if (_config.UseGoogleSearch) {
-            requestConfig.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+            requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
         if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {

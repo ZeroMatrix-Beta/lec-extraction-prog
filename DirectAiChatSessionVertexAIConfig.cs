@@ -8,7 +8,7 @@ namespace DirectChatAiInteraction.Vertex;
 /// </summary>
 public class DirectAiChatSessionVertexAIConfig {
     // [AI Context] Temperature (0.0 - 2.0). 0.0 = purely deterministic.
-    public float Temperature { get; set; } = 0.375f;
+    public float Temperature { get; set; } = AppConfig.DefaultTemperature;
     // [AI Context] TopP (Nucleus Sampling). 0.0 - 1.0.
     public float TopP { get; set; } = 0.9f;
     // [AI Context] TopK. Limits the vocabulary. TopK=1 is greedy decoding.

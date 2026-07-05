@@ -72,29 +72,29 @@ public class LatexRefinementSession {
     /// </summary>
     public async Task StartAsync() {
         if (!_config.Enabled) {
-            Console.WriteLine("\n[INFO] LaTeX Refinement ist in der Konfiguration (LatexRefinementSessionConfig) deaktiviert. Überspringe die Ausführung.");
+            Console.WriteLine("\n[LaTeX Refinement] LaTeX Refinement ist in der Konfiguration deaktiviert. Überspringe die Ausführung.");
             return;
         }
 
         if ((_singleFilePathToProcess != null || _multipleFilesToProcess != null) && _extractionConfig != null) {
             if (!_extractionConfig.GoIntoLatexRefinement || !_extractionConfig.GenerateOffsetFiles || !_extractionConfig.GenerateAudioFile) {
-                Console.WriteLine("\n[WARNUNG] LaTeX Refinement übersprungen.");
+                Console.WriteLine("\n[LaTeX Refinement] [WARNUNG] LaTeX Refinement übersprungen.");
                 Console.WriteLine("  Grund: Die Voraussetzungen in AutoExtractionConfig sind nicht erfüllt.");
                 return;
             }
 
             if (_singleFilePathToProcess != null && !System.IO.File.Exists(_singleFilePathToProcess)) {
-                Console.WriteLine($"\n[WARNUNG] LaTeX Refinement übersprungen. Die Zieldatei fehlt: {_singleFilePathToProcess}");
+                Console.WriteLine($"\n[LaTeX Refinement] [WARNUNG] LaTeX Refinement übersprungen. Die Zieldatei fehlt: {_singleFilePathToProcess}");
                 return;
             }
 
             if (_audioFilePath == null || !System.IO.File.Exists(_audioFilePath)) {
-                Console.WriteLine($"\n[INFO] LaTeX Refinement wird ohne Audio-Datei ausgeführt (Pfad: {_audioFilePath ?? "null"}).");
+                Console.WriteLine($"\n[LaTeX Refinement] [INFO] Ausführung erfolgt ohne Audio-Datei (Pfad: {_audioFilePath ?? "null"}).");
             }
         }
 
         Console.WriteLine("\n==================================================");
-        Console.WriteLine("   Starte LaTeX Refinement Pipeline");
+        Console.WriteLine("   Starte [LaTeX Refinement] Pipeline");
         Console.WriteLine("==================================================");
 
         await ExecutePipelineAsync();
@@ -122,7 +122,7 @@ public class LatexRefinementSession {
         else {
             string sourceFolder = _config.SourceFolder;
             if (!Directory.Exists(sourceFolder)) {
-                Console.WriteLine("Ordner nicht gefunden. Bitte prüfe den SourceFolder in der Konfiguration.");
+                Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Ordner nicht gefunden. Bitte prüfe den SourceFolder in der Konfiguration.");
                 return;
             }
             currentFiles = Directory.GetFiles(sourceFolder, "*.tex");
@@ -135,14 +135,14 @@ public class LatexRefinementSession {
         int partsCount = _extractionConfig?.NumberOfParts ?? currentFiles.Length;
         if (_config.Step1MergeAndTimestamp.Enabled) {
             if (partsCount <= 1) {
-                Console.WriteLine("\n--- [Schritt 1: Merge & Timestamp Control] ---");
+                Console.WriteLine("\n--- [LaTeX Refinement - Schritt 1: Merge & Zeitstempel-Abgleich] ---");
                 Console.WriteLine($"  [INFO] NumberOfParts = {partsCount} (<= 1). Ein Merger ist nicht erforderlich. Überspringe Schritt 1.");
             }
             else {
-                Console.WriteLine("\n--- [Schritt 1: Merge & Timestamp Control] ---");
+                Console.WriteLine("\n--- [LaTeX Refinement - Schritt 1: Merge & Zeitstempel-Abgleich] ---");
                 string? step1Output = await ExecuteStep1MergeAsync(currentFiles, _audioFilePath, baseName, targetFolder);
                 if (step1Output == null) {
-                    Console.WriteLine("[FEHLER] Schritt 1 fehlgeschlagen. Breche Pipeline ab.");
+                    Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Schritt 1 (Merge) fehlgeschlagen. Breche Pipeline ab.");
                     return;
                 }
                 currentFiles = [step1Output];
@@ -151,10 +151,10 @@ public class LatexRefinementSession {
 
         // Step 2: Speech Refinement
         if (_config.Step2SpeechRefinement.Enabled) {
-            Console.WriteLine("\n--- [Schritt 2: Speech Refinement] ---");
+            Console.WriteLine("\n--- [LaTeX Refinement - Schritt 2: Textkorrektur & Grammatik-Polishing] ---");
             string? step2Output = await ExecuteStep2SpeechRefinementAsync(currentFiles[0], _audioFilePath, baseName, targetFolder);
             if (step2Output == null) {
-                Console.WriteLine("[FEHLER] Schritt 2 fehlgeschlagen. Breche Pipeline ab.");
+                Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Schritt 2 (Speech Refinement) fehlgeschlagen. Breche Pipeline ab.");
                 return;
             }
             currentFiles = [step2Output];
@@ -162,10 +162,28 @@ public class LatexRefinementSession {
 
         // Step 3: Last Refinement
         if (_config.Step3LastRefinement.Enabled) {
-            Console.WriteLine("\n--- [Schritt 3: Last Refinement] ---");
-            var finalOutput = await ExecuteStep3LastRefinementAsync(currentFiles[0], baseName, targetFolder);
+            Console.WriteLine("\n--- [LaTeX Refinement - Schritt 3: Endprüfung & Validierung] ---");
+            Console.WriteLine("  [INFO] Führe Probe-Kompilierung des aktuellen Dokuments aus...");
+            bool alreadyCompiles = await CompilePdfAsync(currentFiles[0], baseName, targetFolder, "step3-precheck", allowRetryOnFailure: false);
+            
+            string compileLogPath = Path.Combine(targetFolder, "step3-precheck-compile-log.txt");
+            string compileLog = System.IO.File.Exists(compileLogPath) ? await System.IO.File.ReadAllTextAsync(compileLogPath) : "";
+
+            if (alreadyCompiles) {
+                Console.WriteLine("  [INFO] Probe-Kompilierung erfolgreich! Keine Syntaxfehler vorhanden. Gebe diese Info an Schritt 3 weiter.");
+            }
+            else {
+                Console.WriteLine("  [INFO] Probe-Kompilierung meldet Syntaxfehler. Gebe das Fehlerprotokoll an Schritt 3 weiter zur Korrektur.");
+            }
+
+            // [AI Context] Clean up temporary test-compile files (pdf, aux, log, out, toc, wrapper tex, precheck log)
+            // so they do not clutter the output directory before final Step 4 PDF generation.
+            CleanupPrecheckFiles(targetFolder, currentFiles[0], "step3-precheck");
+
+            Console.WriteLine("  [INFO] Starte finalen Durchlauf für Schritt 3 (Last Refinement)...");
+            var finalOutput = await ExecuteStep3LastRefinementAsync(currentFiles[0], baseName, targetFolder, alreadyCompiles, compileLog);
             if (finalOutput == null) {
-                Console.WriteLine("[FEHLER] Schritt 3 fehlgeschlagen.");
+                Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Schritt 3 (Last Refinement) fehlgeschlagen.");
             }
             else {
                 currentFiles = [finalOutput];
@@ -174,27 +192,27 @@ public class LatexRefinementSession {
 
         // Step 4: PDF Compilation
         if (_config.PdfCompilation?.Enabled == true) {
-            Console.WriteLine("\n--- [Schritt 4: PDF Generierung] ---");
+            Console.WriteLine("\n--- [LaTeX Refinement - Schritt 4: PDF Generierung] ---");
             await CompilePdfAsync(currentFiles[0], baseName, targetFolder);
         }
 
-        Console.WriteLine("\n[AutoExtraction] LaTeX Refinement Pipeline erfolgreich abgeschlossen!");
+        Console.WriteLine("\n[LaTeX Refinement] LaTeX Refinement Pipeline erfolgreich abgeschlossen!\n");
     }
 
     /// <summary>
     /// [AI Context] Compiles the final merged LaTeX file into a PDF using local pdflatex. Uses a wrapper file to inject the preamble.
     /// [Human] Baut das fertige LaTeX-Skript mithilfe einer Preamble (Design-Vorlage) zu einem PDF zusammen.
     /// </summary>
-    private async Task CompilePdfAsync(string finalTexFile, string baseName, string targetFolder) {
+    private async Task<bool> CompilePdfAsync(string finalTexFile, string baseName, string targetFolder, string stepPrefix = "step4", bool allowRetryOnFailure = true) {
         if (!System.IO.File.Exists(finalTexFile)) {
-            Console.WriteLine($"[FEHLER] Kann PDF nicht generieren: {finalTexFile} existiert nicht.");
-            return;
+            Console.WriteLine($"\n[LaTeX Refinement] [FEHLER] Kann PDF nicht generieren: {finalTexFile} existiert nicht.");
+            return false;
         }
 
         string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
         if (!System.IO.File.Exists(preamblePath)) {
-            Console.WriteLine($"[WARNUNG] Preamble-Datei ({preamblePath}) nicht gefunden. Überspringe PDF-Generierung.");
-            return;
+            Console.WriteLine($"\n[LaTeX Refinement] [WARNUNG] Preamble-Datei ({preamblePath}) nicht gefunden. Überspringe PDF-Generierung.");
+            return false;
         }
 
         try {
@@ -202,7 +220,8 @@ public class LatexRefinementSession {
             string finalFileName = Path.GetFileName(finalTexFile);
 
             // Create the wrapper .tex file
-            string wrapperFileName = $"step4-{baseName}-offset-final-main.tex";
+            string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
+            string wrapperFileName = $"{inputBaseName}-main.tex";
             string wrapperPath = Path.Combine(targetFolder, wrapperFileName);
 
             string wrapperContent = preambleText + "\n\\begin{document}\n\n" +
@@ -215,29 +234,60 @@ public class LatexRefinementSession {
             var (success, log) = await LatexToolkit.CompilePdfAsync(wrapperPath);
 
             string logContent = FormatLatexLog(log, success);
-            string logPath = Path.Combine(targetFolder, "compile-log.txt");
+            string logPath = Path.Combine(targetFolder, $"{stepPrefix}-compile-log.txt");
             await System.IO.File.WriteAllTextAsync(logPath, logContent);
 
             if (success) {
                 // LaTeX creates aux files which can clutter the directory. 
                 // We'll leave them for now in case the user wants to inspect them.
-                Console.WriteLine($"  [INFO] PDF erfolgreich erstellt im Ordner: {targetFolder}");
+                Console.WriteLine($"  [INFO] PDF erfolgreich erstellt im Zielordner: {targetFolder}");
                 if (logContent.Contains("⚠️ WARNING:")) {
-                    Console.WriteLine($"  [INFO] Es gab LaTeX-Warnungen. Details in: compile-log.txt");
+                    Console.WriteLine($"  [INFO] Es gab LaTeX-Warnungen während der Kompilation. Details in: {stepPrefix}-compile-log.txt");
                 }
+                return true;
             }
             else {
-                Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Log gespeichert in: {logPath}");
-                Console.WriteLine("  [INFO] Sende fehlerhaftes LaTeX mitsamt Preamble in neuer Session zum Last-Refiner zurück (-final-attempt)...");
-                string finalTexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
-                string fullDocumentContent = preambleText + "\n\\begin{document}\n\n" + finalTexContent + "\n\\end{document}\n";
-                await ExecutePdfFixAttemptAsync(fullDocumentContent, logContent, baseName, targetFolder);
+                Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Protokoll gespeichert in: {logPath}");
+                if (allowRetryOnFailure) {
+                    Console.WriteLine("  [INFO] Starte automatische Fehlerbehebung durch erneute Korrekturanfrage an Gemini (-final-attempt)...");
+                    string finalTexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
+                    await ExecutePdfFixAttemptAsync(preambleText, finalTexContent, logContent, baseName, targetFolder);
+                }
+                return false;
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            Console.WriteLine($"\n[LaTeX Refinement] [Exception gefangen] Art der Exception: {ex.GetType().Name}");
             Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-            Console.WriteLine($"  [FEHLER] Unerwarteter Fehler bei PDF-Generierung.");
+            Console.WriteLine("  [FEHLER] Unerwarteter Fehler bei der PDF-Generierung.");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Deletes intermediate files (.pdf, .aux, .log, wrapper .tex, etc.) generated during the Step 3 precheck compilation.
+    /// [Human] Löscht temporäre Test-Dateien aus dem Pre-Check, damit der Zielordner sauber bleibt.
+    /// </summary>
+    private static void CleanupPrecheckFiles(string targetFolder, string finalTexFile, string stepPrefix) {
+        try {
+            string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
+            string wrapperBase = $"{inputBaseName}-main";
+            string[] extensions = [".tex", ".pdf", ".log", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"];
+            foreach (var ext in extensions) {
+                string filePath = Path.Combine(targetFolder, wrapperBase + ext);
+                if (System.IO.File.Exists(filePath)) {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+            string precheckLogPath = Path.Combine(targetFolder, $"{stepPrefix}-compile-log.txt");
+            if (System.IO.File.Exists(precheckLogPath)) {
+                System.IO.File.Delete(precheckLogPath);
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"\n[LaTeX Refinement] [Exception gefangen] Art der Exception: {ex.GetType().Name}");
+            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Console.WriteLine("  [WARNUNG] Konnte temporäre Precheck-Dateien nicht vollständig bereinigen.");
         }
     }
 
@@ -330,7 +380,7 @@ public class LatexRefinementSession {
 
             if (_config.Step1MergeAndTimestamp.AttachAudio) {
                 if (_preUploadedAudioAttachments != null && _preUploadedAudioAttachments.Count > 0) {
-                    Console.WriteLine($"  [Pre-Upload] Verwende bereits parallel im Hintergrund hochgeladene Audio-Datei!");
+                    Console.WriteLine("  [INFO] Verwende parallel im Hintergrund hochgeladene Audio-Datei.");
                     audioParts.AddRange(_preUploadedAudioAttachments);
                 }
                 else {
@@ -338,7 +388,7 @@ public class LatexRefinementSession {
                     var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                     if (success) {
                         audioParts.AddRange(attached);
-                        Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+                        Console.WriteLine($"  [INFO] Audio-Datei erfolgreich verarbeitet: {audioFilePath}");
                     }
                 }
             }
@@ -357,7 +407,7 @@ public class LatexRefinementSession {
                                   "Please acknowledge you have read it. I will provide the audio file and final merge instructions in the next round.";
             round1Parts.Add(new Part { Text = round1Prompt });
             foreach (var file in inputFiles) {
-                Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
+                Console.WriteLine($"  [INFO] Lese Eingabedatei für Merge: {Path.GetFileName(file)}");
                 string content = await System.IO.File.ReadAllTextAsync(file);
                 round1Parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
             }
@@ -379,7 +429,7 @@ public class LatexRefinementSession {
             // Final User Turn
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
-            Console.WriteLine($"  [INFO] Verwende Fake-History Struktur für Step 1 (Round 1 + Round 2 simuliert).");
+            Console.WriteLine("  [INFO] Verwende Multi-Turn-Struktur für Schritt 1 (Simulation von Audio + Textsegmenten).");
             result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
         else {
@@ -392,7 +442,7 @@ public class LatexRefinementSession {
                                 "Important: Since no audio file is attached, the timestamps in subsequent parts have already been pre-adjusted to global lecture time. Please eliminate redundant overlapping blocks at the part seams and only fix timestamps that look completely out of order or severely broken across boundaries. Otherwise, trust and preserve the existing pre-calibrated timestamps.";
             parts.Add(new Part { Text = promptText });
             foreach (var file in inputFiles) {
-                Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {file}");
+                Console.WriteLine($"  [INFO] Lese Eingabedatei für Merge: {Path.GetFileName(file)}");
                 string content = await System.IO.File.ReadAllTextAsync(file);
                 parts.Add(new Part { Text = $"=== FILE: {Path.GetFileName(file)} ===\n{content}\n=== END FILE ===" });
             }
@@ -424,7 +474,7 @@ public class LatexRefinementSession {
             var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
             if (success) {
                 parts.AddRange(attached);
-                Console.WriteLine($"  [INFO] Audio-Datei erfolgreich an die API übermittelt: {audioFilePath}");
+                Console.WriteLine($"  [INFO] Audio-Datei erfolgreich verarbeitet: {audioFilePath}");
             }
         }
 
@@ -433,7 +483,7 @@ public class LatexRefinementSession {
             "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps.";
         parts.Add(new Part { Text = promptText });
 
-        Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {inputFile}");
+        Console.WriteLine($"  [INFO] Lese Eingabedatei für Textkorrektur: {Path.GetFileName(inputFile)}");
         string content = await System.IO.File.ReadAllTextAsync(inputFile);
         parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
@@ -451,11 +501,18 @@ public class LatexRefinementSession {
     /// [AI Context] Step 3: Final pass to fix general formatting issues or minor logical inconsistencies according to the system instructions.
     /// [Human] Schritt 3: Der letzte Feinschliff für das LaTeX-Dokument, bevor es kompiliert wird.
     /// </summary>
-    private async Task<string?> ExecuteStep3LastRefinementAsync(string inputFile, string baseName, string targetFolder) {
+    private async Task<string?> ExecuteStep3LastRefinementAsync(string inputFile, string baseName, string targetFolder, bool alreadyCompiles, string compilerFeedbackLog) {
         // Simplified using target‑typed new and collection literal; the compiler infers List<Part>.
         List<Part> parts = [new() { Text = "Perform the final refinement and formatting pass on this document according to the system instructions." }];
 
-        Console.WriteLine($"  [INFO] Füge Datei als Text in den Prompt ein: {inputFile}");
+        if (alreadyCompiles) {
+            parts.Add(new Part { Text = "=== COMPILER STATUS ===\nThe input LaTeX document ALREADY COMPILES successfully without any LaTeX errors! Please preserve its valid syntax and structure while performing any final textual/typographical refinements according to the system instructions.\n=== END COMPILER STATUS ===" });
+        }
+        else if (!string.IsNullOrWhiteSpace(compilerFeedbackLog)) {
+            parts.Add(new Part { Text = $"=== COMPILER ERROR FEEDBACK ===\nWhen attempting to compile the input LaTeX document with pdflatex, the following errors and log messages were produced:\n\n{compilerFeedbackLog}\n\nPlease analyze and fix these LaTeX syntax/compilation errors during this final refinement pass.\n=== END COMPILER ERROR FEEDBACK ===" });
+        }
+
+        Console.WriteLine($"  [INFO] Lese Eingabedatei für Formatierung: {Path.GetFileName(inputFile)}");
         string content = await System.IO.File.ReadAllTextAsync(inputFile);
         parts.Add(new Part { Text = $"=== INPUT TEX ===\n{content}\n=== END INPUT TEX ===" });
 
@@ -487,13 +544,14 @@ public class LatexRefinementSession {
         // For arrays, checking '.Length > 0' is a direct property lookup (O(1)).
         // Calling '.Any()' creates an enumerator object under the hood, which causes unnecessary memory allocation.
         if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Length > 0) {
-            Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
+            Console.WriteLine("\n[LaTeX Refinement] Folgende System-Instruktionen sind konfiguriert:");
             var resolved = ExtractionHelpers.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
             ExtractionHelpers.PrintFileTree(resolved);
             foreach (var path in resolved) {
                 if (System.IO.File.Exists(path)) {
                     Console.WriteLine($"  [INFO] Lade System-Instruktion: {path}");
-                    systemInstructionText += await System.IO.File.ReadAllTextAsync(path) + "\n\n";
+                    string relPath = Path.GetFileName(path);
+                    systemInstructionText += $"******\n------\n******\nHere is the file `{relPath}`:\n\n" + await System.IO.File.ReadAllTextAsync(path) + "\n\n";
                 }
                 else {
                     Console.WriteLine($"  [WARNUNG] System-Instruktion nicht gefunden und übersprungen: {path}");
@@ -519,13 +577,13 @@ public class LatexRefinementSession {
             );
             if (match && await ContextCacheStateManager.IsValidRemoteAsync(_client, savedState.CacheName!)) {
                 cacheName = savedState.CacheName;
-                Console.WriteLine($"  [INFO] Nutze bestehenden Google Kontext-Cache für Refinement: {cacheName}");
+                Console.WriteLine($"  [INFO] Bestehender Google Kontext-Cache geladen: {cacheName}");
             }
             else {
                 if (!string.IsNullOrEmpty(savedState.CacheName)) {
                     await ContextCacheStateManager.DeleteRemoteAsync(_client, savedState.CacheName);
                 }
-                Console.WriteLine("  [INFO] Erstelle neuen Google Kontext-Cache für Refinement...");
+                Console.WriteLine("  [INFO] Erstelle neuen Google Kontext-Cache...");
                 try {
                     var cacheConfig = new CreateCachedContentConfig {
                         SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] },
@@ -549,11 +607,11 @@ public class LatexRefinementSession {
                             savedState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
                         }
                         ContextCacheStateManager.SaveState(savedState, cacheStateFileName);
-                        Console.WriteLine($"  [INFO] Refinement Kontext-Cache erstellt: {cacheName}");
+                        Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich erstellt: {cacheName}");
                     }
                 }
                 catch (Exception ex) {
-                    Console.WriteLine($"  [FEHLER] Refinement Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+                    Console.WriteLine($"  [FEHLER] Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
                 }
             }
         }
@@ -574,10 +632,10 @@ public class LatexRefinementSession {
 
             if (remainingMin > 0) {
                 if (remainingMin < backendParams.ContextCachingMinimumRemainingMinutes) {
-                    Console.WriteLine($"  [Cache] Nur noch {remainingMin:F1} min verbleibend (Schwellenwert: {backendParams.ContextCachingMinimumRemainingMinutes} min). Verlängere automatisch um {backendParams.ContextCachingIncrementMinutes} min...");
+                    Console.WriteLine($"  [Cache] TTL knapp ({remainingMin:F1} min). Verlängere automatisch um {backendParams.ContextCachingIncrementMinutes} min...");
                     var updatedState = await ContextCacheStateManager.ExtendCacheAsync(_client, cacheState, backendParams.ContextCachingIncrementMinutes, cacheStateFileName);
                     if (updatedState != null) {
-                        Console.WriteLine($"  [Cache] Cache verlängert. Gültig bis {updatedState.ExpireTimeUtc.ToLocalTime():t}.");
+                        Console.WriteLine($"  [Cache] Cache erfolgreich verlängert bis: {updatedState.ExpireTimeUtc.ToLocalTime():t}");
                         cacheValid = true;
                     }
                 }
@@ -587,7 +645,7 @@ public class LatexRefinementSession {
             }
 
             if (!cacheValid) {
-                Console.WriteLine("  [Cache] Refinement Cache abgelaufen oder nicht gefunden. Erstelle neuen Google Kontext-Cache...");
+                Console.WriteLine("  [Cache] Cache abgelaufen oder ungültig. Erstelle neuen Google Kontext-Cache...");
                 ContextCacheStateManager.ClearState(cacheStateFileName);
                 cacheName = null;
                 try {
@@ -616,11 +674,11 @@ public class LatexRefinementSession {
                             newState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
                         }
                         ContextCacheStateManager.SaveState(newState, cacheStateFileName);
-                        Console.WriteLine($"  [INFO] Refinement Kontext-Cache neu erstellt: {cacheName}");
+                        Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich neu erstellt: {cacheName}");
                     }
                 }
                 catch (Exception ex) {
-                    Console.WriteLine($"  [FEHLER] Refinement Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+                    Console.WriteLine($"  [FEHLER] Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
                 }
             }
         }
@@ -860,16 +918,18 @@ public class LatexRefinementSession {
     }
 
     /// <summary>
-    /// [AI Context] Fallback routine when initial PDF compilation fails. Sends the compile error log and the entire LaTeX document (preamble + body) back to Gemini in a clean session (no system instructions, no context cache) to fix LaTeX syntax errors.
-    /// [Human] Neuer Versuch bei PDF-Fehlern: Schickt das Fehlerlog und den gesamten LaTeX-Code (inklusive Design-Vorlage) an Gemini zurück, um die Fehler zu korrigieren.
+    /// [AI Context] Fallback routine when initial PDF compilation fails. Sends the compile error log, preamble reference, and document body back to Gemini in a clean session (no system instructions, no context cache) to fix LaTeX syntax errors without outputting the preamble to save tokens.
+    /// [Human] Neuer Versuch bei PDF-Fehlern: Schickt das Fehlerlog und den LaTeX-Body an Gemini zurück, um die Fehler zu korrigieren (ohne Preamble-Output zum Token-Sparen).
     /// </summary>
-    private async Task ExecutePdfFixAttemptAsync(string failedFullTex, string compileLog, string baseName, string targetFolder) {
+    private async Task ExecutePdfFixAttemptAsync(string preambleText, string failedBodyTex, string compileLog, string baseName, string targetFolder) {
         Console.WriteLine("\n--- [Schritt 4 Retry: PDF LaTeX Fix (-final-attempt)] ---");
         BackendParameters backendParams = _config.UseVertex ? _config.Step3LastRefinement.Vertex : _config.Step3LastRefinement.AiStudio;
 
         string promptText = $"=== PDF LATEX COMPILE LOG (WITH ERRORS) ===\n{compileLog}\n=== END COMPILE LOG ===\n\n" +
-                            $"=== FULL LATEX DOCUMENT (INCLUDING PREAMBLE) ===\n{failedFullTex}\n=== END LATEX DOCUMENT ===\n\n" +
-                            "Please fix the LaTeX compilation errors in the document above. Note that the compile log error output might be incomplete or truncated, so carefully inspect the entire document for any potential LaTeX syntax errors, missing packages, unescaped characters, or broken math environments. Your ONLY job is to fix the LaTeX code so that it compiles cleanly into a PDF. Output the complete, fixed LaTeX document including preamble and document body.";
+                            $"=== CURRENT LATEX PREAMBLE (FOR REFERENCE ONLY) ===\n{preambleText}\n=== END PREAMBLE ===\n\n" +
+                            $"=== LATEX DOCUMENT BODY (TO FIX) ===\n{failedBodyTex}\n=== END DOCUMENT BODY ===\n\n" +
+                            "Please fix the LaTeX compilation errors in the DOCUMENT BODY above. Note that the compile log error output might be incomplete or truncated, so carefully inspect the entire body for any potential LaTeX syntax errors, unescaped characters, or broken math environments.\n\n" +
+                            "CRITICAL INSTRUCTION: DO NOT output the preamble! Even if certain LaTeX packages or libraries seem to be missing or undefined, DO NOT output any preamble, \\documentclass, or \\usepackage declarations! You MUST ONLY output the corrected LaTeX code that belongs between \\begin{document} and \\end{document} (do NOT include \\begin{document} and \\end{document} tags themselves). To save tokens, output ONLY the fixed document body content.";
 
         var promptParts = new List<Part> {
             new() { Text = promptText },
@@ -977,11 +1037,6 @@ public class LatexRefinementSession {
         if (!string.IsNullOrEmpty(fullResponseText)) {
             string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
 
-            // Version mit Preamble (kompilierbar)
-            string standalonePath = Path.Combine(targetFolder, standaloneFileName);
-            await System.IO.File.WriteAllTextAsync(standalonePath, cleanedText);
-            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei (mit Preamble) gespeichert unter: {standalonePath}");
-
             // Version ohne Preamble
             string bodyOnlyText = cleanedText;
             int beginDocIdx = cleanedText.IndexOf("\\begin{document}", StringComparison.OrdinalIgnoreCase);
@@ -992,7 +1047,13 @@ public class LatexRefinementSession {
             }
             string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
             await System.IO.File.WriteAllTextAsync(noPreamblePath, bodyOnlyText);
-            Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (ohne Preamble) gespeichert unter: {noPreamblePath}");
+            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei (ohne Preamble) gespeichert unter: {noPreamblePath}");
+
+            // Version mit Preamble (kompilierbar)
+            string standaloneContent = preambleText + "\n\\begin{document}\n\n" + bodyOnlyText + "\n\n\\end{document}\n";
+            string standalonePath = Path.Combine(targetFolder, standaloneFileName);
+            await System.IO.File.WriteAllTextAsync(standalonePath, standaloneContent);
+            Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (mit Preamble) gespeichert unter: {standalonePath}");
 
             Console.WriteLine("  [INFO] Starte PDF-Kompilierung für step5 (last try)...");
             var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);

@@ -80,7 +80,7 @@ The pipeline supports both environments, but they handle payloads very different
 ## 4.2 Modular System Prompt & Attention Map Priming
 
 ### Modular File Injection
-Instead of relying on monolithic markdown blobs, the pipeline resolves multiple distinct instruction files (`transcription.md`, `hard-specs.md`, `environments.md`, etc.) via `SystemInstructionPaths`. Before injecting each file into the prompt payload, the application wraps it with clear delimiter headers (`---\nHere is the file 'filename.md':\n`). This explicit separation prevents LLM attention bleeding between distinct instructional domains.
+Instead of relying on monolithic markdown blobs, the pipeline resolves multiple distinct instruction files (`transcription.md`, `hard-specs.md`, `environments.md`, etc.) via `SystemInstructionPaths`. Before injecting each file into the prompt payload, the application wraps it with clear delimiter headers (`******\n------\n******\nHere is the file 'filename.md':\n`). This explicit separation prevents LLM attention bleeding between distinct instructional domains.
 
 ### Attention Map Priming
 To maximize orientation and logical hierarchy adherence, the application generates an ASCII folder tree structure of the loaded system instructions and injects it at the absolute beginning of the system prompt. By observing this structural "map" first, Gemini primes its internal attention mechanism on codebase orientation and logical category separation before parsing specific syntax rules.
@@ -231,7 +231,7 @@ To transcribe a 90-minute lecture, sending the entire video at once often leads 
 1. **FFmpeg Slicing:** The video is chopped into strictly defined chunks (e.g., 3 minutes each) with an overlap (e.g., 180 seconds, meaning the last X seconds of chunk 1 are the first X seconds of chunk 2).
 2. **Token Optimization:** The video framerate is decimated to `1 FPS`. Since blackboards and slides rarely change sub-second, this preserves visual information while drastically reducing the token payload.
 3. **Audio Downmixing:** Audio is compressed and downmixed to mono (`-ac 1`).
-4. **Latex Refinement:** Because of the overlaps, the extracted LaTeX chunks will contain duplicated sentences or formulas at the boundaries. The `LatexRefinementSession` passes these chunks to a deterministic AI (Temperature 0.0) with instructions to seamlessly merge them into a single, continuous LaTeX document.
+4. **Latex Refinement:** Because of the overlaps, the extracted LaTeX chunks will contain duplicated sentences or formulas at the boundaries. The `LatexRefinementSession` passes these chunks to a deterministic AI (Temperature 0.35) with instructions to seamlessly merge them into a single, continuous LaTeX document.
 
 ```
 +---------------------------------------------------------------------------------+
@@ -250,6 +250,20 @@ To transcribe a 90-minute lecture, sending the entire video at once often leads 
 |  Fuses boundary duplicate formulas -> Outputs clean unified LaTeX stream        |
 +---------------------------------------------------------------------------------+
 ```
+
+### 🎬 FFmpeg Interactive Manager Dashboard
+In addition to automated extraction pipeline preprocessing, option **3** in the main menu starts the **FFmpeg Interactive Preprocessor Dashboard**. It provides full interactive control over manual preprocessing:
+- **Interactive Folder Browser:** Browse subfolders, parent folders (`..`), and switch Windows drives (e.g. `d:`, `c:`) to find files.
+- **Conversion Dashboard:** Displays selected files and active settings in one visual overview.
+- **Flexible Settings Customization:**
+  - **Speed Multiplier:** Set video speed between `0.1x` and `10.0x`.
+  - **Video Framerate (FPS):** Set custom target framerates.
+  - **Audio Formats:** Toggle between downmixing to Mono (optimal for AI transcribing) or copying original Stereo.
+  - **Video Scaling:** Toggle between scaling to standard `720p` resolution (recommended) or original resolution.
+  - **Compression (Preset):** Choose FFmpeg x264 presets (`ultrafast` to `veryslow`) to trade off compilation time against file sizes.
+  - **Time Range Cutting:** Crop a custom subsection of the video (e.g., setting a start timestamp and duration) instead of converting the entire file.
+  - **Chunk Splitting:** Set chunk counts and custom overlapping boundary seconds.
+- **Custom Mode:** Directly input custom raw FFmpeg args.
 
 ---
 
@@ -402,7 +416,7 @@ Die Pipeline unterstützt beide Umgebungen, aber sie behandeln Payloads intern s
 ## 4.2 Modulares System-Prompt & Attention Map Priming
 
 ### Modulare Dateiinjektion
-Statt monolithische Markdown-Blöcke zu nutzen, löst die Pipeline über `SystemInstructionPaths` mehrere getrennte Anweisungsdateien (`transcription.md`, `hard-specs.md`, `environments.md` etc.) auf. Vor der Injektion jeder Datei in den Prompt wird sie mit klaren Trenn-Headern versehen (`---\nHere is the file 'dateiname.md':\n`). Diese explizite Trennung verhindert Aufmerksamkeitssprünge (Attention Bleeding) der KI zwischen verschiedenen Domänen.
+Statt monolithische Markdown-Blöcke zu nutzen, löst die Pipeline über `SystemInstructionPaths` mehrere getrennte Anweisungsdateien (`transcription.md`, `hard-specs.md`, `environments.md` etc.) auf. Vor der Injektion jeder Datei in den Prompt wird sie mit klaren Trenn-Headern versehen (`******\n------\n******\nHere is the file 'dateiname.md':\n`). Diese explizite Trennung verhindert Aufmerksamkeitssprünge (Attention Bleeding) der KI zwischen verschiedenen Domänen.
 
 ### Attention Map Priming
 Um die Orientierung und Einhaltung logischer Hierarchien zu maximieren, erzeugt die Anwendung eine ASCII-Ordnerstruktur der geladenen Systemanweisungen und setzt diese an den absoluten Anfang des System-Prompts. Indem Gemini diese strukturelle "Landkarte" als Erstes sieht, wird der interne Attention-Mechanismus auf Orientierung und logische Kategorisierung getrimmt, bevor spezifische Syntaxregeln verarbeitet werden.
@@ -553,7 +567,7 @@ Um eine 90-minütige Vorlesung zu transkribieren, führt das Senden des gesamten
 1. **FFmpeg Slicing:** Das Video wird in streng definierte Chunks (z. B. jeweils 3 Minuten) mit einer Überlappung (z. B. 180 Sekunden, d.h. die letzten X Sekunden von Chunk 1 sind die ersten X Sekunden von Chunk 2) zerschnitten.
 2. **Token-Optimierung:** Die Video-Framerate wird auf `1 FPS` dezimiert. Da sich Tafeln und Folien selten im Sub-Sekunden-Bereich ändern, bleibt die visuelle Information erhalten, während der Token-Payload drastisch reduziert wird.
 3. **Audio-Downmixing:** Audio wird komprimiert und auf Mono heruntergemischt (`-ac 1`).
-4. **Latex Refinement:** Aufgrund der Überlappungen enthalten die extrahierten LaTeX-Chunks duplizierte Sätze oder Formeln an den Rändern. Die `LatexRefinementSession` übergibt diese Chunks an eine deterministische KI (Temperature 0.0) mit der Anweisung, sie nahtlos zu einem einzigen, kontinuierlichen LaTeX-Dokument zusammenzuführen.
+4. **Latex Refinement:** Aufgrund der Überlappungen enthalten die extrahierten LaTeX-Chunks duplizierte Sätze oder Formeln an den Rändern. Die `LatexRefinementSession` übergibt diese Chunks an eine deterministische KI (Temperature 0.35) mit der Anweisung, sie nahtlos zu einem einzigen, kontinuierlichen LaTeX-Dokument zusammenzuführen.
 
 ```
 +---------------------------------------------------------------------------------+
@@ -572,6 +586,20 @@ Um eine 90-minütige Vorlesung zu transkribieren, führt das Senden des gesamten
 |  Verschmilzt Formel-Duplikate -> Gibt nahtlosen LaTeX-Stream aus                |
 +---------------------------------------------------------------------------------+
 ```
+
+### 🎬 FFmpeg Interactive Manager Dashboard
+Zusätzlich zur automatisierten Vorverarbeitung bietet Option **3** im Hauptmenü das **FFmpeg Interactive Preprocessor Dashboard**. Es bietet volle interaktive Kontrolle über die manuelle Vorverarbeitung von Videos:
+- **Interaktiver Ordner-Browser:** Navigiere durch Unterordner, übergeordnete Ordner (`..`) und wechsle Windows-Laufwerke (z. B. `d:`, `c:`), um Dateien zu finden.
+- **Konvertierungs-Dashboard:** Zeigt die ausgewählten Dateien und die aktiven Einstellungen auf einen Blick.
+- **Flexible Anpassung aller Parameter:**
+  - **Geschwindigkeit (Speed):** Setze die Geschwindigkeit des Videos zwischen `0.1x` und `10.0x`.
+  - **Bilder pro Sekunde (FPS):** Bestimme eine benutzerdefinierte Framerate.
+  - **Audio-Downmix:** Wähle zwischen Mono-Downmix (optimal für KI-Transkription) oder Beibehalten der originalen Stereo-Spur.
+  - **Auflösung (Skalierung):** Schalte zwischen standardmäßigem `720p` (empfohlen) oder der Originalauflösung um.
+  - **Kompression (Preset):** Wähle FFmpeg x264 Presets (von `ultrafast` bis `veryslow`), um Konvertierungsgeschwindigkeit gegen Dateigröße abzuwägen.
+  - **Zeitbereichs-Beschnitt (Time Range):** Schneide einen bestimmten Video-Ausschnitt aus (Startzeit und Dauer eingeben), anstatt das gesamte Video zu konvertieren.
+  - **Splitting / Teilen:** Teile das Video in mehrere Stücke auf und bestimme eine eigene Überlappungszeit.
+- **Custom Mode:** Ermöglicht die freie und direkte Eingabe von FFmpeg-Befehlen.
 
 ---
 
