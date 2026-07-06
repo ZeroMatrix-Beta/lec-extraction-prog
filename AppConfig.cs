@@ -32,6 +32,24 @@ public static class ConfigLoader<T> where T : class, new() {
         // This handles values defined within the AppConfig block in appsettings.json.
         configuration.GetSection("AppConfig").GetSection(sectionName).Bind(config);
 
+        // [AI Context] CRITICAL FIX: Microsoft.Extensions.Configuration APPENDS to arrays/lists
+        // when Bind() is called a second time on the same object whose array properties are already
+        // populated. This would cause HistoryPreloadPaths and AiStudioApiKeyEnvNames to grow
+        // exponentially with every program restart (each Save() call writes the already-duplicated
+        // array back to disk, and the next Load() doubles it again).
+        // Solution: Reset all collection-typed properties to empty before the second Bind()
+        // so the second Bind() writes a clean set of values without appending.
+        foreach (var prop in typeof(T).GetProperties()) {
+            if (!prop.CanWrite) continue;
+            var propVal = prop.GetValue(config);
+            if (propVal is System.Collections.IList list && list.Count > 0) {
+                list.Clear();
+            }
+            else if (prop.PropertyType.IsArray) {
+                prop.SetValue(config, Array.CreateInstance(prop.PropertyType.GetElementType()!, 0));
+            }
+        }
+
         // Bind from the root of the combined configuration.
         // This allows the specific {TypeName}.json to have settings at the root level,
         // overriding any values that were previously bound.

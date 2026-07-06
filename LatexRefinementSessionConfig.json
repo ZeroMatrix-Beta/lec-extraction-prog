@@ -7,19 +7,19 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 3,
+  "AiStudioActiveApiProfile": 0,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
   "TargetFolder": "",
   "SourceFolder": "",
   "PdfCompilation": {
-    "Enabled": true,
+    "Enabled": false,
     "PreamblePath": "pdf-preamble.tex"
   },
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "AttachAudio": true,
+    "AttachAudio": true, // set to true for best results
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
@@ -53,7 +53,7 @@
   },
   "Step2SpeechRefinement": {
     "Enabled": true,
-    "AttachAudio": true,
+    "AttachAudio": true, // set to true for best results
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],

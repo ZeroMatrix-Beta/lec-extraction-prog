@@ -1,10 +1,6 @@
 {
-  "ActiveApiProfile": 2,
+  "ActiveApiProfile": 0,
   "AiStudioApiKeyEnvNames": [
-    "API_KEY-automated-content-extraction",
-    "API_KEY-ai-studio-test-project-1",
-    "API_KEY-ai-studio-test-project-2",
-    "API_KEY-ai-studio-test-project-3",
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
     "API_KEY-ai-studio-test-project-2",
@@ -27,10 +23,10 @@
   ],
   "HistoryPreloadPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history2"
   ],
   "LogFolder": "D:\\gemini-logs",
+  "CreateLogFiles": true,
   "Temperature": 0.34,
   "TopP": 0.95,
   "TopK": 40,
@@ -44,7 +40,6 @@
   "GoIntoLatexRefinement": true,
   "NumberOfParts": 3,
   "OverlapSeconds": 240,
-  "CreateLogFiles": true,
   "EnableParallelFileUploads": true,
   "GoogleVideoFps": 0.25,
   "UseGoogleSearch": false,

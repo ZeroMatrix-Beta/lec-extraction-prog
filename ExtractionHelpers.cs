@@ -33,6 +33,8 @@ public static partial class ExtractionHelpers {
                 allHistoryFiles.Add(Path.GetFullPath(path));
             else if (Directory.Exists(path))
                 allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+            else
+                Console.WriteLine($"  [WARNUNG] HistoryPreloadPath nicht gefunden (weder Datei noch Ordner): {path}");
         }
         return [.. allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase)];
     }
