@@ -1,6 +1,14 @@
 {
   "ActiveApiProfile": 0,
   "AiStudioApiKeyEnvNames": [
+    null,
+    null,
+    null,
+    null,
+    "",
+    "",
+    "",
+    "",
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
     "API_KEY-ai-studio-test-project-2",
@@ -22,6 +30,10 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples3.md"
   ],
   "HistoryPreloadPaths": [
+    null,
+    "",
+    "",
+    "",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history2"
   ],
@@ -32,11 +44,15 @@
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "Model": [
+    "",
+    "",
+    "gemini-3-flash-preview",
+    "",
     "gemini-3.5-flash",
     "gemini-3.1-flash-preview",
     "gemini-2.5-flash"
   ],
-  "CurrentModelIndex": 0,
+  "CurrentModelIndex": 2,
   "ThinkingBudget": 32768,
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
@@ -49,5 +65,6 @@
   "GoogleVideoFps": 0.25,
   "UseGoogleSearch": false,
   "FfmpegPreset": "medium",
-  "YouTubeTasks": []
+  "YouTubeTasks": [],
+  "CurrentModel": "gemini-3-flash-preview"
 }

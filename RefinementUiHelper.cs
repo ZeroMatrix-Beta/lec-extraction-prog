@@ -25,8 +25,8 @@ namespace AutoExtraction {
                 string profileDisplay = refinementConfig.AiStudioActiveApiProfile == 0 ? "Dediziert (API_KEY-latex-refinement)" : $"Profil {refinementConfig.AiStudioActiveApiProfile}";
 
                 string currentModel = refinementConfig.UseVertex
-                    ? refinementConfig.Step1MergeAndTimestamp.Vertex.Model
-                    : refinementConfig.Step1MergeAndTimestamp.AiStudio.Model;
+                    ? refinementConfig.Step1MergeAndTimestamp.Vertex.CurrentModel
+                    : refinementConfig.Step1MergeAndTimestamp.AiStudio.CurrentModel;
 
                 Console.WriteLine($"\n[Refinement Config]");
                 Console.WriteLine($"Backend:    {backendDisplay}");
@@ -92,14 +92,14 @@ namespace AutoExtraction {
                     };
                     if (!string.IsNullOrEmpty(newModel)) {
                         if (refinementConfig.UseVertex) {
-                            refinementConfig.Step1MergeAndTimestamp.Vertex.Model = newModel;
-                            refinementConfig.Step2SpeechRefinement.Vertex.Model = newModel;
-                            refinementConfig.Step3LastRefinement.Vertex.Model = newModel;
+                            refinementConfig.Step1MergeAndTimestamp.Vertex.CurrentModel = newModel;
+                            refinementConfig.Step2SpeechRefinement.Vertex.CurrentModel = newModel;
+                            refinementConfig.Step3LastRefinement.Vertex.CurrentModel = newModel;
                         }
                         else {
-                            refinementConfig.Step1MergeAndTimestamp.AiStudio.Model = newModel;
-                            refinementConfig.Step2SpeechRefinement.AiStudio.Model = newModel;
-                            refinementConfig.Step3LastRefinement.AiStudio.Model = newModel;
+                            refinementConfig.Step1MergeAndTimestamp.AiStudio.CurrentModel = newModel;
+                            refinementConfig.Step2SpeechRefinement.AiStudio.CurrentModel = newModel;
+                            refinementConfig.Step3LastRefinement.AiStudio.CurrentModel = newModel;
                         }
                         ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
                     }
