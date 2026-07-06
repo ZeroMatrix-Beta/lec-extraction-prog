@@ -65,7 +65,7 @@ public class DirectAiChatSessionVertex {
         LogFolderPath = config.LogFolder;
         GcsBucketName = config.GcsBucketName; // [AI Context] Crucial: The designated Google Cloud Storage bucket used exclusively for Vertex AI multimodal attachments.
         SystemInstructionPath = config.SystemInstructionPath;
-        _activeModel = config.Model;
+        _activeModel = config.CurrentModel;
 
         AIParams = new DirectAiChatSessionVertexAIConfig {
             Temperature = config.AI.Temperature,
@@ -82,8 +82,10 @@ public class DirectAiChatSessionVertex {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.Model, "Vertex AI", AvailableModels, newModel => {
-                _config.Model = newModel;
+            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", AvailableModels, newModel => {
+                int idx = Array.IndexOf(AvailableModels, newModel);
+                if (idx >= 0) _config.CurrentModelIndex = idx;
+                _config.CurrentModel = newModel;
                 ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
             });
             if (selectedModel == "__EXIT__") return;
@@ -351,7 +353,9 @@ public class DirectAiChatSessionVertex {
                 Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
                 string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
                 if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
-                    _config.Model = _activeModel;
+                    int idx = Array.IndexOf(AvailableModels, _activeModel);
+                    if (idx >= 0) _config.CurrentModelIndex = idx;
+                    _config.CurrentModel = _activeModel;
                     ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
                     WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
                 }

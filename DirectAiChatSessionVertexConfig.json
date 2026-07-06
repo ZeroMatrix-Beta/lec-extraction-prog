@@ -10,6 +10,11 @@
     "",
     ""
   ],
+  "Model": [
+    "gemini-2.5-flash",
+    "gemini-3.1-pro-preview"
+  ],
+  "CurrentModelIndex": 0,
   "AI": {
     "Temperature": 0.35,
     "TopP": 0.9,

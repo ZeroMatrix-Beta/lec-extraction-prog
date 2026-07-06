@@ -346,7 +346,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         Console.WriteLine("  4) 🚀 Alle Videos im Quellordner konvertieren");
         Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
         Console.WriteLine("  6) 📺 YouTube-Video transkribieren (per URL oder Config)");
-        Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.Model + ")");
+        Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.CurrentModel + ")");
         Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
         Console.WriteLine("  9) 🔑 API-Key Profil wechseln (z.B. 'change-key 2', 0 für dediziert) (aktuell: " + (_config.ActiveApiProfile == 0 ? "dediziert" : $"Profil {_config.ActiveApiProfile}") + ")");
         Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
@@ -407,9 +407,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 await ProcessYouTubeTasksAsync();
             }
             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
-                _config.Model = SelectModel();
+                SelectModel();
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
-                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.Model}' gesetzt und in Konfiguration gespeichert.");
+                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und in Konfiguration gespeichert.");
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
@@ -459,42 +459,39 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     }
 
     /// <summary>
-    /// [AI Context] Interactive console menu for initial model selection. Returns the specific model ID string.
-    /// [Human] Das Startmenü in der Konsole. Wenn du neue Modelle hinzufügst, musst du sie exakt hier eintragen.
+    /// [AI Context] Interactive model picker that reads models from _config.Model[] array in the configured order.
+    /// The user's selection is persisted via CurrentModelIndex so it survives restarts.
+    /// [Human] Das Startmenü in der Konsole. Modelle werden aus der JSON-Config gelesen – einfach dort die Liste anpassen.
     /// </summary>
-    private string SelectModel() {
+    private void SelectModel() {
+        string[] models = _config.Model;
+        if (models.Length == 0) {
+            Console.WriteLine("  [WARNUNG] Keine Modelle in der Konfiguration vorhanden.");
+            return;
+        }
+
         Console.WriteLine($"\n=== Model Selection (AI Studio) ===");
         Console.WriteLine("Wähle ein Modell:");
-        Console.WriteLine(" 1) gemini-3.1-flash-lite-preview");
-        Console.WriteLine(" 2) gemini-3-flash-preview");
-        Console.WriteLine(" 3) gemini-3.1-pro-preview");
-        Console.WriteLine(" 4) gemini-2.5-flash");
-        Console.WriteLine(" 5) gemini-2.5-flash-lite");
-        Console.WriteLine(" 6) gemini-2.5-pro");
-        Console.WriteLine(" 7) gemma-3-27b-it");
-        Console.WriteLine(" 8) gemini-1.5-flash");
-        Console.WriteLine(" 9) gemini-1.5-pro");
-        Console.WriteLine("10) gemini-robotics-er-1.6-preview");
-        Console.WriteLine("11) gemini-3.5-flash"); // Added Gemini 3.5 Flash
-        Console.Write($"Auswahl (1-11) [Aktuell: {_config.Model}]: ");
+        for (int i = 0; i < models.Length; i++) {
+            string marker = (i == _config.CurrentModelIndex) ? " [aktiv]" : "";
+            Console.WriteLine($" {i + 1}) {models[i]}{marker}");
+        }
+        Console.Write($"Auswahl (1-{models.Length}) [Aktuell: {_config.CurrentModel}]: ");
 
         string choice = Console.ReadLine()?.Trim() ?? "";
-        if (string.IsNullOrEmpty(choice)) return _config.Model;
+        if (string.IsNullOrEmpty(choice)) return;
 
-        return choice switch {
-            "1" => "gemini-3.1-flash-lite-preview",
-            "2" => "gemini-3-flash-preview",
-            "3" => "gemini-3.1-pro-preview",
-            "4" => "gemini-2.5-flash",
-            "5" => "gemini-2.5-flash-lite",
-            "6" => "gemini-2.5-pro",
-            "7" => "gemma-3-27b-it",
-            "8" => "gemini-1.5-flash",
-            "9" => "gemini-1.5-pro",
-            "10" => "gemini-robotics-er-1.6-preview",
-            "11" => "gemini-3.5-flash", // Added Gemini 3.5 Flash
-            _ => choice.Contains('-') ? choice : _config.Model
-        };
+        if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
+            _config.CurrentModelIndex = idx - 1;
+        } else if (choice.Contains('-')) {
+            // Freetext model name – find or append
+            int found = Array.IndexOf(models, choice);
+            if (found >= 0) {
+                _config.CurrentModelIndex = found;
+            } else {
+                Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
+            }
+        }
     }
 
     /// <summary>
@@ -516,7 +513,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -528,7 +525,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        Console.Write($"\n[Debug Chat] {_config.Model} (Strg+C zum Abbrechen): ");
+        Console.Write($"\n[Debug Chat] {_config.CurrentModel} (Strg+C zum Abbrechen): ");
 
         using var cts = new CancellationTokenSource();
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
@@ -558,7 +555,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 int requestOutputTokens = 0;
                 int requestCachedTokens = 0;
 
-                var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _debugChatHistory, requestConfig);
+                var responseStream = _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _debugChatHistory, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
                     if (cts.IsCancellationRequested) break;
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
@@ -667,7 +664,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// </summary>
     private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
         var historyPromptParts = new List<Part>(_historyParts) {
-            new() { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.Model}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
+            new() { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.CurrentModel}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
         };
         var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
@@ -689,7 +686,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
-        if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -723,7 +720,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 int requestOutputTokens = 0;
                 int requestCachedTokens = 0;
 
-                var responseStream = _client.Models.GenerateContentStreamAsync(_config.Model, _sessionPreamble, requestConfig);
+                var responseStream = _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _sessionPreamble, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
                     if (cts.IsCancellationRequested) break;
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
@@ -810,7 +807,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
             _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             string logMsg = $"[History Acknowledgment] Angehängte Dateien: {loadedFiles}\n\nPrompt:\n{historyPromptParts.Last().Text}";
-            await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.Model, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens, finalCachedTokens);
+            await _sessionLogger.LogChatAsync(logMsg, logMsg, _config.CurrentModel, fullResponse, "AutoExtractionSetup", finalInputTokens, finalOutputTokens, finalCachedTokens);
             return true;
         }
         else {
@@ -1115,7 +1112,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     // Prepend the start time to the individual part .tex file
                     string partHeader = $"% ==========================================\n" +
                                         $"% AutoExtraction Source Part: {Path.GetFileName(safePartPath)}\n" +
-                                        $"% Model: {_config.Model}\n" +
+                                        $"% Model: {_config.CurrentModel}\n" +
                                         $"% Temperature: {_config.Temperature}\n" +
                                         $"% TopP: {_config.TopP}\n" +
                                         $"% TopK: {_config.TopK}\n" +
@@ -1168,7 +1165,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
                 string header = $"% ==========================================\n" +
                                 $"% AutoExtraction Combined Source: {Path.GetFileName(file)}\n" +
-                                $"% Model: {_config.Model}\n" +
+                                $"% Model: {_config.CurrentModel}\n" +
                                 $"% Temperature: {_config.Temperature}\n" +
                                 $"% TopP: {_config.TopP}\n" +
                                 $"% TopK: {_config.TopK}\n" +
@@ -1352,7 +1349,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
-        if (_config.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -1383,7 +1380,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
-            Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.Model} (Request {currentRequest}/{maxRequestsPerPart})...");
+            Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.CurrentModel} (Request {currentRequest}/{maxRequestsPerPart})...");
             GroundingMetadata? accumulatedGrounding = null;
             string chunkResp = "";
             int requestInputTokens = 0;
@@ -1393,7 +1390,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
             try {
                 callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
-                    streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.Model, history, requestConfig),
+                    streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
                     onChunkReceived: async (chunk) => {
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                         Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
@@ -1458,7 +1455,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
 
             fullResponse += chunkResp;
-            await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.Model, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);
+            await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.CurrentModel, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);
 
             bool segmentComplete = SegmentCompleteRegex().IsMatch(chunkResp);
             bool videoComplete = VideoCompleteRegex().IsMatch(chunkResp);

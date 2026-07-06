@@ -566,7 +566,7 @@ public class LatexRefinementSession {
             var savedState = ContextCacheStateManager.LoadState(cacheStateFileName);
             bool match = ContextCacheStateManager.MatchesConfig(
                 savedState,
-                backendParams.Model,
+                backendParams.CurrentModel,
                 backendParams.Temperature,
                 backendParams.TopP,
                 backendParams.TopK,
@@ -590,11 +590,11 @@ public class LatexRefinementSession {
                         DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
                         Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
                     };
-                    var created = await _client.Caches.CreateAsync(backendParams.Model, cacheConfig);
+                    var created = await _client.Caches.CreateAsync(backendParams.CurrentModel, cacheConfig);
                     if (created != null && !string.IsNullOrEmpty(created.Name)) {
                         cacheName = created.Name;
                         savedState.CacheName = cacheName;
-                        savedState.Model = backendParams.Model;
+                        savedState.Model = backendParams.CurrentModel;
                         savedState.Temperature = backendParams.Temperature;
                         savedState.TopP = backendParams.TopP;
                         savedState.TopK = backendParams.TopK;
@@ -655,12 +655,12 @@ public class LatexRefinementSession {
                         DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
                         Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
                     };
-                    var created = await _client.Caches.CreateAsync(backendParams.Model, cacheConfig);
+                    var created = await _client.Caches.CreateAsync(backendParams.CurrentModel, cacheConfig);
                     if (created != null && !string.IsNullOrEmpty(created.Name)) {
                         cacheName = created.Name;
                         var newState = new ContextCacheState {
                             CacheName = cacheName,
-                            Model = backendParams.Model,
+                            Model = backendParams.CurrentModel,
                             Temperature = backendParams.Temperature,
                             TopP = backendParams.TopP,
                             TopK = backendParams.TopK,
@@ -697,8 +697,8 @@ public class LatexRefinementSession {
             requestConfig.SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] };
         }
 
-        if (backendParams.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+        if (backendParams.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+            bool isGemini3 = backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
             bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel) && isGemini3;
             bool hasBudget = backendParams.ThinkingBudget.HasValue;
 
@@ -759,13 +759,13 @@ public class LatexRefinementSession {
         Console.CancelKeyPress += CancelHandler;
 
         while (true) {
-            Console.WriteLine($"\n  [API] Sende Anfrage an Gemini ({backendParams.Model}) (Request {currentRequest}/{maxRequests})...");
+            Console.WriteLine($"\n  [API] Sende Anfrage an Gemini ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
             string chunkResp = "";
             bool callSuccess = false;
 
             try {
                 callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
-                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.Model, history, requestConfig),
+                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
                   onChunkReceived: async (chunk) => {
                       string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
 
@@ -870,7 +870,7 @@ public class LatexRefinementSession {
 
             string fileHeader = $"% ==========================================\n" +
                                 $"% LatexRefinement Step Output: {outputFileName}\n" +
-                                $"% Model: {backendParams.Model}\n" +
+                                $"% Model: {backendParams.CurrentModel}\n" +
                                 $"% Temperature: {backendParams.Temperature}\n" +
                                 $"% TopP: {backendParams.TopP}\n" +
                                 $"% TopK: {backendParams.TopK}\n" +
@@ -945,8 +945,8 @@ public class LatexRefinementSession {
             MaxOutputTokens = backendParams.MaxOutputTokens
         };
 
-        if (backendParams.Model.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = backendParams.Model.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
+        if (backendParams.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+            bool isGemini3 = backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
             bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel) && isGemini3;
             bool hasBudget = backendParams.ThinkingBudget.HasValue;
 
@@ -975,13 +975,13 @@ public class LatexRefinementSession {
         Console.CancelKeyPress += CancelHandler;
 
         while (true) {
-            Console.WriteLine($"\n  [API] Sende PDF-Fix-Anfrage an Gemini ({backendParams.Model}) (Request {currentRequest}/{maxRequests})...");
+            Console.WriteLine($"\n  [API] Sende PDF-Fix-Anfrage an Gemini ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
             string chunkResp = "";
             bool callSuccess = false;
 
             try {
                 callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
-                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.Model, history, requestConfig),
+                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
                   onChunkReceived: async (chunk) => {
                       string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                       Console.Write(text);

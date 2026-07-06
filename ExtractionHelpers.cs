@@ -353,7 +353,7 @@ public static partial class ExtractionHelpers {
             if (int.TryParse(Console.ReadLine()?.Trim(), out int startNum) && startNum >= 1 && startNum <= files.Length) {
                 int startIndex = startNum - 1;
                 Console.WriteLine($"\nStarte Batch-Verarbeitung ab Video {startNum}: {Path.GetFileName(files[startIndex])}");
-                return files.Skip(startIndex).ToArray();
+                return [.. files.Skip(startIndex)];
             }
             else {
                 Console.WriteLine("[WARNUNG] Ungültige Eingabe. Starte bei Video 1.");

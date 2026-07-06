@@ -21,7 +21,12 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Model": "gemini-3.1-pro-preview",
+  "Model": [
+    "gemini-3.1-pro-preview",
+    "gemini-3.5-flash",
+    "gemini-2.5-flash"
+  ],
+  "CurrentModelIndex": 0,
   "Temperature": 0.35,
   "TopP": 0.95,
   "TopK": 40,

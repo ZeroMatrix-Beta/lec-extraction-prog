@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace Config;
 
@@ -7,7 +8,18 @@ public class BackendParameters {
     public float TopP { get; set; } = 1.0f;
     public int TopK { get; set; } = 10;
     public int MaxOutputTokens { get; set; } = 65535;
-    public string Model { get; set; } = "gemini-3.5-flash";
+    public string[] Model { get; set; } = ["gemini-3.5-flash"];
+    // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
+    public int CurrentModelIndex { get; set; } = 0;
+    [JsonIgnore]
+    public string CurrentModel {
+        get => Model.Length > 0 ? Model[Math.Clamp(CurrentModelIndex, 0, Model.Length - 1)] : "";
+        set {
+            int idx = Math.Clamp(CurrentModelIndex, 0, Model.Length > 0 ? Model.Length - 1 : 0);
+            if (Model.Length == 0) Model = [value];
+            else Model[idx] = value;
+        }
+    }
     public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
     public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
 
@@ -28,8 +40,8 @@ public class RefinementStepConfig {
     public string[] SystemInstructionPaths { get; set; } = [];
     public string[] HistoryPreloadPaths { get; set; } = [];
 
-    public BackendParameters AiStudio { get; set; } = new BackendParameters { Model = "gemini-3.5-flash" };
-    public BackendParameters Vertex { get; set; } = new BackendParameters { Model = "gemini-2.5-pro" };
+    public BackendParameters AiStudio { get; set; } = new BackendParameters { Model = ["gemini-3.5-flash"] };
+    public BackendParameters Vertex { get; set; } = new BackendParameters { Model = ["gemini-2.5-pro"] };
 }
 
 public class PdfCompilationConfig {

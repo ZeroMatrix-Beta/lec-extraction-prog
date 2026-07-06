@@ -84,7 +84,7 @@ public partial class DirectAiChatSessionAiStudio {
         GcsBucketName = config.GcsBucketName;
         SystemInstructionPath = config.SystemInstructionPath;
         _activeApiProfile = config.ActiveApiProfile;
-        _activeModel = config.Model;
+        _activeModel = config.CurrentModel;
 
         // [AI Context] Creates a localized deep copy of AI parameters.
         // [Human] Kopiert die Standard-Werte, damit wir sie später mit "/set temp" im Chat verändern können, ohne das Original zu überschreiben.
@@ -104,8 +104,10 @@ public partial class DirectAiChatSessionAiStudio {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.Model, "AI Studio", AvailableModels, newModel => {
-                _config.Model = newModel;
+            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", AvailableModels, newModel => {
+                int idx = Array.IndexOf(AvailableModels, newModel);
+                if (idx >= 0) _config.CurrentModelIndex = idx;
+                _config.CurrentModel = newModel;
                 ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
             });
             if (selectedModel == "__EXIT__") return;
@@ -231,20 +233,20 @@ public partial class DirectAiChatSessionAiStudio {
                 history.Add(new Content { Role = "user", Parts = parts });
 
                 try {
-                // [AI Context] Hands off to streaming handler. Mutates 'history' internally.
-                // The resilience logic is now inside StreamGeminiResponseAsync.
-                await StreamGeminiResponseAsync(_activeModel, history, input, promptText, userName);
-            }
-            catch (Exception ex) {
-                // This block now catches unrecoverable errors re-thrown by the resilience helper.
-                WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
-                WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-                // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
-                if (history.Count > 0 && history.Last().Role == "user") {
-                    history.RemoveAt(history.Count - 1);
+                    // [AI Context] Hands off to streaming handler. Mutates 'history' internally.
+                    // The resilience logic is now inside StreamGeminiResponseAsync.
+                    await StreamGeminiResponseAsync(_activeModel, history, input, promptText, userName);
                 }
-            }
+                catch (Exception ex) {
+                    // This block now catches unrecoverable errors re-thrown by the resilience helper.
+                    WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+                    WriteLine($"Originaler Fehlertext: {ex.Message}");
+
+                    // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
+                    if (history.Count > 0 && history.Last().Role == "user") {
+                        history.RemoveAt(history.Count - 1);
+                    }
+                }
             }
             finally {
                 Console.CancelKeyPress -= turnCancelHandler;
@@ -275,7 +277,7 @@ public partial class DirectAiChatSessionAiStudio {
         }
     }
 
-    private void ShowCommands() {
+    private static void ShowCommands() {
         WriteLine("\n📋 Befehle:");
         WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
         WriteLine("  🚪 exit / quit             -> Beendet den Chat");
@@ -409,11 +411,13 @@ public partial class DirectAiChatSessionAiStudio {
             if (!string.IsNullOrEmpty(newModel)) {
                 _activeModel = newModel;
                 WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
-                
+
                 Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
                 string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
                 if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
-                    _config.Model = _activeModel;
+                    int idx = Array.IndexOf(AvailableModels, _activeModel);
+                    if (idx >= 0) _config.CurrentModelIndex = idx;
+                    _config.CurrentModel = _activeModel;
                     ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
                     WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
                 }
@@ -460,7 +464,7 @@ public partial class DirectAiChatSessionAiStudio {
         };
 
         if (AIParams.UseGoogleSearch) {
-            config.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+            config.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
         // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models

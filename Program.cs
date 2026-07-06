@@ -148,12 +148,15 @@ public partial class Program {
                 config.SourceFolder = newFolder;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "Vertex AI Auto-Extraktion", VertexAutoExtractionSession.AvailableModels, newModel => {
-                config.Model = newModel;
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "Vertex AI Auto-Extraktion", VertexAutoExtractionSession.AvailableModels, newModel => {
+                int idx = Array.IndexOf(VertexAutoExtractionSession.AvailableModels, newModel);
+                if (idx >= 0) config.CurrentModelIndex = idx;
+                config.CurrentModel = newModel;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             });
             if (selectedModel == "__EXIT__") return;
-            config.Model = selectedModel;
+            config.CurrentModel = selectedModel;
+            config.CurrentModelIndex = Math.Max(0, Array.IndexOf(VertexAutoExtractionSession.AvailableModels, selectedModel));
 
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
@@ -168,12 +171,15 @@ public partial class Program {
                 config.SourceFolder = newFolder;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.Model, "AI Studio Auto-Extraktion", AiStudioAutoExtractionSession.AvailableModels, newModel => {
-                config.Model = newModel;
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "AI Studio Auto-Extraktion", AiStudioAutoExtractionSession.AvailableModels, newModel => {
+                int idx = Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, newModel);
+                if (idx >= 0) config.CurrentModelIndex = idx;
+                config.CurrentModel = newModel;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             });
             if (selectedModel == "__EXIT__") return;
-            config.Model = selectedModel;
+            config.CurrentModel = selectedModel;
+            config.CurrentModelIndex = Math.Max(0, Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, selectedModel));
 
             string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
                 ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]

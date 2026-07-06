@@ -31,7 +31,12 @@
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
-  "Model": "gemini-3.5-flash",
+  "Model": [
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-preview",
+    "gemini-2.5-flash"
+  ],
+  "CurrentModelIndex": 0,
   "ThinkingBudget": 32768,
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
