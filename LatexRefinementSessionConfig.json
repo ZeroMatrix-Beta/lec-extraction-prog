@@ -7,7 +7,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 0,
+  "AiStudioActiveApiProfile": 3,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
@@ -25,7 +25,7 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.35,
+      "Temperature": 0.34,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65536,
@@ -53,13 +53,13 @@
   },
   "Step2SpeechRefinement": {
     "Enabled": true,
-    "AttachAudio": false,
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.35,
+      "Temperature": 0.34,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -93,7 +93,7 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.35,
+      "Temperature": 0.34,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -106,7 +106,7 @@
       "ContextCachingMinimumRemainingMinutes": 10
     },
     "Vertex": {
-      "Temperature": 0.35,
+      "Temperature": 0.34,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,

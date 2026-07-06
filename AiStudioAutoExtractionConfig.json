@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 0,
+  "ActiveApiProfile": 2,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
@@ -26,10 +26,12 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples3.md"
   ],
   "HistoryPreloadPaths": [
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history2"
   ],
   "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.35,
+  "Temperature": 0.34,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,

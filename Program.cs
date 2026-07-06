@@ -41,7 +41,7 @@ public partial class Program {
                 Console.WriteLine($"  {vertexDisplay}");
                 Console.WriteLine("  3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)");
                 Console.WriteLine("--------------------------------------------------");
-                 Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
+                Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
                 Console.WriteLine("  5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)");
                 Console.WriteLine("  6) ⚙️ Quellordner (Source Folders) verwalten & ändern");
                 Console.Write("\nChoice (1-6) or 'exit': ");
