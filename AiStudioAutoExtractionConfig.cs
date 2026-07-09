@@ -53,6 +53,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
     public int CurrentModelIndex { get; set; } = 0;
     [JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
     public string CurrentModel {
         get => Model.Length > 0 ? Model[Math.Clamp(CurrentModelIndex, 0, Model.Length - 1)] : "";
         set {

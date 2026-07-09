@@ -38,7 +38,7 @@
   "LoadHistoryIntoSystemInstruction": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 2,
+  "NumberOfParts": 3,
   "OverlapSeconds": 240,
   "CreateLogFiles": true,
   "UseContextCaching": true,

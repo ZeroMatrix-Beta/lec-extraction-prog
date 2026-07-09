@@ -36,7 +36,7 @@ public static partial class ApiResilience {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 if (attempt > 1) {
-                    string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
+                    string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
                     Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
                 }
 
@@ -85,7 +85,7 @@ public static partial class ApiResilience {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 if (attempt > 1) {
-                    string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
+                    string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
                     Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
                 }
                 return await apiCall();
@@ -167,7 +167,7 @@ public static partial class ApiResilience {
         int waitTime;
         int nextBackoff;
 
-        string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [{retryContext}]";
+        string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
         string delayMessage = "Still waiting for the acknowledgment / processing...";
 
         if (IsNetworkConnectionError(ex)) {

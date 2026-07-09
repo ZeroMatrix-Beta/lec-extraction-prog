@@ -979,6 +979,28 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Task<List<Part>>? pendingAudioUploadTask = null;
             Task? rateLimitDelayTask = null;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
+            
+            // [AI Context] Initialize refinementClient early because the parallel audio upload task (pendingAudioUploadTask)
+            // needs to upload the audio to the EXACT SAME Google Cloud Project / API Key that LatexRefinementSession will use.
+            // Otherwise, LatexRefinementSession gets a ClientError: "You do not have permission to access the File".
+            Client? refinementClient = null;
+            if (_config.GoIntoLatexRefinement) {
+                if (_latexRefinementConfig != null) {
+                    _latexRefinementConfig.UseVertex = false;
+                    if (_config.NumberOfParts <= 1) {
+                        Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
+                        _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
+                    }
+                }
+                string? extractedRefinementEnvName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
+                    ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
+                    : null;
+                string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
+                    ? extractedRefinementEnvName
+                    : "API_KEY-latex-refinement";
+                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
+                refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
+            }
             Task? audioExtractionTask = null;
             void startAudioTask() {
                 if (_config.GenerateAudioFile && audioExtractionTask == null) {
@@ -1075,7 +1097,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                                ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                             if (System.IO.File.Exists(audioPath)) {
                                 Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
-                                var handler = new AttachmentHandler(_client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "");
+                                var handler = new AttachmentHandler(refinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "");
                                 var (s, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
                                 if (s) return attached;
                             }
@@ -1203,19 +1225,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     await audioExtractionTask;
                 }
 
-                // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
-                if (_latexRefinementConfig != null) {
-                    _latexRefinementConfig.UseVertex = false;
-                    if (_config.NumberOfParts <= 1) {
-                        Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
-                        _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
-                    }
-                }
-                string envName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
-                    ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
-                    : "API_KEY-latex-refinement";
-                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
-                Client refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
+                // LatexRefinementSession uses its own dedicated API key (resolved at the start of the processing loop)
+                // refinementClient is already initialized and the audio file was uploaded using it.
 
                 List<Part>? preUploadedAudioParts = null;
                 if (_config.EnableParallelFileUploads && pendingAudioUploadTask != null) {
@@ -1232,7 +1243,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
                 var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
-                    refinementClient,
+                    refinementClient ?? _client,
                     _latexRefinementConfig!,
                     refinementTargetFile,
                     _config,

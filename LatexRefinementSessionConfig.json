@@ -7,7 +7,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 0,
+  "AiStudioActiveApiProfile": 1,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
@@ -19,7 +19,7 @@
   },
   "Step1MergeAndTimestamp": {
     "Enabled": true,
-    "AttachAudio": true, // set to true for best results
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
@@ -29,31 +29,37 @@
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65536,
-      "Model": "gemini-3.5-flash",
+      "Model": [
+        "gemini-3.5-flash"
+      ],
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": true,
       "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 15
+      "ContextCachingMinimumRemainingMinutes": 15,
+      "CurrentModelIndex": 0
     },
     "Vertex": {
       "Temperature": 0.35,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
-      "Model": "gemini-3.1-pro-preview",
+      "Model": [
+        "gemini-2.5-pro"
+      ],
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 15
+      "ContextCachingMinimumRemainingMinutes": 15,
+      "CurrentModelIndex": 0
     }
   },
   "Step2SpeechRefinement": {
     "Enabled": true,
-    "AttachAudio": true, // set to true for best results
+    "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
@@ -63,26 +69,32 @@
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
-      "Model": "gemini-3.5-flash",
+      "Model": [
+        "gemini-3.5-flash"
+      ],
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 10
+      "ContextCachingMinimumRemainingMinutes": 10,
+      "CurrentModelIndex": 0
     },
     "Vertex": {
       "Temperature": 0.35,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
-      "Model": "gemini-3.1-pro-preview",
+      "Model": [
+        "gemini-2.5-pro"
+      ],
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 10
+      "ContextCachingMinimumRemainingMinutes": 10,
+      "CurrentModelIndex": 0
     }
   },
   "Step3LastRefinement": {
@@ -97,26 +109,32 @@
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
-      "Model": "gemini-3.5-flash",
+      "Model": [
+        "gemini-3.5-flash"
+      ],
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 10
+      "ContextCachingMinimumRemainingMinutes": 10,
+      "CurrentModelIndex": 0
     },
     "Vertex": {
       "Temperature": 0.34,
       "TopP": 0.93,
       "TopK": 35,
       "MaxOutputTokens": 65535,
-      "Model": "gemini-3.1-pro-preview",
+      "Model": [
+        "gemini-2.5-pro"
+      ],
       "ThinkingBudget": 32768,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
-      "ContextCachingMinimumRemainingMinutes": 10
+      "ContextCachingMinimumRemainingMinutes": 10,
+      "CurrentModelIndex": 0
     }
   }
 }

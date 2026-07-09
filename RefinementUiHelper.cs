@@ -80,7 +80,8 @@ namespace AutoExtraction {
                     Console.WriteLine(" 3) gemini-2.5-flash");
                     Console.WriteLine(" 4) gemini-2.5-pro");
                     Console.WriteLine(" 5) gemini-2.0-flash-exp");
-                    Console.Write("Wahl (1-5): ");
+                    Console.WriteLine(" 6) gemini-3-flash-preview");
+                    Console.Write("Wahl (1-6): ");
                     string mChoice = Console.ReadLine()?.Trim() ?? "";
                     string newModel = mChoice switch {
                         "1" => "gemini-3.5-flash",
@@ -88,6 +89,7 @@ namespace AutoExtraction {
                         "3" => "gemini-2.5-flash",
                         "4" => "gemini-2.5-pro",
                         "5" => "gemini-2.0-flash-exp",
+                        "6" => "gemini-3-flash-preview",
                         _ => ""
                     };
                     if (!string.IsNullOrEmpty(newModel)) {
@@ -207,8 +209,11 @@ namespace AutoExtraction {
                 );
             }
             else {
-                string envName = (refinementConfig.AiStudioApiKeyEnvNames != null && refinementConfig.AiStudioApiKeyEnvNames.Length > refinementConfig.AiStudioActiveApiProfile)
+                string? extractedRefinementEnvName = (refinementConfig.AiStudioApiKeyEnvNames != null && refinementConfig.AiStudioApiKeyEnvNames.Length > refinementConfig.AiStudioActiveApiProfile)
                     ? refinementConfig.AiStudioApiKeyEnvNames[refinementConfig.AiStudioActiveApiProfile]
+                    : null;
+                string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
+                    ? extractedRefinementEnvName
                     : "API_KEY-latex-refinement";
                 string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
                 refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);

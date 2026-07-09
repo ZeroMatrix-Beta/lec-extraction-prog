@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 0,
+  "ActiveApiProfile": 2,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
@@ -12,7 +12,7 @@
     "D:\\lecture-videos\\grundstrukturen",
     "D:\\lecture-videos\\d-und-a"
   ],
-  "TargetFolder": "",
+  "TargetFolder": "D:\\lecture-videos\\grundstrukturen\\extracted_output",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\hard-specs.md",
@@ -22,11 +22,7 @@
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples3.md"
   ],
   "HistoryPreloadPaths": [
-    null,
-    "",
-    "",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history2"
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
   ],
   "LogFolder": "D:\\gemini-logs",
   "CreateLogFiles": true,
@@ -35,12 +31,11 @@
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "Model": [
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-preview",
-    "gemini-2.5-flash"
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash"
   ],
   "CurrentModelIndex": 0,
-  "ThinkingBudget": 32768,
+  "ThinkingBudget": 32765,
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
@@ -49,9 +44,8 @@
   "NumberOfParts": 3,
   "OverlapSeconds": 240,
   "EnableParallelFileUploads": true,
-  "GoogleVideoFps": 0.25,
-  "UseGoogleSearch": false,
+  "GoogleVideoFps": 0.3333,
+  "UseGoogleSearch": true,
   "FfmpegPreset": "medium",
-  "YouTubeTasks": [],
-  "CurrentModel": ""
+  "YouTubeTasks": []
 }

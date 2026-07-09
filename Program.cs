@@ -102,9 +102,15 @@ public partial class Program {
 
     private static async Task RunDirectAiStudioChatAsync() {
         var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
-        string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
+
+        // HIER IST DER FIX:
+        string? extractedEnvName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
             ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
-            : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
+            : null;
+
+        string envName = extractedEnvName ?? (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
+        // ENDE VOM FIX
+
         string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
         var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
@@ -181,9 +187,14 @@ public partial class Program {
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, selectedModel));
 
-            string envName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
+            // HIER IST DER FIX:
+            string? extractedEnvName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
                 ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
-                : (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
+                : null;
+
+            string envName = extractedEnvName ?? (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
+            // ENDE VOM FIX
+
             string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps);
