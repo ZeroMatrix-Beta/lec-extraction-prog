@@ -231,6 +231,9 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 }
 
                 WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
+                // [AI Context] A brief delay is introduced here to allow the File API backend to propagate
+                // the active file status fully before the model attempts to generate content.
+                await Task.Delay(5000, cancellationToken);
                 var fileDataPart = new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } };
                 if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) && _googleVideoFps.HasValue) {
                     fileDataPart.VideoMetadata = new() { Fps = _googleVideoFps.Value };

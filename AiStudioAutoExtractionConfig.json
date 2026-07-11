@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 2,
+  "ActiveApiProfile": 0,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
@@ -31,10 +31,10 @@
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "Model": [
-    "gemini-3-flash-preview",
-    "gemini-3.5-flash"
+    "gemini-3.5-flash",
+    "gemini-3-flash-preview"
   ],
-  "CurrentModelIndex": 0,
+  "CurrentModelIndex": 1,
   "ThinkingBudget": 32765,
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
@@ -45,7 +45,7 @@
   "OverlapSeconds": 240,
   "EnableParallelFileUploads": true,
   "GoogleVideoFps": 0.3333,
-  "UseGoogleSearch": true,
+  "UseGoogleSearch": false,
   "FfmpegPreset": "medium",
   "YouTubeTasks": []
 }

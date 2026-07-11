@@ -436,7 +436,7 @@ namespace FfmpegUtilities {
                     Console.WriteLine($" {i + 1}) {availableModels[i]}");
                 }
                 
-                Console.Write($"\nBitte Modell auswählen (1-{availableModels.Length}) [Standard: gemini-2.5-flash]: ");
+                Console.Write($"\nBitte Modell auswählen (1-{availableModels.Length}) [Standard: {currentModel}]: ");
                 string? modelChoice = Console.ReadLine()?.Trim();
                 
                 if (modelChoice == "exit" || modelChoice == "quit") return "__EXIT__";
@@ -446,7 +446,7 @@ namespace FfmpegUtilities {
                     newModel = availableModels[index - 1];
                 }
                 else {
-                    newModel = "gemini-2.5-flash";
+                    newModel = currentModel;
                 }
                 
                 Console.WriteLine($"\n  🎯 Neues Modell ausgewählt: {newModel}");

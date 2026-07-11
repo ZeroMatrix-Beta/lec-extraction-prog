@@ -10,8 +10,8 @@
     "D:\\lecture-videos\\d-und-a/new"
   ],
   "Model": [
-    "gemini-2.5-flash",
-    "gemini-3.5-flash"
+    "gemini-3.5-flash",
+    "gemini-3-flash-preview"
   ],
   "CurrentModelIndex": 0,
   "AI": {

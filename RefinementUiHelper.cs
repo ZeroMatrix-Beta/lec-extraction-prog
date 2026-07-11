@@ -76,20 +76,12 @@ namespace AutoExtraction {
                 else if (menuChoice == "4") {
                     Console.WriteLine("\nWähle ein Modell:");
                     Console.WriteLine(" 1) gemini-3.5-flash");
-                    Console.WriteLine(" 2) gemini-3.1-flash-lite-preview");
-                    Console.WriteLine(" 3) gemini-2.5-flash");
-                    Console.WriteLine(" 4) gemini-2.5-pro");
-                    Console.WriteLine(" 5) gemini-2.0-flash-exp");
-                    Console.WriteLine(" 6) gemini-3-flash-preview");
-                    Console.Write("Wahl (1-6): ");
+                    Console.WriteLine(" 2) gemini-3-flash-preview");
+                    Console.Write("Wahl (1-2): ");
                     string mChoice = Console.ReadLine()?.Trim() ?? "";
                     string newModel = mChoice switch {
                         "1" => "gemini-3.5-flash",
-                        "2" => "gemini-3.1-flash-lite-preview",
-                        "3" => "gemini-2.5-flash",
-                        "4" => "gemini-2.5-pro",
-                        "5" => "gemini-2.0-flash-exp",
-                        "6" => "gemini-3-flash-preview",
+                        "2" => "gemini-3-flash-preview",
                         _ => ""
                     };
                     if (!string.IsNullOrEmpty(newModel)) {

@@ -21,18 +21,20 @@
     "Enabled": true,
     "AttachAudio": true,
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
+      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\xml-latex-merge-instructions.xml"
+      //"C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.34,
+      "Temperature": 0.33,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65536,
       "Model": [
-        "gemini-3.5-flash"
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview"
       ],
-      "ThinkingBudget": 32768,
+      "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": true,
       "ContextCachingMinutes": 30,
@@ -46,9 +48,10 @@
       "TopK": 35,
       "MaxOutputTokens": 65535,
       "Model": [
-        "gemini-2.5-pro"
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview"
       ],
-      "ThinkingBudget": 32768,
+      "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 30,
@@ -65,14 +68,15 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.34,
+      "Temperature": 0.325,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": [
-        "gemini-3.5-flash"
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview"
       ],
-      "ThinkingBudget": 32768,
+      "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
@@ -86,9 +90,10 @@
       "TopK": 35,
       "MaxOutputTokens": 65535,
       "Model": [
-        "gemini-2.5-pro"
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview"
       ],
-      "ThinkingBudget": 32768,
+      "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
@@ -105,14 +110,15 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.34,
+      "Temperature": 0.36,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": [
-        "gemini-3.5-flash"
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview"
       ],
-      "ThinkingBudget": 32768,
+      "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,
@@ -126,9 +132,10 @@
       "TopK": 35,
       "MaxOutputTokens": 65535,
       "Model": [
-        "gemini-2.5-pro"
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview"
       ],
-      "ThinkingBudget": 32768,
+      "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
       "UseContextCaching": false,
       "ContextCachingMinutes": 15,

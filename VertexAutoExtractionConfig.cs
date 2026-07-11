@@ -25,7 +25,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
     public string LogFolder { get; set; } = AppConfig.LogFolder;
 
-    public string[] Model { get; set; } = ["gemini-3.1-pro-preview"];
+    public string[] Model { get; set; } = ["gemini-3.5-flash", "gemini-3-flash-preview"];
     // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
     public int CurrentModelIndex { get; set; } = 0;
     [JsonIgnore]

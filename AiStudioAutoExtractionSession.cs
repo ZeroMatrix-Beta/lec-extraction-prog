@@ -23,17 +23,7 @@ namespace AutoExtraction;
 public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
         "gemini-3.5-flash",
-        "gemini-3.1-flash-lite-preview",
-        "gemini-3-flash-preview",
-        "gemini-3.1-pro-preview",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-pro",
-        "gemma-3-27b-it",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-robotics-er-1.5-preview",
-        "gemini-robotics-er-1.6-preview"
+        "gemini-3-flash-preview"
     ];
 
     private Client _client = client;
@@ -513,7 +503,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -686,7 +676,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
-        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
@@ -1360,7 +1350,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
-        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
+        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
             if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig();
                 if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {

@@ -165,7 +165,7 @@ public class LatexRefinementSession {
             Console.WriteLine("\n--- [LaTeX Refinement - Schritt 3: Endprüfung & Validierung] ---");
             Console.WriteLine("  [INFO] Führe Probe-Kompilierung des aktuellen Dokuments aus...");
             bool alreadyCompiles = await CompilePdfAsync(currentFiles[0], baseName, targetFolder, "step3-precheck", allowRetryOnFailure: false);
-            
+
             string compileLogPath = Path.Combine(targetFolder, "step3-precheck-compile-log.txt");
             string compileLog = System.IO.File.Exists(compileLogPath) ? await System.IO.File.ReadAllTextAsync(compileLogPath) : "";
 
@@ -241,6 +241,24 @@ public class LatexRefinementSession {
                 // LaTeX creates aux files which can clutter the directory. 
                 // We'll leave them for now in case the user wants to inspect them.
                 Console.WriteLine($"  [INFO] PDF erfolgreich erstellt im Zielordner: {targetFolder}");
+                
+                string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
+                if (System.IO.File.Exists(compiledPdfPath)) {
+                    // 1. Copy to clean prefix name (e.g. step3-refined_output-final.pdf)
+                    string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
+                    System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
+                    Console.WriteLine($"  [INFO] PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
+
+                    // 2. If this is step4, copy it to the clean baseName.pdf (e.g. refined_output.pdf)
+                    if (stepPrefix == "step4") {
+                        string finalCleanPdfPath = Path.Combine(targetFolder, baseName + ".pdf");
+                        System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
+                        Console.WriteLine($"  [INFO] Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
+                    }
+                }
+
+                CleanupHelperFiles(targetFolder, finalTexFile);
+
                 if (logContent.Contains("⚠️ WARNING:")) {
                     Console.WriteLine($"  [INFO] Es gab LaTeX-Warnungen während der Kompilation. Details in: {stepPrefix}-compile-log.txt");
                 }
@@ -248,6 +266,7 @@ public class LatexRefinementSession {
             }
             else {
                 Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Protokoll gespeichert in: {logPath}");
+                CleanupHelperFiles(targetFolder, finalTexFile);
                 if (allowRetryOnFailure) {
                     Console.WriteLine("  [INFO] Starte automatische Fehlerbehebung durch erneute Korrekturanfrage an Gemini (-final-attempt)...");
                     string finalTexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
@@ -283,11 +302,36 @@ public class LatexRefinementSession {
             if (System.IO.File.Exists(precheckLogPath)) {
                 System.IO.File.Delete(precheckLogPath);
             }
+            string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
+            if (System.IO.File.Exists(cleanPdfPath)) {
+                System.IO.File.Delete(cleanPdfPath);
+            }
         }
         catch (Exception ex) {
             Console.WriteLine($"\n[LaTeX Refinement] [Exception gefangen] Art der Exception: {ex.GetType().Name}");
             Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
             Console.WriteLine("  [WARNUNG] Konnte temporäre Precheck-Dateien nicht vollständig bereinigen.");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Deletes intermediate LaTeX compiler files (.main.tex, .main.pdf, .aux, .log, etc.) to keep the output folder clean.
+    /// [Human] Löscht Hilfs- und Wrapperdateien des LaTeX-Compilers im Zielordner, um diesen sauber zu halten.
+    /// </summary>
+    private static void CleanupHelperFiles(string targetFolder, string finalTexFile) {
+        try {
+            string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
+            string wrapperBase = $"{inputBaseName}-main";
+            string[] extensions = [".tex", ".pdf", ".log", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"];
+            foreach (var ext in extensions) {
+                string filePath = Path.Combine(targetFolder, wrapperBase + ext);
+                if (System.IO.File.Exists(filePath)) {
+                    System.IO.File.Delete(filePath);
+                }
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [WARNUNG] Hilfsdateien für {Path.GetFileName(finalTexFile)} konnten nicht vollständig bereinigt werden: {ex.Message}");
         }
     }
 
@@ -697,9 +741,8 @@ public class LatexRefinementSession {
             requestConfig.SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] };
         }
 
-        if (backendParams.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
-            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel) && isGemini3;
+        if (backendParams.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel);
             bool hasBudget = backendParams.ThinkingBudget.HasValue;
 
             if (hasLevel || hasBudget) {
@@ -777,11 +820,11 @@ public class LatexRefinementSession {
                       chunkResp += text;
 
                       if (chunk.UsageMetadata != null) {
-                          if (chunk.UsageMetadata.PromptTokenCount.HasValue) 
+                          if (chunk.UsageMetadata.PromptTokenCount.HasValue)
                               totalInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) 
+                          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue)
                               totalOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                          if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) 
+                          if (chunk.UsageMetadata.CachedContentTokenCount.HasValue)
                               totalCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
                       }
 
@@ -945,9 +988,8 @@ public class LatexRefinementSession {
             MaxOutputTokens = backendParams.MaxOutputTokens
         };
 
-        if (backendParams.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = backendParams.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
-            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel) && isGemini3;
+        if (backendParams.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel);
             bool hasBudget = backendParams.ThinkingBudget.HasValue;
 
             if (hasLevel || hasBudget) {
@@ -1063,9 +1105,23 @@ public class LatexRefinementSession {
 
             if (retrySuccess) {
                 Console.WriteLine($"  [INFO] PDF erfolgreich im finalen Versuch (step5) erstellt: {targetFolder}");
+                string compiledPdfPath = Path.Combine(targetFolder, standaloneFileName.Replace(".tex", ".pdf"));
+                if (System.IO.File.Exists(compiledPdfPath)) {
+                    // 1. Copy to clean prefix name (e.g. step5-refined_output-offset-last_try.pdf)
+                    string cleanPdfPath = Path.Combine(targetFolder, noPreambleFileName.Replace(".tex", ".pdf"));
+                    System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
+                    Console.WriteLine($"  [INFO] PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
+
+                    // 2. Copy to clean baseName.pdf (e.g. refined_output.pdf)
+                    string finalCleanPdfPath = Path.Combine(targetFolder, baseName + ".pdf");
+                    System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
+                    Console.WriteLine($"  [INFO] Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
+                }
+                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName));
             }
             else {
                 Console.WriteLine($"  [FEHLER] Auch step5 konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
+                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName));
             }
         }
     }

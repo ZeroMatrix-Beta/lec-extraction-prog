@@ -27,17 +27,7 @@ namespace AutoExtraction;
 public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
         "gemini-3.5-flash",
-        "gemini-3.1-flash-lite-preview",
-        "gemini-3-flash-preview",
-        "gemini-3.1-pro-preview",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-pro",
-        "gemma-3-27b-it",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-robotics-er-1.5-preview",
-        "gemini-robotics-er-1.6-preview"
+        "gemini-3-flash-preview"
     ];
 
     private readonly Client _client = client;
@@ -725,9 +715,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
-            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
+        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
             bool hasBudget = _config.ThinkingBudget.HasValue;
 
             if (hasLevel || hasBudget) {
@@ -914,9 +903,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
-            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
+        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
             bool hasBudget = _config.ThinkingBudget.HasValue;
 
             if (hasLevel || hasBudget) {
@@ -1611,9 +1599,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (_config.CurrentModel.Contains("gemini-2", StringComparison.OrdinalIgnoreCase) || _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase)) {
-            bool isGemini3 = _config.CurrentModel.Contains("gemini-3", StringComparison.OrdinalIgnoreCase);
-            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel) && isGemini3;
+        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
             bool hasBudget = _config.ThinkingBudget.HasValue;
 
             if (hasLevel || hasBudget) {

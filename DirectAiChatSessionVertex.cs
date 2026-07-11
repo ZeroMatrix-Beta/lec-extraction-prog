@@ -24,17 +24,7 @@ namespace DirectChatAiInteraction.Vertex;
 public class DirectAiChatSessionVertex {
     public static readonly string[] AvailableModels = [
         "gemini-3.5-flash",
-        "gemini-3.1-flash-lite-preview",
-        "gemini-3-flash-preview",
-        "gemini-3.1-pro-preview",
-        "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-pro",
-        "gemma-3-27b-it",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-robotics-er-1.5-preview",
-        "gemini-robotics-er-1.6-preview"
+        "gemini-3-flash-preview"
     ];
 
     private readonly DirectAiChatSessionVertexConfig _config;
@@ -402,14 +392,19 @@ public class DirectAiChatSessionVertex {
             config.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
         }
 
-        // [AI Context] Safely inject Thinking parameters ONLY for supported 2.5 and 3.x models
-        // ThinkingLevel is not supported by the current SDK's ThinkingConfig.
-        // If this functionality is intended, please check for SDK updates or alternative configuration methods.
-        if (selectedModel.Contains("gemini-2.5", StringComparison.OrdinalIgnoreCase)) {
-            if (AIParams.ThinkingBudget.HasValue) {
-                int budget = AIParams.ThinkingBudget.Value;
-                if (budget > 32768) budget = 32768;
-                config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
+        // [AI Context] Safely inject Thinking parameters ONLY for gemini-3-flash-preview.
+        // gemini-3.5-flash will bypass thinking configuration to keep extraction fast and stable.
+        if (selectedModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+            if (AIParams.ThinkingBudget.HasValue || !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
+                config.ThinkingConfig = new ThinkingConfig();
+                if (!string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
+                    config.ThinkingConfig.ThinkingLevel = AIParams.ThinkingLevel;
+                }
+                else if (AIParams.ThinkingBudget.HasValue) {
+                    int budget = AIParams.ThinkingBudget.Value;
+                    if (budget > 32768) budget = 32768;
+                    config.ThinkingConfig.ThinkingBudget = budget;
+                }
             }
         }
 
