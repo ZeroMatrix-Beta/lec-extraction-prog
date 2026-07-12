@@ -715,7 +715,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+        if (SupportsThinking(_config.CurrentModel)) {
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
             bool hasBudget = _config.ThinkingBudget.HasValue;
 
@@ -903,7 +903,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+        if (SupportsThinking(_config.CurrentModel)) {
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
             bool hasBudget = _config.ThinkingBudget.HasValue;
 
@@ -1528,17 +1528,17 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
 
-        prompt += "\n\n========================================= CONTEXT & PARAMETERS =========================================\n" +
+        prompt += "\n\n<context_and_parameters>\n" +
                   "IMPORTANT: The System Instructions (System Prompt) contain the absolute rules, syntax specifications, and constraints for this transcription and MUST be followed strictly. The parameters below only specify details for this video fragment:\n\n" +
-                  $"* You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.\n" +
-                  $"* Duration & Timestamps: Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).\n";
+                  $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.</parameter>\n" +
+                  $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).</parameter>\n";
 
         if (partNumber != 1) {
-            prompt += "* Segment Start: Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.\n";
+            prompt += "<parameter name=\"segment_start\">Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.</parameter>\n";
         }
 
-        prompt += "* Merging & Scope: Do NOT attempt to merge the current part with the previous parts. Focus solely on transcribing this fragment. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.\n" +
-                  "========================================================================================================";
+        prompt += "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts. Focus solely on transcribing this fragment. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n" +
+                  "</context_and_parameters>";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
@@ -1555,7 +1555,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
                 string content = await System.IO.File.ReadAllTextAsync(texFile);
-                contextText += $"=== REFERENCE CONTEXT: {Path.GetFileName(texFile)} ===\n{content}\n=== END OF REFERENCE CONTEXT ===\n\n";
+                contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
             }
             userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
         }
@@ -1599,7 +1599,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (_config.CurrentModel.Equals("gemini-3-flash-preview", StringComparison.OrdinalIgnoreCase)) {
+        if (SupportsThinking(_config.CurrentModel)) {
             bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
             bool hasBudget = _config.ThinkingBudget.HasValue;
 
@@ -1779,6 +1779,17 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
+    /// <summary>
+    /// [AI Context] Determines whether a Gemini model supports thinking parameters (`ThinkingConfig`, `HIGH`/`LOW` levels, `ThinkingBudget`).
+    /// [Human] Prüft, ob das gewählte KI-Modell die erweiterten Denk-Parameter (Thinking Level/Budget) unterstützt.
+    /// </summary>
+    private static bool SupportsThinking(string modelName) {
+        if (string.IsNullOrWhiteSpace(modelName)) return false;
+        return modelName.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase) ||
+               modelName.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase) ||
+               modelName.Contains("thinking", StringComparison.OrdinalIgnoreCase);
+    }
+
     [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
     private static partial System.Text.RegularExpressions.Regex MyRegex();
 

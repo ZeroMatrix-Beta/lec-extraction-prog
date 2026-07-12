@@ -67,20 +67,51 @@ public static class ConfigLoader<T> where T : class, new() {
         }
     }
 
+    /// <summary>
+    /// [AI Context] Recursively updates existing JSON properties from `source` to `target` while keeping `JTokenType.Comment` nodes in `target.Children()` intact.
+    /// Unlike `JObject.Merge`, which replaces structure blocks and deletes adjacent comment nodes, this updates property values in-place so comments in .json configs survive saving.
+    /// [Human] Aktualisiert JSON-Eigenschaften gezielt vor Ort, ohne dass darüber oder darunter liegende Kommentare (`// ...`) beim Speichern gelöscht werden.
+    /// </summary>
+    private static void UpdatePropertiesPreservingComments(JToken target, JToken source) {
+        if (target is JObject targetObj && source is JObject sourceObj) {
+            foreach (var sourceProp in sourceObj.Properties()) {
+                var targetProp = targetObj.Property(sourceProp.Name);
+                if (targetProp != null) {
+                    if (targetProp.Value is JObject && sourceProp.Value is JObject) {
+                        UpdatePropertiesPreservingComments(targetProp.Value, sourceProp.Value);
+                    }
+                    else if (targetProp.Value is JArray && sourceProp.Value is JArray) {
+                        targetProp.Value = sourceProp.Value.DeepClone();
+                    }
+                    else if (targetProp.Value is JValue targetVal && sourceProp.Value is JValue sourceVal) {
+                        targetVal.Value = sourceVal.Value;
+                    }
+                    else {
+                        targetProp.Value = sourceProp.Value.DeepClone();
+                    }
+                }
+                else {
+                    targetObj.Add(sourceProp.Name, sourceProp.Value.DeepClone());
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Serializes the configuration object to a formatted JSON string while preserving existing JSON comments and formatting from the target file.
+    /// [Human] Speichert die Konfiguration in die JSON-Datei und sorgt dafür, dass bestehende Kommentare nicht verloren gehen.
+    /// </summary>
     private static string SerializePreservingComments(string filePath, T config) {
         if (File.Exists(filePath)) {
             try {
                 string existingJson = File.ReadAllText(filePath);
-                var job = JObject.Parse(existingJson, new JsonLoadSettings { CommentHandling = CommentHandling.Load });
+                var job = JObject.Parse(existingJson, new JsonLoadSettings { CommentHandling = CommentHandling.Load, LineInfoHandling = LineInfoHandling.Load });
                 var updatedJob = JObject.FromObject(config);
-                job.Merge(updatedJob, new JsonMergeSettings {
-                    MergeArrayHandling = MergeArrayHandling.Replace,
-                    MergeNullValueHandling = MergeNullValueHandling.Merge
-                });
+                UpdatePropertiesPreservingComments(job, updatedJob);
                 return job.ToString(Formatting.Indented);
             }
-            catch {
-                // Fallback if existing JSON was malformed
+            catch (Exception ex) {
+                Console.WriteLine($"\n[AppConfig Warnung] Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden. Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}");
             }
         }
         return JsonConvert.SerializeObject(config, Formatting.Indented);

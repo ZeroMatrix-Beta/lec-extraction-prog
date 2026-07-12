@@ -3,34 +3,176 @@
 % ==========================================
 % NEW VIBRANT SHADOW PREAMBLE
 % ==========================================
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+
+% --- FONT CONFIGURATION ---
+\usepackage{lmodern}
+\usepackage{anyfontsize}
+\usepackage{mathpazo}
+\renewcommand{\sfdefault}{lmss}
+
 \usepackage[ngerman]{babel} 
+% \usepackage[final,babel=true,expansion=false]{microtype} % Auskommentiert zur Einsparung von TeX-Speicher
+\usepackage{csquotes}
+
+% --- OPTIMIERTE SILBENTRENNUNG (HYPHENATION TUNING) ---
+\hyphenpenalty=100
+\exhyphenpenalty=100
+\doublehyphendemerits=10000
+\finalhyphendemerits=5000
+\tolerance=1500
+\emergencystretch=3em
+\hfuzz=1pt
+
 \usepackage{amsmath, amssymb, amsthm, mathtools, environ, etoolbox} 
 \usepackage{booktabs}
 \usepackage{fontawesome5}
+\usepackage[dvipsnames, x11names]{xcolor}
 
 % Setzt global "Woche" anstelle von "Kapitel" (angepasst an ngerman)
 \addto\captionsngerman{\renewcommand{\chaptername}{Woche}}
 
-% --- FONT CONFIGURATION ---
-\usepackage{mathpazo}
+% ==========================================
+% GLOBAL COLOR PALETTE & VARIABLES
+% ==========================================
+% 0. CUSTOM COLORS
+%\definecolor{DeepSeaGreen}{HTML}{1E3F3E}1E3F3E
+\definecolor{DeepSeaGreen}{HTML}{4A6F6E}
+\definecolor{DeepSeaGreenBright1}{HTML}{335655}
+\definecolor{DeepSeaGreenBright2}{HTML}{4A6F6E}
+
+\definecolor{DarkCaramel}{HTML}{684A31}
+
+% 1. CORE THEME COLORS
+\colorlet{ThemePrimary}{RoyalPurple}
+\colorlet{ThemeSecondary}{MidnightBlue}
+\colorlet{ThemeWeekNumber}{OliveGreen}
+\colorlet{ThemeAccent1}{BurntOrange}
+\colorlet{ThemeAccent2}{TealBlue}
+\colorlet{ThemeAccent3}{ForestGreen}
+\colorlet{ThemeAccent4}{BrickRed}
+
+% 2. TEXT & LINKS
+\colorlet{TextEmphColor}{SlateBlue4}
+\colorlet{TextBoldColor}{Brown!80!black} % Das Espresso-Braun #673132
+\colorlet{TextMetaNote}{Gray}
+\colorlet{LinkColor}{MidnightBlue}
+\colorlet{FileColor}{Magenta}
+\colorlet{ItemizeBullet}{ThemeAccent1}
+\colorlet{EnumerateBullet}{DeepSeaGreen} 
+\colorlet{EnumerateBullet}{OliveGreen} 
+
+% 3. SHADOWS & PROOF GLOBALS
+\colorlet{ShadowNormal}{black!50}
+\colorlet{ShadowProof}{OliveGreen!40}
+\colorlet{ProofTint}{OliveGreen}
+
+% 4. ENVIRONMENTS BASE COLORS
+\colorlet{EnvStudent}{Violet}
+\colorlet{EnvSpoken}{MidnightBlue}
+\colorlet{EnvMath}{MidnightBlue}
+\colorlet{EnvTeacher}{ForestGreen}
+\colorlet{EnvMeta}{TealBlue}
+\colorlet{EnvAI}{BrickRed}
+\colorlet{EnvNote}{BurntOrange}
+\colorlet{EnvBreak}{BrickRed}
+
+% --- THEOREM ENVIRONMENT COLORS ---
+\colorlet{EnvTheorem}{EnvStudent} 
+\colorlet{EnvTheoremDark}{EnvStudent!85!black}
+
+% 5. ENVIRONMENT MIXES & PROOF STATES
+\colorlet{EnvSpokenBg}{EnvSpoken!5}
+\colorlet{EnvSpokenProof}{EnvSpoken!50!ProofTint}
+\colorlet{EnvNoteBg}{EnvNote!20}
+\colorlet{EnvNoteProof}{EnvNote!50!ProofTint}
+\colorlet{EnvTeacherBg}{EnvTeacher!5}
+\colorlet{EnvTeacherBorder}{EnvTeacher!80!black}
+\colorlet{EnvTeacherProof}{EnvTeacherBorder!50!ProofTint}
+\colorlet{EnvMathProof}{EnvMath!50!ProofTint}
+\colorlet{ProofSubBg}{EnvMath!30}
+\colorlet{ProofSubText}{EnvMath!80!black}
+\colorlet{EnvMetaProof}{EnvMeta!50!ProofTint}
+\colorlet{EnvAIBg}{EnvAI!5}
+\colorlet{EnvAIBorder}{EnvAI!85!black}
+\colorlet{EnvAIProof}{EnvAIBorder!50!ProofTint}
+\colorlet{EnvAIFallbackProof}{EnvAI!50!ProofTint}
+\colorlet{EnvStudentBg}{EnvStudent!5}
+\colorlet{EnvStudentProof}{EnvStudent!50!ProofTint}
+\colorlet{EnvBreakProof}{EnvBreak!50!ProofTint}
+\colorlet{ExplanationIconColor}{ProofTint}
+
+% 6. PROOF SPECIFIC ELEMENTS
+\colorlet{ProofQEDText}{ProofTint}
+\colorlet{ProofQEDBg}{white}
+
+% 7. HEADER, FOOTER & CHAPTER
+\colorlet{HeaderFooterFaint}{ThemeWeekNumber!45!Gray}
+\colorlet{HeaderFooterLine}{HeaderFooterFaint!50}
+\colorlet{ChapTitleText}{ThemeSecondary!90!black}
+\colorlet{ChapNumberText}{ThemeWeekNumber}
+\colorlet{ChapSubtitleText}{HeaderFooterFaint}
+\colorlet{ChapLine}{ThemeSecondary!80!black}
+
+% 8. SECTION BARS
+\colorlet{SecBar1}{ThemePrimary}
+\colorlet{SecBar2}{TextBoldColor}
+\colorlet{SecBar3}{ThemeAccent3!80!black}
+\colorlet{SecBar4}{ThemeAccent4!90!black}
+\colorlet{SecBar1Proof}{SecBar1!50!ProofTint}
+\colorlet{SecBar2Proof}{SecBar2!50!ProofTint}
+\colorlet{SecBar3Proof}{SecBar3!50!ProofTint}
+\colorlet{SecBar4Proof}{SecBar4!50!ProofTint}
+\colorlet{SecTitleColor}{ThemePrimary}
+\colorlet{SecTitleColorProof}{SecTitleColor!50!ProofTint}
+
+\colorlet{SubSecBar1}{TextBoldColor}
+\colorlet{SubSecBar2}{TextBoldColor!70!white}
+\colorlet{SubSecBar1Proof}{SubSecBar1!50!ProofTint}
+\colorlet{SubSecBar2Proof}{SubSecBar2!50!ProofTint}
+\colorlet{SubSecTitleColor}{TextBoldColor}
+\colorlet{SubSecTitleColorProof}{SubSecTitleColor!50!ProofTint}
+
+\colorlet{SubSubSecBar1}{gray}
+\colorlet{SubSubSecBar2}{gray!60!white}
+\colorlet{SubSubSecBar1Proof}{SubSubSecBar1!50!ProofTint}
+\colorlet{SubSubSecBar2Proof}{SubSubSecBar2!50!ProofTint}
+\colorlet{SubSubSecTitleColor}{gray}
+\colorlet{SubSubSecTitleColorProof}{SubSubSecTitleColor!50!ProofTint}
+
+
+\colorlet{SubSubSecNumberColor}{gray}
+\colorlet{SubSubSecNumberColorProof}{SubSubSecNumberColor!50!ProofTint}
+
+
+% --- THEOREM ENVIRONMENT COLORS ---
+\definecolor{OriginalTheoremHex}{HTML}{6A3199} % Dein ursprünglicher Hex-Code
+\colorlet{EnvTheorem}{OriginalTheoremHex}             % Dein ursprüngliches RoyalPurple
+\colorlet{EnvTheoremDark}{OriginalTheoremHex}  % Wendet den Hex-Code auf das Wort "Definition" an
+% ==========================================
 
 % --- EMPHASIS STYLE OVERRIDE ---
-\DeclareTextFontCommand{\emph}{\sffamily\bfseries}
+\DeclareTextFontCommand{\emph}{\sffamily\bfseries\color{TextEmphColor}}
+\DeclareTextFontCommand{\textbf}{\sffamily\bfseries\color{TextBoldColor}} 
 
-\usepackage[margin=1in, headheight=35pt]{geometry}
-\usepackage[dvipsnames, x11names]{xcolor}
+\usepackage[margin=1in, headheight=40pt]{geometry} % Headheight leicht erhöht für mehrzeilige Header
+
+\definecolor{DarkSlateGray}{HTML}{2F4F4F}
+\definecolor{bglight}{HTML}{F8F9FA}
+\colorlet{ThemeBgLight}{bglight}
+
 \usepackage{hyperref}
 \usepackage[nameinlink, capitalize]{cleveref}
 
 % --- HYPERREF AESTHETICS ---
 \hypersetup{
 colorlinks=true,
-linkcolor=MidnightBlue,
-filecolor=Magenta,
-urlcolor=MidnightBlue,
-citecolor=MidnightBlue,
+linkcolor=LinkColor,
+filecolor=FileColor,
+urlcolor=LinkColor,
+citecolor=LinkColor,
 bookmarksopen=true
 }
 
@@ -44,14 +186,14 @@ bookmarksopen=true
 \tcbset{
   dynamic shadow/.code={
     \ifinsideproof
-      \tcbset{drop fuzzy shadow=ForestGreen!40} 
+      \tcbset{drop fuzzy shadow=ShadowProof} 
     \else
-      \tcbset{drop fuzzy shadow=black!50}
+      \tcbset{drop fuzzy shadow=ShadowNormal}
     \fi
   },
   dynamic color shadow/.code={
     \ifinsideproof
-      \tcbset{drop fuzzy shadow=ForestGreen!40} 
+      \tcbset{drop fuzzy shadow=ShadowProof} 
     \else
       \tcbset{drop fuzzy shadow=#1}
     \fi
@@ -76,7 +218,9 @@ bookmarksopen=true
   }
 }
 
-% --- TYPOGRAPHY & LAYOUT ENHANCEMENTS ---
+% ==========================================
+% TYPOGRAPHY, ADVANCED SPACING & CORNER CASES
+% ==========================================
 \linespread{1.05}
 
 \newlength{\standardparindent}
@@ -91,45 +235,101 @@ bookmarksopen=true
 \newlength{\customenvspace}
 \setlength{\customenvspace}{0.9ex plus 0.2ex minus 0.1ex}
 
+% Inline-Mathe "Atemluft" 
+\setlength{\mathsurround}{1pt}
+
+% Matrix- und Tabellen-Zeilen 
+\renewcommand{\arraystretch}{1.15}
+
+% Floats im Text 
+\setlength{\intextsep}{1.5\customparskip plus 1ex minus 1ex}
+\setlength{\textfloatsep}{2\customparskip plus 1ex minus 1ex}
+
+% Proportional Math Spacing
+\AtBeginDocument{
+  \setlength{\abovedisplayskip}{1.2\customparskip plus 0.5ex minus 0.2ex}
+  \setlength{\belowdisplayskip}{1.2\customparskip plus 0.5ex minus 0.2ex}
+  \setlength{\abovedisplayshortskip}{0.5\customparskip plus 0.2ex}
+  \setlength{\belowdisplayshortskip}{0.8\customparskip plus 0.2ex minus 0.1ex}
+}
+
 % --- LIST SPACING FIX & VIBRANT COLORS ---
 \usepackage{enumitem}
+
+
+\setlist{
+  topsep=0pt, 
+  partopsep=0pt, 
+  % parsep ist der Abstand zwischen Absätzen. Wir halbieren ihn für Listen, 
+  % damit mehrzeilige Punkte gut aussehen, aber nicht auseinanderfallen.
+  parsep=0.5\customparskip, 
+  % itemsep ist der ZUSÄTZLICHE Abstand zwischen zwei Punkten. 
+  % Den setzen wir jetzt auf 0, damit die Liste schön kompakt wird.
+  itemsep=0pt, 
+}
+
+
+
 \setlist[itemize]{
-topsep=\customenvspace,
-itemsep=0.4ex plus 0.1ex,
-parsep=\parskip,
-partopsep=0pt,
-label=\textcolor{BurntOrange}{\textbullet}
+  label=\textcolor{ItemizeBullet}{\textbullet}
 }
+
 \setlist[enumerate]{
-topsep=\customenvspace,
-itemsep=0.4ex plus 0.1ex,
-parsep=\parskip,
-partopsep=0pt,
-label=\textbf{\textcolor{RoyalPurple}{(\alph*)}}, % Changed to RoyalPurple for elegant contrast
-ref=(\alph*)
+  % FIX: Leitet \textbf im Label temporär auf die Enumerate-Farbe um!
+  font=\colorlet{TextBoldColor}{EnumerateBullet}, 
+  label=\textcolor{ItemizeBullet}{\bfseries(\alph*)}, % ItemizeBullet statt EnumerateBullet
+  ref=(\alph*)
 }
+
 \setlist[description]{
-style=unboxed,
-topsep=\customenvspace,
-itemsep=0.4ex plus 0.1ex,
-parsep=\parskip,
-labelsep=0.333em plus 0.167em minus 0.111em
+  style=unboxed,
+  labelsep=0.333em plus 0.167em minus 0.111em
 }
 
-% --- HEADER & FOOTER CONFIGURATION ---
-\colorlet{FaintRoyalPurple}{RoyalPurple!45!Gray}
+% Abstände bei geschachtelten Listen 
+\setlist[itemize,2]{topsep=0pt, itemsep=0pt, parsep=0pt}
+\setlist[enumerate,2]{topsep=0pt, itemsep=0pt, parsep=0pt}
 
+% --- FIX: LISTEN DIREKT NACH THEOREM-HEADING ---
+\makeatletter
+\newcommand{\fixlistaftertheorem}{%
+  \if@inlabel 
+    \leavevmode \par 
+  \fi
+}
+\BeforeBeginEnvironment{itemize}{\fixlistaftertheorem}
+\BeforeBeginEnvironment{enumerate}{\fixlistaftertheorem}
+\BeforeBeginEnvironment{description}{\fixlistaftertheorem}
+\makeatother
+
+% ==========================================
+% HEADER, FOOTER & COMMANDS
+% ==========================================
 \usepackage{fancyhdr}
 \usepackage{extramarks}
+\usepackage{lastpage}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\parbox[t]{0.8\textwidth}{\sloppy\raggedright\small\sffamily\color{FaintRoyalPurple}\leftmark}}
-\fancyhead[R]{\parbox[t]{0.18\textwidth}{\sloppy\raggedleft\small\sffamily\bfseries\color{FaintRoyalPurple}\thepage}}
-\fancyfoot[L]{\parbox[t]{0.47\textwidth}{\sloppy\raggedright\small\sffamily\color{FaintRoyalPurple}\rightmark}}
-\fancyfoot[R]{\parbox[t]{0.47\textwidth}{\sloppy\raggedleft\small\sffamily\color{FaintRoyalPurple}\lastxmark}}
-\renewcommand{\headrule}{\hbox to\headwidth{\color{FaintRoyalPurple!50}\leaders\hrule height 0.5pt\hfill}}
-\renewcommand{\footrule}{\hbox to\headwidth{\color{FaintRoyalPurple!50}\leaders\hrule height 0.5pt\hfill}}
 
+% FIX: \parbox[b] sorgt dafür, dass sich mehrzeilige Header nach oben ausdehnen 
+% und immer perfekt bündig mit der Seitenzahl auf der Linie aufliegen.
+\fancyhead[L]{\parbox[b]{0.8\textwidth}{\sloppy\raggedright\small\sffamily\color{HeaderFooterFaint}\leftmark}}
+\fancyhead[R]{\parbox[b]{0.18\textwidth}{\sloppy\raggedleft\small\sffamily\color{HeaderFooterFaint}\textbf{\thepage} / \pageref*{LastPage}}}
+
+\fancyfoot[L]{\parbox[t]{0.47\textwidth}{\sloppy\raggedright\small\sffamily\color{HeaderFooterFaint}\rightmark}}
+\fancyfoot[R]{\parbox[t]{0.47\textwidth}{\sloppy\raggedleft\small\sffamily\color{HeaderFooterFaint}\lastxmark}}
+
+\renewcommand{\headrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 0.5pt\hfill}}
+\renewcommand{\footrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 0.5pt\hfill}}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\small\sffamily\color{HeaderFooterFaint}\textbf{\thepage} / \pageref*{LastPage}}%
+  \renewcommand{\headrule}{}%
+  \renewcommand{\footrule}{}%
+}
+
+\renewcommand{\chaptermark}[1]{}
 \renewcommand{\sectionmark}[1]{%
 \markright{\thesection.\ #1}%
 \extramarks{}{}%
@@ -141,28 +341,56 @@ labelsep=0.333em plus 0.167em minus 0.111em
 % Fail-Safe TikZ Configuration
 \usepackage{tikz}
 \usetikzlibrary{calc, arrows.meta, positioning, 3d, shapes.geometric, decorations.pathreplacing, patterns, shadows}
+\usetikzlibrary{fit}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
-
 \usepackage{titlesec}
-\definecolor{bglight}{HTML}{F8F9FA}
+\usepackage{titletoc}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+% --- TABLE OF CONTENTS TYPOGRAPHY & COLORS ---
+\contentsmargin{2.0em}
+
+\titlecontents{chapter}[0em]
+  {\addvspace{16pt}\sffamily\bfseries\large\color{ThemePrimary!95!black}}
+  {\color{ThemeWeekNumber}\MakeUppercase{\chaptername}\ \thecontentslabel\hspace{0.8em}}
+  {}
+  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{ThemeWeekNumber}\contentspage}
+
+\titlecontents{section}[1.8em]
+  {\addvspace{5pt}\sffamily\bfseries\color{TextEmphColor}}
+  {\color{ThemePrimary!85!black}\thecontentslabel\hspace{0.8em}\color{TextEmphColor}}
+  {}
+  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TextEmphColor}\contentspage}
+
+\titlecontents{subsection}[4.0em]
+  {\addvspace{2.5pt}\sffamily\color{TextBoldColor}}
+  {\color{TextBoldColor}\thecontentslabel\hspace{0.8em}\color{TextBoldColor}}
+  {}
+  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TextBoldColor}\contentspage}
+
+\titlecontents{subsubsection}[6.5em]
+  {\addvspace{1.5pt}\sffamily\small\bfseries\color{gray}}
+  {\color{gray}\thecontentslabel\hspace{0.8em}\color{gray}}
+  {}
+  {\normalfont\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{gray}\contentspage}
 
 % Math operators
 \DeclareMathOperator{\id}{id}
 \DeclareMathOperator{\Vol}{Vol}
 
 % Custom text commands
-\newcommand{\newterm}[1]{\glqq\textcolor{BrickRed!85!black}{#1}\grqq} % Changed to a deep, rich burgundy
-\newcommand{\inlinemetanote}[1]{\textit{[\textcolor{Gray}{#1}]}}
-
-\DeclareTextFontCommand{\textbf}{\sffamily\bfseries\color{MidnightBlue!85!black}} 
+\newcommand{\newterm}[1]{\textcolor{BrickRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{BrickRed}{\grqq}} 
+\newcommand{\inlinemetanote}[1]{\textit{[\textcolor{TextMetaNote}{#1}]}}
 
 % Custom Theorem Style
-\newtheoremstyle{royalpurplethm}%
-{\customenvspace}{\customenvspace}{\normalfont}{}{\color{RoyalPurple}\sffamily\bfseries}{:}{0.5em}%
-{\thmname{#1}\thmnumber{ #2}\thmnote{ \textcolor{RoyalPurple}{\bfseries(}{\normalfont\sffamily\textit{#3}}\textcolor{RoyalPurple}{\bfseries)}}}
+\newtheoremstyle{purplethm}%
+{\customenvspace}{\customenvspace}{\normalfont}{}{\color{EnvTheorem}\sffamily\bfseries}{:}{0.5em}%
+{\thmname{\textcolor{EnvTheorem}{\sffamily\bfseries#1 }}\thmnumber{\sffamily\bfseries #2}\thmnote{ \textcolor{EnvTheorem}{\bfseries(}{\normalfont\sffamily\textit{#3}}\textcolor{EnvTheorem}{\bfseries)}}}
 
-\theoremstyle{royalpurplethm}
+\theoremstyle{purplethm}
 
 % Standard Math Environments (Deutsch)
 \newtheorem{theorem}{Satz}[chapter]
@@ -173,6 +401,19 @@ labelsep=0.333em plus 0.167em minus 0.111em
 \newtheorem{example}[theorem]{Beispiel}
 \newtheorem{examples}[theorem]{Beispiele}
 \newtheorem{exercise}[theorem]{Übung}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{axioms}[theorem]{Axiome}
+\newtheorem{property}[theorem]{Eigenschaft}
+\newtheorem{principle}[theorem]{Prinzip}
+\newtheorem{claim}[theorem]{Behauptung}
+\newtheorem{remark}[theorem]{Bemerkung}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{summary}[theorem]{Zusammenfassung}
+\newtheorem{warmup}[theorem]{Einstieg}
+\newtheorem{question}[theorem]{Frage}
+\newtheorem{answer}[theorem]{Antwort}
+\newtheorem{importantremark}[theorem]{Wichtige Bemerkung}
+\newtheorem{goals}[theorem]{Ziele}
 
 % Unnumbered Environments (Deutsch)
 \newtheorem*{theorem*}{Satz}
@@ -183,33 +424,48 @@ labelsep=0.333em plus 0.167em minus 0.111em
 \newtheorem*{example*}{Beispiel}
 \newtheorem*{examples*}{Beispiele}
 \newtheorem*{exercise*}{Übung}
-
-\newtheorem*{claim}{Behauptung}
+\newtheorem*{axiom*}{Axiom}
+\newtheorem*{axioms*}{Axiome}
+\newtheorem*{property*}{Eigenschaft}
+\newtheorem*{principle*}{Prinzip}
 \newtheorem*{claim*}{Behauptung}
-\newtheorem*{remark}{Bemerkung}
 \newtheorem*{remark*}{Bemerkung}
-\newtheorem{notation}[theorem]{Notation}
 \newtheorem*{notation*}{Notation}
+\newtheorem*{summary*}{Zusammenfassung}
+\newtheorem*{warmup*}{Einstieg}
+\newtheorem*{question*}{Frage}
+\newtheorem*{answer*}{Antwort}
+\newtheorem*{importantremark*}{Wichtige Bemerkung}
+\newtheorem*{goals*}{Ziele}
 
-\newtheorem*{summary}{Zusammenfassung}
-\newtheorem*{warmup}{Einstieg}
-\newtheorem*{question}{Frage}
-\newcommand{\qt}[1]{\textit{``#1''}}
-\newtheorem*{answer}{Antwort}
-\newtheorem*{importantremark}{Wichtige Bemerkung}
-\newtheorem*{goals}{Ziele}
+\newcommand{\qt}[1]{\textit{\textcolor{BrickRed}{\glqq}#1\textcolor{BrickRed}{\grqq}}}
 
-\crefalias{lemma}{lemma}
-\crefalias{theorem}{theorem}
-\crefalias{definition}{definition}
-\crefalias{proposition}{proposition}
-\crefalias{corollary}{corollary}
-\crefalias{example}{example}
-\crefalias{examples}{examples}
-\crefalias{exercise}{exercise}
-\crefalias{claim}{claim}
-\crefalias{remark}{remark}
-\crefalias{notation}{notation}
+\crefname{axiom}{Axiom}{Axiome}
+\Crefname{axiom}{Axiom}{Axiome}
+\crefname{axioms}{Axiome}{Axiome}
+\Crefname{axioms}{Axiome}{Axiome}
+\crefname{property}{Eigenschaft}{Eigenschaften}
+\Crefname{property}{Eigenschaft}{Eigenschaften}
+\crefname{principle}{Prinzip}{Prinzipien}
+\Crefname{principle}{Prinzip}{Prinzipien}
+\crefname{claim}{Behauptung}{Behauptungen}
+\Crefname{claim}{Behauptung}{Behauptungen}
+\crefname{remark}{Bemerkung}{Bemerkungen}
+\Crefname{remark}{Bemerkung}{Bemerkungen}
+\crefname{notation}{Notation}{Notationen}
+\Crefname{notation}{Notation}{Notationen}
+\crefname{summary}{Zusammenfassung}{Zusammenfassungen}
+\Crefname{summary}{Zusammenfassung}{Zusammenfassungen}
+\crefname{warmup}{Einstieg}{Einstiege}
+\Crefname{warmup}{Einstieg}{Einstiege}
+\crefname{question}{Frage}{Fragen}
+\Crefname{question}{Frage}{Fragen}
+\crefname{answer}{Antwort}{Antworten}
+\Crefname{answer}{Antwort}{Antworten}
+\crefname{importantremark}{Wichtige Bemerkung}{Wichtige Bemerkungen}
+\Crefname{importantremark}{Wichtige Bemerkung}{Wichtige Bemerkungen}
+\crefname{goals}{Ziel}{Ziele}
+\Crefname{goals}{Ziel}{Ziele}
 
 % ==========================================
 % VIBRANT SHADOW META-ENVIRONMENTS (Deutsch)
@@ -219,16 +475,16 @@ labelsep=0.333em plus 0.167em minus 0.111em
 \newtcolorbox{spoken-clean}[1][]{
 enhanced,
 frame hidden,
-colback=MidnightBlue!5,
+colback=EnvSpokenBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={3pt}{0pt}{MidnightBlue!50!ForestGreen}}
+    \tcbset{borderline west={3pt}{0pt}{EnvSpokenProof}}
   \else
-    \tcbset{borderline west={3pt}{0pt}{MidnightBlue}}
+    \tcbset{borderline west={3pt}{0pt}{EnvSpoken}}
   \fi
 },
-title={\sffamily\bfseries\textcolor{\ifinsideproof MidnightBlue!50!ForestGreen\else MidnightBlue\fi}{\faMicrophone\ \ Mündliches Protokoll\ifblank{#1}{}{ [#1]}}},
+title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faMicrophone\ \ Mündliches Protokoll\ifblank{#1}{}{ [#1]}}},
 attach title to upper={\par\setlength{\parindent}{\standardparindent}\setlength{\parskip}{\customparskip}\vspace{1ex}},
 breakable
 }
@@ -242,13 +498,13 @@ dynamic shadow,
 code={
   \ifinsideproof
     \tcbset{
-      colframe=BurntOrange!50!ForestGreen,
-      boxed title style={colback=BurntOrange!20, colframe=BurntOrange!50!ForestGreen, boxrule=0.5pt}
+      colframe=EnvNoteProof,
+      boxed title style={colback=EnvNoteBg, colframe=EnvNoteProof, boxrule=0.5pt}
     }
   \else
     \tcbset{
-      colframe=BurntOrange,
-      boxed title style={colback=BurntOrange!20, colframe=BurntOrange, boxrule=0.5pt}
+      colframe=EnvNote,
+      boxed title style={colback=EnvNoteBg, colframe=EnvNote, boxrule=0.5pt}
     }
   \fi
 },
@@ -264,16 +520,16 @@ breakable
 enhanced,
 arc=3mm,
 frame hidden,
-colback=ForestGreen!5,
+colback=EnvTeacherBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={2pt}{0pt}{ForestGreen!80!black!50!ForestGreen}}
+    \tcbset{borderline west={2pt}{0pt}{EnvTeacherProof}}
   \else
-    \tcbset{borderline west={2pt}{0pt}{ForestGreen!80!black}}
+    \tcbset{borderline west={2pt}{0pt}{EnvTeacherBorder}}
   \fi
 },
-title={\sffamily\bfseries\textcolor{\ifinsideproof ForestGreen!80!black!50!ForestGreen\else ForestGreen!80!black\fi}{\textit{\faLightbulb\ \ Einblick:} #1}},
+title={\sffamily\bfseries\textcolor{\ifinsideproof EnvTeacherProof\else EnvTeacherBorder\fi}{\textit{\faLightbulb\ \ Einblick:} #1}},
 attach title to upper=\par\vspace{0.5ex},
 breakable
 }
@@ -291,8 +547,8 @@ dynamic color shadow=#1!30,
 code={
   \ifinsideproof
     \tcbset{
-      colframe=#1!50!ForestGreen,
-      boxed title style={colback=white, colframe=#1!50!ForestGreen, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+      colframe=#1!50!ProofTint,
+      boxed title style={colback=white, colframe=#1!50!ProofTint, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
     }
   \else
     \tcbset{
@@ -324,8 +580,8 @@ attach boxed title to top left={xshift=10pt, yshift=-10pt},
 code={
   \ifinsideproof
     \tcbset{
-      colframe=#2!50!ForestGreen,
-      boxed title style={colback=white, colframe=#2!50!ForestGreen, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+      colframe=#2!50!ProofTint,
+      boxed title style={colback=white, colframe=#2!50!ProofTint, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
     }
   \else
     \tcbset{
@@ -355,13 +611,40 @@ code={
 \NewChalkBox{brown-box}{Brown}{Brown!30}
 \NewChalkBox{pink-box}{Pink}{Pink!30}
 
-\NewChalkBox{orange-formula}{BurntOrange}{BurntOrange!30}
-\NewChalkBox{blue-formula}{MidnightBlue}{MidnightBlue!30}
-\NewChalkBox{dark-green-formula}{ForestGreen}{ForestGreen!30}
-\NewChalkBox{apple-green-formula}{LimeGreen}{LimeGreen!30}
-\NewChalkBox{yellow-formula}{Goldenrod!90!black}{Goldenrod!30}
-\NewChalkBox{violet-formula}{Violet}{Violet!30}
-\NewChalkBox{red-formula}{BrickRed}{BrickRed!30}
+\newcommand{\NewFormulaBox}[3]{%
+\newtcolorbox{#1}[1][Hervorgehobene Tafelformel]{%
+enhanced,
+colback=white,
+fonttitle=\bfseries\sffamily,
+coltitle=black,
+title=\faSquareRootAlt\ \ ##1,
+boxrule=1.5pt,
+arc=4pt,
+dynamic color shadow=#3,
+attach boxed title to top left={xshift=10pt, yshift=-10pt},
+code={
+  \ifinsideproof
+    \tcbset{
+      colframe=#2!50!ProofTint,
+      boxed title style={colback=white, colframe=#2!50!ProofTint, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+    }
+  \else
+    \tcbset{
+      colframe=#2,
+      boxed title style={colback=white, colframe=#2, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+    }
+  \fi
+}
+}%
+}
+
+\NewFormulaBox{orange-formula}{BurntOrange}{BurntOrange!30}
+\NewFormulaBox{blue-formula}{MidnightBlue}{MidnightBlue!30}
+\NewFormulaBox{dark-green-formula}{ForestGreen}{ForestGreen!30}
+\NewFormulaBox{apple-green-formula}{LimeGreen}{LimeGreen!30}
+\NewFormulaBox{yellow-formula}{Goldenrod!90!black}{Goldenrod!30}
+\NewFormulaBox{violet-formula}{Violet}{Violet!30}
+\NewFormulaBox{red-formula}{BrickRed}{BrickRed!30}
 
 % 5. Mathematical Setup (Stroke-by-Stroke)
 \NewTColorBox{math-stroke}{ O{} }{
@@ -370,16 +653,18 @@ frame hidden,
 colback=white,
 opacityback=0, 
 breakable,
+before upper={\setlength{\parskip}{\customparskip}\setlength{\parindent}{0pt}},
 code={
   \ifinsideproof
-    \tcbset{borderline west={2pt}{0pt}{MidnightBlue!50!ForestGreen}}
+    \tcbset{borderline west={2pt}{0pt}{EnvMathProof}}
   \else
-    \tcbset{borderline west={2pt}{0pt}{MidnightBlue!50}}
+    \tcbset{borderline west={2pt}{0pt}{EnvMath!50}}
   \fi
   \ifblank{#1}{
     \tcbset{notitle}
   }{
-    \tcbset{title={\sffamily\bfseries\textcolor{\ifinsideproof MidnightBlue!50!ForestGreen\else MidnightBlue\fi}{\faChalkboard\ \ #1}}, attach title to upper=\par\vspace{1ex}}
+    \tcbset{title={\sffamily\bfseries\textcolor{\ifinsideproof EnvMathProof\else EnvMath\fi}{\faChalkboard\ \ #1}}, 
+    attach title to upper={\par\setlength{\parindent}{0pt}\setlength{\parskip}{\customparskip}\vspace{1ex}}}
   }
 }
 }
@@ -389,15 +674,15 @@ code={
 enhanced,
 frame hidden,
 colback=white,
-dynamic shadow,
+opacityback=0,
 code={
   \ifinsideproof
-    \tcbset{borderline={0.5pt}{0pt}{TealBlue!50!ForestGreen, dashed}}
+    \tcbset{borderline={0.5pt}{0pt}{EnvMetaProof, dashed}}
   \else
-    \tcbset{borderline={0.5pt}{0pt}{TealBlue, dashed}}
+    \tcbset{borderline={0.5pt}{0pt}{EnvMeta, dashed}}
   \fi
 },
-title={\sffamily\bfseries\textcolor{\ifinsideproof TealBlue!50!ForestGreen\else TealBlue\fi}{\faEye\ \ #1}},
+title={\sffamily\bfseries\textcolor{\ifinsideproof EnvMetaProof\else EnvMeta\fi}{\faEye\ \ #1}},
 attach title to upper=\par\vspace{1ex},
 breakable
 }
@@ -405,13 +690,13 @@ breakable
 % 7. AI Observational Note
 \newtcolorbox{ai-note}[1][KI-Notiz]{
 enhanced,
-colback=BrickRed!5,
+colback=EnvAIBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{colframe=BrickRed!85!black!50!ForestGreen}
+    \tcbset{colframe=EnvAIProof}
   \else
-    \tcbset{colframe=BrickRed!85!black}
+    \tcbset{colframe=EnvAIBorder}
   \fi
 },
 fonttitle=\bfseries\sffamily,
@@ -426,23 +711,23 @@ breakable
 \newtcolorbox{student-interaction}[1][Studentische Interaktion]{
 enhanced,
 frame hidden,
-colback=Violet!5,
+colback=EnvStudentBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={3pt}{0pt}{Violet!50!ForestGreen}}
+    \tcbset{borderline west={3pt}{0pt}{EnvStudentProof}}
   \else
-    \tcbset{borderline west={3pt}{0pt}{Violet}}
+    \tcbset{borderline west={3pt}{0pt}{EnvStudent}}
   \fi
 },
-title={\sffamily\bfseries\textcolor{\ifinsideproof Violet!50!ForestGreen\else Violet\fi}{\faUserGraduate\ \ #1}},
+title={\sffamily\bfseries\textcolor{\ifinsideproof EnvStudentProof\else EnvStudent\fi}{\faUserGraduate\ \ #1}},
 attach title to upper=\par\vspace{1ex},
 breakable
 }
 
 % 9. Explanation of Steps
-\newenvironment{explanation-of-steps}[1][Erklärung der Schritte]{
-\par\vspace{1ex}\noindent\textbf{\textcolor{\ifinsideproof MidnightBlue!50!ForestGreen\else MidnightBlue\fi}{\faListUl\ \ #1:}}
+\newenvironment{explanation-of-steps}[1][Erklärung]{
+\par\vspace{1ex}\noindent\textbf{\textcolor{ExplanationIconColor}{\faListUl\ \ #1:}}
 }{
 \par\vspace{1ex}
 }
@@ -450,45 +735,41 @@ breakable
 % 10. Subsection-like heading for proofs
 \newenvironment{proof-subsection}[1]{
 \par\vspace{1ex}\noindent
-\tikz[baseline=(A.base)]\node[fill=MidnightBlue!30, text=MidnightBlue!80!black, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries, drop shadow] (A) {#1};
+\tikz[baseline=(A.base)]\node[fill=ProofSubBg, text=ProofSubText, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries, drop shadow] (A) {#1};
 \vspace{0.5ex}\par
 }{
 \par\vspace{1ex}
 }
 
-% 11. Dynamic Proof Wrappers (Formatted exactly like \section with perfect spacing)
+% 11. Dynamic Proof Wrappers
 \makeatletter
 
-% SHORT PROOF (Matches theorem font size, inline icon)
+% SHORT PROOF 
 \newenvironment{short-proof}[1][Beweis]{
     \par\addvspace{2ex plus 0.5ex minus 0.2ex}
     \insideprooftrue 
-    % Icon is now inline, acting like a normal character!
-    \noindent\textcolor{ForestGreen}{\faPenNib}\hspace{0.5em}%
-    {\normalfont\sffamily\bfseries\color{ForestGreen}#1}%
+    \noindent\textcolor{ProofTint}{\faPenNib}\hspace{0.5em}%
+    {\normalfont\sffamily\bfseries\color{ProofTint}#1}%
     \par\nobreak\vspace{1ex plus .2ex}\vspace{-\parskip}
     \@afterindentfalse\@afterheading
 }{
-    \par\vspace{-2ex}\hfill % Tucked up nicely
-    \tikz[baseline=(Q.base)]\node[draw=ForestGreen, fill=white, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ForestGreen, drop shadow={shadow xshift=0.5ex, shadow yshift=-0.5ex, fill=ForestGreen, opacity=0.4}] (Q) {Q.E.D.};
+    \par\vspace{-2ex}\hfill 
+    \tikz[baseline=(Q.base)]\node[draw=ProofTint, fill=ProofQEDBg, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ProofQEDText, drop shadow={shadow xshift=0.5ex, shadow yshift=-0.5ex, fill=ProofTint, opacity=0.4}] (Q) {Q.E.D.};
     \par\vspace{2ex}
 }
 
-% LONG PROOF (Matches section font size, includes watermark)
+% LONG PROOF 
 \renewenvironment{proof}[1][Beweis]{
     \par\addvspace{3.5ex plus 1ex minus .2ex}
     \insideprooftrue 
-    \noindent\makebox[0pt][r]{\textcolor{ForestGreen}{\faPenNib}\hspace{10pt}}%
-    {\normalfont\sffamily\Large\bfseries\color{ForestGreen}#1}%
+    \noindent\makebox[0pt][r]{\textcolor{ProofTint}{\faPenNib}\hspace{10pt}}%
+    {\normalfont\sffamily\Large\bfseries\color{ProofTint}#1}%
     \par\nobreak\vspace{1.5ex plus .2ex}\vspace{-\parskip}
     \@afterindentfalse\@afterheading
 }{
-    % Increased negative space to perfectly counteract the tcolorbox after-skip!
     \par\vspace{-4ex}\hfill 
     \tikz[baseline=(Q.base)]{
-        \node[draw=ForestGreen, fill=white, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ForestGreen, drop shadow={shadow xshift=0.5ex, shadow yshift=-0.5ex, fill=ForestGreen, opacity=0.4}] (Q) {Q.E.D.};
-        % Restored Watermark: Drawn at the END so it sits ON TOP of the white boxes!
-        \node[overlay, rotate=35, scale=7, text=ForestGreen, opacity=0.15, font=\sffamily\bfseries, xshift=-7cm, yshift=5cm] at (Q.center) {BEWEIS};
+        \node[draw=ProofTint, fill=ProofQEDBg, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ProofQEDText, drop shadow={shadow xshift=0.5ex, shadow yshift=-0.5ex, fill=ProofTint, opacity=0.4}] (Q) {Q.E.D.};
     }
     \par\vspace{2ex}
 }
@@ -499,17 +780,17 @@ breakable
 enhanced,
 frame hidden,
 colback=white,
-dynamic shadow,
+opacityback=0,
 code={
   \ifinsideproof
-    \tcbset{borderline north={0.5pt}{0pt}{BrickRed!50!ForestGreen, dashed}, borderline south={0.5pt}{0pt}{BrickRed!50!ForestGreen, dashed}}
+    \tcbset{borderline north={0.5pt}{0pt}{EnvBreakProof, dashed}, borderline south={0.5pt}{0pt}{EnvBreakProof, dashed}}
   \else
-    \tcbset{borderline north={0.5pt}{0pt}{BrickRed, dashed}, borderline south={0.5pt}{0pt}{BrickRed, dashed}}
+    \tcbset{borderline north={0.5pt}{0pt}{EnvBreak, dashed}, borderline south={0.5pt}{0pt}{EnvBreak, dashed}}
   \fi
 },
-title={\sffamily\bfseries\centering\textcolor{\ifinsideproof BrickRed!50!ForestGreen\else BrickRed\fi}{\faCoffee\ \ #1}},
+title={\sffamily\bfseries\centering\textcolor{\ifinsideproof EnvBreakProof\else EnvBreak\fi}{\faCoffee\ \ #1}},
 attach title to upper=\par\vspace{1ex},
-fontupper=\centering\itshape\color{\ifinsideproof BrickRed!50!ForestGreen\else BrickRed\fi},
+fontupper=\centering\itshape\color{\ifinsideproof EnvBreakProof\else EnvBreak\fi},
 breakable
 }
 
@@ -523,25 +804,24 @@ breakable
 \NewEnviron{ai-discard-invisible-content}[1][]{}
 \NewEnviron{ai-retroactive-patch}[1][]{}
 \NewEnviron{ai-global-state-checkpoint-invisible-content}{}
-\NewEnviron{ai-global-state-checkpoint}{} % Made invisible again
+\NewEnviron{ai-global-state-checkpoint}{}
 
 % Data Integrity Fallbacks
 \newcommand{\NewFallbackBox}[1]{
 \newtcolorbox{#1}[1][Fallback]{
 enhanced,
-colback=BrickRed!5,
+colback=EnvAIBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{colframe=BrickRed!50!ForestGreen}
+    \tcbset{colframe=EnvAIFallbackProof}
   \else
-    \tcbset{colframe=BrickRed}
+    \tcbset{colframe=EnvAI}
   \fi
 },
-title={\sffamily\bfseries\textcolor{white}{\faExclamationTriangle\ \ ##1}},
 fonttitle=\sffamily\bfseries,
-coltitle=BrickRed!75!black,
-title={##1},
+coltitle=white,
+title=\faExclamationTriangle\ \ ##1,
 breakable
 }
 }
@@ -554,56 +834,74 @@ breakable
 \NewFallbackBox{ai-async-board-update}
 \NewFallbackBox{ai-kinetic-emphasis}
 
-% Custom Lecture Chapter Command
-\newcommand{\lecturechapter}[4]{%
-  \chapter[#1, #2: #4]{{\Large\color{RoyalPurple}#1: #3} \texorpdfstring{\\[1ex]}{-- } {\LARGE #4}}%
-  \ifblank{#2}{%
-    \markboth{\chaptername\ \thechapter\ \ ---\ \ #3\ \ ---\ \ #4}{}%
-  }{%
-    \markboth{\chaptername\ \thechapter\ \ ---\ \ #3\ (#2)\ \ ---\ \ #4}{}%
+% Custom Lecture Chapter Command with Optional Semester/Week Number
+\newif\ifrestorelecturesubcounters
+\NewDocumentCommand{\lecturechapter}{ o m m m m }{%
+  \restorelecturesubcountersfalse
+  \IfValueT{#1}{%
+    \ifblank{#1}{}{%
+      \ifnum\numexpr#1\relax=\value{chapter}%
+        \restorelecturesubcounterstrue
+        \edef\TempSec{\the\value{section}}%
+        \edef\TempThm{\the\value{theorem}}%
+        \edef\TempEq{\the\value{equation}}%
+        \edef\TempFig{\the\value{figure}}%
+        \edef\TempTab{\the\value{table}}%
+      \fi
+      \setcounter{chapter}{\numexpr#1-1\relax}%
+    }%
   }%
+  \chapter[\texorpdfstring{--- \color{ThemePrimary!95!black}#5}{--- #5}]{{\Large\color{ChapSubtitleText}#2 #4} \texorpdfstring{\\[1ex]}{--- } {\LARGE #5}}%
+  \ifrestorelecturesubcounters
+    \setcounter{section}{\TempSec}%
+    \setcounter{theorem}{\TempThm}%
+    \setcounter{equation}{\TempEq}%
+    \setcounter{figure}{\TempFig}%
+    \setcounter{table}{\TempTab}%
+  \fi
+  \markboth{\chaptername\ \thechapter\ \ ---\ \ #2 #4\ \ ---\ \ #5}{}%
 }
 
 \titlespacing*{\chapter}{0pt}{-20pt}{40pt}
 
 \titleformat{\chapter}[display]
-{\normalfont\sffamily\Large\bfseries\color{MidnightBlue!90!black}}
-{\raggedleft\large\color{RoyalPurple!80!black}\MakeUppercase{\chaptertitlename}\ \thechapter}
+{\normalfont\sffamily\Large\bfseries\color{ChapTitleText}}
+{\raggedleft\large\color{ChapNumberText}\MakeUppercase{\chaptertitlename}\ \thechapter}
 {1ex}
-{\color{MidnightBlue!80!black}\rule{\textwidth}{1.5pt}\endgraf\nopagebreak\vspace{2ex}\raggedleft} 
-[\endgraf\nopagebreak\vspace{1ex}\color{MidnightBlue!80!black}\rule{\textwidth}{1.5pt}]
+{\color{ChapLine}\rule{\textwidth}{1.5pt}\endgraf\nopagebreak\vspace{2ex}\raggedleft} 
+[\endgraf\nopagebreak\vspace{1ex}\color{ChapLine}\rule{\textwidth}{1.5pt}]
 
-% Extended Section Bars (Added TealBlue block to the left for a more square-like appearance)
+% Extended Section Bars 
 \newcommand{\sectionbar}{%
 \tikz[baseline=0pt]{
-\fill[\ifinsideproof RoyalPurple!50!ForestGreen\else RoyalPurple\fi] (-2.5pt, 0) rectangle (1.0pt, 0.72em);
-\fill[\ifinsideproof TealBlue!50!ForestGreen\else TealBlue\fi] (2.0pt, 0) rectangle (3.5pt, 0.72em);
-\fill[\ifinsideproof ForestGreen!80!black!50!ForestGreen\else ForestGreen!80!black\fi] (4.8pt, 0) rectangle (5.3pt, 0.72em);
-\fill[\ifinsideproof BrickRed!90!black!50!ForestGreen\else BrickRed!90!black\fi] (6.6pt, 0) rectangle (8.1pt, 0.72em);
+\fill[\ifinsideproof SecBar1Proof\else SecBar1\fi] (-2.5pt, 0) rectangle (1.0pt, 0.72em);
+\fill[\ifinsideproof SecBar2Proof\else SecBar2\fi] (2.0pt, 0) rectangle (3.5pt, 0.72em);
+\fill[\ifinsideproof SecBar3Proof\else SecBar3\fi] (4.8pt, 0) rectangle (5.3pt, 0.72em);
+\fill[\ifinsideproof SecBar4Proof\else SecBar4\fi] (6.6pt, 0) rectangle (8.1pt, 0.72em);
 }%
 \hspace{10pt}%
 }
 
 \newcommand{\subsectionbar}{%
 \tikz[baseline=0pt]{
-\fill[\ifinsideproof RoyalPurple!85!black!50!ForestGreen\else RoyalPurple!85!black\fi] (-2.5pt, 0) rectangle (0.3pt, 0.72em);
-\shade[left color=\ifinsideproof RoyalPurple!85!black!50!ForestGreen\else RoyalPurple!85!black\fi, right color=\ifinsideproof BrickRed!85!black!50!ForestGreen\else BrickRed!85!black\fi] (1.3pt, 0) rectangle (2.0pt, 0.72em);
-\fill[\ifinsideproof BrickRed!85!black!50!ForestGreen\else BrickRed!85!black\fi] (3.3pt, 0) rectangle (4.8pt, 0.72em);
+\fill[\ifinsideproof SubSecBar1Proof\else SubSecBar1\fi] (-2.5pt, 0) rectangle (0.3pt, 0.72em);
+\shade[left color=\ifinsideproof SubSecBar1Proof\else SubSecBar1\fi, right color=\ifinsideproof SubSecBar2Proof\else SubSecBar2\fi] (1.3pt, 0) rectangle (2.0pt, 0.72em);
+\fill[\ifinsideproof SubSecBar2Proof\else SubSecBar2\fi] (3.3pt, 0) rectangle (4.8pt, 0.72em);
 }%
 \hspace{10pt}%
 }
 
 \newcommand{\subsubsectionbar}{%
 \tikz[baseline=0pt]{
-\fill[\ifinsideproof RoyalPurple!85!black!50!ForestGreen\else RoyalPurple!85!black\fi] (-2.5pt, 0) rectangle (-1.0pt, 0.72em);
-\fill[\ifinsideproof BrickRed!85!black!50!ForestGreen\else BrickRed!85!black\fi] (0,0) rectangle (2.2pt, 0.72em);
+\fill[\ifinsideproof SubSubSecBar1Proof\else SubSubSecBar1\fi] (-2.5pt, 0) rectangle (-1.0pt, 0.72em);
+\fill[\ifinsideproof SubSubSecBar2Proof\else SubSubSecBar2\fi] (0,0) rectangle (2.2pt, 0.72em);
 }%
 \hspace{10pt}%
 }
 
-\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{\ifinsideproof RoyalPurple!50!ForestGreen\else RoyalPurple\fi}}{}{0pt}{\makebox[0pt][r]{\sectionbar}}
-\titleformat{\subsection}{\normalfont\sffamily\large\bfseries\color{\ifinsideproof RoyalPurple!90!black!50!ForestGreen\else RoyalPurple!90!black\fi}}{}{0pt}{\makebox[0pt][r]{\subsectionbar}}
-\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries\color{\ifinsideproof RoyalPurple!85!black!50!ForestGreen\else RoyalPurple!85!black\fi}}{}{0pt}{\makebox[0pt][r]{\subsubsectionbar}}
+\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{\ifinsideproof SecTitleColorProof\else SecTitleColor\fi}}{}{0pt}{\makebox[0pt][r]{\sectionbar}}
+\titleformat{\subsection}{\normalfont\sffamily\large\bfseries\color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleColor\fi}}{}{0pt}{\makebox[0pt][r]{\subsectionbar}}
+\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries\color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleColor\fi}}{}{0pt}{\makebox[0pt][r]{\subsubsectionbar}}
 
 \titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 \titlespacing*{\subsection}{0pt}{3ex plus 1ex minus .2ex}{1.2ex plus .2ex}

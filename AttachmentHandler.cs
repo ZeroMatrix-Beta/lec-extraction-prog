@@ -150,7 +150,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             else {
                 WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
                 string fileContent = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
-                parts.Add(new Part { Text = $"=== ATTACHED FILE: {Path.GetFileName(filePath)} ===\n{fileContent}\n=== END OF ATTACHED FILE ===\n\n" });
+                parts.Add(new Part { Text = $"<attached_file name=\"{Path.GetFileName(filePath)}\">\n{fileContent}\n</attached_file>\n\n" });
                 return true;
             }
         }

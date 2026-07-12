@@ -203,12 +203,13 @@ public static partial class ExtractionHelpers {
         try {
             var sb = new System.Text.StringBuilder(systemInstructionText);
             if (historyParts != null && historyParts.Count > 0) {
-                sb.AppendLine("\n\n=== ATTACHED HISTORY & BENCHMARK PARTS ===");
+                sb.AppendLine("\n\n<attached_history_and_benchmark_parts>");
                 foreach (var part in historyParts) {
                     if (part.Text != null) sb.Append(part.Text);
                     else if (part.InlineData != null) sb.AppendLine($"\n[BINARY IMAGE PAYLOAD: {part.InlineData.MimeType}, {part.InlineData.Data?.Length ?? 0} bytes]\n");
                     else if (part.FileData != null) sb.AppendLine($"\n[REMOTE FILE URI: {part.FileData.FileUri}, {part.FileData.MimeType}]\n");
                 }
+                sb.AppendLine("\n</attached_history_and_benchmark_parts>");
             }
             if (!Directory.Exists(logFolder)) Directory.CreateDirectory(logFolder);
             string dumpPath = Path.Combine(logFolder, "system_instruction_logged.md");

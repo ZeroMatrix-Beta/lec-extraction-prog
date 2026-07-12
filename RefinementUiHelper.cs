@@ -167,6 +167,7 @@ namespace AutoExtraction {
             }
 
             string selectedTex = texFiles[fileIndex - 1];
+            Console.WriteLine($"\n  🎯 Ausgewählte Datei [{fileIndex}]: {Path.GetRelativePath(searchFolder, selectedTex)}");
             string selectedDir = Path.GetDirectoryName(selectedTex) ?? searchFolder;
 
             var audioFiles = Directory.GetFiles(selectedDir, "*.aac");
@@ -181,6 +182,7 @@ namespace AutoExtraction {
                     string audioInput = Console.ReadLine()?.Trim() ?? "";
                     if (int.TryParse(audioInput, out int audioIdx) && audioIdx >= 1 && audioIdx <= audioFiles.Length) {
                         selectedAudio = audioFiles[audioIdx - 1];
+                        Console.WriteLine($"  🎯 Ausgewählte Audio-Datei [{audioIdx}]: {Path.GetFileName(selectedAudio)}");
                     }
                 }
                 else {
@@ -188,7 +190,36 @@ namespace AutoExtraction {
                 }
             }
             else {
-                Console.WriteLine("\n[INFO] Überspringe Audio-Auswahl für 'Last Refinement' (Schritt 3 benötigt kein Audio).");
+                Console.WriteLine("\n[INFO] Überspringe Audio-Auswahl für 'Last Refinement' (Schritt 3 (oder Schritt 4)) benötigt kein Audio).");
+            }
+
+            if (stepChoice == "1" || stepChoice == "2" || stepChoice == "3") {
+                Console.Write("\nMöchtest du ab diesem Schritt die restliche Pipeline bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausführen? (y/n, Standard: n): ");
+                string runToEndInput = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "n";
+                if (runToEndInput == "y" || runToEndInput == "j" || runToEndInput == "yes" || runToEndInput == "ja") {
+                    if (stepChoice == "1") {
+                        refinementConfig.Step2SpeechRefinement.Enabled = true;
+                        refinementConfig.Step3LastRefinement.Enabled = true;
+                    }
+                    else if (stepChoice == "2") {
+                        refinementConfig.Step3LastRefinement.Enabled = true;
+                    }
+                    if (refinementConfig.PdfCompilation != null) {
+                        refinementConfig.PdfCompilation.Enabled = true;
+                    }
+                    Console.WriteLine("  [INFO] Pipeline wird ab dem gewählten Schritt bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausgeführt.");
+                }
+                else {
+                    if (refinementConfig.PdfCompilation != null) {
+                        refinementConfig.PdfCompilation.Enabled = false;
+                    }
+                    Console.WriteLine($"  [INFO] Es wird ausschließlich Schritt {stepChoice} ausgeführt (ohne nachfolgende PDF-Kompilierung).");
+                }
+            }
+            else {
+                if (refinementConfig.PdfCompilation != null) {
+                    refinementConfig.PdfCompilation.Enabled = true;
+                }
             }
 
             Console.WriteLine($"\n[INFO] Starte Refinement für: {Path.GetFileName(selectedTex)}");

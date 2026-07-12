@@ -7,7 +7,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 1,
+  "AiStudioActiveApiProfile": 3,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
@@ -15,24 +15,24 @@
   "SourceFolder": "",
   "PdfCompilation": {
     "Enabled": false,
-    "PreamblePath": "pdf-preamble.tex"
+    "PreamblePath": "pdf-preamble.tex",
+    "UseAntiGravityAgent": true
   },
   "Step1MergeAndTimestamp": {
     "Enabled": true,
     "AttachAudio": true,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\xml-latex-merge-instructions.xml"
-      //"C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
       "Temperature": 0.33,
       "TopP": 0.95,
       "TopK": 40,
-      "MaxOutputTokens": 65536,
+      "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.5-flash",
-        "gemini-3-flash-preview"
+        "gemini-3.5-flash"
       ],
       "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
@@ -40,7 +40,7 @@
       "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 15,
-      "CurrentModelIndex": 0
+      "CurrentModelIndex": 1
     },
     "Vertex": {
       "Temperature": 0.35,
@@ -57,7 +57,7 @@
       "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 15,
-      "CurrentModelIndex": 0
+      "CurrentModelIndex": 1
     }
   },
   "Step2SpeechRefinement": {
@@ -74,7 +74,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.5-flash",
-        "gemini-3-flash-preview"
+        "gemini-3.5-flash"
       ],
       "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
@@ -82,7 +82,7 @@
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 10,
-      "CurrentModelIndex": 0
+      "CurrentModelIndex": 1
     },
     "Vertex": {
       "Temperature": 0.35,
@@ -116,7 +116,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.5-flash",
-        "gemini-3-flash-preview"
+        "gemini-3.5-flash"
       ],
       "ThinkingBudget": 32765,
       "ThinkingLevel": "HIGH",
@@ -124,7 +124,7 @@
       "ContextCachingMinutes": 15,
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 10,
-      "CurrentModelIndex": 0
+      "CurrentModelIndex": 1
     },
     "Vertex": {
       "Temperature": 0.34,

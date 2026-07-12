@@ -48,6 +48,7 @@ public class RefinementStepConfig {
 public class PdfCompilationConfig {
     public bool Enabled { get; set; } = true;
     public string PreamblePath { get; set; } = "pdf-preamble.tex";
+    public bool UseAntiGravityAgent { get; set; } = false;
 }
 
 
