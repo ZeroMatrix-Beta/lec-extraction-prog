@@ -49,16 +49,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     /// </summary>
     public async Task StartAsync() {
-        Console.WriteLine("\n🚀 [AutoExtraction] Starte AI Studio Extraction Session...");
-        Console.WriteLine($"  📁 Quelle (Source): {_config.SourceFolder}");
-        Console.WriteLine($"  📁 Ziel (Target):   {_config.TargetFolder}");
-        if (_config.ActiveApiProfile == 0) {
-            Console.WriteLine("  🔑 API-Key:         Dedizierter Key für automatisierte Extraktion");
-        }
-        else {
-            Console.WriteLine($"  🔑 API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
-        }
-
         if (!Directory.Exists(_config.SourceFolder)) {
             Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
             return;
@@ -73,13 +63,22 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Directory.CreateDirectory(_config.TargetFolder);
         }
 
+        Console.WriteLine("\n🚀 [AutoExtraction] Starte AI Studio Extraction Session...");
+        Console.WriteLine($"  📁 Quelle (Source): {_config.SourceFolder}");
+        Console.WriteLine($"  📁 Ziel (Target):   {_config.TargetFolder}");
+        if (_config.ActiveApiProfile == 0) {
+            Console.WriteLine("  🔑 API-Key:         Dedizierter Key für automatisierte Extraktion");
+        }
+        else {
+            Console.WriteLine($"  🔑 API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
+        }
+
         string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-        string filenamePatternRegex = @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$";
         foreach (var f in filesToProcess) {
-            string fileName = Path.GetFileName(f).ToLowerInvariant();
-            if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, filenamePatternRegex)) {
-                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
-                Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
+            var dateInfo = VideoDateParser.Parse(f);
+            if (!dateInfo.IsValid) {
+                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(f)}");
+                Console.WriteLine("Erwartetes Format z.B.: 02-16-2026-monday-week1-Analysis_II.mp4 oder week1-02-16-2026-montag.mp4");
             }
         }
 
@@ -399,7 +398,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
                 SelectModel();
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
-                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und in Konfiguration gespeichert.");
+                ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und für die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
@@ -473,14 +473,18 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
             _config.CurrentModelIndex = idx - 1;
-        } else if (choice.Contains('-')) {
+            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+        }
+        else if (choice.Contains('-')) {
             // Freetext model name – find or append
             int found = Array.IndexOf(models, choice);
             if (found >= 0) {
                 _config.CurrentModelIndex = found;
-            } else {
+            }
+            else {
                 Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
             }
+            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
         }
     }
 
@@ -814,8 +818,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Das asynchrone Fließband: FFmpeg bereitet Videos im Hintergrund vor, während Gemini sie der Reihe nach abarbeitet.
     /// </summary>
     private async Task ProcessFilesAsync(string[] files) {
-        // Chronologisch aufsteigend sortieren anhand des Dateinamens
-        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date)];
+        // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
+        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date).ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue).ThenBy(f => f)];
 
         // [AI Context] We use a bounded channel (capacity 1) to synchronize the FFmpeg Producer task and the Gemini Consumer task.
         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
@@ -969,7 +973,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Task<List<Part>>? pendingAudioUploadTask = null;
             Task? rateLimitDelayTask = null;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
-            
+
             // [AI Context] Initialize refinementClient early because the parallel audio upload task (pendingAudioUploadTask)
             // needs to upload the audio to the EXACT SAME Google Cloud Project / API Key that LatexRefinementSession will use.
             // Otherwise, LatexRefinementSession gets a ClientError: "You do not have permission to access the File".
@@ -1240,6 +1244,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     audioFilePath,
                     preUploadedAudioParts);
 
+                AttachmentHandler.HasJustUploaded = false;
                 await refinementSession.StartAsync();
             }
         }
@@ -1277,14 +1282,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
-        string dateContext = string.IsNullOrEmpty(dateInfo.Weekday) ? dateInfo.DateString : $"{dateInfo.Weekday}, {dateInfo.DateString}";
+        string dateContext = dateInfo.GetFormattedContext();
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
 
         if (partNumber == 1) {
-            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the date of the lecture is important since this is part 1 of the lecture. " + prompt;
+            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}), and week number ({dateInfo.WeekInfo ?? "N/A"}) are important metadata since this is part 1 of the lecture. " + prompt;
         }
         else {
-            prompt = $"The lecture took place on {dateContext}. This is not so important since this is part {partNumber} of the lecture. " + prompt;
+            prompt = $"The lecture took place on {dateContext} (Day of the week: {dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}). This is not so important since this is part {partNumber} of the lecture. " + prompt;
         }
 
         double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
@@ -1381,7 +1386,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
-            Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an {_config.CurrentModel} (Request {currentRequest}/{maxRequestsPerPart})...");
+            Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {currentRequest}/{maxRequestsPerPart})...");
             GroundingMetadata? accumulatedGrounding = null;
             string chunkResp = "";
             int requestInputTokens = 0;
@@ -1394,7 +1399,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
                     onChunkReceived: async (chunk) => {
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                        Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
+                        Console.Write(txt);
                         chunkResp += txt;
 
                         var metadata = chunk.Candidates?[0]?.GroundingMetadata;
@@ -1409,8 +1414,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         }
                         await Task.CompletedTask;
                     },
-                      cancellationToken: cts.Token,
-                      retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}"
+                    cancellationToken: cts.Token,
+                    retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
+                    onRetry: () => {
+                        chunkResp = "";
+                        accumulatedGrounding = null;
+                        requestInputTokens = 0;
+                        requestOutputTokens = 0;
+                        requestCachedTokens = 0;
+                    }
                 );
             }
             catch (Exception ex) {
@@ -1494,6 +1506,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         Console.CancelKeyPress -= cancelHandler;
+        AttachmentHandler.HasJustUploaded = false;
         return (fullResponse, interactionInputTokens, interactionOutputTokens, interactionCachedTokens);
     }
 

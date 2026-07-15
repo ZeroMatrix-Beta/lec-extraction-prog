@@ -524,42 +524,54 @@ public partial class DirectAiChatSessionAiStudio {
         GroundingMetadata? accumulatedGrounding = null;
 
         try {
-            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
-                streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
-                onChunkReceived: async (chunk) => {
-                    string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
-                    fullResponse += chunkText;
-
-                    var metadata = chunk.Candidates?[0]?.GroundingMetadata;
-                    if (metadata != null) {
-                        accumulatedGrounding = metadata;
-                    }
-
-                    if (chunk.UsageMetadata != null) {
-                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                    }
-                    await Task.CompletedTask;
-                },
-                cancellationToken: cts.Token,
-                maxRetries: 5,
-                retryContext: "Chat-Antwort"
-            );
-            if (!success) exceptionCaught = true;
-
-            if (accumulatedGrounding != null) {
-                WriteLine("\n\n🔍 [Google Search Grounding] Quellen:");
-                if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
-                    WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 70s before every GenerateContentStreamAsync request to Google AI Studio.
+            // HasJustUploaded is intentionally NOT checked here – the 70s in AttachmentHandler does not replace this per-request delay.
+            // [Human] Wir warten VOR JEDEM AI-Studio-Request 70 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
+            if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
+                    exceptionCaught = true;
                 }
-                if (accumulatedGrounding.GroundingChunks != null) {
-                    int refIdx = 1;
-                    foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
-                        if (chunkRef.Web != null) {
-                            WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
-                            refIdx++;
+            }
+            AttachmentHandler.HasJustUploaded = false;
+
+            if (!exceptionCaught) {
+                bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+                    streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
+                    onChunkReceived: async (chunk) => {
+                        string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                        Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
+                        fullResponse += chunkText;
+
+                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+                        if (metadata != null) {
+                            accumulatedGrounding = metadata;
+                        }
+
+                        if (chunk.UsageMetadata != null) {
+                            if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+                            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                            if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
+                        }
+                        await Task.CompletedTask;
+                    },
+                    cancellationToken: cts.Token,
+                    maxRetries: 5,
+                    retryContext: "Chat-Antwort"
+                );
+                if (!success) exceptionCaught = true;
+
+                if (!exceptionCaught && accumulatedGrounding != null) {
+                    WriteLine("\n\n🔍 [Google Search Grounding] Quellen:");
+                    if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
+                        WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+                    }
+                    if (accumulatedGrounding.GroundingChunks != null) {
+                        int refIdx = 1;
+                        foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
+                            if (chunkRef.Web != null) {
+                                WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
+                                refIdx++;
+                            }
                         }
                     }
                 }

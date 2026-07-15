@@ -21,6 +21,7 @@ namespace Infrastructure;
 /// </remarks>
 public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null) {
     private static readonly HashSet<string> s_textExtensions = [".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex"];
+    public static bool HasJustUploaded { get; set; } = false;
     private readonly string _uploadFolder = uploadFolder;
     private readonly string[] _includePaths = includePaths ?? [];
     private readonly bool _isAiStudio = isAiStudio;
@@ -231,9 +232,16 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 }
 
                 WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
-                // [AI Context] A brief delay is introduced here to allow the File API backend to propagate
-                // the active file status fully before the model attempts to generate content.
-                await Task.Delay(5000, cancellationToken);
+                // [AI Context] Financial & Rate-Limit Guardrail: When using the standard AI Studio API (_isAiStudio == true),
+                // uploading and processing a file consumes tokens and quota bursts immediately upon activation.
+                // We must wait 70 seconds here before generating content so we don't trigger a Max-Token / Rate-Limit (RESOURCE_EXHAUSTED) error.
+                // [Human] Bei der AI Studio Version müssen wir nach der Datei-Aktivierung zwingend 70 Sekunden warten,
+                // damit wir nicht in eine Max-Token / Rate-Limit Fehlermeldung laufen. Bei Vertex brauchten wir das nicht,
+                // weil es eine Enterprise Version mit höheren Quotas ist.
+                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
+                    return false;
+                }
+                HasJustUploaded = true;
                 var fileDataPart = new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } };
                 if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) && _googleVideoFps.HasValue) {
                     fileDataPart.VideoMetadata = new() { Fps = _googleVideoFps.Value };

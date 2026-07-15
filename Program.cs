@@ -6,9 +6,10 @@ using DirectChatAiInteraction.Vertex;
 using FfmpegUtilities;
 using GoogleGenAi;
 using Google.GenAI;
-using AutoExtraction;
 using Config;
 using Infrastructure;
+
+namespace AutoExtraction;
 
 /// <summary>
 /// [AI Context] Main application entry point. Orchestrates the execution flow by delegating
@@ -159,10 +160,12 @@ public partial class Program {
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
+                AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: true);
             });
             if (selectedModel == "__EXIT__") return;
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(VertexAutoExtractionSession.AvailableModels, selectedModel));
+            AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: true);
 
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
@@ -182,10 +185,12 @@ public partial class Program {
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
+                AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: false);
             });
             if (selectedModel == "__EXIT__") return;
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, selectedModel));
+            AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: false);
 
             // HIER IST DER FIX:
             string? extractedEnvName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)

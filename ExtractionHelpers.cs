@@ -21,6 +21,9 @@ public static partial class ExtractionHelpers {
         set => _isInSmartDelay = value;
     }
 
+    // [AI Context] Tracks the UTC timestamp when the last model completion / file generation finished across any extraction or refinement step.
+    public static DateTime LastGenerationCompletionTimeUtc { get; set; } = DateTime.MinValue;
+
     /// <summary>
     /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
     /// </summary>
@@ -251,6 +254,8 @@ public static partial class ExtractionHelpers {
     /// Implements an interactive delay with user cancellation. Allows interrupting long backoff periods.
     /// </summary>
     public static async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...") {
+        Console.WriteLine($"\n⏳ [SmartDelay] Warte {seconds} Sekunden: {message}");
+        Console.WriteLine("   (Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
         bool delayCanceled = false;
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
         Console.CancelKeyPress += cancelHandler;
@@ -333,6 +338,8 @@ public static partial class ExtractionHelpers {
 
         var files = Directory.GetFiles(sourceFolder, "*.mp4")
                              .OrderBy(f => VideoDateParser.Parse(f).Date)
+                             .ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue)
+                             .ThenBy(f => f)
                              .ToArray();
 
         if (files.Length == 0) {
@@ -457,6 +464,27 @@ public static partial class ExtractionHelpers {
             OutputName = name,
             Fragments = fragList
         };
+    }
+
+    /// <summary>
+    /// [AI Context] Synchronizes the model selected in the AutoExtraction session to all refinement steps
+    /// in the LatexRefinementSessionConfig, and persists both configurations so the entire pipeline stays unified.
+    /// [Human] Synchronisiert das ausgewählte Modell auf alle Schritte des LaTeX-Refinements und speichert beide Config-Dateien ab.
+    /// </summary>
+    public static void SyncModelToRefinementConfig(string modelName, bool isVertex, LatexRefinementSessionConfig? inMemoryConfig = null) {
+        if (string.IsNullOrWhiteSpace(modelName)) return;
+        var refConfig = inMemoryConfig ?? ConfigLoader<LatexRefinementSessionConfig>.Load();
+        if (isVertex) {
+            refConfig.Step1MergeAndTimestamp.Vertex.CurrentModel = modelName;
+            refConfig.Step2SpeechRefinement.Vertex.CurrentModel = modelName;
+            refConfig.Step3LastRefinement.Vertex.CurrentModel = modelName;
+        }
+        else {
+            refConfig.Step1MergeAndTimestamp.AiStudio.CurrentModel = modelName;
+            refConfig.Step2SpeechRefinement.AiStudio.CurrentModel = modelName;
+            refConfig.Step3LastRefinement.AiStudio.CurrentModel = modelName;
+        }
+        ConfigLoader<LatexRefinementSessionConfig>.Save(refConfig);
     }
 
     private static string FormatSecondsToTime(double totalSec) {

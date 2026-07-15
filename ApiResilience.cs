@@ -16,28 +16,36 @@ namespace Infrastructure;
 public static partial class ApiResilience {
     /// <summary>
     /// [AI Context] Executes a streaming API call with a robust retry mechanism.
+    /// On each retry, the optional <paramref name="onRetry"/> callback is invoked BEFORE the new attempt
+    /// so callers can reset their accumulation buffers (e.g. <c>chunkResp = ""</c>) to prevent the
+    /// partial-stream leak that occurs when a transient 503 mid-stream causes duplicate/corrupt output.
     /// [Human] Führt eine Google API Streaming-Anfrage (für fließenden Text) mit automatischen Wiederholungen durch.
+    /// Der optionale onRetry-Callback erlaubt es dem Aufrufer, seinen Textpuffer vor jedem neuen Versuch zurückzusetzen.
     /// </summary>
     /// <param name="streamFactory">A function that creates the IAsyncEnumerable stream from the API.</param>
     /// <param name="onChunkReceived">An async action to process each received chunk from the stream.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <param name="maxRetries">Maximum number of retry attempts.</param>
     /// <param name="initialBackoff">Initial delay in seconds for the first retry.</param>
+    /// <param name="retryContext">Human-readable label printed in retry log messages.</param>
+    /// <param name="onRetry">Optional callback invoked before every retry (attempt > 1). Use it to clear accumulation buffers.</param>
     /// <returns>True if the stream completed successfully, false if it was cancelled. Throws on unrecoverable errors.</returns>
     public static async Task<bool> ExecuteStreamWithRetryAsync(
         Func<IAsyncEnumerable<GenerateContentResponse>> streamFactory,
         Func<GenerateContentResponse, Task> onChunkReceived,
         CancellationToken cancellationToken,
         int maxRetries = 8,
-        int initialBackoff = 45,
-        string retryContext = "") {
+        int initialBackoff = 70,
+        string retryContext = "",
+        Action? onRetry = null) {
         int backoff = initialBackoff;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 if (attempt > 1) {
                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-                    Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
+                    Console.WriteLine($"\n[API Retry]{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zurückgesetzt...");
+                    onRetry?.Invoke();
                 }
 
                 var responseStream = streamFactory();

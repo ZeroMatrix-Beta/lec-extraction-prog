@@ -15,7 +15,9 @@
   "SourceFolder": "",
   "PdfCompilation": {
     "Enabled": true,
-    "PreamblePath": "pdf-preamble.tex"
+    "PreamblePath": "pdf-preamble.tex",
+    "UseAntiGravityAgent": true,
+    "MaxFixRounds": 3
   },
   "Step1MergeAndTimestamp": {
     "Enabled": true,

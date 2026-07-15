@@ -218,7 +218,7 @@ public class DirectAiChatSessionVertex {
         }
     }
 
-    private void ShowCommands() {
+    private static void ShowCommands() {
         WriteLine("\n📋 Befehle:");
         WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
         WriteLine("  🚪 exit / quit             -> Beendet den Chat");
@@ -339,7 +339,7 @@ public class DirectAiChatSessionVertex {
             if (!string.IsNullOrEmpty(newModel)) {
                 _activeModel = newModel;
                 WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
-                
+
                 Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
                 string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
                 if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
@@ -389,7 +389,7 @@ public class DirectAiChatSessionVertex {
         };
 
         if (AIParams.UseGoogleSearch) {
-            config.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
+            config.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
         // [AI Context] Safely inject Thinking parameters ONLY for gemini-3-flash-preview.

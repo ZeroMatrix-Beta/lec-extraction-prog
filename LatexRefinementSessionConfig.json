@@ -7,26 +7,28 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 3,
+  "AiStudioActiveApiProfile": 2,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
   "TargetFolder": "",
   "SourceFolder": "",
   "PdfCompilation": {
-    "Enabled": false,
+    "Enabled": true,
     "PreamblePath": "pdf-preamble.tex",
-    "UseAntiGravityAgent": true
+    "UseAntiGravityAgent": true,
+    "MaxFixRounds": 3,
+    "MaxAntiGravityAgentRounds": 3
   },
   "Step1MergeAndTimestamp": {
     "Enabled": true,
     "AttachAudio": true,
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\xml-latex-merge-instructions.xml"
+      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instructions.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.33,
+      "Temperature": 0.36,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -57,7 +59,7 @@
       "ContextCachingMinutes": 30,
       "ContextCachingIncrementMinutes": 30,
       "ContextCachingMinimumRemainingMinutes": 15,
-      "CurrentModelIndex": 1
+      "CurrentModelIndex": 0
     }
   },
   "Step2SpeechRefinement": {
@@ -68,7 +70,7 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.325,
+      "Temperature": 0.36,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
@@ -110,7 +112,7 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.36,
+      "Temperature": 0.33,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
