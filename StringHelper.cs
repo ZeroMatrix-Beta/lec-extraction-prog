@@ -9,7 +9,7 @@ public static partial class StringHelper {
     /// </summary>
     public static string Truncate(this string value, int maxLength) {
         if (string.IsNullOrEmpty(value)) return value;
-        return value.Length <= maxLength ? value : value.Substring(0, maxLength) + "...";
+        return value.Length <= maxLength ? value : string.Concat(value.AsSpan(0, maxLength), "...");
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ public static partial class StringHelper {
         return source.Contains(toCheck, StringComparison.OrdinalIgnoreCase);
     }
 
-    [GeneratedRegex(@"\\end\{(spoken-clean|math-stroke|student-interaction|nice-box|color-box|didactic-insight|explanation-of-steps|meta-note|lecture-break|remark|ai-note|ai-tikz-planner-invisible-content|ai-global-state-checkpoint-invisible-content)\>")]
+    [GeneratedRegex(@"\\end\{([a-zA-Z0-9_\-\*]+)\>")]
     private static partial Regex MalformedEndTagRegex();
 
     /// <summary>

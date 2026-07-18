@@ -182,7 +182,7 @@ public partial class LatexRefinementSession {
 
             // [AI Context] Clean up temporary test-compile files (pdf, aux, log, out, toc, wrapper tex, precheck log)
             // so they do not clutter the output directory before final Step 4 PDF generation.
-            CleanupPrecheckFiles(targetFolder, currentFiles[0], "step3-precheck");
+            CleanupPrecheckFiles(targetFolder, currentFiles[0], "step3-precheck", alreadyCompiles);
 
             Console.WriteLine("  [INFO] Starte finalen Durchlauf für Schritt 3 (Last Refinement)...");
             var finalOutput = await ExecuteStep3LastRefinementAsync(currentFiles[0], baseName, targetFolder, alreadyCompiles, compileLog);
@@ -283,7 +283,7 @@ public partial class LatexRefinementSession {
                     }
                 }
 
-                CleanupHelperFiles(targetFolder, finalTexFile);
+                CleanupHelperFiles(targetFolder, finalTexFile, true);
 
                 if (logContent.Contains("⚠️ WARNING:")) {
                     Console.WriteLine($"  [INFO] Es gab LaTeX-Warnungen während der Kompilation. Details in: {stepPrefix}-compile-log.txt");
@@ -292,7 +292,7 @@ public partial class LatexRefinementSession {
             }
             else {
                 Console.WriteLine($"  [FEHLER] Fehler bei der PDF-Generierung. Protokoll gespeichert in: {logPath}");
-                CleanupHelperFiles(targetFolder, finalTexFile);
+                CleanupHelperFiles(targetFolder, finalTexFile, false);
                 if (allowRetryOnFailure) {
                     if (_config.PdfCompilation?.UseAntiGravityAgent == true) {
                         Console.WriteLine("\n[AntiGravity Agent Mode] PDF-Kompilierung fehlgeschlagen. Starte sofort interaktive Reparatur über AntiGravity (keine automatischen Gemini-Fix-Versuche)...");
@@ -361,20 +361,24 @@ public partial class LatexRefinementSession {
     /// [AI Context] Deletes intermediate files (.pdf, .aux, .log, wrapper .tex, etc.) generated during the Step 3 precheck compilation.
     /// [Human] Löscht temporäre Test-Dateien aus dem Pre-Check, damit der Zielordner sauber bleibt.
     /// </summary>
-    private static void CleanupPrecheckFiles(string targetFolder, string finalTexFile, string stepPrefix) {
+    private static void CleanupPrecheckFiles(string targetFolder, string finalTexFile, string stepPrefix, bool compilationSuccess = true) {
         try {
             string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
             string wrapperBase = $"{inputBaseName}-main";
-            string[] extensions = [".tex", ".pdf", ".log", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"];
+            string[] extensions = compilationSuccess 
+                ? [".tex", ".pdf", ".log", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"]
+                : [".pdf", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"];
             foreach (var ext in extensions) {
                 string filePath = Path.Combine(targetFolder, wrapperBase + ext);
                 if (System.IO.File.Exists(filePath)) {
                     System.IO.File.Delete(filePath);
                 }
             }
-            string precheckLogPath = Path.Combine(targetFolder, $"{stepPrefix}-compile-log.txt");
-            if (System.IO.File.Exists(precheckLogPath)) {
-                System.IO.File.Delete(precheckLogPath);
+            if (compilationSuccess) {
+                string precheckLogPath = Path.Combine(targetFolder, $"{stepPrefix}-compile-log.txt");
+                if (System.IO.File.Exists(precheckLogPath)) {
+                    System.IO.File.Delete(precheckLogPath);
+                }
             }
             string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
             if (System.IO.File.Exists(cleanPdfPath)) {
@@ -390,13 +394,15 @@ public partial class LatexRefinementSession {
 
     /// <summary>
     /// [AI Context] Deletes intermediate LaTeX compiler files (.main.tex, .main.pdf, .aux, .log, etc.) to keep the output folder clean.
-    /// [Human] Löscht Hilfs- und Wrapperdateien des LaTeX-Compilers im Zielordner, um diesen sauber zu halten.
+    /// [Human] Löscht Hilfs- und Wrapperdateien des LaTeX-Compilers im Zielordner, um diesen sauber zu halten. Bei Fehlern bleiben .tex und .log zur Fehlersuche erhalten.
     /// </summary>
-    private static void CleanupHelperFiles(string targetFolder, string finalTexFile) {
+    private static void CleanupHelperFiles(string targetFolder, string finalTexFile, bool compilationSuccess = true) {
         try {
             string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
             string wrapperBase = $"{inputBaseName}-main";
-            string[] extensions = [".tex", ".pdf", ".log", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"];
+            string[] extensions = compilationSuccess 
+                ? [".tex", ".pdf", ".log", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"]
+                : [".pdf", ".aux", ".out", ".toc", ".fls", ".fdb_latexmk", ".synctex.gz"];
             foreach (var ext in extensions) {
                 string filePath = Path.Combine(targetFolder, wrapperBase + ext);
                 if (System.IO.File.Exists(filePath)) {
@@ -715,6 +721,9 @@ public partial class LatexRefinementSession {
                     Console.WriteLine($"  [WARNUNG] System-Instruktion nicht gefunden und übersprungen: {path}");
                 }
             }
+            // [AI Context] Reset the rate-limit timer to now: loading system instructions takes time,
+            // so the 70s guard will count from here and enforce a proper gap before the first API call.
+            AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         }
 
         // [AI Context] Context caching is Vertex AI only. AiStudio (Google API key) does not support caching.
@@ -1304,12 +1313,12 @@ public partial class LatexRefinementSession {
                     System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
                     Console.WriteLine($"  [INFO] Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
                 }
-                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName));
+                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName), true);
                 return true;
             }
             else {
                 Console.WriteLine($"  [FEHLER] Auch Fix-Versuch #{roundNumber} konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
-                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName));
+                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName), false);
                 return false;
             }
         }
@@ -1356,11 +1365,11 @@ public partial class LatexRefinementSession {
                     System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
                     Console.WriteLine($"  [INFO] Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
                 }
-                CleanupHelperFiles(targetFolder, finalTexFile);
+                CleanupHelperFiles(targetFolder, finalTexFile, true);
                 return true;
             }
             else {
-                CleanupHelperFiles(targetFolder, finalTexFile);
+                CleanupHelperFiles(targetFolder, finalTexFile, false);
                 Console.WriteLine("\n==================================================================================");
                 Console.WriteLine($"🤖 [Antigravity Agent Mode] PDF-Generierung fehlgeschlagen (Runde {round} von {maxRounds})!");
                 Console.WriteLine("Der LaTeX-Compiler meldet immer noch Fehler. Bitte korrigiere die LaTeX-Body-Datei im Workspace.");

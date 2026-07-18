@@ -215,6 +215,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
+        // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
+        // can take significant time; the 70s guard will count from here and enforce a proper gap before the first API call.
+        ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();
 

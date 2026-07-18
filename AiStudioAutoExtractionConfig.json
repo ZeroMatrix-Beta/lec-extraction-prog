@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 2,
+  "ActiveApiProfile": 3,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",

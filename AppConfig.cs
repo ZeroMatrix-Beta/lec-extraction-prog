@@ -80,8 +80,22 @@ public static class ConfigLoader<T> where T : class, new() {
                     if (targetProp.Value is JObject && sourceProp.Value is JObject) {
                         UpdatePropertiesPreservingComments(targetProp.Value, sourceProp.Value);
                     }
-                    else if (targetProp.Value is JArray && sourceProp.Value is JArray) {
-                        targetProp.Value = sourceProp.Value.DeepClone();
+                    else if (targetProp.Value is JArray targetArr && sourceProp.Value is JArray sourceArr) {
+                        var newArray = new JArray();
+                        int sourceIndex = 0;
+                        foreach (var token in targetArr.Children()) {
+                            if (token.Type == JTokenType.Comment) {
+                                newArray.Add(token.DeepClone());
+                            } else if (sourceIndex < sourceArr.Count) {
+                                newArray.Add(sourceArr[sourceIndex].DeepClone());
+                                sourceIndex++;
+                            }
+                        }
+                        while (sourceIndex < sourceArr.Count) {
+                            newArray.Add(sourceArr[sourceIndex].DeepClone());
+                            sourceIndex++;
+                        }
+                        targetProp.Value = newArray;
                     }
                     else if (targetProp.Value is JValue targetVal && sourceProp.Value is JValue sourceVal) {
                         targetVal.Value = sourceVal.Value;
