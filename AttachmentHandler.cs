@@ -233,13 +233,14 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
 
                 WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
                 // [AI Context] Financial & Rate-Limit Guardrail: When using the standard AI Studio API (_isAiStudio == true),
-                // uploading and processing a file consumes tokens and quota bursts immediately upon activation.
-                // We must wait 70 seconds here before generating content so we don't trigger a Max-Token / Rate-Limit (RESOURCE_EXHAUSTED) error.
-                // [Human] Bei der AI Studio Version müssen wir nach der Datei-Aktivierung zwingend 70 Sekunden warten,
-                // damit wir nicht in eine Max-Token / Rate-Limit Fehlermeldung laufen. Bei Vertex brauchten wir das nicht,
-                // weil es eine Enterprise Version mit höheren Quotas ist.
-                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
-                    return false;
+                // we historically waited here. However, as Gemini is stateless, token consumption (TPM) only happens upon the
+                // actual GenerateContent request, not during file upload. Thus, waiting after uploading a system instruction is unnecessary.
+                if (!asSystemInstruction) {
+                    // [Human] Bei der AI Studio Version warten wir nach großen Datei-Aktivierungen (wie Videos).
+                    // Für System Instructions überspringen wir das, da sie kaum Tokens/Zeit beim Upload verbrauchen.
+                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
+                        return false;
+                    }
                 }
                 HasJustUploaded = true;
                 var fileDataPart = new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } };

@@ -914,6 +914,27 @@ public partial class LatexRefinementSession {
             Console.WriteLine($"  [WARNUNG] Konnte Prompt-Log nicht speichern.");
         }
 
+        int expectedSpokenClean = 0;
+        int expectedMathStroke = 0;
+        try {
+            string allInputText = "";
+            foreach (var turn in history) {
+                if (turn.Parts != null) {
+                    foreach (var part in turn.Parts) {
+                        if (!string.IsNullOrEmpty(part.Text)) {
+                            allInputText += part.Text + "\n";
+                        }
+                    }
+                }
+            }
+            expectedSpokenClean = System.Text.RegularExpressions.Regex.Matches(allInputText, @"\\begin\{spoken-clean\}").Count;
+            expectedMathStroke = System.Text.RegularExpressions.Regex.Matches(allInputText, @"\\begin\{math-stroke\}").Count;
+            if (expectedSpokenClean > 0 || expectedMathStroke > 0) {
+                Console.WriteLine($"  [INFO] Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x spoken-clean und {expectedMathStroke}x math-stroke Blöcke im Output.");
+            }
+        }
+        catch { }
+
         int totalInputTokens = 0;
         int totalOutputTokens = 0;
         int totalCachedTokens = 0;
@@ -1021,14 +1042,16 @@ public partial class LatexRefinementSession {
                 break;
             }
 
-            // [AI Context] Note on C# 8 Range Operator: 
-            // 'chunkResp[^300..]' is modern C# syntax equivalent to 'chunkResp.Substring(chunkResp.Length - 300)'.
-            // The '^' operator means "from the end", so '^300..' means "start 300 characters from the end, and go to the very end".
+            bool closedBlock = chunkResp.TrimEnd().EndsWith("```");
             string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
                 "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Do not open a new ```latex block, do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
 
-            Console.WriteLine("\n  [Refinement] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
+            if (closedBlock) {
+                continuePrompt += "\n\n[WARNING] It looks like you closed the ```latex markdown block, but you forgot the '% [SYSTEM] Refinement complete' marker. If you have not finished transcribing/refining the ENTIRE document, DO NOT just send the marker! You must continue transcribing the remaining content of the lecture. Open a new ```latex block and continue the transcription.";
+            }
+
+            Console.WriteLine("\n  [Refinement] Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...");
             Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
             // [AI Context] Note on C# 12 Collection Expressions:
@@ -1049,6 +1072,29 @@ public partial class LatexRefinementSession {
         }
 
         Console.CancelKeyPress -= CancelHandler;
+
+        // --- STRUCTURAL INTEGRITY VERIFICATION ---
+        if (!string.IsNullOrEmpty(fullResponseText) && (expectedSpokenClean > 0 || expectedMathStroke > 0)) {
+            int actualSpokenClean = System.Text.RegularExpressions.Regex.Matches(fullResponseText, @"\\begin\{spoken-clean\}").Count;
+            int actualMathStroke = System.Text.RegularExpressions.Regex.Matches(fullResponseText, @"\\begin\{math-stroke\}").Count;
+            
+            // Tolerance: LLM shouldn't drop more than 20% of the blocks.
+            int minExpectedSpoken = (int)(expectedSpokenClean * 0.8);
+            int minExpectedMath = (int)(expectedMathStroke * 0.8);
+
+            if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
+                Console.WriteLine($"\n[FATAL ERROR] SILENT TRUNCATION DETECTED!");
+                Console.WriteLine($"[FATAL ERROR] Das Modell hat einen großen Teil des Textes übersprungen oder abgeschnitten.");
+                Console.WriteLine($"[FATAL ERROR] Erwartet: ~{expectedSpokenClean} spoken-clean / ~{expectedMathStroke} math-stroke.");
+                Console.WriteLine($"[FATAL ERROR] Erhalten: {actualSpokenClean} spoken-clean / {actualMathStroke} math-stroke.");
+                Console.WriteLine($"[FATAL ERROR] Datei wird aus Sicherheitsgründen NICHT gespeichert, da massiver Datenverlust vorliegt.");
+                return null;
+            }
+            else {
+                Console.WriteLine($"  [INFO] Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} spoken-clean, {actualMathStroke}/{expectedMathStroke} math-stroke.");
+            }
+        }
+        // -----------------------------------------
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
             if (!Directory.Exists(targetOutputFolder)) Directory.CreateDirectory(targetOutputFolder);
@@ -1326,16 +1372,30 @@ public partial class LatexRefinementSession {
     }
 
     /// <summary>
-    /// [AI Context] Interactive loop that prompts the developer and their Antigravity AI coding assistant to fix compilation errors locally.
-    /// [Human] Interaktiver Modus: Wartet darauf, dass du oder dein Antigravity-Agent Fehler in der LaTeX-Datei behebt, und kompiliert dann erneut.
+    /// [AI Context] Automated loop that calls the Google Antigravity Agent via v1beta/interactions REST API to fix compilation errors in a secure remote sandbox.
+    /// [Human] Ruft den echten Google Antigravity-Agenten über die REST-Schnittstelle auf, um LaTeX-Fehler vollautomatisch in einer Sandbox zu reparieren.
     /// </summary>
     private async Task<bool> RunAntiGravityAgentFixLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText) {
         int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
         if (maxRounds <= 0) maxRounds = 1;
 
+        string? envVarName = (_config.AiStudioApiKeyEnvNames != null && _config.AiStudioApiKeyEnvNames.Length > _config.AiStudioActiveApiProfile)
+            ? _config.AiStudioApiKeyEnvNames[_config.AiStudioActiveApiProfile]
+            : "API_KEY";
+
+        string? apiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envVarName);
+        if (string.IsNullOrEmpty(apiKey)) {
+            Console.WriteLine($"\n[FEHLER] Antigravity Agent benötigt einen gültigen API-Key in der Umgebungsvariable '{envVarName}'.");
+            return false;
+        }
+
+        using var httpClient = new System.Net.Http.HttpClient();
+        httpClient.Timeout = TimeSpan.FromMinutes(20);
+        httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
+
         for (int round = 1; round <= maxRounds; round++) {
             Console.WriteLine($"\n==================================================================================");
-            Console.WriteLine($"🤖 [Antigravity Agent Mode] Starte Reparatur-Runde {round} von {maxRounds}...");
+            Console.WriteLine($"🚀 [Antigravity Agent API] Starte Reparatur-Runde {round} von {maxRounds}...");
             Console.WriteLine($"==================================================================================");
 
             // Re-create the wrapper file since it was cleaned up
@@ -1354,7 +1414,7 @@ public partial class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(logPath, logContent);
 
             if (success) {
-                Console.WriteLine($"\n[LatexToolkit] 🎉 PDF im Antigravity-Modus erfolgreich (Runde {round}/{maxRounds}) generiert!");
+                Console.WriteLine($"\n[LatexToolkit] 🎉 PDF durch Antigravity Agent erfolgreich (Runde {round}/{maxRounds}) generiert!");
                 string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
                 if (System.IO.File.Exists(compiledPdfPath)) {
                     string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
@@ -1371,38 +1431,91 @@ public partial class LatexRefinementSession {
             else {
                 CleanupHelperFiles(targetFolder, finalTexFile, false);
                 Console.WriteLine("\n==================================================================================");
-                Console.WriteLine($"🤖 [Antigravity Agent Mode] PDF-Generierung fehlgeschlagen (Runde {round} von {maxRounds})!");
-                Console.WriteLine("Der LaTeX-Compiler meldet immer noch Fehler. Bitte korrigiere die LaTeX-Body-Datei im Workspace.");
-                Console.WriteLine("Die fehlerhafte LaTeX-Body-Datei befindet sich unter:");
-                Console.WriteLine($"  [TEX BODY] {finalTexFile}");
-                Console.WriteLine($"Die dazugehörige Preamble-Datei (Design-Vorlage) befindet sich unter:");
-                Console.WriteLine($"  [TEX PREAMBLE] {preamblePath}");
-                Console.WriteLine("\n🚨 [CRITICAL INSTRUCTION FOR ANTIGRAVITY AGENT]:");
-                Console.WriteLine($"1. DO NOT invent your own preamble! DO NOT add \\documentclass or \\usepackage to `{finalTexFile}`!");
-                Console.WriteLine($"2. `{finalTexFile}` contains ONLY the document body inside \\begin{{document}} ... \\end{{document}}.");
-                Console.WriteLine($"3. The preamble from `{preamblePath}` is automatically prepended during compilation via a wrapper.");
-                Console.WriteLine($"4. Check `{preamblePath}` or the preamble block below to see which packages, commands, and environments (`spoken-clean`, etc.) are already defined.");
-                Console.WriteLine("\n<current_latex_preamble note=\"FOR REFERENCE ONLY - ALREADY INJECTED BY WRAPPER\">");
-                Console.WriteLine(preamble);
-                Console.WriteLine("</current_latex_preamble>");
-                Console.WriteLine("\nHier ist das aktuelle Fehlerprotokoll:");
-                Console.WriteLine("----------------------------------------------------------------------------------");
-                Console.WriteLine(logContent);
-                Console.WriteLine("----------------------------------------------------------------------------------");
+                Console.WriteLine($"🤖 [Antigravity Agent API] PDF-Generierung fehlgeschlagen (Runde {round} von {maxRounds})!");
+                Console.WriteLine("Der LaTeX-Compiler meldet Fehler. Sende Log und Code an den Remote-Agenten...");
+                
+                string currentLatexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
 
-                if (round < maxRounds) {
-                    Console.WriteLine($"\n⏳ [Antigravity Agent Mode] Warte 60 Sekunden auf Korrektur der Datei `{finalFileName}`...");
-                    Console.WriteLine("   (Tipp: Drücke Enter, sobald die Datei durch den Agenten/Benutzer korrigiert wurde, um sofort weiter zu machen.)");
-                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(60, $"Antigravity Agent Mode (Runde {round}/{maxRounds}): Warte auf Datei-Korrektur...")) {
-                        Console.WriteLine("  [INFO] Wartezeit abgebrochen.");
+                string prompt = $@"We are trying to compile a LaTeX document, but pdflatex encountered errors.
+You are the Antigravity Agent. Please fix the LaTeX code.
+
+The preamble is managed by a wrapper script. Do not write the preamble, only output the fixed content for the body file.
+
+### Error Log
+```text
+{logContent}
+```
+
+### Current File Contents (`{finalFileName}`)
+```latex
+{currentLatexContent}
+```
+
+Please return the fully corrected contents of `{finalFileName}` inside a ```latex code block. DO NOT use \begin{{document}} or \end{{document}}.";
+
+                var payload = new {
+                    agent = "antigravity-preview-05-2026",
+                    environment = "remote",
+                    input = prompt
+                };
+
+                string jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+                var content = new System.Net.Http.StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+
+                Console.WriteLine($"⏳ [Antigravity Agent API] Kontaktiere Google Cloud (v1beta/interactions) für automatische Korrektur...");
+                
+                try {
+                    var response = await httpClient.PostAsync("https://generativelanguage.googleapis.com/v1beta/interactions", content);
+                    string responseBody = await response.Content.ReadAsStringAsync();
+
+                    if (!response.IsSuccessStatusCode) {
+                        Console.WriteLine($"\n[FEHLER] Antigravity Agent API Aufruf fehlgeschlagen: {response.StatusCode}");
+                        Console.WriteLine($"Response: {responseBody}");
+                        return false;
+                    }
+
+                    using var doc = System.Text.Json.JsonDocument.Parse(responseBody);
+                    string agentOutput = "";
+                    if (doc.RootElement.TryGetProperty("output_text", out var outputTextElement) && outputTextElement.ValueKind == System.Text.Json.JsonValueKind.String) {
+                        agentOutput = outputTextElement.GetString() ?? "";
+                    }
+
+                    // Fallback: Wenn kein output_text da ist, extrahieren wir allen Text aus den "steps"
+                    if (string.IsNullOrWhiteSpace(agentOutput) && doc.RootElement.TryGetProperty("steps", out var stepsElement) && stepsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
+                        var sb = new System.Text.StringBuilder();
+                        foreach (var step in stepsElement.EnumerateArray()) {
+                            if (step.TryGetProperty("summary", out var summaryElement) && summaryElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
+                                foreach (var item in summaryElement.EnumerateArray()) {
+                                    if (item.TryGetProperty("text", out var txtElement) && txtElement.ValueKind == System.Text.Json.JsonValueKind.String) {
+                                        sb.AppendLine(txtElement.GetString());
+                                    }
+                                }
+                            }
+                        }
+                        agentOutput = sb.ToString();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(agentOutput)) {
+                        string cleanedText = AutoExtraction.ExtractionHelpers.CleanLatexResponse(agentOutput);
+                        
+                        await System.IO.File.WriteAllTextAsync(finalTexFile, cleanedText);
+                        Console.WriteLine($"\n✅ [Antigravity Agent API] Agent hat Korrekturen angewendet und in `{finalFileName}` gespeichert. Starte nächsten Kompilierungs-Versuch...");
+                    }
+                    else {
+                        Console.WriteLine("\n[FEHLER] Antigravity Agent Response enthielt kein `output_text` Feld und in den `steps` wurde kein Text gefunden.");
+                        Console.WriteLine($"Raw JSON (erste 1000 Zeichen): {(responseBody.Length > 1000 ? string.Concat(responseBody.AsSpan(0, 1000), "...") : responseBody)}");
                         return false;
                     }
                 }
-                else {
-                    Console.WriteLine($"\n  [FEHLER] Maximale Anzahl an Antigravity-Reparaturrunden ({maxRounds}) erreicht. PDF konnte nicht generiert werden.");
+                catch (Exception ex) {
+                    Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                    Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                    return false;
                 }
             }
         }
+        
+        Console.WriteLine($"\n  [FEHLER] Maximale Anzahl an Antigravity-Reparaturrunden ({maxRounds}) erreicht. PDF konnte nicht generiert werden.");
         return false;
     }
 

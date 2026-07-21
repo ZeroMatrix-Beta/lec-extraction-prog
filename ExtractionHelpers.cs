@@ -232,17 +232,21 @@ public static partial class ExtractionHelpers {
     public static string CleanLatexResponse(string rawResponse) {
         string cleanTex = rawResponse;
 
-        // Extract content inside ```latex ... ``` if present, ignoring conversational text outside
-        var match = MyRegex().Match(cleanTex);
-        if (match.Success) {
-            cleanTex = match.Groups[1].Value;
+        // We use a non-greedy regex to capture everything inside the blocks, allowing multiple blocks.
+        var matches = MyRegex().Matches(cleanTex);
+        if (matches.Count > 0) {
+            var sb = new System.Text.StringBuilder();
+            foreach (System.Text.RegularExpressions.Match match in matches) {
+                if (sb.Length > 0) sb.AppendLine();
+                sb.AppendLine(match.Groups[1].Value);
+            }
+            cleanTex = sb.ToString();
         }
-        else {
-            // Fallback: just strip the markers if the regex fails to capture a clean block
-            // Updated to use Source-Generated Regexes to improve performance and resolve IDE warnings
-            cleanTex = LatexBlockRegex().Replace(cleanTex, "");
-            cleanTex = CodeBlockRegex().Replace(cleanTex, "");
-        }
+
+        // Always strip any remaining markdown code block markers (even if we extracted a block),
+        // because the model might have split the LaTeX code into multiple consecutive markdown blocks.
+        cleanTex = LatexBlockRegex().Replace(cleanTex, "");
+        cleanTex = CodeBlockRegex().Replace(cleanTex, "");
 
         // Fuzzy regex to catch variations like "**[SYSTEM] Segment complete.**" with leading spaces or bold markers
         // Updated to use Source-Generated Regex to improve performance and resolve IDE warnings

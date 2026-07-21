@@ -696,11 +696,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
             _config.CurrentModelIndex = idx - 1;
             ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
-        } else if (choice.Contains('-')) {
+        }
+        else if (choice.Contains('-')) {
             int found = Array.IndexOf(models, choice);
             if (found >= 0) {
                 _config.CurrentModelIndex = found;
-            } else {
+            }
+            else {
                 Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
             }
             ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
@@ -1274,7 +1276,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     uploadTask = pendingVideoUploadTask;
                 }
                 else {
-                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
+                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
                 }
 
                 (uploadSuccess, parsedPrompt, attachmentParts) = await uploadTask;
@@ -1321,7 +1323,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 2}.tex");
                         if (!System.IO.File.Exists(nextTexPath)) {
                             Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
-                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file);
+                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
                         }
                         else {
                             pendingVideoUploadTask = null;
@@ -1523,7 +1525,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         return newPath;
     }
 
-    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
+    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
@@ -1539,16 +1541,23 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
 
+        TimeSpan fullVideoTime = TimeSpan.FromSeconds(fullOriginalVideoDuration);
+        string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
+
         prompt += "\n\n<context_and_parameters>\n" +
                   "IMPORTANT: The System Instructions (System Prompt) contain the absolute rules, syntax specifications, and constraints for this transcription and MUST be followed strictly. The parameters below only specify details for this video fragment:\n\n" +
-                  $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.</parameter>\n" +
+                  $"<parameter name=\"source_video\">You must transcribe the video attachment named `{Path.GetFileName(partFile)}` verbatim according to the system instructions. Ensure you transcribe every single spoken word up to the very last second of the video, even if it cuts off mid-sentence.</parameter>\n" +
+                  $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long. The duration of the entire lecture video is {fullDurationString}.</parameter>\n" +
                   $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).</parameter>\n";
 
         if (partNumber != 1) {
-            prompt += "<parameter name=\"segment_start\">Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.</parameter>\n";
+            prompt += "<parameter name=\"segment_start\">\n" +
+                      "1. Start the transcription EXACTLY where the audio begins in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction.\n" +
+                      "2. If the previous part ended in the middle of an environment (like a `proof`, `short-proof`, or `math-stroke`), you MUST logically continue that environment in this part (e.g., start with `\\begin{proof}` or `\\begin{math-stroke}` if the professor is still doing the proof/derivation). However, you must still transcribe the spoken words exactly from where this new video segment begins.\n" +
+                      "</parameter>\n";
         }
 
-        prompt += "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts. Focus solely on transcribing this fragment. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n" +
+        prompt += "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts (i.e. do not try to fix the cut). Focus solely on transcribing this fragment as it is. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n" +
                   "</context_and_parameters>";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
@@ -1557,24 +1566,40 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         return (true, parsedPrompt, attachmentParts);
     }
 
+    /// <summary>
+    /// [AI Context] Executes the Vertex AI generation call for a single video segment.
+    /// Prompt parts are assembled in strict prefix-stable order (payload first, parameters second, reference context trailing) to preserve cache alignment.
+    /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment über Vertex AI.
+    /// </summary>
     private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
+        // [AI Context] 1. Primary payload first (attachmentParts / video) to maintain prefix alignment.
+        // [Human] Zuerst das Video anfügen, damit der Prompt-Anfang für das Caching stabil bleibt.
+        userPromptParts.AddRange(attachmentParts);
+
+        // 2. Add segment prompt parameters
+        if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
+            userPromptParts.Add(new Part { Text = parsedPrompt });
+        }
+
+        // 3. Append previous .tex files as read-only reference context AT THE END
         if (previousTexFiles.Count > 0) {
-            Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
-            string contextText = "Here are the context files from the previous parts of the lecture. Please note that these files might contain compilation errors from previous, incomplete, or flawed extractions. Treat them as contextual reference material, but do not assume perfect LaTeX syntax or content validity.\n\n";
+            Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
+            string contextText =
+                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+                "CRITICAL RULES:\n" +
+                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+                $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
+                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
                 string content = await System.IO.File.ReadAllTextAsync(texFile);
                 contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
             }
             userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
-        }
-
-        userPromptParts.AddRange(attachmentParts);
-
-        if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
-            userPromptParts.Add(new Part { Text = parsedPrompt });
         }
 
         var history = new List<Content>();

@@ -153,21 +153,36 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                             instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
                             Console.WriteLine($"  [INFO] System Instruction geladen: {relPath}");
                         }
-                        _systemInstructionText = instructionBuilder.ToString();
 
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                            Console.WriteLine("\n  [INFO] Lade History-Dateien für System Instruction ein...");
-                            string fileList = string.Join(", ", distinctHistoryFiles.Select(p => $"\"{p}\""));
-                            var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
-                            if (success && attachmentParts.Count > 0) {
-                                _historyParts.AddRange(attachmentParts);
-                                _historyWasLoaded = true;
-                                Console.WriteLine("  [INFO] Dateien erfolgreich eingelesen und in die System Instruction eingebunden.");
+                            Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (für 100% Caching)...");
+                            List<string> nonTextHistoryFiles = [];
+                            foreach (var hFile in distinctHistoryFiles) {
+                                string ext = Path.GetExtension(hFile).ToLowerInvariant();
+                                if (ext == ".tex" || ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".cs") {
+                                    string rawRelPath = !string.IsNullOrEmpty(commonBase)
+                                        ? Path.GetRelativePath(commonBase, hFile)
+                                        : Path.GetFileName(hFile);
+                                    string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                                    instructionBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relPath}`:\n");
+                                    instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(hFile));
+                                    Console.WriteLine($"  [INFO] History-Textdatei direkt in System Instruction eingebunden: {relPath}");
+                                }
+                                else {
+                                    nonTextHistoryFiles.Add(hFile);
+                                }
                             }
-                            else {
-                                Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht eingelesen werden.");
+                            if (nonTextHistoryFiles.Count > 0) {
+                                string fileList = string.Join(", ", nonTextHistoryFiles.Select(p => $"\"{p}\""));
+                                var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
+                                if (success && attachmentParts.Count > 0) {
+                                    _historyParts.AddRange(attachmentParts);
+                                }
                             }
+                            _historyWasLoaded = true;
                         }
+
+                        _systemInstructionText = instructionBuilder.ToString();
                     }
                 }
                 else {
@@ -201,7 +216,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         _historyParts.AddRange(attachmentParts);
                         _historyWasLoaded = true;
                         if (_config.LoadHistoryIntoSystemInstruction) {
-                            Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden (Acknowledge wird übersprungen).");
+                            Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
+                            if (!await WarmUpSystemInstructionCacheAsync()) return false;
                         }
                         else {
                             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
@@ -213,6 +229,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
                 }
             }
+        }
+
+        if (!_historyWasLoaded && !string.IsNullOrWhiteSpace(_systemInstructionText)) {
+            if (!await WarmUpSystemInstructionCacheAsync()) return false;
         }
 
         // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
@@ -817,6 +837,62 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     }
 
     /// <summary>
+    /// [AI Context] Sends a lightweight handshake request containing the System Instruction to Google AI Studio.
+    /// This warms up Google's implicit prefix cache and enforces a 70-second token refill delay
+    /// before heavy video processing begins, preventing Quota Errors and ensuring high cache hits.
+    /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
+    /// </summary>
+    private async Task<bool> WarmUpSystemInstructionCacheAsync() {
+        Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...");
+
+        var requestConfig = new GenerateContentConfig {
+            Temperature = _config.Temperature,
+            TopP = _config.TopP,
+            TopK = _config.TopK,
+            MaxOutputTokens = 100
+        };
+
+        var sysParts = new List<Part>();
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+        if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
+        if (sysParts.Count > 0) {
+            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+        }
+
+        var pingContent = new List<Content> {
+            new Content {
+                Role = "user",
+                Parts = [new Part { Text = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'" }]
+            }
+        };
+
+        try {
+            string responseText = "";
+            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+                streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
+                onChunkReceived: async (chunk) => {
+                    string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                    responseText += txt;
+                    await Task.CompletedTask;
+                },
+                cancellationToken: CancellationToken.None,
+                retryContext: "Cache-Warming Handshake"
+            );
+
+            if (success) {
+                Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich. Google hat die System Instruction gecacht.");
+                Console.WriteLine("  [Rate-Limit] Warte 70 Sekunden (Token Refill), damit die Quota vor den Video-Teilen vollständig zurückgesetzt ist...");
+                await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Token-Refill nach Handshake...");
+                return true;
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [WARNUNG] Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.");
+        }
+        return true;
+    }
+
+    /// <summary>
     /// [AI Context] Executes the batch processing workflow.
     /// Uses System.Threading.Channels to run FFmpeg processing in the background (Producer) while Gemini processes chunks sequentially (Consumer), maximizing hardware and API throughput.
     /// [Human] Das asynchrone Fließband: FFmpeg bereitet Videos im Hintergrund vor, während Gemini sie der Reihe nach abarbeitet.
@@ -1054,7 +1130,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     uploadTask = pendingVideoUploadTask;
                 }
                 else {
-                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file);
+                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
                 }
 
                 (uploadSuccess, parsedPrompt, attachmentParts) = await uploadTask;
@@ -1079,7 +1155,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 2}.tex");
                         if (!System.IO.File.Exists(nextTexPath)) {
                             Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
-                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file);
+                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
                         }
                         else {
                             pendingVideoUploadTask = null;
@@ -1284,7 +1360,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return newPath;
     }
 
-    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
+    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
@@ -1300,16 +1376,23 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
 
+        TimeSpan fullVideoTime = TimeSpan.FromSeconds(fullOriginalVideoDuration);
+        string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
+
         prompt += "\n\n<context_and_parameters>\n" +
                   "IMPORTANT: The System Instructions (System Prompt) contain the absolute rules, syntax specifications, and constraints for this transcription and MUST be followed strictly. The parameters below only specify details for this video fragment:\n\n" +
-                  $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long.</parameter>\n" +
+                  $"<parameter name=\"source_video\">You must transcribe the video attachment named `{Path.GetFileName(partFile)}` verbatim according to the system instructions. Ensure you transcribe every single spoken word up to the very last second of the video, even if it cuts off mid-sentence.</parameter>\n" +
+                  $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long. The duration of the entire lecture video is {fullDurationString}.</parameter>\n" +
                   $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).</parameter>\n";
 
         if (partNumber != 1) {
-            prompt += "<parameter name=\"segment_start\">Start the transcription EXACTLY where the professor starts in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction whatsoever.</parameter>\n";
+            prompt += "<parameter name=\"segment_start\">\n" +
+                      "1. Start the transcription EXACTLY where the audio begins in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction.\n" +
+                      "2. If the previous part ended in the middle of an environment (like a `proof`, `short-proof`, or `math-stroke`), you MUST logically continue that environment in this part (e.g., start with `\\begin{proof}` or `\\begin{math-stroke}` if the professor is still doing the proof/derivation). However, you must still transcribe the spoken words exactly from where this new video segment begins.\n" +
+                      "</parameter>\n";
         }
 
-        prompt += "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts. Focus solely on transcribing this fragment. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n" +
+        prompt += "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts (i.e. do not try to fix the cut). Focus solely on transcribing this fragment as it is. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n" +
                   "</context_and_parameters>";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
@@ -1318,24 +1401,44 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return (true, parsedPrompt, attachmentParts);
     }
 
+    /// <summary>
+    /// [AI Context] Executes the Gemini API generation call for a single video segment.
+    /// To guarantee 100% implicit prefix cache hits across multi-part extractions, prompt parts are assembled in strict prefix-stable order:
+    /// 1. Primary payload (attachmentParts / video) first.
+    /// 2. Segment-specific parameters second.
+    /// 3. Read-only reference context (previousTexFiles) trailing at the very end.
+    /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment. Hält die Prompt-Reihenfolge strikt ein, damit Googles impliziter Cache optimal greift.
+    /// </summary>
     private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
+        // [AI Context] 1. Primary payload first (attachmentParts / video) to maintain prefix alignment.
+        // [Human] Zuerst das Video anfügen, damit der Prompt-Anfang für das implizite Caching stabil bleibt.
+        userPromptParts.AddRange(attachmentParts);
+
+        // 2. Add the segment prompt parameters
+        if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
+            userPromptParts.Add(new Part { Text = parsedPrompt });
+        }
+
+        // 3. Append previous .tex files as read-only reference context AT THE END
+        // Putting reference context at the end ensures the static prefix (System Instruction + Video) is completely uncorrupted by dynamic prior outputs.
         if (previousTexFiles.Count > 0) {
-            Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Kontext mit:");
-            string contextText = "Here are the context files from the previous parts of the lecture. Please note that these files might contain compilation errors from previous, incomplete, or flawed extractions. Treat them as contextual reference material, but do not assume perfect LaTeX syntax or content validity.\n\n";
+            Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
+            string contextText =
+                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+                "CRITICAL RULES:\n" +
+                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+                $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
+                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
                 string content = await System.IO.File.ReadAllTextAsync(texFile);
                 contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
             }
             userPromptParts.Add(new() { Text = contextText.TrimEnd() });
-        }
-
-        userPromptParts.AddRange(attachmentParts);
-
-        if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
-            userPromptParts.Add(new Part { Text = parsedPrompt });
         }
 
         var history = new List<Content>();
@@ -1490,7 +1593,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 "Please \"continue\" exactly where you left off. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
 
             if (segmentComplete) Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
-            else Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
+            else Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...");
 
             Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
 
