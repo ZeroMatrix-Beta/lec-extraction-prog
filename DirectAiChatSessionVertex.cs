@@ -23,6 +23,7 @@ namespace DirectChatAiInteraction.Vertex;
 /// </summary>
 public class DirectAiChatSessionVertex {
     public static readonly string[] AvailableModels = [
+        "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3-flash-preview"
     ];
@@ -72,8 +73,8 @@ public class DirectAiChatSessionVertex {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", AvailableModels, newModel => {
-                int idx = Array.IndexOf(AvailableModels, newModel);
+            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
+                int idx = Array.IndexOf(_config.Model, newModel);
                 if (idx >= 0) _config.CurrentModelIndex = idx;
                 _config.CurrentModel = newModel;
                 ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);

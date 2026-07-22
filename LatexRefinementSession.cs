@@ -98,7 +98,7 @@ public partial class LatexRefinementSession {
         Console.WriteLine("==================================================");
 
         // [AI Context] Reset HasJustUploaded when starting the pipeline so that any background audio upload
-        // or prior extraction steps don't suppress the initial 70-second token refill timer.
+        // or prior extraction steps don't suppress the initial 120-second token refill timer.
         AttachmentHandler.HasJustUploaded = false;
 
         await ExecutePipelineAsync();
@@ -722,7 +722,7 @@ public partial class LatexRefinementSession {
                 }
             }
             // [AI Context] Reset the rate-limit timer to now: loading system instructions takes time,
-            // so the 70s guard will count from here and enforce a proper gap before the first API call.
+            // so the 120s guard will count from here and enforce a proper gap before the first API call.
             AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         }
 
@@ -952,8 +952,8 @@ public partial class LatexRefinementSession {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
             double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < 70 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                int waitRemaining = (int)Math.Ceiling(70 - secondsSinceLastGen);
+            if (secondsSinceLastGen < 120 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+                int waitRemaining = (int)Math.Ceiling(120 - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem nächsten API-Aufruf...");
                 if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
                     break;
@@ -1060,10 +1060,10 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "model", Parts = [new Part { Text = chunkResp }] });
             history.Add(new Content { Role = "user", Parts = [new Part { Text = continuePrompt }] });
 
-            // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
-            // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] A 120-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 2m0s ensures a full quota refresh.
+            // [Human] Wir warten hier 2 Minuten (120s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine("  [Rate-Limit] Warte 120 Sekunden (Token Refill), damit die Quota vor den Batch-Teilen vollständig zurückgesetzt ist...");
+            if (!await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }
@@ -1226,8 +1226,8 @@ public partial class LatexRefinementSession {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
             double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < 70 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                int waitRemaining = (int)Math.Ceiling(70 - secondsSinceLastGen);
+            if (secondsSinceLastGen < 120 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+                int waitRemaining = (int)Math.Ceiling(120 - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem PDF-Fix-Request...");
                 if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
                     break;
@@ -1298,8 +1298,8 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
 
-            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung...");
-            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
+            Console.WriteLine($"\n  [Timer] Warte 120 Sekunden vor der Fortsetzung...");
+            if (!await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...")) {
                 break;
             }
             currentRequest++;

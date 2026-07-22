@@ -26,6 +26,7 @@ namespace AutoExtraction;
 /// </remarks>
 public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
+        "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3-flash-preview"
     ];
@@ -228,7 +229,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
-        // can take significant time; the 70s guard will count from here and enforce a proper gap before the first API call.
+        // can take significant time; the 150s guard will count from here and enforce a proper gap before the first API call.
         ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
@@ -1584,7 +1585,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         // 3. Append previous .tex files as read-only reference context AT THE END
-        if (previousTexFiles.Count > 0) {
+        if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
             string contextText =
                 "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
@@ -1779,10 +1780,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
-            // [AI Context] Under Vertex AI, we do not have strict RPM / TPM limits, but a small 10s delay provides a buffer to avoid transient concurrency limits or spikes.
-            // [Human] Unter Vertex AI sind die Rate-Limits höher, aber eine kleine Pause von 10s schützt vor temporären Server-Spikes. (Oder drücke Enter für sofortigen Skip)
-            Console.WriteLine($"\n  [Timer] Warte 10 Sekunden vor der Fortsetzung... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(10, "Warte auf Fortsetzung (Sicherheits-Puffer)...")) {
+            // [AI Context] Under Vertex AI, we do not have strict RPM / TPM limits, but a 150s delay provides a buffer to avoid transient concurrency limits or spikes.
+            // [Human] Unter Vertex AI sind die Rate-Limits höher, aber eine Pause von 150s schützt vor temporären Server-Spikes. (Oder drücke Enter für sofortigen Skip)
+            Console.WriteLine($"\n  [Timer] Warte 150 Sekunden vor der Fortsetzung... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(150, "Warte auf Fortsetzung (Sicherheits-Puffer)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

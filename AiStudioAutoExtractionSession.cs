@@ -22,6 +22,7 @@ namespace AutoExtraction;
 /// </summary>
 public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
+        "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3-flash-preview"
     ];
@@ -236,7 +237,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
-        // can take significant time; the 70s guard will count from here and enforce a proper gap before the first API call.
+        // can take significant time; the 120s guard will count from here and enforce a proper gap before the first API call.
         ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
@@ -838,7 +839,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     /// <summary>
     /// [AI Context] Sends a lightweight handshake request containing the System Instruction to Google AI Studio.
-    /// This warms up Google's implicit prefix cache and enforces a 70-second token refill delay
+    /// This warms up Google's implicit prefix cache and enforces a 120-second token refill delay
     /// before heavy video processing begins, preventing Quota Errors and ensuring high cache hits.
     /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
     /// </summary>
@@ -881,8 +882,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
             if (success) {
                 Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich. Google hat die System Instruction gecacht.");
-                Console.WriteLine("  [Rate-Limit] Warte 70 Sekunden (Token Refill), damit die Quota vor den Video-Teilen vollständig zurückgesetzt ist...");
-                await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Token-Refill nach Handshake...");
+                Console.WriteLine("  [Rate-Limit] Warte 120 Sekunden (Token Refill), damit die Quota vor den Video-Teilen vollständig zurückgesetzt ist...");
+                await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Token-Refill nach Handshake...");
                 return true;
             }
         }
@@ -1188,10 +1189,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 if (i + 1 < partsWithTimes.Count) {
                     rateLimitDelayTask = Task.Run(async () => {
-                        // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
-                        // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-                        Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...");
+                        // [AI Context] A 120-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
+                        // [Human] Wir warten hier 120 Sekunden, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+                        Console.WriteLine($"\n  [Timer] Warte 120 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+                        await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...");
                     });
                 }
                 int partFreshTokens = Math.Max(0, result.partInputTokens - result.partCachedTokens);
@@ -1423,7 +1424,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         // 3. Append previous .tex files as read-only reference context AT THE END
         // Putting reference context at the end ensures the static prefix (System Instruction + Video) is completely uncorrupted by dynamic prior outputs.
-        if (previousTexFiles.Count > 0) {
+        if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
             string contextText =
                 "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
@@ -1436,6 +1437,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
                 string content = await System.IO.File.ReadAllTextAsync(texFile);
+                int maxChars = 30000;
+                if (content.Length > maxChars) {
+                    content = "...\n[Früherer Kontext gekürzt um Rate-Limits zu schonen]\n..." + content[^maxChars..];
+                }
                 contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
             }
             userPromptParts.Add(new() { Text = contextText.TrimEnd() });
@@ -1601,10 +1606,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
-            // [AI Context] A 70-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 1m10s ensures a full quota refresh.
-            // [Human] Wir warten hier 1 Minute und 10 Sekunden (70s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-            Console.WriteLine($"\n  [Timer] Warte 70 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(70, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] A 120-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 2m0s ensures a full quota refresh.
+            // [Human] Wir warten hier 2 Minuten (120s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine($"\n  [Timer] Warte 120 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

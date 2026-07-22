@@ -1,0 +1,1591 @@
+commit 5830a9cdf7320845e1768496338135de56616b40
+Author: ZeroMatrix-Beta <michelwerder@gmail.com>
+Date:   Wed Jul 15 19:55:27 2026 +0200
+
+    feat: add LaTeX refinement configuration, implement document tag stripping, and optimize audio attachment upload handling for refinement sessions
+
+diff --git a/AiStudioAutoExtractionConfig.json b/AiStudioAutoExtractionConfig.json
+index bd90d8b..9b9a8c8 100644
+--- a/AiStudioAutoExtractionConfig.json
++++ b/AiStudioAutoExtractionConfig.json
+@@ -1,22 +1,21 @@
+ {
+-  "ActiveApiProfile": 3,
++  "ActiveApiProfile": 2,
+   "AiStudioApiKeyEnvNames": [
+     "API_KEY-automated-content-extraction",
+     "API_KEY-ai-studio-test-project-1",
+     "API_KEY-ai-studio-test-project-2",
+     "API_KEY-ai-studio-test-project-3"
+   ],
+-  "SourceFolder": "D:\\lecture-videos\\information-security-2024",
++  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
+   "PredefinedSourceFolders": [
+     "D:\\lecture-videos\\analysis2",
+     "D:\\lecture-videos\\grundstrukturen",
+     "D:\\lecture-videos\\d-und-a",
+     "D:\\lecture-videos\\information-security-2024"
+   ],
+-  "TargetFolder": "D:\\lecture-videos\\grundstrukturen\\extracted_output",
++  "TargetFolder": "",
+   "SystemInstructionPaths": [
+     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
+-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\hard-specs.md",
+     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
+     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
+     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples2.md",
+@@ -35,7 +34,7 @@
+     "gemini-3.5-flash",
+     "gemini-3-flash-preview"
+   ],
+-  "CurrentModelIndex": 1,
++  "CurrentModelIndex": 0,
+   "ThinkingBudget": 32765,
+   "ThinkingLevel": "HIGH",
+   "GenerateOffsetFiles": true,
+@@ -43,7 +42,7 @@
+   "GenerateAudioFile": true,
+   "GoIntoLatexRefinement": true,
+   "NumberOfParts": 3,
+-  "OverlapSeconds": 240,
++  "OverlapSeconds": 180,
+   "EnableParallelFileUploads": true,
+   "GoogleVideoFps": 0.3333,
+   "UseGoogleSearch": false,
+diff --git a/AiStudioAutoExtractionSession.cs b/AiStudioAutoExtractionSession.cs
+index 1ebfb69..0f7f469 100644
+--- a/AiStudioAutoExtractionSession.cs
++++ b/AiStudioAutoExtractionSession.cs
+@@ -49,16 +49,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+     /// [Human] Bereitet die Session vor: Pr├╝ft Ordner, warnt bei falschen Dateinamen (wichtig f├╝r die chronologische Sortierung) und l├ñdt History/System-Prompt hoch.
+     /// </summary>
+     public async Task StartAsync() {
+-        Console.WriteLine("\n­ƒÜÇ [AutoExtraction] Starte AI Studio Extraction Session...");
+-        Console.WriteLine($"  ­ƒôü Quelle (Source): {_config.SourceFolder}");
+-        Console.WriteLine($"  ­ƒôü Ziel (Target):   {_config.TargetFolder}");
+-        if (_config.ActiveApiProfile == 0) {
+-            Console.WriteLine("  ­ƒöæ API-Key:         Dedizierter Key f├╝r automatisierte Extraktion");
+-        }
+-        else {
+-            Console.WriteLine($"  ­ƒöæ API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
+-        }
+-
+         if (!Directory.Exists(_config.SourceFolder)) {
+             Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
+             return;
+@@ -73,13 +63,22 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+             Directory.CreateDirectory(_config.TargetFolder);
+         }
+ 
++        Console.WriteLine("\n­ƒÜÇ [AutoExtraction] Starte AI Studio Extraction Session...");
++        Console.WriteLine($"  ­ƒôü Quelle (Source): {_config.SourceFolder}");
++        Console.WriteLine($"  ­ƒôü Ziel (Target):   {_config.TargetFolder}");
++        if (_config.ActiveApiProfile == 0) {
++            Console.WriteLine("  ­ƒöæ API-Key:         Dedizierter Key f├╝r automatisierte Extraktion");
++        }
++        else {
++            Console.WriteLine($"  ­ƒöæ API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
++        }
++
+         string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+-        string filenamePatternRegex = @"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$";
+         foreach (var f in filesToProcess) {
+-            string fileName = Path.GetFileName(f).ToLowerInvariant();
+-            if (!System.Text.RegularExpressions.Regex.IsMatch(fileName, filenamePatternRegex)) {
+-                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
+-                Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
++            var dateInfo = VideoDateParser.Parse(f);
++            if (!dateInfo.IsValid) {
++                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(f)}");
++                Console.WriteLine("Erwartetes Format z.B.: 02-16-2026-monday-week1-Analysis_II.mp4 oder week1-02-16-2026-montag.mp4");
+             }
+         }
+ 
+@@ -399,7 +398,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
+                 SelectModel();
+                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+-                Console.WriteLine($"  [INFO] Modell f├╝r diese Session auf '{_config.CurrentModel}' gesetzt und in Konfiguration gespeichert.");
++                ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
++                Console.WriteLine($"  [INFO] Modell f├╝r diese Session auf '{_config.CurrentModel}' gesetzt und f├╝r die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
+             }
+             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
+                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
+@@ -473,14 +473,18 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+ 
+         if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
+             _config.CurrentModelIndex = idx - 1;
+-        } else if (choice.Contains('-')) {
++            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
++        }
++        else if (choice.Contains('-')) {
+             // Freetext model name ÔÇô find or append
+             int found = Array.IndexOf(models, choice);
+             if (found >= 0) {
+                 _config.CurrentModelIndex = found;
+-            } else {
++            }
++            else {
+                 Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unver├ñndert.");
+             }
++            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+         }
+     }
+ 
+@@ -814,8 +818,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+     /// [Human] Das asynchrone Flie├ƒband: FFmpeg bereitet Videos im Hintergrund vor, w├ñhrend Gemini sie der Reihe nach abarbeitet.
+     /// </summary>
+     private async Task ProcessFilesAsync(string[] files) {
+-        // Chronologisch aufsteigend sortieren anhand des Dateinamens
+-        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date)];
++        // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
++        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date).ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue).ThenBy(f => f)];
+ 
+         // [AI Context] We use a bounded channel (capacity 1) to synchronize the FFmpeg Producer task and the Gemini Consumer task.
+         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
+@@ -969,7 +973,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+             Task<List<Part>>? pendingAudioUploadTask = null;
+             Task? rateLimitDelayTask = null;
+             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
+-            
++
+             // [AI Context] Initialize refinementClient early because the parallel audio upload task (pendingAudioUploadTask)
+             // needs to upload the audio to the EXACT SAME Google Cloud Project / API Key that LatexRefinementSession will use.
+             // Otherwise, LatexRefinementSession gets a ClientError: "You do not have permission to access the File".
+@@ -1240,6 +1244,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+                     audioFilePath,
+                     preUploadedAudioParts);
+ 
++                AttachmentHandler.HasJustUploaded = false;
+                 await refinementSession.StartAsync();
+             }
+         }
+@@ -1277,14 +1282,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+ 
+     private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
+         var dateInfo = VideoDateParser.Parse(originalFileName);
+-        string dateContext = string.IsNullOrEmpty(dateInfo.Weekday) ? dateInfo.DateString : $"{dateInfo.Weekday}, {dateInfo.DateString}";
++        string dateContext = dateInfo.GetFormattedContext();
+         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
+ 
+         if (partNumber == 1) {
+-            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the date of the lecture is important since this is part 1 of the lecture. " + prompt;
++            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}), and week number ({dateInfo.WeekInfo ?? "N/A"}) are important metadata since this is part 1 of the lecture. " + prompt;
+         }
+         else {
+-            prompt = $"The lecture took place on {dateContext}. This is not so important since this is part {partNumber} of the lecture. " + prompt;
++            prompt = $"The lecture took place on {dateContext} (Day of the week: {dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}). This is not so important since this is part {partNumber} of the lecture. " + prompt;
+         }
+ 
+         double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
+@@ -1381,7 +1386,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+         Console.CancelKeyPress += cancelHandler;
+ 
+         while (true) {
+-            Console.WriteLine($"  [API] Sende Anfrage f├╝r Part {partNumber} an {_config.CurrentModel} (Request {currentRequest}/{maxRequestsPerPart})...");
++            Console.WriteLine($"  [API] Sende Anfrage f├╝r Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {currentRequest}/{maxRequestsPerPart})...");
+             GroundingMetadata? accumulatedGrounding = null;
+             string chunkResp = "";
+             int requestInputTokens = 0;
+@@ -1394,7 +1399,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
+                     onChunkReceived: async (chunk) => {
+                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+-                        Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
++                        Console.Write(txt);
+                         chunkResp += txt;
+ 
+                         var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+@@ -1409,8 +1414,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+                         }
+                         await Task.CompletedTask;
+                     },
+-                      cancellationToken: cts.Token,
+-                      retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}"
++                    cancellationToken: cts.Token,
++                    retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
++                    onRetry: () => {
++                        chunkResp = "";
++                        accumulatedGrounding = null;
++                        requestInputTokens = 0;
++                        requestOutputTokens = 0;
++                        requestCachedTokens = 0;
++                    }
+                 );
+             }
+             catch (Exception ex) {
+@@ -1494,6 +1506,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
+         }
+ 
+         Console.CancelKeyPress -= cancelHandler;
++        AttachmentHandler.HasJustUploaded = false;
+         return (fullResponse, interactionInputTokens, interactionOutputTokens, interactionCachedTokens);
+     }
+ 
+diff --git a/ApiResilience.cs b/ApiResilience.cs
+index 4c28a8f..e72d468 100644
+--- a/ApiResilience.cs
++++ b/ApiResilience.cs
+@@ -16,28 +16,36 @@ namespace Infrastructure;
+ public static partial class ApiResilience {
+     /// <summary>
+     /// [AI Context] Executes a streaming API call with a robust retry mechanism.
++    /// On each retry, the optional <paramref name="onRetry"/> callback is invoked BEFORE the new attempt
++    /// so callers can reset their accumulation buffers (e.g. <c>chunkResp = ""</c>) to prevent the
++    /// partial-stream leak that occurs when a transient 503 mid-stream causes duplicate/corrupt output.
+     /// [Human] F├╝hrt eine Google API Streaming-Anfrage (f├╝r flie├ƒenden Text) mit automatischen Wiederholungen durch.
++    /// Der optionale onRetry-Callback erlaubt es dem Aufrufer, seinen Textpuffer vor jedem neuen Versuch zur├╝ckzusetzen.
+     /// </summary>
+     /// <param name="streamFactory">A function that creates the IAsyncEnumerable stream from the API.</param>
+     /// <param name="onChunkReceived">An async action to process each received chunk from the stream.</param>
+     /// <param name="cancellationToken">A token to cancel the operation.</param>
+     /// <param name="maxRetries">Maximum number of retry attempts.</param>
+     /// <param name="initialBackoff">Initial delay in seconds for the first retry.</param>
++    /// <param name="retryContext">Human-readable label printed in retry log messages.</param>
++    /// <param name="onRetry">Optional callback invoked before every retry (attempt > 1). Use it to clear accumulation buffers.</param>
+     /// <returns>True if the stream completed successfully, false if it was cancelled. Throws on unrecoverable errors.</returns>
+     public static async Task<bool> ExecuteStreamWithRetryAsync(
+         Func<IAsyncEnumerable<GenerateContentResponse>> streamFactory,
+         Func<GenerateContentResponse, Task> onChunkReceived,
+         CancellationToken cancellationToken,
+         int maxRetries = 8,
+-        int initialBackoff = 45,
+-        string retryContext = "") {
++        int initialBackoff = 70,
++        string retryContext = "",
++        Action? onRetry = null) {
+         int backoff = initialBackoff;
+ 
+         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+             try {
+                 if (attempt > 1) {
+                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
+-                    Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
++                    Console.WriteLine($"\n[API Retry]{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zur├╝ckgesetzt...");
++                    onRetry?.Invoke();
+                 }
+ 
+                 var responseStream = streamFactory();
+diff --git a/AttachmentHandler.cs b/AttachmentHandler.cs
+index 195a588..919d44e 100644
+--- a/AttachmentHandler.cs
++++ b/AttachmentHandler.cs
+@@ -21,6 +21,7 @@ namespace Infrastructure;
+ /// </remarks>
+ public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null) {
+     private static readonly HashSet<string> s_textExtensions = [".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex"];
++    public static bool HasJustUploaded { get; set; } = false;
+     private readonly string _uploadFolder = uploadFolder;
+     private readonly string[] _includePaths = includePaths ?? [];
+     private readonly bool _isAiStudio = isAiStudio;
+@@ -231,9 +232,16 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
+                 }
+ 
+                 WriteLine("  [AI Studio] Datei ist ACTIVE und bereit f├╝r Gemini.");
+-                // [AI Context] A brief delay is introduced here to allow the File API backend to propagate
+-                // the active file status fully before the model attempts to generate content.
+-                await Task.Delay(5000, cancellationToken);
++                // [AI Context] Financial & Rate-Limit Guardrail: When using the standard AI Studio API (_isAiStudio == true),
++                // uploading and processing a file consumes tokens and quota bursts immediately upon activation.
++                // We must wait 70 seconds here before generating content so we don't trigger a Max-Token / Rate-Limit (RESOURCE_EXHAUSTED) error.
++                // [Human] Bei der AI Studio Version m├╝ssen wir nach der Datei-Aktivierung zwingend 70 Sekunden warten,
++                // damit wir nicht in eine Max-Token / Rate-Limit Fehlermeldung laufen. Bei Vertex brauchten wir das nicht,
++                // weil es eine Enterprise Version mit h├Âheren Quotas ist.
++                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
++                    return false;
++                }
++                HasJustUploaded = true;
+                 var fileDataPart = new Part { FileData = new FileData { FileUri = uploadedFile.Uri, MimeType = mimeType } };
+                 if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) && _googleVideoFps.HasValue) {
+                     fileDataPart.VideoMetadata = new() { Fps = _googleVideoFps.Value };
+diff --git a/DirectAiChatSessionAiStudio.cs b/DirectAiChatSessionAiStudio.cs
+index 0f51488..17da168 100644
+--- a/DirectAiChatSessionAiStudio.cs
++++ b/DirectAiChatSessionAiStudio.cs
+@@ -524,42 +524,54 @@ public partial class DirectAiChatSessionAiStudio {
+         GroundingMetadata? accumulatedGrounding = null;
+ 
+         try {
+-            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+-                streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
+-                onChunkReceived: async (chunk) => {
+-                    string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+-                    Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
+-                    fullResponse += chunkText;
+-
+-                    var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+-                    if (metadata != null) {
+-                        accumulatedGrounding = metadata;
+-                    }
++            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 70s before every GenerateContentStreamAsync request to Google AI Studio.
++            // HasJustUploaded is intentionally NOT checked here ÔÇô the 70s in AttachmentHandler does not replace this per-request delay.
++            // [Human] Wir warten VOR JEDEM AI-Studio-Request 70 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
++            if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
++                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz f├╝r Max-Token/Quota)...")) {
++                    exceptionCaught = true;
++                }
++            }
++            AttachmentHandler.HasJustUploaded = false;
++
++            if (!exceptionCaught) {
++                bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
++                    streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
++                    onChunkReceived: async (chunk) => {
++                        string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
++                        Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
++                        fullResponse += chunkText;
+ 
+-                    if (chunk.UsageMetadata != null) {
+-                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+-                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+-                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
++                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
++                        if (metadata != null) {
++                            accumulatedGrounding = metadata;
++                        }
++
++                        if (chunk.UsageMetadata != null) {
++                            if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
++                            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
++                            if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
++                        }
++                        await Task.CompletedTask;
++                    },
++                    cancellationToken: cts.Token,
++                    maxRetries: 5,
++                    retryContext: "Chat-Antwort"
++                );
++                if (!success) exceptionCaught = true;
++
++                if (!exceptionCaught && accumulatedGrounding != null) {
++                    WriteLine("\n\n­ƒöì [Google Search Grounding] Quellen:");
++                    if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
++                        WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+                     }
+-                    await Task.CompletedTask;
+-                },
+-                cancellationToken: cts.Token,
+-                maxRetries: 5,
+-                retryContext: "Chat-Antwort"
+-            );
+-            if (!success) exceptionCaught = true;
+-
+-            if (accumulatedGrounding != null) {
+-                WriteLine("\n\n­ƒöì [Google Search Grounding] Quellen:");
+-                if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
+-                    WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+-                }
+-                if (accumulatedGrounding.GroundingChunks != null) {
+-                    int refIdx = 1;
+-                    foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
+-                        if (chunkRef.Web != null) {
+-                            WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
+-                            refIdx++;
++                    if (accumulatedGrounding.GroundingChunks != null) {
++                        int refIdx = 1;
++                        foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
++                            if (chunkRef.Web != null) {
++                                WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
++                                refIdx++;
++                            }
+                         }
+                     }
+                 }
+diff --git a/DirectAiChatSessionVertex.cs b/DirectAiChatSessionVertex.cs
+index 01d1c8a..bd2ae94 100644
+--- a/DirectAiChatSessionVertex.cs
++++ b/DirectAiChatSessionVertex.cs
+@@ -218,7 +218,7 @@ public class DirectAiChatSessionVertex {
+         }
+     }
+ 
+-    private void ShowCommands() {
++    private static void ShowCommands() {
+         WriteLine("\n­ƒôï Befehle:");
+         WriteLine("  ­ƒô£ help / commands         -> Zeigt diese Befehls├╝bersicht erneut an");
+         WriteLine("  ­ƒÜ¬ exit / quit             -> Beendet den Chat");
+@@ -339,7 +339,7 @@ public class DirectAiChatSessionVertex {
+             if (!string.IsNullOrEmpty(newModel)) {
+                 _activeModel = newModel;
+                 WriteLine($"[INFO] Aktives Modell f├╝r die n├ñchste(n) Antwort(en) auf '{_activeModel}' ge├ñndert.");
+-                
++
+                 Write("M├Âchten Sie diese ├änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+                 string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
+                 if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+@@ -389,7 +389,7 @@ public class DirectAiChatSessionVertex {
+         };
+ 
+         if (AIParams.UseGoogleSearch) {
+-            config.Tools = [ new Tool { GoogleSearch = new GoogleSearch() } ];
++            config.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
+         }
+ 
+         // [AI Context] Safely inject Thinking parameters ONLY for gemini-3-flash-preview.
+diff --git a/ExtractionHelpers.cs b/ExtractionHelpers.cs
+index f797be2..6219afb 100644
+--- a/ExtractionHelpers.cs
++++ b/ExtractionHelpers.cs
+@@ -21,6 +21,9 @@ public static partial class ExtractionHelpers {
+         set => _isInSmartDelay = value;
+     }
+ 
++    // [AI Context] Tracks the UTC timestamp when the last model completion / file generation finished across any extraction or refinement step.
++    public static DateTime LastGenerationCompletionTimeUtc { get; set; } = DateTime.MinValue;
++
+     /// <summary>
+     /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
+     /// </summary>
+@@ -251,6 +254,8 @@ public static partial class ExtractionHelpers {
+     /// Implements an interactive delay with user cancellation. Allows interrupting long backoff periods.
+     /// </summary>
+     public static async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...") {
++        Console.WriteLine($"\nÔÅ│ [SmartDelay] Warte {seconds} Sekunden: {message}");
++        Console.WriteLine("   (Tipp: Du kannst jederzeit [Enter] dr├╝cken, um die Wartezeit sofort zu ├╝berspringen.)");
+         bool delayCanceled = false;
+         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
+         Console.CancelKeyPress += cancelHandler;
+@@ -333,6 +338,8 @@ public static partial class ExtractionHelpers {
+ 
+         var files = Directory.GetFiles(sourceFolder, "*.mp4")
+                              .OrderBy(f => VideoDateParser.Parse(f).Date)
++                             .ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue)
++                             .ThenBy(f => f)
+                              .ToArray();
+ 
+         if (files.Length == 0) {
+@@ -459,6 +466,27 @@ public static partial class ExtractionHelpers {
+         };
+     }
+ 
++    /// <summary>
++    /// [AI Context] Synchronizes the model selected in the AutoExtraction session to all refinement steps
++    /// in the LatexRefinementSessionConfig, and persists both configurations so the entire pipeline stays unified.
++    /// [Human] Synchronisiert das ausgew├ñhlte Modell auf alle Schritte des LaTeX-Refinements und speichert beide Config-Dateien ab.
++    /// </summary>
++    public static void SyncModelToRefinementConfig(string modelName, bool isVertex, LatexRefinementSessionConfig? inMemoryConfig = null) {
++        if (string.IsNullOrWhiteSpace(modelName)) return;
++        var refConfig = inMemoryConfig ?? ConfigLoader<LatexRefinementSessionConfig>.Load();
++        if (isVertex) {
++            refConfig.Step1MergeAndTimestamp.Vertex.CurrentModel = modelName;
++            refConfig.Step2SpeechRefinement.Vertex.CurrentModel = modelName;
++            refConfig.Step3LastRefinement.Vertex.CurrentModel = modelName;
++        }
++        else {
++            refConfig.Step1MergeAndTimestamp.AiStudio.CurrentModel = modelName;
++            refConfig.Step2SpeechRefinement.AiStudio.CurrentModel = modelName;
++            refConfig.Step3LastRefinement.AiStudio.CurrentModel = modelName;
++        }
++        ConfigLoader<LatexRefinementSessionConfig>.Save(refConfig);
++    }
++
+     private static string FormatSecondsToTime(double totalSec) {
+         var ts = TimeSpan.FromSeconds(Math.Max(0, totalSec));
+         return ts.ToString(@"hh\:mm\:ss");
+diff --git a/LatexRefinementSession.cs b/LatexRefinementSession.cs
+index adb5acf..12df8b3 100644
+--- a/LatexRefinementSession.cs
++++ b/LatexRefinementSession.cs
+@@ -17,14 +17,14 @@ namespace DirectChatAiInteraction;
+ /// [AI Context] Post-processing pipeline that takes sequentially extracted LaTeX chunks and deterministically merges them into a single, cohesive document.
+ /// [Human] Der letzte Schritt in der Pipeline. F├╝gt die ├╝berlappenden LaTeX-Fragmente nahtlos zu einem kompilierbaren PDF zusammen.
+ /// </summary>
+-public class LatexRefinementSession {
++public partial class LatexRefinementSession {
+     private readonly Client _client;
+     private readonly LatexRefinementSessionConfig _config;
+     private readonly string? _singleFilePathToProcess;
+     private readonly string[]? _multipleFilesToProcess;
+     private readonly IAutoExtractionConfig? _extractionConfig;
+     private readonly string? _audioFilePath;
+-    private readonly List<Part>? _preUploadedAudioAttachments;
++    private List<Part>? _preUploadedAudioAttachments;
+ 
+     public LatexRefinementSession(Client client, LatexRefinementSessionConfig config) {
+         _client = client;
+@@ -97,6 +97,10 @@ public class LatexRefinementSession {
+         Console.WriteLine("   Starte [LaTeX Refinement] Pipeline");
+         Console.WriteLine("==================================================");
+ 
++        // [AI Context] Reset HasJustUploaded when starting the pipeline so that any background audio upload
++        // or prior extraction steps don't suppress the initial 70-second token refill timer.
++        AttachmentHandler.HasJustUploaded = false;
++
+         await ExecutePipelineAsync();
+     }
+ 
+@@ -216,6 +220,28 @@ public class LatexRefinementSession {
+         }
+ 
+         try {
++            if (System.IO.File.Exists(finalTexFile)) {
++                string bodyContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
++                if (bodyContent.Contains("\\begin{document}", StringComparison.OrdinalIgnoreCase) || bodyContent.Contains("\\end{document}", StringComparison.OrdinalIgnoreCase)) {
++                    int beginDocIdx = bodyContent.IndexOf("\\begin{document}", StringComparison.OrdinalIgnoreCase);
++                    int endDocIdx = bodyContent.IndexOf("\\end{document}", StringComparison.OrdinalIgnoreCase);
++                    if (beginDocIdx >= 0 && endDocIdx > beginDocIdx) {
++                        beginDocIdx += "\\begin{document}".Length;
++                        bodyContent = bodyContent[beginDocIdx..endDocIdx].Trim();
++                    }
++                    else if (beginDocIdx >= 0 && endDocIdx < 0) {
++                        beginDocIdx += "\\begin{document}".Length;
++                        bodyContent = bodyContent[beginDocIdx..].Trim();
++                    }
++                    else if (endDocIdx >= 0 && beginDocIdx < 0) {
++                        bodyContent = bodyContent[..endDocIdx].Trim();
++                    }
++                    bodyContent = DocumentTagsRegex().Replace(bodyContent, "").Trim();
++                    await System.IO.File.WriteAllTextAsync(finalTexFile, bodyContent);
++                    Console.WriteLine($"  [INFO] Verbleibende \\begin{{document}} / \\end{{document}} Tags aus {Path.GetFileName(finalTexFile)} entfernt.");
++                }
++            }
++
+             string preambleText = await System.IO.File.ReadAllTextAsync(preamblePath);
+             string finalFileName = Path.GetFileName(finalTexFile);
+ 
+@@ -241,7 +267,7 @@ public class LatexRefinementSession {
+                 // LaTeX creates aux files which can clutter the directory. 
+                 // We'll leave them for now in case the user wants to inspect them.
+                 Console.WriteLine($"  [INFO] PDF erfolgreich erstellt im Zielordner: {targetFolder}");
+-                
++
+                 string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
+                 if (System.IO.File.Exists(compiledPdfPath)) {
+                     // 1. Copy to clean prefix name (e.g. step3-refined_output-final.pdf)
+@@ -269,13 +295,56 @@ public class LatexRefinementSession {
+                 CleanupHelperFiles(targetFolder, finalTexFile);
+                 if (allowRetryOnFailure) {
+                     if (_config.PdfCompilation?.UseAntiGravityAgent == true) {
++                        Console.WriteLine("\n[AntiGravity Agent Mode] PDF-Kompilierung fehlgeschlagen. Starte sofort interaktive Reparatur ├╝ber AntiGravity (keine automatischen Gemini-Fix-Versuche)...");
+                         return await RunAntiGravityAgentFixLoopAsync(finalTexFile, baseName, targetFolder, preambleText);
+                     }
+-                    else {
+-                        Console.WriteLine("  [INFO] Starte automatische Fehlerbehebung durch erneute Korrekturanfrage an Gemini (-final-attempt)...");
+-                        string finalTexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
+-                        await ExecutePdfFixAttemptAsync(preambleText, finalTexContent, logContent, baseName, targetFolder);
++
++                    int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
++                    if (maxRounds <= 0) maxRounds = 1;
++
++                    string currentBodyTex = await System.IO.File.ReadAllTextAsync(finalTexFile);
++                    string currentLog = logContent;
++                    bool anyRoundSucceeded = false;
++
++                    for (int round = 1; round <= maxRounds; round++) {
++                        Console.WriteLine($"\n==================================================================");
++                        Console.WriteLine($"­ƒñû [AI PDF Fix Loop] Starte Reparatur-Runde {round} von {maxRounds}...");
++                        Console.WriteLine($"==================================================================");
++
++                        bool roundSuccess = await ExecutePdfFixAttemptAsync(preambleText, currentBodyTex, currentLog, baseName, targetFolder, round);
++
++                        // Clean up previous failed round files so only the latest try remains
++                        for (int prev = 1; prev < round; prev++) {
++                            string prevNoPreamble = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{prev}.tex");
++                            string prevStandalone = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{prev}-main.tex");
++                            string prevLog = Path.Combine(targetFolder, $"compile-log-step5-last_try{prev}.txt");
++                            try { if (System.IO.File.Exists(prevNoPreamble)) System.IO.File.Delete(prevNoPreamble); } catch (Exception ex) { Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}"); Console.WriteLine($"Originaler Fehlertext: {ex.Message}"); }
++                            try { if (System.IO.File.Exists(prevStandalone)) System.IO.File.Delete(prevStandalone); } catch (Exception ex) { Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}"); Console.WriteLine($"Originaler Fehlertext: {ex.Message}"); }
++                            try { if (System.IO.File.Exists(prevLog)) System.IO.File.Delete(prevLog); } catch (Exception ex) { Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}"); Console.WriteLine($"Originaler Fehlertext: {ex.Message}"); }
++                        }
++
++                        if (roundSuccess) {
++                            anyRoundSucceeded = true;
++                            break;
++                        }
++
++                        if (round < maxRounds) {
++                            string nextTryFile = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{round}.tex");
++                            string nextLogFile = Path.Combine(targetFolder, $"compile-log-step5-last_try{round}.txt");
++                            if (System.IO.File.Exists(nextTryFile)) {
++                                currentBodyTex = await System.IO.File.ReadAllTextAsync(nextTryFile);
++                            }
++                            if (System.IO.File.Exists(nextLogFile)) {
++                                currentLog = await System.IO.File.ReadAllTextAsync(nextLogFile);
++                            }
++                        }
+                     }
++
++                    if (anyRoundSucceeded) {
++                        return true;
++                    }
++
++                    return false;
+                 }
+                 return false;
+             }
+@@ -336,7 +405,9 @@ public class LatexRefinementSession {
+             }
+         }
+         catch (Exception ex) {
+-            Console.WriteLine($"  [WARNUNG] Hilfsdateien f├╝r {Path.GetFileName(finalTexFile)} konnten nicht vollst├ñndig bereinigt werden: {ex.Message}");
++            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
++            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
++            Console.WriteLine($"  [WARNUNG] Hilfsdateien f├╝r {Path.GetFileName(finalTexFile)} konnten nicht vollst├ñndig bereinigt werden.");
+         }
+     }
+ 
+@@ -431,6 +502,7 @@ public class LatexRefinementSession {
+                 if (_preUploadedAudioAttachments != null && _preUploadedAudioAttachments.Count > 0) {
+                     Console.WriteLine("  [INFO] Verwende parallel im Hintergrund hochgeladene Audio-Datei.");
+                     audioParts.AddRange(_preUploadedAudioAttachments);
++                    AttachmentHandler.HasJustUploaded = false;
+                 }
+                 else {
+                     var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+@@ -438,6 +510,7 @@ public class LatexRefinementSession {
+                     if (success) {
+                         audioParts.AddRange(attached);
+                         Console.WriteLine($"  [INFO] Audio-Datei erfolgreich verarbeitet: {audioFilePath}");
++                        _preUploadedAudioAttachments = attached;
+                     }
+                 }
+             }
+@@ -495,6 +568,7 @@ public class LatexRefinementSession {
+                 string content = await System.IO.File.ReadAllTextAsync(file);
+                 parts.Add(new Part { Text = $"<input_file name=\"{Path.GetFileName(file)}\">\n{content}\n</input_file>" });
+             }
++            AttachmentHandler.HasJustUploaded = false;
+             result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+         }
+ 
+@@ -519,14 +593,22 @@ public class LatexRefinementSession {
+         var audioParts = new List<Part>();
+ 
+         if (audioAttached) {
+-            var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+-            var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
+-            if (success) {
+-                audioParts.AddRange(attached);
+-                Console.WriteLine($"  [INFO] Audio-Datei erfolgreich verarbeitet: {audioFilePath}");
++            if (_preUploadedAudioAttachments != null && _preUploadedAudioAttachments.Count > 0) {
++                Console.WriteLine("  [INFO] Verwende parallel im Hintergrund hochgeladene Audio-Datei.");
++                audioParts.AddRange(_preUploadedAudioAttachments);
++                AttachmentHandler.HasJustUploaded = false;
+             }
+             else {
+-                audioAttached = false;
++                var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
++                var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
++                if (success) {
++                    audioParts.AddRange(attached);
++                    Console.WriteLine($"  [INFO] Audio-Datei erfolgreich verarbeitet: {audioFilePath}");
++                    _preUploadedAudioAttachments = attached;
++                }
++                else {
++                    audioAttached = false;
++                }
+             }
+         }
+ 
+@@ -553,6 +635,7 @@ public class LatexRefinementSession {
+             history.Add(new Content { Role = "user", Parts = round2Parts });
+ 
+             Console.WriteLine("  [INFO] Verwende Multi-Turn-Struktur f├╝r Schritt 2 (Simulation von Text-Dokument + Audio-Refinement).");
++            AttachmentHandler.HasJustUploaded = false;
+             result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+         }
+         else {
+@@ -561,6 +644,7 @@ public class LatexRefinementSession {
+                 new() { Text = "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps." },
+                 new() { Text = $"<input_tex>\n{content}\n</input_tex>" }
+             };
++            AttachmentHandler.HasJustUploaded = false;
+             result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+         }
+ 
+@@ -578,13 +662,6 @@ public class LatexRefinementSession {
+     private async Task<string?> ExecuteStep3LastRefinementAsync(string inputFile, string baseName, string targetFolder, bool alreadyCompiles, string compilerFeedbackLog) {
+         // Simplified using targetÔÇætyped new and collection literal; the compiler infers List<Part>.
+         List<Part> parts = [new() { Text = "Perform the final refinement and formatting pass on this document according to the system instructions." }];
+-
+-        string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
+-        if (System.IO.File.Exists(preamblePath)) {
+-            string preambleText = await System.IO.File.ReadAllTextAsync(preamblePath);
+-            parts.Add(new Part { Text = $"<current_latex_preamble note=\"FOR REFERENCE ONLY - DO NOT OUTPUT THIS PREAMBLE OR INVENT YOUR OWN\">\n{preambleText}\n</current_latex_preamble>\n\nCRITICAL INSTRUCTION: DO NOT output any preamble, \\documentclass, or \\usepackage declarations in your response! The preamble above is provided strictly as reference so you know which LaTeX packages, macros, and environments (`spoken-clean`, etc.) are already loaded and available. You MUST ONLY output the corrected LaTeX document body (the content that goes inside \\begin{{document}} ... \\end{{document}}, without including the \\begin{{document}} or \\end{{document}} tags themselves)." });
+-        }
+-
+         if (alreadyCompiles) {
+             parts.Add(new Part { Text = "<compiler_status>\nThe input LaTeX document ALREADY COMPILES successfully without any LaTeX errors! Please preserve its valid syntax and structure while performing any final textual/typographical refinements according to the system instructions.\n</compiler_status>" });
+         }
+@@ -597,6 +674,7 @@ public class LatexRefinementSession {
+         parts.Add(new Part { Text = $"<input_tex>\n{content}\n</input_tex>" });
+ 
+         string outputFileName = $"step4-{baseName}-offset-final.tex";
++        AttachmentHandler.HasJustUploaded = false;
+         var result = await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
+ 
+         if (_config.UseVertex) {
+@@ -822,7 +900,9 @@ public class LatexRefinementSession {
+             Console.WriteLine($"  [INFO] Gemini-Prompt-Log gespeichert unter: {promptDumpPath}");
+         }
+         catch (Exception ex) {
+-            Console.WriteLine($"  [WARNUNG] Konnte Prompt-Log nicht speichern: {ex.Message}");
++            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
++            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
++            Console.WriteLine($"  [WARNUNG] Konnte Prompt-Log nicht speichern.");
+         }
+ 
+         int totalInputTokens = 0;
+@@ -835,11 +915,24 @@ public class LatexRefinementSession {
+         int emptyResponseRetries = 0;
+ 
+         using var cts = new CancellationTokenSource();
+-        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
++        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}"); Console.WriteLine($"Originaler Fehlertext: {ex.Message}"); } }
+         Console.CancelKeyPress += CancelHandler;
+ 
+         while (true) {
+-            Console.WriteLine($"\n  [API] Sende Anfrage an Gemini ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
++            string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
++
++            double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
++            if (secondsSinceLastGen < 70 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
++                int waitRemaining = (int)Math.Ceiling(70 - secondsSinceLastGen);
++                Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem n├ñchsten API-Aufruf...");
++                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
++                    break;
++                }
++            }
++            AttachmentHandler.HasJustUploaded = false;
++
++            Console.WriteLine($"\n  [API] Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
++
+             string chunkResp = "";
+             bool callSuccess = false;
+ 
+@@ -868,12 +961,19 @@ public class LatexRefinementSession {
+                       await Task.CompletedTask;
+                   },
+                   cancellationToken: cts.Token,
+-                  retryContext: outputFileName
++                  retryContext: outputFileName,
++                  onRetry: () => {
++                      chunkResp = "";
++                      totalInputTokens = 0;
++                      totalOutputTokens = 0;
++                      totalCachedTokens = 0;
++                  }
+                 );
+             }
+             catch (Exception ex) {
++                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
++                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                 Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+-                Console.WriteLine($"Finaler Fehler: {ex.Message}");
+                 break;
+             }
+ 
+@@ -975,6 +1075,9 @@ public class LatexRefinementSession {
+ 
+             await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
+             Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
++
++            AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
++
+             return outPath;
+         }
+         else {
+@@ -1011,8 +1114,8 @@ public class LatexRefinementSession {
+     /// [AI Context] Fallback routine when initial PDF compilation fails. Sends the compile error log, preamble reference, and document body back to Gemini in a clean session (no system instructions, no context cache) to fix LaTeX syntax errors without outputting the preamble to save tokens.
+     /// [Human] Neuer Versuch bei PDF-Fehlern: Schickt das Fehlerlog und den LaTeX-Body an Gemini zur├╝ck, um die Fehler zu korrigieren (ohne Preamble-Output zum Token-Sparen).
+     /// </summary>
+-    private async Task ExecutePdfFixAttemptAsync(string preambleText, string failedBodyTex, string compileLog, string baseName, string targetFolder) {
+-        Console.WriteLine("\n--- [Schritt 4 Retry: PDF LaTeX Fix (-final-attempt)] ---");
++    private async Task<bool> ExecutePdfFixAttemptAsync(string preambleText, string failedBodyTex, string compileLog, string baseName, string targetFolder, int roundNumber = 1) {
++        Console.WriteLine($"\n--- [Schritt 4 Retry: PDF LaTeX Fix (-final-attempt, Runde #{roundNumber})] ---");
+         BackendParameters backendParams = _config.UseVertex ? _config.Step3LastRefinement.Vertex : _config.Step3LastRefinement.AiStudio;
+ 
+         string promptText = $"<pdf_latex_compile_log>\n{compileLog}\n</pdf_latex_compile_log>\n\n" +
+@@ -1052,8 +1155,8 @@ public class LatexRefinementSession {
+             }
+         }
+ 
+-        string noPreambleFileName = $"step5-{baseName}-offset-last_try.tex";
+-        string standaloneFileName = $"step5-{baseName}-offset-last_try-main.tex";
++        string noPreambleFileName = $"step5-{baseName}-offset-last_try{roundNumber}.tex";
++        string standaloneFileName = $"step5-{baseName}-offset-last_try{roundNumber}-main.tex";
+         string outputFileName = standaloneFileName;
+         string fullResponseText = "";
+         int currentRequest = 1;
+@@ -1061,11 +1164,24 @@ public class LatexRefinementSession {
+         int emptyResponseRetries = 0;
+ 
+         using var cts = new CancellationTokenSource();
+-        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
++        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}"); Console.WriteLine($"Originaler Fehlertext: {ex.Message}"); } }
+         Console.CancelKeyPress += CancelHandler;
+ 
+         while (true) {
+-            Console.WriteLine($"\n  [API] Sende PDF-Fix-Anfrage an Gemini ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
++            string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
++
++            double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
++            if (secondsSinceLastGen < 70 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
++                int waitRemaining = (int)Math.Ceiling(70 - secondsSinceLastGen);
++                Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem PDF-Fix-Request...");
++                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
++                    break;
++                }
++            }
++            AttachmentHandler.HasJustUploaded = false;
++
++            Console.WriteLine($"\n  [API] Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
++
+             string chunkResp = "";
+             bool callSuccess = false;
+ 
+@@ -1079,7 +1195,8 @@ public class LatexRefinementSession {
+                       await Task.CompletedTask;
+                   },
+                   cancellationToken: cts.Token,
+-                  retryContext: outputFileName
++                  retryContext: outputFileName,
++                  onRetry: () => { chunkResp = ""; }
+                 );
+             }
+             catch (Exception ex) {
+@@ -1138,7 +1255,7 @@ public class LatexRefinementSession {
+         if (!string.IsNullOrEmpty(fullResponseText)) {
+             string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
+ 
+-            // Version ohne Preamble
++            // Version ohne Preamble und komplett bereinigt von \begin{document} / \end{document}
+             string bodyOnlyText = cleanedText;
+             int beginDocIdx = cleanedText.IndexOf("\\begin{document}", StringComparison.OrdinalIgnoreCase);
+             int endDocIdx = cleanedText.IndexOf("\\end{document}", StringComparison.OrdinalIgnoreCase);
+@@ -1146,27 +1263,38 @@ public class LatexRefinementSession {
+                 beginDocIdx += "\\begin{document}".Length;
+                 bodyOnlyText = cleanedText[beginDocIdx..endDocIdx].Trim();
+             }
++            else if (beginDocIdx >= 0 && endDocIdx < 0) {
++                beginDocIdx += "\\begin{document}".Length;
++                bodyOnlyText = cleanedText[beginDocIdx..].Trim();
++            }
++            else if (endDocIdx >= 0 && beginDocIdx < 0) {
++                bodyOnlyText = cleanedText[..endDocIdx].Trim();
++            }
++            bodyOnlyText = DocumentTagsRegex().Replace(bodyOnlyText, "").Trim();
++
+             string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
+             await System.IO.File.WriteAllTextAsync(noPreamblePath, bodyOnlyText);
+-            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei (ohne Preamble) gespeichert unter: {noPreamblePath}");
++            Console.WriteLine($"\n\n[INFO] Gefixte LaTeX-Datei (Versuch #{roundNumber}, ohne Preamble/\\end{{document}}) gespeichert unter: {noPreamblePath}");
+ 
+-            // Version mit Preamble (kompilierbar)
++            // Version mit Preamble (kompilierbar via -main.tex)
+             string standaloneContent = preambleText + "\n\\begin{document}\n\n" + bodyOnlyText + "\n\n\\end{document}\n";
+             string standalonePath = Path.Combine(targetFolder, standaloneFileName);
+             await System.IO.File.WriteAllTextAsync(standalonePath, standaloneContent);
+-            Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (mit Preamble) gespeichert unter: {standalonePath}");
++            Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (Versuch #{roundNumber}, mit Preamble) gespeichert unter: {standalonePath}");
+ 
+-            Console.WriteLine("  [INFO] Starte PDF-Kompilierung f├╝r step5 (last try)...");
++            AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
++
++            Console.WriteLine($"  [INFO] Starte PDF-Kompilierung f├╝r step5 (Fix-Versuch #{roundNumber})...");
+             var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);
+             string retryLogContent = FormatLatexLog(retryLog, retrySuccess);
+-            string retryLogPath = Path.Combine(targetFolder, "compile-log-step5-last_try.txt");
++            string retryLogPath = Path.Combine(targetFolder, $"compile-log-step5-last_try{roundNumber}.txt");
+             await System.IO.File.WriteAllTextAsync(retryLogPath, retryLogContent);
+ 
+             if (retrySuccess) {
+-                Console.WriteLine($"  [INFO] PDF erfolgreich im finalen Versuch (step5) erstellt: {targetFolder}");
++                Console.WriteLine($"  [INFO] ­ƒÄë PDF erfolgreich im Fix-Versuch #{roundNumber} (step5) erstellt: {targetFolder}");
+                 string compiledPdfPath = Path.Combine(targetFolder, standaloneFileName.Replace(".tex", ".pdf"));
+                 if (System.IO.File.Exists(compiledPdfPath)) {
+-                    // 1. Copy to clean prefix name (e.g. step5-refined_output-offset-last_try.pdf)
++                    // 1. Copy to clean prefix name (e.g. step5-refined_output-offset-last_try1.pdf)
+                     string cleanPdfPath = Path.Combine(targetFolder, noPreambleFileName.Replace(".tex", ".pdf"));
+                     System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
+                     Console.WriteLine($"  [INFO] PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
+@@ -1177,15 +1305,15 @@ public class LatexRefinementSession {
+                     Console.WriteLine($"  [INFO] Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
+                 }
+                 CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName));
++                return true;
+             }
+             else {
+-                Console.WriteLine($"  [FEHLER] Auch step5 konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
++                Console.WriteLine($"  [FEHLER] Auch Fix-Versuch #{roundNumber} konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
+                 CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName));
+-                if (_config.PdfCompilation?.UseAntiGravityAgent == true) {
+-                    await RunAntiGravityAgentFixLoopAsync(Path.Combine(targetFolder, noPreambleFileName), baseName, targetFolder, preambleText);
+-                }
++                return false;
+             }
+         }
++        return false;
+     }
+ 
+     /// <summary>
+@@ -1193,7 +1321,14 @@ public class LatexRefinementSession {
+     /// [Human] Interaktiver Modus: Wartet darauf, dass du oder dein Antigravity-Agent Fehler in der LaTeX-Datei behebt, und kompiliert dann erneut.
+     /// </summary>
+     private async Task<bool> RunAntiGravityAgentFixLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText) {
+-        while (true) {
++        int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
++        if (maxRounds <= 0) maxRounds = 1;
++
++        for (int round = 1; round <= maxRounds; round++) {
++            Console.WriteLine($"\n==================================================================================");
++            Console.WriteLine($"­ƒñû [Antigravity Agent Mode] Starte Reparatur-Runde {round} von {maxRounds}...");
++            Console.WriteLine($"==================================================================================");
++
+             // Re-create the wrapper file since it was cleaned up
+             string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
+             string preamble = System.IO.File.Exists(preamblePath) ? await System.IO.File.ReadAllTextAsync(preamblePath) : preambleText;
+@@ -1210,7 +1345,7 @@ public class LatexRefinementSession {
+             await System.IO.File.WriteAllTextAsync(logPath, logContent);
+ 
+             if (success) {
+-                Console.WriteLine($"\n[LatexToolkit] ­ƒÄë PDF im Antigravity-Modus erfolgreich generiert!");
++                Console.WriteLine($"\n[LatexToolkit] ­ƒÄë PDF im Antigravity-Modus erfolgreich (Runde {round}/{maxRounds}) generiert!");
+                 string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
+                 if (System.IO.File.Exists(compiledPdfPath)) {
+                     string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
+@@ -1227,7 +1362,7 @@ public class LatexRefinementSession {
+             else {
+                 CleanupHelperFiles(targetFolder, finalTexFile);
+                 Console.WriteLine("\n==================================================================================");
+-                Console.WriteLine("­ƒñû [Antigravity Agent Mode] PDF-Generierung erneut fehlgeschlagen!");
++                Console.WriteLine($"­ƒñû [Antigravity Agent Mode] PDF-Generierung fehlgeschlagen (Runde {round} von {maxRounds})!");
+                 Console.WriteLine("Der LaTeX-Compiler meldet immer noch Fehler. Bitte korrigiere die LaTeX-Body-Datei im Workspace.");
+                 Console.WriteLine("Die fehlerhafte LaTeX-Body-Datei befindet sich unter:");
+                 Console.WriteLine($"  [TEX BODY] {finalTexFile}");
+@@ -1245,16 +1380,24 @@ public class LatexRefinementSession {
+                 Console.WriteLine("----------------------------------------------------------------------------------");
+                 Console.WriteLine(logContent);
+                 Console.WriteLine("----------------------------------------------------------------------------------");
+-                Console.Write("\nDr├╝cke ENTER f├╝r einen erneuten Versuch, oder tippe 'abort' zum Abbrechen: ");
+-                string choice = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
+-                if (choice == "abort" || choice == "cancel" || choice == "exit") {
+-                    Console.WriteLine("  [INFO] Abbruch durch Benutzer. Der fehlerhafte LaTeX-Entwurf bleibt erhalten.");
+-                    return false;
++
++                if (round < maxRounds) {
++                    Console.WriteLine($"\nÔÅ│ [Antigravity Agent Mode] Warte 60 Sekunden auf Korrektur der Datei `{finalFileName}`...");
++                    Console.WriteLine("   (Tipp: Dr├╝cke Enter, sobald die Datei durch den Agenten/Benutzer korrigiert wurde, um sofort weiter zu machen.)");
++                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(60, $"Antigravity Agent Mode (Runde {round}/{maxRounds}): Warte auf Datei-Korrektur...")) {
++                        Console.WriteLine("  [INFO] Wartezeit abgebrochen.");
++                        return false;
++                    }
++                }
++                else {
++                    Console.WriteLine($"\n  [FEHLER] Maximale Anzahl an Antigravity-Reparaturrunden ({maxRounds}) erreicht. PDF konnte nicht generiert werden.");
+                 }
+             }
+         }
++        return false;
+     }
+ 
++
+     /// <summary>
+     /// [AI Context] Determines whether a Gemini model supports thinking parameters (`ThinkingConfig`, `HIGH`/`LOW` levels, `ThinkingBudget`).
+     /// All `gemini-3*`, `gemini-2.5*`, and models explicitly containing `"thinking"` in their identifier require thinking configurations.
+@@ -1287,4 +1430,7 @@ public class LatexRefinementSession {
+         }
+         return name;
+     }
++
++    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{document\}|\\end\{document\}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
++    private static partial System.Text.RegularExpressions.Regex DocumentTagsRegex();
+ }
+diff --git a/LatexRefinementSessionConfig.cs b/LatexRefinementSessionConfig.cs
+index 3529bd9..034a52c 100644
+--- a/LatexRefinementSessionConfig.cs
++++ b/LatexRefinementSessionConfig.cs
+@@ -49,6 +49,11 @@ public class PdfCompilationConfig {
+     public bool Enabled { get; set; } = true;
+     public string PreamblePath { get; set; } = "pdf-preamble.tex";
+     public bool UseAntiGravityAgent { get; set; } = false;
++    public int MaxFixRounds { get; set; } = 3;
++    public int MaxAntiGravityAgentRounds {
++        get => MaxFixRounds;
++        set => MaxFixRounds = value;
++    }
+ }
+ 
+ 
+diff --git a/LatexRefinementSessionConfig.json b/LatexRefinementSessionConfig.json
+index 0b6fe3b..636a8cc 100644
+--- a/LatexRefinementSessionConfig.json
++++ b/LatexRefinementSessionConfig.json
+@@ -7,26 +7,28 @@
+     "API_KEY-ai-studio-test-project-2",
+     "API_KEY-ai-studio-test-project-3"
+   ],
+-  "AiStudioActiveApiProfile": 3,
++  "AiStudioActiveApiProfile": 2,
+   "VertexProjectId": "vertex-ai-experiments-494320",
+   "VertexLocation": "global",
+   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
+   "TargetFolder": "",
+   "SourceFolder": "",
+   "PdfCompilation": {
+-    "Enabled": false,
++    "Enabled": true,
+     "PreamblePath": "pdf-preamble.tex",
+-    "UseAntiGravityAgent": true
++    "UseAntiGravityAgent": true,
++    "MaxFixRounds": 3,
++    "MaxAntiGravityAgentRounds": 3
+   },
+   "Step1MergeAndTimestamp": {
+     "Enabled": true,
+     "AttachAudio": true,
+     "SystemInstructionPaths": [
+-      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\xml-latex-merge-instructions.xml"
++      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instructions.md"
+     ],
+     "HistoryPreloadPaths": [],
+     "AiStudio": {
+-      "Temperature": 0.33,
++      "Temperature": 0.36,
+       "TopP": 0.95,
+       "TopK": 40,
+       "MaxOutputTokens": 65535,
+@@ -57,7 +59,7 @@
+       "ContextCachingMinutes": 30,
+       "ContextCachingIncrementMinutes": 30,
+       "ContextCachingMinimumRemainingMinutes": 15,
+-      "CurrentModelIndex": 1
++      "CurrentModelIndex": 0
+     }
+   },
+   "Step2SpeechRefinement": {
+@@ -68,7 +70,7 @@
+     ],
+     "HistoryPreloadPaths": [],
+     "AiStudio": {
+-      "Temperature": 0.325,
++      "Temperature": 0.36,
+       "TopP": 0.95,
+       "TopK": 40,
+       "MaxOutputTokens": 65535,
+@@ -110,7 +112,7 @@
+     ],
+     "HistoryPreloadPaths": [],
+     "AiStudio": {
+-      "Temperature": 0.36,
++      "Temperature": 0.33,
+       "TopP": 0.95,
+       "TopK": 40,
+       "MaxOutputTokens": 65535,
+diff --git a/Program.cs b/Program.cs
+index c624fde..c2e8643 100644
+--- a/Program.cs
++++ b/Program.cs
+@@ -6,10 +6,11 @@ using DirectChatAiInteraction.Vertex;
+ using FfmpegUtilities;
+ using GoogleGenAi;
+ using Google.GenAI;
+-using AutoExtraction;
+ using Config;
+ using Infrastructure;
+ 
++namespace AutoExtraction;
++
+ /// <summary>
+ /// [AI Context] Main application entry point. Orchestrates the execution flow by delegating
+ /// either to the FFmpeg processing toolkit or the Gemini chat session based on user input.
+@@ -159,10 +160,12 @@ public partial class Program {
+                 if (idx >= 0) config.CurrentModelIndex = idx;
+                 config.CurrentModel = newModel;
+                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
++                AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: true);
+             });
+             if (selectedModel == "__EXIT__") return;
+             config.CurrentModel = selectedModel;
+             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(VertexAutoExtractionSession.AvailableModels, selectedModel));
++            AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: true);
+ 
+             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
+             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
+@@ -182,10 +185,12 @@ public partial class Program {
+                 if (idx >= 0) config.CurrentModelIndex = idx;
+                 config.CurrentModel = newModel;
+                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
++                AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: false);
+             });
+             if (selectedModel == "__EXIT__") return;
+             config.CurrentModel = selectedModel;
+             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, selectedModel));
++            AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: false);
+ 
+             // HIER IST DER FIX:
+             string? extractedEnvName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
+diff --git a/RefinementUiHelper.cs b/RefinementUiHelper.cs
+index bdeaa66..4c20c89 100644
+--- a/RefinementUiHelper.cs
++++ b/RefinementUiHelper.cs
+@@ -14,7 +14,7 @@ namespace AutoExtraction {
+ 
+             // Hot-reload the config from disk so manual edits to the .json file are picked up immediately
+             refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
+-            if (!global::Program.Activate_Vertex && refinementConfig.UseVertex) {
++            if (!Program.Activate_Vertex && refinementConfig.UseVertex) {
+                 Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false)! Wechsle f├╝r LaTeX Refinement automatisch auf AI Studio.");
+                 refinementConfig.UseVertex = false;
+                 ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
+@@ -49,7 +49,7 @@ namespace AutoExtraction {
+                 if (string.IsNullOrEmpty(menuChoice)) menuChoice = "1";
+ 
+                 if (menuChoice == "2") {
+-                    if (!global::Program.Activate_Vertex && !refinementConfig.UseVertex) {
++                    if (!Program.Activate_Vertex && !refinementConfig.UseVertex) {
+                         Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false). Wechsel auf Vertex nicht m├Âglich.");
+                         continue;
+                     }
+@@ -225,7 +225,7 @@ namespace AutoExtraction {
+             Console.WriteLine($"\n[INFO] Starte Refinement f├╝r: {Path.GetFileName(selectedTex)}");
+ 
+             Client refinementClient;
+-            if (refinementConfig.UseVertex && global::Program.Activate_Vertex) {
++            if (refinementConfig.UseVertex && Program.Activate_Vertex) {
+                 refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildVertexClient(
+                     refinementConfig.VertexProjectId,
+                     refinementConfig.VertexLocation
+diff --git a/VertexAutoExtractionSession.cs b/VertexAutoExtractionSession.cs
+index 9a47708..238befd 100644
+--- a/VertexAutoExtractionSession.cs
++++ b/VertexAutoExtractionSession.cs
+@@ -55,13 +55,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+     /// [Human] Bereitet die Session vor: Pr├╝ft Ordner, warnt bei falschen Dateinamen (wichtig f├╝r die chronologische Sortierung) und l├ñdt History/System-Prompt hoch.
+     /// </summary>
+     public async Task StartAsync() {
+-        Console.WriteLine("\n­ƒÜÇ [AutoExtraction] Starte Vertex AI Extraction Session...");
+-        Console.WriteLine($"  ­ƒôü Quelle (Source): {_config.SourceFolder}");
+-        Console.WriteLine($"  ­ƒôü Ziel (Target):   {_config.TargetFolder}");
+-        if (!string.IsNullOrWhiteSpace(_config.ProjectId)) {
+-            Console.WriteLine($"  Ôÿü´©Å  API-Projekt:     {_config.ProjectId} ({_config.Location})");
+-        }
+-
+         if (!Directory.Exists(_config.SourceFolder)) {
+             Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
+             return;
+@@ -76,12 +69,19 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+             Directory.CreateDirectory(_config.TargetFolder);
+         }
+ 
++        Console.WriteLine("\n­ƒÜÇ [AutoExtraction] Starte Vertex AI Extraction Session...");
++        Console.WriteLine($"  ­ƒôü Quelle (Source): {_config.SourceFolder}");
++        Console.WriteLine($"  ­ƒôü Ziel (Target):   {_config.TargetFolder}");
++        if (!string.IsNullOrWhiteSpace(_config.ProjectId)) {
++            Console.WriteLine($"  Ôÿü´©Å  API-Projekt:     {_config.ProjectId} ({_config.Location})");
++        }
++
+         string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+         foreach (var f in filesToProcess) {
+-            string fileName = Path.GetFileName(f).ToLowerInvariant();
+-            if (!FilenamePatternRegex().IsMatch(fileName)) {
+-                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-Namensschema: {Path.GetFileName(f)}");
+-                Console.WriteLine("Erwartetes Format z.B.: 04-12-monday.mp4 oder 06-04-12-montag.mp4 oder 2006-04-12-montag.mp4");
++            var dateInfo = VideoDateParser.Parse(f);
++            if (!dateInfo.IsValid) {
++                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(f)}");
++                Console.WriteLine("Erwartetes Format z.B.: 02-16-2026-monday-week1-Analysis_II.mp4 oder week1-02-16-2026-montag.mp4");
+             }
+         }
+ 
+@@ -538,11 +538,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
+                 SelectModel();
+                 ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
+-                Console.WriteLine($"  [INFO] Modell f├╝r diese Session auf '{_config.CurrentModel}' gesetzt und in Konfiguration gespeichert.");
++                ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
++                Console.WriteLine($"  [INFO] Modell f├╝r diese Session auf '{_config.CurrentModel}' gesetzt und f├╝r die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
+             }
+             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
+                 if (_latexRefinementConfig != null) {
+-                    _latexRefinementConfig.UseVertex = global::Program.Activate_Vertex;
++                    _latexRefinementConfig.UseVertex = Program.Activate_Vertex;
+                 }
+                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig!, _config);
+             }
+@@ -655,6 +656,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+             else if (normalizedInput == "11" || normalizedInput.Equals("config cache", StringComparison.OrdinalIgnoreCase)) {
+                 ConfigureCachingSettings();
+             }
++            else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
++                _debugChatHistory.Clear();
++                Console.WriteLine("  [INFO] Debug-Chat Verlauf gel├Âscht.");
++            }
+             else {
+                 await DebugChatAsync(input); // Chat erh├ñlt den originalen Input
+             }
+@@ -686,6 +691,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+ 
+         if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
+             _config.CurrentModelIndex = idx - 1;
++            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
+         } else if (choice.Contains('-')) {
+             int found = Array.IndexOf(models, choice);
+             if (found >= 0) {
+@@ -693,6 +699,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+             } else {
+                 Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unver├ñndert.");
+             }
++            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
+         }
+     }
+ 
+@@ -1046,8 +1053,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+     /// [Human] Das asynchrone Flie├ƒband: FFmpeg bereitet Videos im Hintergrund vor, w├ñhrend Gemini sie der Reihe nach abarbeitet.
+     /// </summary>
+     private async Task ProcessFilesAsync(string[] files) {
+-        // Chronologisch aufsteigend sortieren anhand des Dateinamens
+-        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date)];
++        // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
++        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date).ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue).ThenBy(f => f)];
+ 
+         // [AI Context] We use a bounded channel (capacity 1) to synchronize the FFmpeg Producer task and the Gemini Consumer task.
+         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
+@@ -1447,7 +1454,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+ 
+                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
+                 if (_latexRefinementConfig != null) {
+-                    _latexRefinementConfig.UseVertex = global::Program.Activate_Vertex;
++                    _latexRefinementConfig.UseVertex = Program.Activate_Vertex;
+                     if (_config.NumberOfParts <= 1) {
+                         Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) f├╝r die LatexRefinementSession.");
+                         _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
+@@ -1514,14 +1521,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+ 
+     private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName) {
+         var dateInfo = VideoDateParser.Parse(originalFileName);
+-        string dateContext = string.IsNullOrEmpty(dateInfo.Weekday) ? dateInfo.DateString : $"{dateInfo.Weekday}, {dateInfo.DateString}";
++        string dateContext = dateInfo.GetFormattedContext();
+         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
+ 
+         if (partNumber == 1) {
+-            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the date of the lecture is important since this is part 1 of the lecture. " + prompt;
++            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}), and week number ({dateInfo.WeekInfo ?? "N/A"}) are important metadata since this is part 1 of the lecture. " + prompt;
+         }
+         else {
+-            prompt = $"The lecture took place on {dateContext}. This is not so important since this is part {partNumber} of the lecture. " + prompt;
++            prompt = $"The lecture took place on {dateContext} (Day of the week: {dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}). This is not so important since this is part {partNumber} of the lecture. " + prompt;
+         }
+ 
+         double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
+@@ -1635,7 +1642,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+         Console.CancelKeyPress += cancelHandler;
+ 
+         while (true) {
+-            Console.WriteLine($"  [API] Sende Anfrage f├╝r Part {partNumber} an {_config.CurrentModel} (Request {currentRequest}/{maxRequestsPerPart})...");
++            Console.WriteLine($"  [API] Sende Anfrage f├╝r Part {partNumber} an Vertex AI ({_config.CurrentModel}) (Request {currentRequest}/{maxRequestsPerPart})...");
+             GroundingMetadata? accumulatedGrounding = null;
+             string chunkResp = "";
+             int requestInputTokens = 0;
+@@ -1648,7 +1655,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
+                     onChunkReceived: async (chunk) => {
+                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+-                        Console.Write(txt); // The variable txt is already updated from `chunk.Text ?? ...`, no change needed here.
++                        Console.Write(txt);
+                         chunkResp += txt;
+ 
+                         var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+@@ -1663,8 +1670,15 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
+                         }
+                         await Task.CompletedTask;
+                     },
+-                      cancellationToken: cts.Token,
+-                      retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}"
++                    cancellationToken: cts.Token,
++                    retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
++                    onRetry: () => {
++                        chunkResp = "";
++                        accumulatedGrounding = null;
++                        requestInputTokens = 0;
++                        requestOutputTokens = 0;
++                        requestCachedTokens = 0;
++                    }
+                 );
+             }
+             catch (Exception ex) {
+diff --git a/VideoDateParser.cs b/VideoDateParser.cs
+index 7ce6e73..a232718 100644
+--- a/VideoDateParser.cs
++++ b/VideoDateParser.cs
+@@ -1,4 +1,5 @@
+ using System;
++using System.Collections.Generic;
+ using System.Globalization;
+ using System.IO;
+ using System.Text.RegularExpressions;
+@@ -6,61 +7,126 @@ using System.Text.RegularExpressions;
+ namespace AutoExtraction;
+ 
+ /// <summary>
+-/// [AI Context] Helper class to parse date and weekday information from video filenames.
+-/// Supports flexible formats like "MM-DD-YYYY-weekday...", "MM-DD-YY-...", and "YYYY-MM-DD-...".
++/// [AI Context] Helper class to parse date, weekday, and week number information from video filenames.
++/// Supports flexible formats like "MM-DD-YYYY-monday-week1...", "week1-MM-DD-YYYY-montag...", and "YYYY-MM-DD-...".
+ /// </summary>
+ public static partial class VideoDateParser {
+     public class VideoDateInfo {
+         public DateTime Date { get; init; }
+         public string? Weekday { get; init; }
++        public string? WeekdayEnglish { get; init; }
++        public string? WeekInfo { get; init; }
++        public int? WeekNumber { get; init; }
+         public string DateString { get; init; } = "";
++
++        public bool IsValid => Date != DateTime.MinValue || !string.IsNullOrEmpty(Weekday) || !string.IsNullOrEmpty(WeekInfo);
++
++        public string GetFormattedContext() {
++            List<string> parts = [];
++            if (!string.IsNullOrEmpty(Weekday)) {
++                if (!string.IsNullOrEmpty(WeekdayEnglish) && !string.Equals(Weekday, WeekdayEnglish, StringComparison.OrdinalIgnoreCase)) {
++                    parts.Add($"{WeekdayEnglish} ({Weekday})");
++                }
++                else {
++                    parts.Add(Weekday);
++                }
++            }
++            if (Date != DateTime.MinValue && !string.IsNullOrEmpty(DateString)) {
++                parts.Add(DateString);
++            }
++            if (!string.IsNullOrEmpty(WeekInfo)) {
++                parts.Add(WeekInfo);
++            }
++            if (parts.Count == 0) {
++                return DateString;
++            }
++            return string.Join(", ", parts);
++        }
+     }
+ 
+-    // Matches MM-DD-YYYY or MM-DD-YY followed by optional token
+-    [GeneratedRegex(@"^(\d{2})-(\d{2})-(\d{4}|\d{2})(?:[-_]([a-zA-Z]+))?(?:[-_.]|$)", RegexOptions.IgnoreCase)]
++    // Matches YYYY-MM-DD anywhere with delimiters
++    [GeneratedRegex(@"(?:^|[-_.\s])(\d{4})-(\d{2})-(\d{2})(?:[-_.\s]|$)", RegexOptions.IgnoreCase)]
++    private static partial Regex YyyyMmDdRegex();
++
++    // Matches MM-DD-YYYY or MM-DD-YY anywhere with delimiters
++    [GeneratedRegex(@"(?:^|[-_.\s])(\d{2})-(\d{2})-(\d{4}|\d{2})(?:[-_.\s]|$)", RegexOptions.IgnoreCase)]
+     private static partial Regex MmDdYyyyRegex();
+ 
+-    // Matches YYYY-MM-DD followed by optional token
+-    [GeneratedRegex(@"^(\d{4})-(\d{2})-(\d{2})(?:[-_]([a-zA-Z]+))?(?:[-_.]|$)", RegexOptions.IgnoreCase)]
+-    private static partial Regex YyyyMmDdRegex();
++    // Matches MM-DD only anywhere with delimiters
++    [GeneratedRegex(@"(?:^|[-_.\s])(\d{2})-(\d{2})(?:[-_.\s]|$)", RegexOptions.IgnoreCase)]
++    private static partial Regex MmDdOnlyRegex();
++
++    // Matches weekday anywhere with delimiters
++    [GeneratedRegex(@"(?:^|[-_.\s])(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:[-_.\s]|$)", RegexOptions.IgnoreCase)]
++    private static partial Regex WeekdayRegex();
++
++    // Matches week/woche followed by digits anywhere with delimiters
++    [GeneratedRegex(@"(?:^|[-_.\s])(week|woche)[-_.\s]*(\d+)(?:[-_.\s]|$)", RegexOptions.IgnoreCase)]
++    private static partial Regex WeekRegex();
+ 
+     public static VideoDateInfo Parse(string filePath) {
+         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+ 
+-        int year, month, day;
+-        string? token = null;
++        int year = 0, month = 0, day = 0;
++        bool dateFound = false;
+ 
+         Match matchYyyy = YyyyMmDdRegex().Match(fileNameWithoutExtension);
+-        Match matchMmDd = MmDdYyyyRegex().Match(fileNameWithoutExtension);
+-
+-        if (matchYyyy.Success) {
+-            year = int.Parse(matchYyyy.Groups[1].Value);
+-            month = int.Parse(matchYyyy.Groups[2].Value);
+-            day = int.Parse(matchYyyy.Groups[3].Value);
+-            if (matchYyyy.Groups[4].Success) {
+-                token = matchYyyy.Groups[4].Value;
++        if (matchYyyy.Success &&
++            int.TryParse(matchYyyy.Groups[1].Value, out year) &&
++            int.TryParse(matchYyyy.Groups[2].Value, out month) &&
++            int.TryParse(matchYyyy.Groups[3].Value, out day)) {
++            dateFound = true;
++        }
++        else {
++            Match matchMmDdYyyy = MmDdYyyyRegex().Match(fileNameWithoutExtension);
++            if (matchMmDdYyyy.Success &&
++                int.TryParse(matchMmDdYyyy.Groups[1].Value, out month) &&
++                int.TryParse(matchMmDdYyyy.Groups[2].Value, out day) &&
++                int.TryParse(matchMmDdYyyy.Groups[3].Value, out int rawYear)) {
++                year = rawYear < 100 ? 2000 + rawYear : rawYear;
++                dateFound = true;
++            }
++            else {
++                Match matchMmDd = MmDdOnlyRegex().Match(fileNameWithoutExtension);
++                if (matchMmDd.Success &&
++                    int.TryParse(matchMmDd.Groups[1].Value, out month) &&
++                    int.TryParse(matchMmDd.Groups[2].Value, out day)) {
++                    year = DateTime.Now.Year;
++                    dateFound = true;
++                }
+             }
+         }
+-        else if (matchMmDd.Success) {
+-            month = int.Parse(matchMmDd.Groups[1].Value);
+-            day = int.Parse(matchMmDd.Groups[2].Value);
+-            int rawYear = int.Parse(matchMmDd.Groups[3].Value);
+-            year = rawYear < 100 ? 2000 + rawYear : rawYear;
+-            if (matchMmDd.Groups[4].Success) {
+-                token = matchMmDd.Groups[4].Value;
++
++        Match matchWeekday = WeekdayRegex().Match(fileNameWithoutExtension);
++        string? rawWeekday = matchWeekday.Success ? matchWeekday.Groups[1].Value : null;
++        TryParseWeekday(rawWeekday, out string? weekday, out string? weekdayEnglish);
++
++        Match matchWeek = WeekRegex().Match(fileNameWithoutExtension);
++        string? weekInfo = null;
++        int? weekNumber = null;
++        if (matchWeek.Success && int.TryParse(matchWeek.Groups[2].Value, out int parsedWeekNum)) {
++            weekNumber = parsedWeekNum;
++            string rawWord = matchWeek.Groups[1].Value.ToLowerInvariant();
++            if (rawWord == "woche") {
++                weekInfo = $"Week {parsedWeekNum} (Woche {parsedWeekNum})";
++            }
++            else {
++                weekInfo = $"Week {parsedWeekNum}";
+             }
+         }
+-        else {
+-            Console.WriteLine($"[Warning] Date format mismatch for file '{fileNameWithoutExtension}': Expected format MM-DD-YYYY or YYYY-MM-DD at the beginning.");
++
++        if (!dateFound) {
++            Console.WriteLine($"[Warning] Date format mismatch or missing date in file '{fileNameWithoutExtension}'.");
+             return new() {
+                 Date = DateTime.MinValue,
+-                Weekday = null,
++                Weekday = weekday,
++                WeekdayEnglish = weekdayEnglish,
++                WeekInfo = weekInfo,
++                WeekNumber = weekNumber,
+                 DateString = fileNameWithoutExtension
+             };
+         }
+ 
+-        TryParseWeekday(token, out string? weekday);
+-
+         DateTime parsedDate;
+         try {
+             parsedDate = new DateTime(year, month, day);
+@@ -72,6 +138,9 @@ public static partial class VideoDateParser {
+             return new() {
+                 Date = DateTime.MinValue,
+                 Weekday = weekday,
++                WeekdayEnglish = weekdayEnglish,
++                WeekInfo = weekInfo,
++                WeekNumber = weekNumber,
+                 DateString = fileNameWithoutExtension
+             };
+         }
+@@ -81,24 +150,82 @@ public static partial class VideoDateParser {
+         return new() {
+             Date = parsedDate,
+             Weekday = weekday,
++            WeekdayEnglish = weekdayEnglish,
++            WeekInfo = weekInfo,
++            WeekNumber = weekNumber,
+             DateString = parsedDateStringForInfo
+         };
+     }
+ 
+-    private static bool TryParseWeekday(string? token, out string? normalizedWeekday) {
++    private static bool TryParseWeekday(string? token, out string? weekday, out string? weekdayEnglish) {
+         if (string.IsNullOrWhiteSpace(token)) {
+-            normalizedWeekday = null;
++            weekday = null;
++            weekdayEnglish = null;
+             return false;
+         }
+ 
+         string lower = token.ToLowerInvariant();
+-        if (lower is "monday" or "tuesday" or "wednesday" or "thursday" or "friday" or "saturday" or "sunday" or
+-                     "montag" or "dienstag" or "mittwoch" or "donnerstag" or "freitag" or "samstag" or "sonntag") {
+-            normalizedWeekday = char.ToUpperInvariant(lower[0]) + lower.Substring(1);
+-            return true;
++        switch (lower) {
++            case "monday":
++                weekday = "Monday";
++                weekdayEnglish = "Monday";
++                return true;
++            case "montag":
++                weekday = "Montag";
++                weekdayEnglish = "Monday";
++                return true;
++            case "tuesday":
++                weekday = "Tuesday";
++                weekdayEnglish = "Tuesday";
++                return true;
++            case "dienstag":
++                weekday = "Dienstag";
++                weekdayEnglish = "Tuesday";
++                return true;
++            case "wednesday":
++                weekday = "Wednesday";
++                weekdayEnglish = "Wednesday";
++                return true;
++            case "mittwoch":
++                weekday = "Mittwoch";
++                weekdayEnglish = "Wednesday";
++                return true;
++            case "thursday":
++                weekday = "Thursday";
++                weekdayEnglish = "Thursday";
++                return true;
++            case "donnerstag":
++                weekday = "Donnerstag";
++                weekdayEnglish = "Thursday";
++                return true;
++            case "friday":
++                weekday = "Friday";
++                weekdayEnglish = "Friday";
++                return true;
++            case "freitag":
++                weekday = "Freitag";
++                weekdayEnglish = "Friday";
++                return true;
++            case "saturday":
++                weekday = "Saturday";
++                weekdayEnglish = "Saturday";
++                return true;
++            case "samstag":
++                weekday = "Samstag";
++                weekdayEnglish = "Saturday";
++                return true;
++            case "sunday":
++                weekday = "Sunday";
++                weekdayEnglish = "Sunday";
++                return true;
++            case "sonntag":
++                weekday = "Sonntag";
++                weekdayEnglish = "Sunday";
++                return true;
++            default:
++                weekday = null;
++                weekdayEnglish = null;
++                return false;
+         }
+-
+-        normalizedWeekday = null;
+-        return false;
+     }
+ }
+\ No newline at end of file
+diff --git a/build_test_bin/LatexRefinementSessionConfig.json b/build_test_bin/LatexRefinementSessionConfig.json
+index 48b5923..b89de00 100644
+--- a/build_test_bin/LatexRefinementSessionConfig.json
++++ b/build_test_bin/LatexRefinementSessionConfig.json
+@@ -15,7 +15,9 @@
+   "SourceFolder": "",
+   "PdfCompilation": {
+     "Enabled": true,
+-    "PreamblePath": "pdf-preamble.tex"
++    "PreamblePath": "pdf-preamble.tex",
++    "UseAntiGravityAgent": true,
++    "MaxFixRounds": 3
+   },
+   "Step1MergeAndTimestamp": {
+     "Enabled": true,
+

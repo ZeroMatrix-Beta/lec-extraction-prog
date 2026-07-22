@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 0,
+  "ActiveApiProfile": 1,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
@@ -13,7 +13,7 @@
     "D:\\lecture-videos\\d-und-a",
     "D:\\lecture-videos\\information-security-2024"
   ],
-  "TargetFolder": "",
+  "TargetFolder": "D:\\lecture-videos\\analysis2\\extracted_output",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
@@ -31,7 +31,8 @@
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "Model": [
-    "gemini-3.6-flash",
+    "gemini-3.6-flash"
+    /* keep this*/,
     "gemini-3.5-flash",
     "gemini-3-flash-preview"
   ],
@@ -40,12 +41,13 @@
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
+  "DebugSendReferenceFile": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 3,
+  "NumberOfParts": 4,
   "OverlapSeconds": 240,
   "EnableParallelFileUploads": false,
-  "GoogleVideoFps": 0.3333,
+  "GoogleVideoFps": 0.25,
   "UseGoogleSearch": false,
   "FfmpegPreset": "fast",
   "YouTubeTasks": []

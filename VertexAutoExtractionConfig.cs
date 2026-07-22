@@ -25,7 +25,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
     public string LogFolder { get; set; } = AppConfig.LogFolder;
 
-    public string[] Model { get; set; } = ["gemini-3.5-flash", "gemini-3-flash-preview"];
+    public string[] Model { get; set; } = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"];
     // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
     public int CurrentModelIndex { get; set; } = 0;
     [JsonIgnore]
@@ -53,6 +53,9 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
 
     // [AI Context] If true, loaded history files are added to SystemInstruction instead of History, skipping the explicit handshake.
     public bool LoadHistoryIntoSystemInstruction { get; set; } = false;
+
+    // [AI Context] If true, previous .tex files are appended as read-only reference context to subsequent parts.
+    public bool DebugSendReferenceFile { get; set; } = true;
 
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.

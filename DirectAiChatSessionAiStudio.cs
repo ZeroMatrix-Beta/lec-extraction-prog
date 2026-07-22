@@ -23,6 +23,7 @@ namespace DirectChatAiInteraction.AiStudio;
 /// </summary> 
 public partial class DirectAiChatSessionAiStudio {
     public static readonly string[] AvailableModels = [
+        "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3-flash-preview"
     ];
@@ -94,8 +95,8 @@ public partial class DirectAiChatSessionAiStudio {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", AvailableModels, newModel => {
-                int idx = Array.IndexOf(AvailableModels, newModel);
+            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
+                int idx = Array.IndexOf(_config.Model, newModel);
                 if (idx >= 0) _config.CurrentModelIndex = idx;
                 _config.CurrentModel = newModel;
                 ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
@@ -524,11 +525,11 @@ public partial class DirectAiChatSessionAiStudio {
         GroundingMetadata? accumulatedGrounding = null;
 
         try {
-            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 70s before every GenerateContentStreamAsync request to Google AI Studio.
-            // HasJustUploaded is intentionally NOT checked here – the 70s in AttachmentHandler does not replace this per-request delay.
-            // [Human] Wir warten VOR JEDEM AI-Studio-Request 70 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
+            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 120s before every GenerateContentStreamAsync request to Google AI Studio.
+            // HasJustUploaded is intentionally NOT checked here – the 120s in AttachmentHandler does not replace this per-request delay.
+            // [Human] Wir warten VOR JEDEM AI-Studio-Request 120 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
             if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
+                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(120, "Warte 120 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
                     exceptionCaught = true;
                 }
             }

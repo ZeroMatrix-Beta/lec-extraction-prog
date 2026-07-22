@@ -238,7 +238,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 if (!asSystemInstruction) {
                     // [Human] Bei der AI Studio Version warten wir nach großen Datei-Aktivierungen (wie Videos).
                     // Für System Instructions überspringen wir das, da sie kaum Tokens/Zeit beim Upload verbrauchen.
-                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(70, "Warte 70 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
+                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(120, "Warte 120 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
                         return false;
                     }
                 }

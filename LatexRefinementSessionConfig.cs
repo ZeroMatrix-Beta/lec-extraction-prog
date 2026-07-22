@@ -8,7 +8,7 @@ public class BackendParameters {
     public float TopP { get; set; } = 1.0f;
     public int TopK { get; set; } = 10;
     public int MaxOutputTokens { get; set; } = 65535;
-    public string[] Model { get; set; } = ["gemini-3.5-flash", "gemini-3-flash-preview"];
+    public string[] Model { get; set; } = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"];
     // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
     public int CurrentModelIndex { get; set; } = 0;
     [JsonIgnore]
@@ -41,8 +41,8 @@ public class RefinementStepConfig {
     public string[] SystemInstructionPaths { get; set; } = [];
     public string[] HistoryPreloadPaths { get; set; } = [];
 
-    public BackendParameters AiStudio { get; set; } = new BackendParameters { Model = ["gemini-3.5-flash", "gemini-3-flash-preview"] };
-    public BackendParameters Vertex { get; set; } = new BackendParameters { Model = ["gemini-3.5-flash", "gemini-3-flash-preview"] };
+    public BackendParameters AiStudio { get; set; } = new BackendParameters { Model = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] };
+    public BackendParameters Vertex { get; set; } = new BackendParameters { Model = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] };
 }
 
 public class PdfCompilationConfig {

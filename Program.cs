@@ -155,8 +155,8 @@ public partial class Program {
                 config.SourceFolder = newFolder;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "Vertex AI Auto-Extraktion", VertexAutoExtractionSession.AvailableModels, newModel => {
-                int idx = Array.IndexOf(VertexAutoExtractionSession.AvailableModels, newModel);
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "Vertex AI Auto-Extraktion", config.Model, newModel => {
+                int idx = Array.IndexOf(config.Model, newModel);
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
@@ -164,7 +164,7 @@ public partial class Program {
             });
             if (selectedModel == "__EXIT__") return;
             config.CurrentModel = selectedModel;
-            config.CurrentModelIndex = Math.Max(0, Array.IndexOf(VertexAutoExtractionSession.AvailableModels, selectedModel));
+            config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
             AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: true);
 
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
@@ -180,8 +180,8 @@ public partial class Program {
                 config.SourceFolder = newFolder;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "AI Studio Auto-Extraktion", AiStudioAutoExtractionSession.AvailableModels, newModel => {
-                int idx = Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, newModel);
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "AI Studio Auto-Extraktion", config.Model, newModel => {
+                int idx = Array.IndexOf(config.Model, newModel);
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
@@ -189,7 +189,7 @@ public partial class Program {
             });
             if (selectedModel == "__EXIT__") return;
             config.CurrentModel = selectedModel;
-            config.CurrentModelIndex = Math.Max(0, Array.IndexOf(AiStudioAutoExtractionSession.AvailableModels, selectedModel));
+            config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
             AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: false);
 
             // HIER IST DER FIX:

@@ -36,6 +36,7 @@
   "SpeedMultiplier": 1.2,
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
+  "DebugSendReferenceFile": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
   "NumberOfParts": 3,
