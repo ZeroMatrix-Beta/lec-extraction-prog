@@ -1733,6 +1733,26 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
         string currentLogPrompt = logContext;
 
+        try {
+            Console.WriteLine("\n  [Token-Analyse] Berechne Token-Anzahl für die einzelnen Bestandteile...");
+            var videoContents = new List<Content> { new Content { Role = "user", Parts = attachmentParts } };
+            var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
+            Console.WriteLine($"    - Video-Token: {videoCount.TotalTokens}");
+
+            var contextParts = userPromptParts.Where(p => p.FileData?.MimeType == "text/plain").ToList();
+            for (int i = 0; i < contextParts.Count; i++) {
+                var texContents = new List<Content> { new Content { Role = "user", Parts = [contextParts[i]] } };
+                var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
+                Console.WriteLine($"    - Kontext-Datei {i + 1} ({Path.GetFileName(previousTexFiles[i])}) Token: {texCount.TotalTokens}");
+            }
+            
+            var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, history);
+            Console.WriteLine($"    -> Gesamt-Token in History (Video + Kontext + Prompt): {totalCount.TotalTokens}\n");
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [Token-Analyse] Fehler beim Zählen der Token: {ex.Message}\n");
+        }
+
         using var cts = new CancellationTokenSource();
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
         Console.CancelKeyPress += cancelHandler;
