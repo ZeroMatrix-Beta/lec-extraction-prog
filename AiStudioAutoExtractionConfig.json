@@ -1,5 +1,5 @@
 {
-  "ActiveApiProfile": 1,
+  "ActiveApiProfile": 2,
   "AiStudioApiKeyEnvNames": [
     "API_KEY-automated-content-extraction",
     "API_KEY-ai-studio-test-project-1",
@@ -13,7 +13,7 @@
     "D:\\lecture-videos\\d-und-a",
     "D:\\lecture-videos\\information-security-2024"
   ],
-  "TargetFolder": "D:\\lecture-videos\\analysis2\\extracted_output",
+  "TargetFolder": "",
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
@@ -26,29 +26,37 @@
   ],
   "LogFolder": "D:\\gemini-logs",
   "CreateLogFiles": true,
-  "Temperature": 0.3,
+  "Temperature": 0.36,
   "TopP": 0.95,
   "TopK": 40,
   "MaxOutputTokens": 65535,
   "Model": [
     "gemini-3.6-flash"
-    /* keep this*/,
+    /* keep this*/ ,
     "gemini-3.5-flash",
-    "gemini-3-flash-preview"
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash-lite"
   ],
-  "CurrentModelIndex": 0,
+  "CurrentModelIndex": 1,
   "ThinkingBudget": 32765,
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
+  "InlineHistoryImages": false,
+  "HistoryBatchCount": 3,
   "DebugSendReferenceFile": true,
+  "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 4,
+  "NumberOfParts": 2,
   "OverlapSeconds": 240,
   "EnableParallelFileUploads": false,
-  "GoogleVideoFps": 0.25,
+  "GoogleVideoFps": 0.3333,
   "UseGoogleSearch": false,
   "FfmpegPreset": "fast",
-  "YouTubeTasks": []
+  "VideoPartDelaySeconds": 63,
+  "SystemInstructionDelaySeconds": 63,
+  "HistoryRateLimitDelaySeconds": 63,
+  "YouTubeTasks": [],
+  "RateLimitDelaySeconds": 63
 }

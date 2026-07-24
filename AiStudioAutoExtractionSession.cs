@@ -44,6 +44,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
     private int _sessionTotalCachedTokens = 0;
+    private int _sessionMaxFreshTokens = 0;
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
@@ -156,34 +157,98 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         }
 
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                            Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (für 100% Caching)...");
-                            List<string> nonTextHistoryFiles = [];
-                            foreach (var hFile in distinctHistoryFiles) {
-                                string ext = Path.GetExtension(hFile).ToLowerInvariant();
-                                if (ext == ".tex" || ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".cs") {
-                                    string rawRelPath = !string.IsNullOrEmpty(commonBase)
-                                        ? Path.GetRelativePath(commonBase, hFile)
-                                        : Path.GetFileName(hFile);
-                                    string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
-                                    instructionBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relPath}`:\n");
-                                    instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(hFile));
-                                    Console.WriteLine($"  [INFO] History-Textdatei direkt in System Instruction eingebunden: {relPath}");
+                            _systemInstructionText = instructionBuilder.ToString();
+                            int interDelay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 120;
+
+                            if (_config.HistoryBatchCount > 0) {
+                                var batches = ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(distinctHistoryFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
+                                int baseSysDelay = _config.SystemInstructionDelaySeconds > 0 ? _config.SystemInstructionDelaySeconds : 65;
+                                int historyDelay = _config.HistoryRateLimitDelaySeconds > 0 ? _config.HistoryRateLimitDelaySeconds : 65;
+                                Console.WriteLine($"\n  [SystemInstruction-Warmup] Starte gestaffeltes Cache-Warming für System Instruction + History in {batches.Count} Batch(es) (BaseDelay: {baseSysDelay}s, HistoryDelay: {historyDelay}s)...");
+
+                                if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
+                                    // Step 0: Warmup Base System Instruction
+                                    Console.WriteLine("\n  [Cache-Warming Step 0] Warmup für Basis System Instruction...");
+                                    if (!await WarmUpSystemInstructionCacheAsync(baseSysDelay)) return false;
                                 }
                                 else {
-                                    nonTextHistoryFiles.Add(hFile);
+                                    Console.WriteLine("\n  [Cache-Warming] Überspringe separaten Warmup für Basis System Instruction (wird mit erstem Batch vereint)...");
                                 }
+
+                                for (int batchIdx = 0; batchIdx < batches.Count; batchIdx++) {
+                                    var (label, batchFiles) = batches[batchIdx];
+                                    Console.WriteLine($"\n  [Cache-Warming Step {batchIdx + 1}/{batches.Count}] Lade History-Batch '{label}' ({batchFiles.Count} Datei(en)) in System Instruction...");
+
+                                    var batchBuilder = new System.Text.StringBuilder();
+                                    List<string> nonTextHistoryFiles = [];
+                                    foreach (var hFile in batchFiles) {
+                                        string ext = Path.GetExtension(hFile).ToLowerInvariant();
+                                        if (ext == ".tex" || ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".cs") {
+                                            string rawRelPath = !string.IsNullOrEmpty(commonBase)
+                                                ? Path.GetRelativePath(commonBase, hFile)
+                                                : Path.GetFileName(hFile);
+                                            string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                                            batchBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relPath}`:\n");
+                                            batchBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(hFile));
+                                            Console.WriteLine($"  [INFO] History-Textdatei in System Instruction eingebunden: {relPath}");
+                                        }
+                                        else {
+                                            nonTextHistoryFiles.Add(hFile);
+                                        }
+                                    }
+
+                                    _systemInstructionText += batchBuilder.ToString();
+
+                                    if (nonTextHistoryFiles.Count > 0) {
+                                        string fileList = string.Join(", ", nonTextHistoryFiles.Select(p => $"\"{p}\""));
+                                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
+                                        if (success && attachmentParts.Count > 0) {
+                                            _historyParts.AddRange(attachmentParts);
+                                        }
+                                    }
+
+                                    if (!await WarmUpSystemInstructionCacheAsync(historyDelay)) return false;
+                                }
+
+                                // Final post-history refill delay before Debug/Video calls
+                                int postHistoryDelay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 120;
+                                Console.WriteLine($"\n  [Tokens] History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}");
+                                Console.WriteLine($"  [Rate-Limit] Warte {postHistoryDelay}s (Token Refill) vor Haupt-Verarbeitung...");
+                                await ExtractionHelpers.SmartDelayAsync(postHistoryDelay, "Warte auf Token-Refill nach History-Aufbau...");
                             }
-                            if (nonTextHistoryFiles.Count > 0) {
-                                string fileList = string.Join(", ", nonTextHistoryFiles.Select(p => $"\"{p}\""));
-                                var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
-                                if (success && attachmentParts.Count > 0) {
-                                    _historyParts.AddRange(attachmentParts);
+                            else {
+                                Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
+                                List<string> nonTextHistoryFiles = [];
+                                foreach (var hFile in distinctHistoryFiles) {
+                                    string ext = Path.GetExtension(hFile).ToLowerInvariant();
+                                    if (ext == ".tex" || ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".cs") {
+                                        string rawRelPath = !string.IsNullOrEmpty(commonBase)
+                                            ? Path.GetRelativePath(commonBase, hFile)
+                                            : Path.GetFileName(hFile);
+                                        string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                                        instructionBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relPath}`:\n");
+                                        instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(hFile));
+                                        Console.WriteLine($"  [INFO] History-Textdatei direkt in System Instruction eingebunden: {relPath}");
+                                    }
+                                    else {
+                                        nonTextHistoryFiles.Add(hFile);
+                                    }
                                 }
+                                if (nonTextHistoryFiles.Count > 0) {
+                                    string fileList = string.Join(", ", nonTextHistoryFiles.Select(p => $"\"{p}\""));
+                                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
+                                    if (success && attachmentParts.Count > 0) {
+                                        _historyParts.AddRange(attachmentParts);
+                                    }
+                                }
+                                _systemInstructionText = instructionBuilder.ToString();
+                                if (!await WarmUpSystemInstructionCacheAsync()) return false;
                             }
                             _historyWasLoaded = true;
                         }
-
-                        _systemInstructionText = instructionBuilder.ToString();
+                        else {
+                            _systemInstructionText = instructionBuilder.ToString();
+                        }
                     }
                 }
                 else {
@@ -207,26 +272,67 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (Console.ReadLine()?.Trim().ToLower() == "j") {
                     if (_config.LoadHistoryIntoSystemInstruction) {
                         Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
-                    }
-                    else {
-                        Console.WriteLine("\n  [INFO] Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
-                    }
-                    string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
-                    if (success && attachmentParts.Count > 0) {
-                        _historyParts.AddRange(attachmentParts);
-                        _historyWasLoaded = true;
-                        if (_config.LoadHistoryIntoSystemInstruction) {
+                        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
+                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
+                        if (success && attachmentParts.Count > 0) {
+                            _historyParts.AddRange(attachmentParts);
+                            _historyWasLoaded = true;
                             Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
                             if (!await WarmUpSystemInstructionCacheAsync()) return false;
                         }
                         else {
-                            Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-                            if (!await AcknowledgeHistoryAsync(fileList)) return false;
+                            Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
                         }
                     }
                     else {
-                        Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+                        // [AI Context] Batched history loading: split files by top-level subfolder groups (if enabled)
+                        // so that each batch fits within the Free-Tier per-minute token quota.
+                        // Each batch becomes its own multi-turn entry in _sessionPreamble.
+                        List<(string Label, List<string> Files)> batches;
+                        if (_config.HistoryBatchCount > 1) {
+                            batches = ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(distinctFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
+                            Console.WriteLine($"\n  [History-Batching] Aufgeteilt in {batches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
+                        }
+                        else {
+                            batches = [("(alle)", distinctFiles)];
+                        }
+
+                        bool allBatchesOk = true;
+                        for (int batchIdx = 0; batchIdx < batches.Count; batchIdx++) {
+                            var (label, batchFiles) = batches[batchIdx];
+                            bool isLast = batchIdx == batches.Count - 1;
+                            Console.WriteLine($"\n  [INFO] History-Batch {batchIdx + 1}/{batches.Count}: '{label}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
+
+                            string batchFileList = string.Join(", ", batchFiles.Select(p => $"\"{p}\""));
+                            var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {batchFileList}", false);
+                            if (success && attachmentParts.Count > 0) {
+                                _historyParts.AddRange(attachmentParts);
+                                _historyWasLoaded = true;
+                                if (!await AcknowledgeHistoryAsync(attachmentParts, batchFileList, batchIdx + 1, batches.Count)) {
+                                    allBatchesOk = false;
+                                    break;
+                                }
+                                if (!isLast) {
+                                    // [AI Context] Full inter-batch delay to let the per-minute rate-limit quota fully refill before sending the next batch.
+                                    int interDelay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 120;
+                                    Console.WriteLine($"  [Rate-Limit] Inter-Batch-Pause: {interDelay}s vor nächstem Batch...");
+                                    await ExtractionHelpers.SmartDelayAsync(interDelay, $"Warte zwischen Batch {batchIdx + 1} und {batchIdx + 2}...");
+                                }
+                            }
+                            else {
+                                Console.WriteLine($"  [FEHLER] Batch {batchIdx + 1}/{batches.Count} konnte nicht hochgeladen werden.");
+                                allBatchesOk = false;
+                                break;
+                            }
+                        }
+
+                        if (allBatchesOk && _historyWasLoaded) {
+                            // [AI Context] Token-Refill delay after all history batches: all history tokens consumed,
+                            // must wait for per-minute quota to refill before video processing starts.
+                            int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
+                            Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill) nach History-Upload...");
+                            await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach History-Acknowledgment...");
+                        }
                     }
                 }
             }
@@ -237,7 +343,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
-        // can take significant time; the 120s guard will count from here and enforce a proper gap before the first API call.
+        // can take significant time; the guard will count from here and enforce a proper gap before the first API call.
         ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
@@ -251,6 +357,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         await _sessionLogger.LogSessionSetupAsync();
+
+        if (_config.DebugHelloRoundtrip) {
+            if (!await DebugHelloRoundtripAsync()) return false;
+        }
+
         return true;
     }
 
@@ -677,13 +788,19 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     }
 
     /// <summary>
-    /// [AI Context] Forces a real API call to explicitly acknowledge the history payload. 
-    /// This guarantees the model context is correctly primed before batch processing starts and provides immediate visual feedback.
-    /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
+    /// [AI Context] Forces a real API call to explicitly acknowledge one batch of history payload.
+    /// Appends the user turn and model confirmation to _sessionPreamble, building up a multi-turn
+    /// prefix that all subsequent video requests will prepend. When called multiple times (one per
+    /// subfolder batch), each call adds another turn to the preamble.
+    /// [Human] Sendet einen History-Batch an Gemini und wartet auf Bestätigung. Bei mehreren Batches
+    /// wird jeder Batch als eigener Turn an den _sessionPreamble angehängt.
     /// </summary>
-    private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
-        var historyPromptParts = new List<Part>(_historyParts) {
-            new() { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.CurrentModel}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
+    private async Task<bool> AcknowledgeHistoryAsync(List<Part> batchParts, string loadedFiles = "", int batchNumber = 1, int totalBatches = 1) {
+        string batchHint = totalBatches > 1
+            ? $" (Batch {batchNumber}/{totalBatches}: {loadedFiles.Split(',')[0].Trim().Trim('"')}...)"
+            : "";
+        var historyPromptParts = new List<Part>(batchParts) {
+            new() { Text = $"Here is the material from my history{batchHint}. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.CurrentModel}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
         };
         var userContent = new Content { Role = "user", Parts = historyPromptParts };
 
@@ -717,7 +834,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        // Console.Write($"\n[AutoExtraction] Warte auf Bestätigung der History von {_config.Model}: ");
+        Console.WriteLine($"\n  [API] Sende History-Bestätigungsanfrage{batchHint} an Gemini ({_config.CurrentModel})...");
         int backoff = 45;
         int maxRetries = 10;
         bool success = false;
@@ -733,7 +850,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.CancelKeyPress += cancelHandler;
 
             try {
-                if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
+                if (attempt > 1) Console.Write($"\n  [Versuch {attempt}/{maxRetries}] Sende Anfrage erneut... ");
 
                 int requestInputTokens = 0;
                 int requestOutputTokens = 0;
@@ -743,7 +860,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
                     if (cts.IsCancellationRequested) break;
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    // Console.Write(txt);
                     fullResponse += txt;
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
@@ -758,10 +874,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 finalInputTokens = requestInputTokens;
                 finalOutputTokens = requestOutputTokens;
                 finalCachedTokens = requestCachedTokens;
-                // Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens} | Output: {requestOutputTokens} (inkl. Thinking Tokens)");
-                // Console.WriteLine($"  [Session Total Tokens] Input: {_sessionTotalInputTokens} | Output: {_sessionTotalOutputTokens}");
 
-                // Console.WriteLine();
+                Console.WriteLine($"  [Gemini Antwort] {fullResponse.Trim()}");
+                Console.WriteLine($"  [Tokens] Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {Math.Max(0, requestInputTokens - requestCachedTokens):N0} | Output: {requestOutputTokens:N0}");
                 success = true;
                 break;
             }
@@ -839,11 +954,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     /// <summary>
     /// [AI Context] Sends a lightweight handshake request containing the System Instruction to Google AI Studio.
-    /// This warms up Google's implicit prefix cache and enforces a 120-second token refill delay
+    /// This warms up Google's implicit prefix cache and enforces a token refill delay
     /// before heavy video processing begins, preventing Quota Errors and ensuring high cache hits.
     /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
     /// </summary>
-    private async Task<bool> WarmUpSystemInstructionCacheAsync() {
+    private async Task<bool> WarmUpSystemInstructionCacheAsync(int? customDelay = null) {
         Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...");
 
         var requestConfig = new GenerateContentConfig {
@@ -861,7 +976,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         var pingContent = new List<Content> {
-            new Content {
+            new() {
                 Role = "user",
                 Parts = [new Part { Text = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'" }]
             }
@@ -869,11 +984,18 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         try {
             string responseText = "";
+            int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
+
             bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                     responseText += txt;
+                    if (chunk.UsageMetadata != null) {
+                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
+                    }
                     await Task.CompletedTask;
                 },
                 cancellationToken: CancellationToken.None,
@@ -881,9 +1003,20 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             );
 
             if (success) {
-                Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich. Google hat die System Instruction gecacht.");
-                Console.WriteLine("  [Rate-Limit] Warte 120 Sekunden (Token Refill), damit die Quota vor den Video-Teilen vollständig zurückgesetzt ist...");
-                await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Token-Refill nach Handshake...");
+                int freshTokens = Math.Max(0, inputTokens - cachedTokens);
+                _sessionTotalInputTokens += inputTokens;
+                _sessionTotalOutputTokens += outputTokens;
+                _sessionTotalCachedTokens += cachedTokens;
+                _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
+
+                Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich.");
+                if (inputTokens > 0) {
+                    Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
+                }
+
+                int delay = customDelay ?? (_config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130);
+                Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill)...");
+                await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
                 return true;
             }
         }
@@ -891,6 +1024,84 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.WriteLine($"  [WARNUNG] Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.");
         }
         return true;
+    }
+
+    /// <summary>
+    /// [AI Context] Sends a simple "Hello" debug roundtrip if enabled in config.
+    /// [Human] Reiner Debug-Roundtrip, um zu testen ob die API antwortet.
+    /// </summary>
+    private async Task<bool> DebugHelloRoundtripAsync() {
+        Console.WriteLine("\n  [Debug] Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
+
+        var requestConfig = new GenerateContentConfig {
+            Temperature = _config.Temperature,
+            TopP = _config.TopP,
+            TopK = _config.TopK,
+            MaxOutputTokens = 200
+        };
+
+        var sysParts = new List<Part>();
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+        if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
+        if (sysParts.Count > 0) {
+            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+        }
+
+        var debugContent = new List<Content> {
+            new() {
+                Role = "user",
+                Parts = [new() { Text = "Hi, this is a debug roundtrip. Please reply with a short 'Hello' or 'Hi'." }]
+            }
+        };
+
+        bool success = false;
+        string fullResponse = "";
+        int maxRetries = 3;
+        int backoff = 10;
+        int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                var response = await _client.Models.GenerateContentAsync(_config.CurrentModel, debugContent, requestConfig);
+                fullResponse = response.Text ?? "";
+                if (response.UsageMetadata != null) {
+                    inputTokens = response.UsageMetadata.PromptTokenCount ?? 0;
+                    outputTokens = response.UsageMetadata.CandidatesTokenCount ?? 0;
+                    cachedTokens = response.UsageMetadata.CachedContentTokenCount ?? 0;
+                    int freshTokens = Math.Max(0, inputTokens - cachedTokens);
+                    _sessionTotalInputTokens += inputTokens;
+                    _sessionTotalOutputTokens += outputTokens;
+                    _sessionTotalCachedTokens += cachedTokens;
+                    _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
+                }
+                
+                Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {Math.Max(0, inputTokens - cachedTokens):N0} | Output: {outputTokens:N0}");
+                Console.WriteLine($"  [Gemini Antwort] {fullResponse.Trim()}");
+                success = true;
+                break;
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                if (attempt < maxRetries - 1) {
+                    Console.WriteLine($"[Debug] Retry in {backoff}s...");
+                    await Task.Delay(backoff * 1000);
+                    backoff += 10;
+                }
+            }
+        }
+
+        if (success) {
+            _sessionPreamble.Add(debugContent[0]);
+            _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
+            int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 60;
+            Console.WriteLine($"  [Rate-Limit] Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
+            await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
+            return true;
+        } else {
+            Console.WriteLine("[FEHLER] Debug Roundtrip fehlgeschlagen.");
+            return false;
+        }
     }
 
     /// <summary>
@@ -1189,10 +1400,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 if (i + 1 < partsWithTimes.Count) {
                     rateLimitDelayTask = Task.Run(async () => {
-                        // [AI Context] A 120-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
-                        // [Human] Wir warten hier 120 Sekunden, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-                        Console.WriteLine($"\n  [Timer] Warte 120 Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...");
+                        int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
+                        // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
+                        // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+                        Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+                        await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
                     });
                 }
                 int partFreshTokens = Math.Max(0, result.partInputTokens - result.partCachedTokens);
@@ -1422,28 +1634,46 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             userPromptParts.Add(new Part { Text = parsedPrompt });
         }
 
-        // 3. Append previous .tex files as read-only reference context AT THE END
+        // 3. Append previous .tex files as read-only reference context AT THE END via Google File API
         // Putting reference context at the end ensures the static prefix (System Instruction + Video) is completely uncorrupted by dynamic prior outputs.
         if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
-            Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
+            Console.WriteLine("  [Kontext] Lade folgende bereits generierte .tex-Dateien über die Google File API als Referenzkontext hoch:");
             string contextText =
-                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
-                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+                "IMPORTANT CONTEXT WARNING: Below are attached LaTeX files generated from previous parts of this lecture.\n" +
+                "You must treat them strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
                 "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
                 "CRITICAL RULES:\n" +
                 "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
                 $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
                 "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+            userPromptParts.Add(new() { Text = contextText.TrimEnd() });
+
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
-                string content = await System.IO.File.ReadAllTextAsync(texFile);
-                int maxChars = 30000;
-                if (content.Length > maxChars) {
-                    content = "...\n[Früherer Kontext gekürzt um Rate-Limits zu schonen]\n..." + content[^maxChars..];
+                try {
+                    var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = "text/plain" };
+                    var uploadedFile = await ApiResilience.ExecuteWithRetryAsync(
+                        () => _client.Files.UploadAsync(texFile, config: uploadConfig),
+                        maxRetries: 5,
+                        retryContext: $"File API Upload .tex: {Path.GetFileName(texFile)}"
+                    );
+
+                    if (uploadedFile?.Uri != null) {
+                        userPromptParts.Add(new Part {
+                            FileData = new FileData {
+                                FileUri = uploadedFile.Uri,
+                                MimeType = "text/plain"
+                            }
+                        });
+                        Console.WriteLine($"      [Uploaded .tex] URI: {uploadedFile.Uri}");
+                    }
                 }
-                contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
+                catch (Exception ex) {
+                    Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
+                    Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                    Console.WriteLine($"      [WARNUNG] Upload von '{Path.GetFileName(texFile)}' fehlgeschlagen. Fahre fort.");
+                }
             }
-            userPromptParts.Add(new() { Text = contextText.TrimEnd() });
         }
 
         var history = new List<Content>();
@@ -1606,10 +1836,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
-            // [AI Context] A 120-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 2m0s ensures a full quota refresh.
-            // [Human] Wir warten hier 2 Minuten (120s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-            Console.WriteLine($"\n  [Timer] Warte 120 Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...")) {
+            int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
+            // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
+            // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+            if (!await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

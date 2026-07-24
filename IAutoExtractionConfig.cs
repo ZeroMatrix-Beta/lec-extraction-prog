@@ -14,4 +14,5 @@ public interface IAutoExtractionConfig {
     bool UseGoogleSearch { get; }
     YouTubeTranscriptionTask[] YouTubeTasks { get; }
     string FfmpegPreset { get; }
+    int RateLimitDelaySeconds { get; }
 }

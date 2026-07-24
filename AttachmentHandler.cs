@@ -19,7 +19,7 @@ namespace Infrastructure;
 /// [AI Context] Injects required runtime dependencies.
 /// [Human] Konstruktor: Bekommt alle wichtigen Einstellungen (Pfade, Google Client) übergeben.
 /// </remarks>
-public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null) {
+public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null, bool inlineImages = false) {
     private static readonly HashSet<string> s_textExtensions = [".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex"];
     public static bool HasJustUploaded { get; set; } = false;
     private readonly string _uploadFolder = uploadFolder;
@@ -27,6 +27,9 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     private readonly bool _isAiStudio = isAiStudio;
     private readonly string _gcsBucketName = gcsBucketName;
     private readonly double? _googleVideoFps = googleVideoFps;
+    // [AI Context] If true, image files are embedded as InlineData blobs instead of being uploaded via File API.
+    // Inline blobs are part of the stable request prefix and enable Google's implicit prefix caching.
+    private readonly bool _inlineImages = inlineImages;
     private Client _client = client;
 
     /// <summary>
@@ -173,13 +176,24 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             return false;
         }
 
-        if (asSystemInstruction && ext is ".jpg" or ".jpeg" or ".png" or ".webp") {
-            WriteLine($"  [Lokal] Lese Bilddatei '{Path.GetFileName(filePath)}' für Inline System Instruction ein...");
-            byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath, cancellationToken);
-            parts.Add(new Part { Text = $"\n<image path=\"{displayPath}\">\n" });
-            parts.Add(new Part { InlineData = new Blob { Data = imageBytes, MimeType = mimeType } });
-            parts.Add(new Part { Text = "\n</image>\n" });
-            return true;
+        if (ext is ".jpg" or ".jpeg" or ".png" or ".webp") {
+            // [AI Context] Inline images when: (a) used as system instruction (always), or (b) _inlineImages flag is set.
+            // Inline blobs are part of the stable request prefix and enable Google's implicit prefix caching.
+            // File API URIs are external references that break prefix caching.
+            // [Human] Bilder werden als Blob eingebettet, wenn sie in der System Instruction sind ODER InlineHistoryImages=true ist.
+            if (asSystemInstruction || _inlineImages) {
+                string context = asSystemInstruction ? "Inline System Instruction" : "Inline History/Prefix-Cache";
+                WriteLine($"  [Lokal] Lese Bilddatei '{Path.GetFileName(filePath)}' für {context} ein...");
+                byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath, cancellationToken);
+                if (asSystemInstruction) {
+                    parts.Add(new Part { Text = $"\n<image path=\"{displayPath}\">\n" });
+                }
+                parts.Add(new Part { InlineData = new Blob { Data = imageBytes, MimeType = mimeType } });
+                if (asSystemInstruction) {
+                    parts.Add(new Part { Text = "\n</image>\n" });
+                }
+                return true;
+            }
         }
 
         if (_isAiStudio) {
@@ -235,10 +249,11 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 // [AI Context] Financial & Rate-Limit Guardrail: When using the standard AI Studio API (_isAiStudio == true),
                 // we historically waited here. However, as Gemini is stateless, token consumption (TPM) only happens upon the
                 // actual GenerateContent request, not during file upload. Thus, waiting after uploading a system instruction is unnecessary.
-                if (!asSystemInstruction) {
-                    // [Human] Bei der AI Studio Version warten wir nach großen Datei-Aktivierungen (wie Videos).
-                    // Für System Instructions überspringen wir das, da sie kaum Tokens/Zeit beim Upload verbrauchen.
-                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(120, "Warte 120 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
+                if (!asSystemInstruction && (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) || mimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))) {
+                    // [Human] Bei der AI Studio Version warten wir nach großen Datei-Aktivierungen (Videos/Audio).
+                    // Für Bilder, PDFs und andere kleine Dateien (z.B. History-Uploads) überspringen wir das,
+                    // da der Token-Verbrauch erst beim GenerateContent-Call passiert, nicht beim File-Upload.
+                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(130, "Warte 130 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
                         return false;
                     }
                 }

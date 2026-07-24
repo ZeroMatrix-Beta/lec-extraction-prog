@@ -63,14 +63,15 @@ namespace AutoExtraction {
                         Console.WriteLine("API Profile sind nur für AI Studio relevant.");
                         continue;
                     }
-                    Console.Write("Neues API-Key Profil (0-3, 0 für Dediziert): ");
-                    if (int.TryParse(Console.ReadLine(), out int newProfile) && newProfile >= 0 && newProfile <= 3) {
-                        refinementConfig.AiStudioActiveApiProfile = newProfile;
-                        ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
-                    }
-                    else {
-                        Console.WriteLine("Ungültige Eingabe.");
-                    }
+                    refinementConfig.AiStudioActiveApiProfile = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                        refinementConfig.AiStudioActiveApiProfile,
+                        "LaTeX Refinement Session",
+                        newProfile => {
+                            refinementConfig.AiStudioActiveApiProfile = newProfile;
+                            ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
+                        },
+                        refinementConfig.AiStudioApiKeyEnvNames
+                    );
                     continue;
                 }
                 else if (menuChoice == "4") {

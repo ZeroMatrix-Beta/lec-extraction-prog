@@ -35,7 +35,7 @@ public static partial class ApiResilience {
         Func<GenerateContentResponse, Task> onChunkReceived,
         CancellationToken cancellationToken,
         int maxRetries = 8,
-        int initialBackoff = 120,
+        int initialBackoff = 130,
         string retryContext = "",
         Action? onRetry = null) {
         int backoff = initialBackoff;

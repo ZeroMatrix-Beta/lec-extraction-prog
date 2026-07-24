@@ -7,7 +7,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 0,
+  "AiStudioActiveApiProfile": 3,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
@@ -23,6 +23,7 @@
   "Step1MergeAndTimestamp": {
     "Enabled": true,
     "AttachAudio": true,
+    "RateLimitDelaySeconds": 130,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md",
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\merging_leftovers_example.md"
@@ -35,7 +36,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.6-flash",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
@@ -68,6 +69,7 @@
   "Step2SpeechRefinement": {
     "Enabled": true,
     "AttachAudio": true,
+    "RateLimitDelaySeconds": 130,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
@@ -79,7 +81,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.6-flash",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
@@ -112,6 +114,7 @@
   "Step3LastRefinement": {
     "Enabled": true,
     "AttachAudio": false,
+    "RateLimitDelaySeconds": 130,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
     ],
@@ -123,7 +126,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.6-flash",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,

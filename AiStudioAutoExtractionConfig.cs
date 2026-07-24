@@ -73,8 +73,27 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] If true, loaded history files are added to SystemInstruction instead of History, skipping the explicit handshake.
     public bool LoadHistoryIntoSystemInstruction { get; set; } = false;
 
+    // [AI Context] If true, image files in the history are embedded as inline blobs (InlineData) instead of being uploaded via the File API.
+    // Inline blobs are part of the stable request prefix and enable Google's implicit prefix caching.
+    // File API URIs are external references that prevent prefix caching.
+    // [Human] Wenn aktiviert, werden Bilder in der History als Inline-Blob eingebettet (Prefix-Cache-freundlich).
+    // Deaktivieren, wenn History-Bilder sehr groß sind und die Request-Payload zu groß wird.
+    public bool InlineHistoryImages { get; set; } = true;
+
+    // [AI Context] Controls how many multi-turn batches the history is split into when loading.
+    // 0 or 1 = all history in a single turn (legacy behavior).
+    // N > 1  = top-level subfolders are distributed evenly into N batches; each batch becomes its own
+    //          AcknowledgeHistory turn in _sessionPreamble, reducing per-request token count.
+    // [Human] Anzahl der Turns, in die die History aufgeteilt wird. 0/1 = alles in einem Turn.
+    // Z.B. 4 = die Subfolders werden gleichmäßig auf 4 Turns verteilt.
+    public int HistoryBatchCount { get; set; } = 0;
+
     // [AI Context] If true, previous .tex files are appended as read-only reference context to subsequent parts.
     public bool DebugSendReferenceFile { get; set; } = true;
+
+    // [AI Context] If true, sends a simple "Hello" debug roundtrip during initialization.
+    // [Human] Wenn aktiviert, wird ein einfacher "Hello"-Roundtrip zum Debuggen gesendet.
+    public bool DebugHelloRoundtrip { get; set; } = false;
 
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
@@ -105,5 +124,25 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
 
     public bool UseGoogleSearch { get; set; } = false;
     public string FfmpegPreset { get; set; } = "fast";
+
+    // [AI Context] Rate limit delay in seconds after processing video parts or chunk transitions to ensure token refill.
+    // [Human] Wartezeit in Sekunden nach einzelnen Video-Teilen (Standard: 130s).
+    public int VideoPartDelaySeconds { get; set; } = 130;
+
+    // [AI Context] Alias for VideoPartDelaySeconds for IAutoExtractionConfig interface compatibility.
+    public int RateLimitDelaySeconds {
+        get => VideoPartDelaySeconds;
+        set => VideoPartDelaySeconds = value;
+    }
+
+    // [AI Context] Dedicated rate limit delay in seconds after the base system instruction warmup (Step 0).
+    // [Human] Wartezeit in Sekunden nach der Basis-System-Instruction (Step 0) (Standard: 65s).
+    public int SystemInstructionDelaySeconds { get; set; } = 65;
+
+    // [AI Context] Dedicated rate limit delay in seconds between history loading/cache warming steps (e.g. 65s)
+    // to keep Google's implicit GPU prefix cache warm without causing cache eviction or token refill starvation.
+    // [Human] Spezielle Wartezeit in Sekunden während des History-Aufbaus (Standard: 65s).
+    public int HistoryRateLimitDelaySeconds { get; set; } = 65;
+
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

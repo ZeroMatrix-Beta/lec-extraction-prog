@@ -103,5 +103,6 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
 
     public bool UseGoogleSearch { get; set; } = false;
     public string FfmpegPreset { get; set; } = "fast";
+    public int RateLimitDelaySeconds { get; set; } = 130;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

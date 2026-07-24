@@ -45,7 +45,8 @@ public partial class Program {
                 Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
                 Console.WriteLine("  5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)");
                 Console.WriteLine("  6) ⚙️ Quellordner (Source Folders) verwalten & ändern");
-                Console.Write("\nChoice (1-6) or 'exit': ");
+                Console.WriteLine("  7) 🔑 API-Key Profile (AI Studio & Refinement) verwalten & ändern");
+                Console.Write("\nChoice (1-7) or 'exit': ");
 
                 string? mainChoice = Console.ReadLine()?.Trim().ToLower();
 
@@ -77,6 +78,9 @@ public partial class Program {
                     case "6":
                         ConfigureSourceFoldersMenu();
                         break;
+                    case "7":
+                        ConfigureApiKeysMenu();
+                        break;
                     default:
                         Console.WriteLine("Invalid choice.");
                         break;
@@ -103,14 +107,22 @@ public partial class Program {
 
     private static async Task RunDirectAiStudioChatAsync() {
         var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
+        int profile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+            config.ActiveApiProfile,
+            "Direct AI Studio Chat",
+            newProfile => {
+                config.ActiveApiProfile = newProfile;
+                ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(config);
+            },
+            config.AiStudioApiKeyEnvNames
+        );
+        config.ActiveApiProfile = profile;
 
-        // HIER IST DER FIX:
         string? extractedEnvName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
             ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
             : null;
 
         string envName = extractedEnvName ?? (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
-        // ENDE VOM FIX
 
         string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
@@ -192,17 +204,26 @@ public partial class Program {
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
             AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: false);
 
-            // HIER IST DER FIX:
+            int selectedProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                config.ActiveApiProfile,
+                "AI Studio Auto-Extraktion",
+                newProfile => {
+                    config.ActiveApiProfile = newProfile;
+                    ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
+                },
+                config.AiStudioApiKeyEnvNames
+            );
+            config.ActiveApiProfile = selectedProfile;
+
             string? extractedEnvName = (config.AiStudioApiKeyEnvNames != null && config.AiStudioApiKeyEnvNames.Length > config.ActiveApiProfile)
                 ? config.AiStudioApiKeyEnvNames[config.ActiveApiProfile]
                 : null;
 
             string envName = extractedEnvName ?? (config.ActiveApiProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{config.ActiveApiProfile}");
-            // ENDE VOM FIX
 
             string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps);
+            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps, config.InlineHistoryImages);
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
             var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load(); // Load config for refinement
             var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
@@ -270,4 +291,73 @@ public partial class Program {
             }
         }
     }
+
+    /// <summary>
+    /// [AI Context] Interactive menu enabling users to inspect and update API key profiles across all session configurations.
+    /// [Human] Menü zum Anzeigen und Ändern des aktiven API-Key Profils für alle KI-Sitzungen (Auto-Extraktion, Chat, LaTeX Refinement).
+    /// </summary>
+    private static void ConfigureApiKeysMenu() {
+        while (true) {
+            var aiStudioConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
+            var chatConfig = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
+            var latexConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
+
+            string autoExtProfileLabel = aiStudioConfig.ActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {aiStudioConfig.ActiveApiProfile}";
+            string chatProfileLabel = chatConfig.ActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {chatConfig.ActiveApiProfile}";
+            string latexProfileLabel = latexConfig.AiStudioActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {latexConfig.AiStudioActiveApiProfile}";
+
+            Console.WriteLine("\n==================================================");
+            Console.WriteLine("    🔑 API-Key Profil Konfiguration (JSON)        ");
+            Console.WriteLine("==================================================");
+            Console.WriteLine($" 1) Google AI Studio Auto-Extraktion: {autoExtProfileLabel}");
+            Console.WriteLine($" 2) Direct AI Studio Chat:          {chatProfileLabel}");
+            Console.WriteLine($" 3) LaTeX Refinement Session:       {latexProfileLabel}");
+            Console.WriteLine("--------------------------------------------------");
+            Console.WriteLine(" 4) Zurück zum Hauptmenü");
+            Console.Write("\nWelches API-Key Profil möchten Sie ansehen / ändern? (1-4): ");
+
+            string? choice = Console.ReadLine()?.Trim();
+            if (choice == "4" || choice == "exit" || choice == "quit") break;
+
+            switch (choice) {
+                case "1":
+                    aiStudioConfig.ActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                        aiStudioConfig.ActiveApiProfile,
+                        "AI Studio Auto-Extraktion",
+                        newProfile => {
+                            aiStudioConfig.ActiveApiProfile = newProfile;
+                            ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
+                        },
+                        aiStudioConfig.AiStudioApiKeyEnvNames
+                    );
+                    break;
+                case "2":
+                    chatConfig.ActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                        chatConfig.ActiveApiProfile,
+                        "Direct AI Studio Chat",
+                        newProfile => {
+                            chatConfig.ActiveApiProfile = newProfile;
+                            ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(chatConfig);
+                        },
+                        chatConfig.AiStudioApiKeyEnvNames
+                    );
+                    break;
+                case "3":
+                    latexConfig.AiStudioActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                        latexConfig.AiStudioActiveApiProfile,
+                        "LaTeX Refinement Session",
+                        newProfile => {
+                            latexConfig.AiStudioActiveApiProfile = newProfile;
+                            ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
+                        },
+                        latexConfig.AiStudioApiKeyEnvNames
+                    );
+                    break;
+                default:
+                    Console.WriteLine("Ungültige Auswahl.");
+                    break;
+            }
+        }
+    }
 }
+

@@ -525,11 +525,11 @@ public partial class DirectAiChatSessionAiStudio {
         GroundingMetadata? accumulatedGrounding = null;
 
         try {
-            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 120s before every GenerateContentStreamAsync request to Google AI Studio.
-            // HasJustUploaded is intentionally NOT checked here – the 120s in AttachmentHandler does not replace this per-request delay.
-            // [Human] Wir warten VOR JEDEM AI-Studio-Request 120 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
+            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 130s before every GenerateContentStreamAsync request to Google AI Studio.
+            // HasJustUploaded is intentionally NOT checked here – the 130s in AttachmentHandler does not replace this per-request delay.
+            // [Human] Wir warten VOR JEDEM AI-Studio-Request 130 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
             if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(120, "Warte 120 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
+                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
                     exceptionCaught = true;
                 }
             }

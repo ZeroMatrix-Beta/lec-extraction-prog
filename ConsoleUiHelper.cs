@@ -467,5 +467,82 @@ namespace FfmpegUtilities {
             
             return currentModel;
         }
+
+        /// <summary>
+        /// [AI Context] Interactive prompt verifying or updating the configured active API Key profile (0-3).
+        /// Checks environment variable resolution and allows persisting changes to configuration JSON.
+        /// [Human] Interaktiver Dialog zum Bestätigen oder Wechseln des aktiven API-Key Profils (0 für dediziert, 1-3 für Testprojekte).
+        /// </summary>
+        public static int ConfirmOrChangeApiKeyProfile(int currentProfile, string sessionName, Action<int>? onProfileChanged = null, string[]? envNames = null) {
+            envNames ??= [
+                "API_KEY-automated-content-extraction",
+                "API_KEY-ai-studio-test-project-1",
+                "API_KEY-ai-studio-test-project-2",
+                "API_KEY-ai-studio-test-project-3"
+            ];
+
+            static bool CheckEnvKey(string name) {
+                string? key = Environment.GetEnvironmentVariable(name)
+                           ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User)
+                           ?? Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.Machine);
+                return !string.IsNullOrEmpty(key);
+            }
+
+            string currentEnvName = (currentProfile >= 0 && currentProfile < envNames.Length)
+                ? envNames[currentProfile]
+                : (currentProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{currentProfile}");
+
+            string profileLabel = currentProfile == 0 ? "Dedizierter Key (0)" : $"Profil {currentProfile}";
+            bool hasCurrentKey = CheckEnvKey(currentEnvName);
+            string keyStatus = hasCurrentKey ? "✅ [VORHANDEN]" : "⚠️ [NICHT GEFUNDEN IN ENV]";
+
+            Console.WriteLine($"\n==================================================");
+            Console.WriteLine($" 🔑 API-Key Profil ({sessionName})");
+            Console.WriteLine($"==================================================");
+            Console.WriteLine($" Aktuelles Profil: {profileLabel} ({currentEnvName}) {keyStatus}");
+
+            Console.Write("\nMöchten Sie dieses API-Key Profil verwenden? (j/n, Standard: j): ");
+            string? choice = Console.ReadLine()?.Trim().ToLowerInvariant();
+
+            if (choice == "n" || choice == "nein" || choice == "no") {
+                Console.WriteLine("\nVerfügbare API-Key Profile:");
+                for (int i = 0; i < envNames.Length; i++) {
+                    string name = envNames[i];
+                    string label = i == 0 ? "Dedizierter Key" : $"Profil {i}";
+                    bool exists = CheckEnvKey(name);
+                    string status = exists ? "✅ [OK]" : "⚠️ [FEHLT IN ENV]";
+                    Console.WriteLine($"  {i}) {label} ({name}) {status}");
+                }
+
+                Console.Write($"\nBitte Profil auswählen (0-{envNames.Length - 1}) [Standard: {currentProfile}]: ");
+                string? profileChoice = Console.ReadLine()?.Trim();
+
+                if (profileChoice == "exit" || profileChoice == "quit") return currentProfile;
+
+                int newProfile = currentProfile;
+                if (int.TryParse(profileChoice, out int parsed) && parsed >= 0 && parsed < envNames.Length) {
+                    newProfile = parsed;
+                }
+
+                string newEnvName = envNames[newProfile];
+                string newLabel = newProfile == 0 ? "Dedizierter Key (0)" : $"Profil {newProfile}";
+                Console.WriteLine($"\n  🎯 Neues API-Key Profil ausgewählt: {newLabel} ({newEnvName})");
+
+                if (onProfileChanged != null) {
+                    Console.Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+                    string? saveChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
+                    if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+                        onProfileChanged.Invoke(newProfile);
+                        Console.WriteLine("  💾 [INFO] Das neue API-Key Profil wurde in der Konfiguration (JSON) gespeichert.");
+                    } else {
+                        Console.WriteLine("  [INFO] Die Änderung ist nur vorübergehend (wird nicht in JSON gespeichert).");
+                    }
+                }
+
+                return newProfile;
+            }
+
+            return currentProfile;
+        }
     }
-}
+}

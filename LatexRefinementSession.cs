@@ -98,7 +98,7 @@ public partial class LatexRefinementSession {
         Console.WriteLine("==================================================");
 
         // [AI Context] Reset HasJustUploaded when starting the pipeline so that any background audio upload
-        // or prior extraction steps don't suppress the initial 120-second token refill timer.
+        // or prior extraction steps don't suppress the initial 130-second token refill timer.
         AttachmentHandler.HasJustUploaded = false;
 
         await ExecutePipelineAsync();
@@ -722,7 +722,7 @@ public partial class LatexRefinementSession {
                 }
             }
             // [AI Context] Reset the rate-limit timer to now: loading system instructions takes time,
-            // so the 120s guard will count from here and enforce a proper gap before the first API call.
+            // so the guard will count from here and enforce a proper gap before the first API call.
             AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         }
 
@@ -927,8 +927,8 @@ public partial class LatexRefinementSession {
                     }
                 }
             }
-            expectedSpokenClean = System.Text.RegularExpressions.Regex.Matches(allInputText, @"\\begin\{spoken-clean\}").Count;
-            expectedMathStroke = System.Text.RegularExpressions.Regex.Matches(allInputText, @"\\begin\{math-stroke\}").Count;
+            expectedSpokenClean = SpokenCleanRegex().Count(allInputText);
+            expectedMathStroke = MathStrokeRegex().Count(allInputText);
             if (expectedSpokenClean > 0 || expectedMathStroke > 0) {
                 Console.WriteLine($"  [INFO] Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x spoken-clean und {expectedMathStroke}x math-stroke Blöcke im Output.");
             }
@@ -951,9 +951,10 @@ public partial class LatexRefinementSession {
         while (true) {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
+            int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
             double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < 120 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                int waitRemaining = (int)Math.Ceiling(120 - secondsSinceLastGen);
+            if (secondsSinceLastGen < rateLimitDelay && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+                int waitRemaining = (int)Math.Ceiling(rateLimitDelay - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem nächsten API-Aufruf...");
                 if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
                     break;
@@ -1060,10 +1061,10 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "model", Parts = [new Part { Text = chunkResp }] });
             history.Add(new Content { Role = "user", Parts = [new Part { Text = continuePrompt }] });
 
-            // [AI Context] A 120-second delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider. 2m0s ensures a full quota refresh.
-            // [Human] Wir warten hier 2 Minuten (120s), da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-            Console.WriteLine("  [Rate-Limit] Warte 120 Sekunden (Token Refill), damit die Quota vor den Batch-Teilen vollständig zurückgesetzt ist...");
-            if (!await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...")) {
+            // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
+            // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+            Console.WriteLine($"  [Rate-Limit] Warte {rateLimitDelay} Sekunden (Token Refill), damit die Quota vor den Batch-Teilen vollständig zurückgesetzt ist...");
+            if (!await ExtractionHelpers.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }
@@ -1075,12 +1076,12 @@ public partial class LatexRefinementSession {
 
         // --- STRUCTURAL INTEGRITY VERIFICATION ---
         if (!string.IsNullOrEmpty(fullResponseText) && (expectedSpokenClean > 0 || expectedMathStroke > 0)) {
-            int actualSpokenClean = System.Text.RegularExpressions.Regex.Matches(fullResponseText, @"\\begin\{spoken-clean\}").Count;
-            int actualMathStroke = System.Text.RegularExpressions.Regex.Matches(fullResponseText, @"\\begin\{math-stroke\}").Count;
+            int actualSpokenClean = SpokenCleanRegex().Count(fullResponseText);
+            int actualMathStroke = MathStrokeRegex().Count(fullResponseText);
             
-            // Tolerance: LLM shouldn't drop more than 20% of the blocks.
-            int minExpectedSpoken = (int)(expectedSpokenClean * 0.8);
-            int minExpectedMath = (int)(expectedMathStroke * 0.8);
+            // Tolerance: LLM shouldn't drop more than 40% of the blocks (allows normal merging by Schritt 1).
+            int minExpectedSpoken = (int)(expectedSpokenClean * 0.6);
+            int minExpectedMath = (int)(expectedMathStroke * 0.6);
 
             if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
                 Console.WriteLine($"\n[FATAL ERROR] SILENT TRUNCATION DETECTED!");
@@ -1225,9 +1226,10 @@ public partial class LatexRefinementSession {
         while (true) {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
+            int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds > 0 ? _config.Step3LastRefinement.RateLimitDelaySeconds : 130;
             double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < 120 && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                int waitRemaining = (int)Math.Ceiling(120 - secondsSinceLastGen);
+            if (secondsSinceLastGen < fixDelay && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+                int waitRemaining = (int)Math.Ceiling(fixDelay - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem PDF-Fix-Request...");
                 if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
                     break;
@@ -1298,8 +1300,8 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
 
-            Console.WriteLine($"\n  [Timer] Warte 120 Sekunden vor der Fortsetzung...");
-            if (!await ExtractionHelpers.SmartDelayAsync(120, "Warte auf Rate-Limits (Token Refill)...")) {
+            Console.WriteLine($"\n  [Timer] Warte {fixDelay} Sekunden vor der Fortsetzung...");
+            if (!await ExtractionHelpers.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 break;
             }
             currentRequest++;
@@ -1552,6 +1554,12 @@ Please return the fully corrected contents of `{finalFileName}` inside a ```late
         }
         return name;
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{spoken-clean\}")]
+    private static partial System.Text.RegularExpressions.Regex SpokenCleanRegex();
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{math-stroke\}")]
+    private static partial System.Text.RegularExpressions.Regex MathStrokeRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{document\}|\\end\{document\}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex DocumentTagsRegex();
