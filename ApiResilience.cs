@@ -141,8 +141,11 @@ public static partial class ApiResilience {
         return ex is System.Net.Http.HttpRequestException ||
                ex is System.Net.Sockets.SocketException ||
                ex is System.IO.IOException ||
+               ex is TimeoutException ||
                ex.InnerException is System.Net.Sockets.SocketException ||
                ex.InnerException is System.Net.Http.HttpRequestException ||
+               ex.InnerException is TimeoutException ||
+               msg.Contains("Timeout", StringComparison.OrdinalIgnoreCase) ||
                msg.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
                msg.Contains("No such host is known", StringComparison.OrdinalIgnoreCase) ||
                msg.Contains("Error while copying content to a stream", StringComparison.OrdinalIgnoreCase) ||

@@ -19,7 +19,7 @@ namespace Infrastructure;
 /// [AI Context] Injects required runtime dependencies.
 /// [Human] Konstruktor: Bekommt alle wichtigen Einstellungen (Pfade, Google Client) übergeben.
 /// </remarks>
-public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null, bool inlineImages = false) {
+public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null, bool inlineImages = false, int fileActivationDelaySeconds = 130, int uploadTimeoutSeconds = 240, int uploadMaxRetries = 10) {
     private static readonly HashSet<string> s_textExtensions = [".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex"];
     public static bool HasJustUploaded { get; set; } = false;
     private readonly string _uploadFolder = uploadFolder;
@@ -27,6 +27,9 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     private readonly bool _isAiStudio = isAiStudio;
     private readonly string _gcsBucketName = gcsBucketName;
     private readonly double? _googleVideoFps = googleVideoFps;
+    private readonly int _fileActivationDelaySeconds = fileActivationDelaySeconds;
+    private readonly int _uploadTimeoutSeconds = uploadTimeoutSeconds;
+    private readonly int _uploadMaxRetries = uploadMaxRetries;
     // [AI Context] If true, image files are embedded as InlineData blobs instead of being uploaded via File API.
     // Inline blobs are part of the stable request prefix and enable Google's implicit prefix caching.
     private readonly bool _inlineImages = inlineImages;
@@ -201,10 +204,20 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             // [Human] Das ist der direkte Datei-Upload über die Google AI Studio API (ohne GCS Buckets).
             WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
             try {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
                 var uploadedFile = await ApiResilience.ExecuteWithRetryAsync(
-                    () => _client.Files.UploadAsync(filePath, config: uploadConfig, cancellationToken: cancellationToken),
-                    maxRetries: 10,
+                    async () => {
+                        using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                        attemptCts.CancelAfter(TimeSpan.FromSeconds(_uploadTimeoutSeconds));
+                        try {
+                            return await _client.Files.UploadAsync(filePath, config: uploadConfig, cancellationToken: attemptCts.Token);
+                        }
+                        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+                            throw new TimeoutException($"Upload-Versuch für '{Path.GetFileName(filePath)}' hat nach {_uploadTimeoutSeconds}s nicht reagiert (Timeout).");
+                        }
+                    },
+                    maxRetries: _uploadMaxRetries,
                     retryContext: $"File API Upload: {Path.GetFileName(filePath)}"
                 );
 
@@ -213,9 +226,11 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                     return false;
                 }
 
+                stopwatch.Stop();
                 string remoteFileName = uploadedFile.Name;
 
                 WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
+                WriteLine($"  [AI Studio] Upload-Dauer: {stopwatch.Elapsed.Minutes} Minuten und {stopwatch.Elapsed.Seconds} Sekunden.");
                 Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
 
                 var fileInfo = await ApiResilience.ExecuteWithRetryAsync(
@@ -253,7 +268,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                     // [Human] Bei der AI Studio Version warten wir nach großen Datei-Aktivierungen (Videos/Audio).
                     // Für Bilder, PDFs und andere kleine Dateien (z.B. History-Uploads) überspringen wir das,
                     // da der Token-Verbrauch erst beim GenerateContent-Call passiert, nicht beim File-Upload.
-                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(130, "Warte 130 Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
+                    if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(_fileActivationDelaySeconds, $"Warte {_fileActivationDelaySeconds} Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
                         return false;
                     }
                 }

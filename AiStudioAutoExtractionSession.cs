@@ -172,7 +172,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                     if (!await WarmUpSystemInstructionCacheAsync(baseSysDelay)) return false;
                                 }
                                 else {
-                                    Console.WriteLine("\n  [Cache-Warming] Überspringe separaten Warmup für Basis System Instruction (wird mit erstem Batch vereint)...");
+                                    Console.WriteLine($"\n  [Cache-Warming] Überspringe separaten Warmup & Wartezeit ({baseSysDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...");
                                 }
 
                                 for (int batchIdx = 0; batchIdx < batches.Count; batchIdx++) {
@@ -207,14 +207,24 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                         }
                                     }
 
-                                    if (!await WarmUpSystemInstructionCacheAsync(historyDelay)) return false;
+                                    bool isLastBatch = batchIdx == batches.Count - 1;
+                                    bool shouldWarmup = true;
+                                    if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch) {
+                                        // Skip every second handshake (odd indices 1, 3, 5...)
+                                        if (batchIdx % 2 == 1) {
+                                            shouldWarmup = false;
+                                        }
+                                    }
+
+                                    if (shouldWarmup) {
+                                        if (!await WarmUpSystemInstructionCacheAsync(historyDelay)) return false;
+                                    }
+                                    else {
+                                        Console.WriteLine($"  [Cache-Warming] Überspringe Handshake & Wartezeit ({historyDelay}s) für Batch '{label}' (wird mit dem nächsten Batch vereint)...");
+                                    }
                                 }
 
-                                // Final post-history refill delay before Debug/Video calls
-                                int postHistoryDelay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 120;
                                 Console.WriteLine($"\n  [Tokens] History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}");
-                                Console.WriteLine($"  [Rate-Limit] Warte {postHistoryDelay}s (Token Refill) vor Haupt-Verarbeitung...");
-                                await ExtractionHelpers.SmartDelayAsync(postHistoryDelay, "Warte auf Token-Refill nach History-Aufbau...");
                             }
                             else {
                                 Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
@@ -1383,7 +1393,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                                ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                             if (System.IO.File.Exists(audioPath)) {
                                 Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
-                                var handler = new AttachmentHandler(refinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "");
+                                var handler = new AttachmentHandler(refinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
                                 var (s, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
                                 if (s) return attached;
                             }

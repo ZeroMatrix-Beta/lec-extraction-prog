@@ -139,6 +139,26 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Wartezeit in Sekunden nach der Basis-System-Instruction (Step 0) (Standard: 65s).
     public int SystemInstructionDelaySeconds { get; set; } = 65;
 
+    // [AI Context] Delay in seconds after uploading and activating a media file (like video) to prevent quota issues.
+    // [Human] Wartezeit in Sekunden nach der Datei-Aktivierung bei AI Studio (Standard: 130s).
+    public int FileActivationDelaySeconds { get; set; } = 130;
+
+    // [AI Context] Maximum timeout in seconds for a single video upload attempt before timing out and triggering a retry.
+    // [Human] Maximales Zeitlimit in Sekunden für einen einzelnen Upload-Versuch (Standard: 240s / 4 Min).
+    public int VideoUploadTimeoutSeconds { get; set; } = 240;
+
+    // [AI Context] Maximum retry attempts for uploading media files.
+    // [Human] Maximale Anzahl an Wiederholungsversuchen beim Datei-Upload (Standard: 10).
+    public int VideoUploadMaxRetries { get; set; } = 10;
+
+    // [AI Context] If true, merges the base system instruction and the first history batch into a single warmup request.
+    // [Human] Wenn true, wird die Basis-System-Instruction direkt mit dem ersten History-Batch vereint aufgewärmt (spart 1 Request).
+    public bool MergeSystemInstructionAndFirstHistoryBatch { get; set; } = false;
+
+    // [AI Context] If true, merges all consecutive history batches, handshaking only every second step to save API requests.
+    // [Human] Wenn true, wird nur bei jedem zweiten History-Batch ein Handshake durchgeführt, um API-Aufrufe einzusparen.
+    public bool MergeAllConsecutiveHistoryBatches { get; set; } = false;
+
     // [AI Context] Dedicated rate limit delay in seconds between history loading/cache warming steps (e.g. 65s)
     // to keep Google's implicit GPU prefix cache warm without causing cache eviction or token refill starvation.
     // [Human] Spezielle Wartezeit in Sekunden während des History-Aufbaus (Standard: 65s).
