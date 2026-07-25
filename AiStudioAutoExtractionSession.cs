@@ -804,9 +804,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var sysParts = new List<Part>();
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
         if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            var validParts = _config.CurrentModel.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase)
-                ? _historyParts.Where(p => !string.IsNullOrEmpty(p.Text) && p.InlineData == null && p.FileData == null)
-                : _historyParts;
+            var validParts = _historyParts.Where(p => p.FileData == null);
             sysParts.AddRange(validParts);
         }
         return sysParts;
@@ -994,10 +992,23 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
 
+        string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
+        if (_config.DebugSendReferenceFile) {
+            string contextText =
+                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+                "CRITICAL RULES:\n" +
+                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+                "2. Your SOLE task is to transcribe the new attached video segment verbatim.\n" +
+                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+            handshakeText = contextText + handshakeText;
+        }
+
         var pingContent = new List<Content> {
             new() {
                 Role = "user",
-                Parts = [new Part { Text = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'" }]
+                Parts = [new Part { Text = handshakeText }]
             }
         };
 
@@ -1029,6 +1040,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
 
                 Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich.");
+                if (!string.IsNullOrWhiteSpace(responseText)) {
+                    Console.WriteLine($"  [Gemini Antwort] {responseText.Trim()}");
+                }
                 if (inputTokens > 0) {
                     Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
                 }
@@ -1446,12 +1460,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
                 }
 
-                /* 
+                /************************************************************************************************************************
                  * [Human Context] Here is where all the magic happens. We call the function   GenerateTexFromUploadedPartAsync to generate the LaTeX code for the current part. 
                  * This function is the core of the program and is responsible for generating the LaTeX code for the current part.
-                 */
+                 ************************************************************************************************************************/
 
-                result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+                result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles); // generated TexFiles could contain part0 for instance.
 
                 fileTotalInputTokens += result.partInputTokens;
                 fileTotalOutputTokens += result.partOutputTokens;
@@ -1682,6 +1696,33 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment. Hält die Prompt-Reihenfolge strikt ein, damit Googles impliziter Cache optimal greift.
     /// </summary>
     private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+        var requestConfig = new GenerateContentConfig {
+            Temperature = _config.Temperature,
+            TopP = _config.TopP,
+            TopK = _config.TopK,
+            MaxOutputTokens = _config.MaxOutputTokens
+        };
+
+        // Create System Instruction at the very beginning of the request setup
+        var sysParts = GetValidSystemInstructionParts();
+        if (sysParts.Count > 0) {
+            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+        }
+
+        if (SupportsThinking(_config.CurrentModel)) {
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+            }
+        }
+
+        if (_config.UseGoogleSearch) {
+            requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
+        }
+
         var userPromptParts = new List<Part>();
 
         // 1. If DebugSendReferenceFile is enabled, inline previous .tex files BEFORE the video payload to enable implicit prefix caching across parts.
@@ -1716,31 +1757,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         history.AddRange(_sessionPreamble);
         history.Add(new Content { Role = "user", Parts = userPromptParts });
 
-        var requestConfig = new GenerateContentConfig {
-            Temperature = _config.Temperature,
-            TopP = _config.TopP,
-            TopK = _config.TopK,
-            MaxOutputTokens = _config.MaxOutputTokens
-        };
-
-        if (_config.UseGoogleSearch) {
-            requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
-        }
-
-        var sysParts = GetValidSystemInstructionParts();
-        if (sysParts.Count > 0) {
-            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
-        }
-        if (SupportsThinking(_config.CurrentModel)) {
-            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-            }
-            else if (_config.ThinkingBudget.HasValue) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
-            }
-        }
-
         string fullResponse = "";
         int currentRequest = 1;
         int maxRequestsPerPart = 6;
@@ -1761,11 +1777,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
             Console.WriteLine($"    - Video-Token: {videoCount.TotalTokens}");
 
-            var contextParts = userPromptParts.Where(p => p.FileData?.MimeType == "text/plain").ToList();
-            for (int i = 0; i < contextParts.Count; i++) {
-                var texContents = new List<Content> { new() { Role = "user", Parts = [contextParts[i]] } };
+            if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0 && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
+                var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
                 var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
-                Console.WriteLine($"    - Kontext-Datei {i + 1} ({Path.GetFileName(previousTexFiles[i])}) Token: {texCount.TotalTokens}");
+                Console.WriteLine($"    - Inlined Kontext ({previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}) Token: {texCount.TotalTokens}");
             }
 
             var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, history);
