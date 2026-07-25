@@ -2,6 +2,7 @@ namespace Config;
 
 public interface IAutoExtractionConfig {
     bool GoIntoLatexRefinement { get; }
+    bool UseChosenModelForRestOfPipeline { get; }
     bool GenerateOffsetFiles { get; }
     bool GenerateAudioFile { get; }
     int NumberOfParts { get; }
@@ -14,5 +15,6 @@ public interface IAutoExtractionConfig {
     bool UseGoogleSearch { get; }
     YouTubeTranscriptionTask[] YouTubeTasks { get; }
     string FfmpegPreset { get; }
-    int RateLimitDelaySeconds { get; }
+    bool DebugSendReferenceFile { get; }
+    bool InlinePrecedingLecTexParts { get; }
 }

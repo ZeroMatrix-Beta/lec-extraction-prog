@@ -130,11 +130,14 @@ public static partial class ApiResilience {
         string msg = ex.Message;
         string exStr = ex.ToString();
 
-        // Explicit rate limit or server error HTTP status codes should be handled by regular backoff, not network pause.
+        // Explicit rate limit, schema, or server error HTTP status codes should be handled by regular backoff or fail fast, not network pause.
         if (msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
             msg.Contains("quota", StringComparison.OrdinalIgnoreCase) ||
             msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) ||
-            msg.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+            msg.Contains("high demand", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Only text is supported", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Thinking level is not supported", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("INVALID_ARGUMENT", StringComparison.OrdinalIgnoreCase)) {
             return false;
         }
 
@@ -160,12 +163,25 @@ public static partial class ApiResilience {
     /// [Human] Erkennt, ob ein Fehler nur vorübergehend ist (z.B. Netzwerk-Wackler, Server überlastet) oder ob wir wirklich abbrechen müssen.
     /// </summary>
     public static bool IsTransientError(Exception ex) {
-        if (IsNetworkConnectionError(ex)) return true;
         string msg = ex.Message;
         string exStr = ex.ToString();
+
+        // Non-recoverable API schema errors must fail fast and not trigger retries
+        if (msg.Contains("Only text is supported", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("Thinking level is not supported", StringComparison.OrdinalIgnoreCase) ||
+            msg.Contains("INVALID_ARGUMENT", StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+
+        if (IsNetworkConnectionError(ex)) return true;
+
         return msg.Contains("429") || msg.Contains("503") || msg.Contains("502") || msg.Contains("500") ||
-               exStr.Contains("ServerError") || msg.Contains("quota", StringComparison.OrdinalIgnoreCase) ||
-               msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) || msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+               exStr.Contains("ServerError") || exStr.Contains("ClientError") ||
+               msg.Contains("quota", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("QuotaFailure", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

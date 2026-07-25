@@ -24,7 +24,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     public static readonly string[] AvailableModels = [
         "gemini-3.6-flash",
         "gemini-3.5-flash",
-        "gemini-3-flash-preview"
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash"
     ];
 
     private Client _client = client;
@@ -226,6 +227,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                                 Console.WriteLine($"\n  [Tokens] History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}");
                             }
+                            /* Load all history files into the system instructiions at once */
                             else {
                                 Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
                                 List<string> nonTextHistoryFiles = [];
@@ -252,7 +254,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                     }
                                 }
                                 _systemInstructionText = instructionBuilder.ToString();
-                                if (!await WarmUpSystemInstructionCacheAsync()) return false;
+                                if (!await WarmUpSystemInstructionCacheAsync()) {
+                                    return false;
+                                }
                             }
                             _historyWasLoaded = true;
                         }
@@ -363,6 +367,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string logDest = !string.IsNullOrWhiteSpace(_sessionLogger.CurrentSessionLogPath)
                 ? _sessionLogger.CurrentSessionLogPath
                 : _config.LogFolder;
+
+            // Logg System instructions at `logDest`
             await ExtractionHelpers.LogSystemInstructionDumpAsync(logDest, _systemInstructionText, _historyParts);
         }
 
@@ -654,14 +660,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         if (SupportsThinking(_config.CurrentModel)) {
-            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                }
-                else if (_config.ThinkingBudget.HasValue) {
-                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
-                }
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
             }
         }
 
@@ -787,14 +791,25 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (exceptionCaught || cts.IsCancellationRequested) {
             Console.WriteLine("\n\n[INFO] Debug-Chat durch Benutzer abgebrochen.");
         }
-
-        if (!string.IsNullOrWhiteSpace(fullResponse)) {
+        else if (!string.IsNullOrWhiteSpace(fullResponse)) {
             _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
         }
         else if (_debugChatHistory.Count > 0 && _debugChatHistory.Last().Role == "user") {
             // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
             _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
         }
+    }
+
+    private List<Part> GetValidSystemInstructionParts() {
+        var sysParts = new List<Part>();
+        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
+        if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+            var validParts = _config.CurrentModel.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase)
+                ? _historyParts.Where(p => !string.IsNullOrEmpty(p.Text) && p.InlineData == null && p.FileData == null)
+                : _historyParts;
+            sysParts.AddRange(validParts);
+        }
+        return sysParts;
     }
 
     /// <summary>
@@ -826,21 +841,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (_config.UseGoogleSearch) {
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
-            var sysParts = new List<Part>();
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
+        var sysParts = GetValidSystemInstructionParts();
+        if (sysParts.Count > 0) {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (SupportsThinking(_config.CurrentModel)) {
-            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                }
-                else if (_config.ThinkingBudget.HasValue) {
-                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
-                }
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
             }
         }
 
@@ -978,9 +989,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             MaxOutputTokens = 100
         };
 
-        var sysParts = new List<Part>();
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
-        if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
+        var sysParts = GetValidSystemInstructionParts();
         if (sysParts.Count > 0) {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
@@ -1032,6 +1041,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
         catch (Exception ex) {
             Console.WriteLine($"  [WARNUNG] Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.");
+            int delay = customDelay ?? (_config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130);
+            Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill nach Handshake)...");
+            await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
         }
         return true;
     }
@@ -1050,9 +1062,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             MaxOutputTokens = 200
         };
 
-        var sysParts = new List<Part>();
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
-        if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
+        var sysParts = GetValidSystemInstructionParts();
         if (sysParts.Count > 0) {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
@@ -1084,7 +1094,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     _sessionTotalCachedTokens += cachedTokens;
                     _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
                 }
-                
+
                 Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {Math.Max(0, inputTokens - cachedTokens):N0} | Output: {outputTokens:N0}");
                 Console.WriteLine($"  [Gemini Antwort] {fullResponse.Trim()}");
                 success = true;
@@ -1108,7 +1118,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.WriteLine($"  [Rate-Limit] Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
             await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
             return true;
-        } else {
+        }
+        else {
             Console.WriteLine("[FEHLER] Debug Roundtrip fehlgeschlagen.");
             return false;
         }
@@ -1265,6 +1276,20 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
                 baseName = "step1-" + baseName;
             }
+
+            if (_config.DebugSendReferenceFile) {
+                string part0Path = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part0.tex");
+                if (!System.IO.File.Exists(part0Path)) {
+                    string part0Content =
+                        "% ==========================================\n" +
+                        "% DUMMY REFERENCE FILE FOR PREFIX CACHING\n" +
+                        "% ==========================================\n" +
+                        "This is a dummy reference file created for Google Gemini API prefix caching consistency across video parts.\n" +
+                        "Please ignore the content of this dummy header file completely and proceed with transcribing the video fragment!";
+                    await System.IO.File.WriteAllTextAsync(part0Path, part0Content);
+                }
+                generatedTexFiles.Add(part0Path);
+            }
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
             int fileTotalInputTokens = 0;
@@ -1283,9 +1308,24 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.GoIntoLatexRefinement) {
                 if (_latexRefinementConfig != null) {
                     _latexRefinementConfig.UseVertex = false;
-                    if (_config.NumberOfParts <= 1) {
+                    if (_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
                         Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
                         _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
+                    }
+                    if (_config.UseChosenModelForRestOfPipeline) {
+                        Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...");
+                        void applyParams(Config.BackendParameters target) {
+                            target.CurrentModel = _config.CurrentModel;
+                            target.Temperature = _config.Temperature;
+                            target.TopP = _config.TopP;
+                            target.TopK = _config.TopK;
+                            target.MaxOutputTokens = _config.MaxOutputTokens;
+                            target.ThinkingBudget = _config.ThinkingBudget;
+                            target.ThinkingLevel = _config.ThinkingLevel;
+                        }
+                        if (_latexRefinementConfig.Step1MergeAndTimestamp?.AiStudio != null) applyParams(_latexRefinementConfig.Step1MergeAndTimestamp.AiStudio);
+                        if (_latexRefinementConfig.Step2SpeechRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step2SpeechRefinement.AiStudio);
+                        if (_latexRefinementConfig.Step3LastRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step3LastRefinement.AiStudio);
                     }
                 }
                 string? extractedRefinementEnvName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
@@ -1297,6 +1337,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
                 refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
             }
+
+            // Handle Audio File Generation
             Task? audioExtractionTask = null;
             void startAudioTask() {
                 if (_config.GenerateAudioFile && audioExtractionTask == null) {
@@ -1340,7 +1382,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     continue;
                 }
 
+                // [Human Context] declearing the variable `result` as a tuple.
                 (string texOutput, int partInputTokens, int partOutputTokens, int partCachedTokens) result;
+
                 bool uploadSuccess;
                 string? parsedPrompt;
                 List<Part> attachmentParts;
@@ -1401,6 +1445,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         });
                     }
                 }
+
+                /* 
+                 * [Human Context] Here is where all the magic happens. We call the function   GenerateTexFromUploadedPartAsync to generate the LaTeX code for the current part. 
+                 * This function is the core of the program and is responsible for generating the LaTeX code for the current part.
+                 */
 
                 result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
@@ -1626,64 +1675,41 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     /// <summary>
     /// [AI Context] Executes the Gemini API generation call for a single video segment.
-    /// To guarantee 100% implicit prefix cache hits across multi-part extractions, prompt parts are assembled in strict prefix-stable order:
-    /// 1. Primary payload (attachmentParts / video) first.
-    /// 2. Segment-specific parameters second.
-    /// 3. Read-only reference context (previousTexFiles) trailing at the very end.
+    /// To guarantee optimal implicit prefix cache hits across multi-part extractions, prompt parts are assembled in strict prefix-stable order:
+    /// 1. Read-only reference context (previousTexFiles) inlined first BEFORE the video to form a growing shared prefix across parts.
+    /// 2. Primary payload (attachmentParts / video) second.
+    /// 3. Segment-specific parameters third.
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment. Hält die Prompt-Reihenfolge strikt ein, damit Googles impliziter Cache optimal greift.
     /// </summary>
     private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
-        // [AI Context] 1. Primary payload first (attachmentParts / video) to maintain prefix alignment.
-        // [Human] Zuerst das Video anfügen, damit der Prompt-Anfang für das implizite Caching stabil bleibt.
-        userPromptParts.AddRange(attachmentParts);
-
-        // 2. Add the segment prompt parameters
-        if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
-            userPromptParts.Add(new Part { Text = parsedPrompt });
-        }
-
-        // 3. Append previous .tex files as read-only reference context AT THE END via Google File API
-        // Putting reference context at the end ensures the static prefix (System Instruction + Video) is completely uncorrupted by dynamic prior outputs.
+        // 1. If DebugSendReferenceFile is enabled, inline previous .tex files BEFORE the video payload to enable implicit prefix caching across parts.
         if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
-            Console.WriteLine("  [Kontext] Lade folgende bereits generierte .tex-Dateien über die Google File API als Referenzkontext hoch:");
+            Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
             string contextText =
-                "IMPORTANT CONTEXT WARNING: Below are attached LaTeX files generated from previous parts of this lecture.\n" +
-                "You must treat them strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
                 "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
                 "CRITICAL RULES:\n" +
                 "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
-                $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
+                "2. Your SOLE task is to transcribe the new attached video segment verbatim.\n" +
                 "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
-            userPromptParts.Add(new() { Text = contextText.TrimEnd() });
 
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
-                try {
-                    var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = "text/plain" };
-                    var uploadedFile = await ApiResilience.ExecuteWithRetryAsync(
-                        () => _client.Files.UploadAsync(texFile, config: uploadConfig),
-                        maxRetries: 5,
-                        retryContext: $"File API Upload .tex: {Path.GetFileName(texFile)}"
-                    );
-
-                    if (uploadedFile?.Uri != null) {
-                        userPromptParts.Add(new Part {
-                            FileData = new FileData {
-                                FileUri = uploadedFile.Uri,
-                                MimeType = "text/plain"
-                            }
-                        });
-                        Console.WriteLine($"      [Uploaded .tex] URI: {uploadedFile.Uri}");
-                    }
-                }
-                catch (Exception ex) {
-                    Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                    Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                    Console.WriteLine($"      [WARNUNG] Upload von '{Path.GetFileName(texFile)}' fehlgeschlagen. Fahre fort.");
-                }
+                string content = await System.IO.File.ReadAllTextAsync(texFile);
+                contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
             }
+            userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
+        }
+
+        // 2. Primary payload (attachmentParts / video)
+        userPromptParts.AddRange(attachmentParts);
+
+        // 3. Add the segment prompt parameters
+        if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
+            userPromptParts.Add(new Part { Text = parsedPrompt });
         }
 
         var history = new List<Content>();
@@ -1701,21 +1727,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText) || (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0)) {
-            var sysParts = new List<Part>();
-            if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
-            if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) sysParts.AddRange(_historyParts);
+        var sysParts = GetValidSystemInstructionParts();
+        if (sysParts.Count > 0) {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
         if (SupportsThinking(_config.CurrentModel)) {
-            if (_config.ThinkingBudget.HasValue || !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel;
-                }
-                else if (_config.ThinkingBudget.HasValue) {
-                    requestConfig.ThinkingConfig.ThinkingBudget = _config.ThinkingBudget;
-                }
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
             }
         }
 
@@ -1735,17 +1757,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         try {
             Console.WriteLine("\n  [Token-Analyse] Berechne Token-Anzahl für die einzelnen Bestandteile...");
-            var videoContents = new List<Content> { new Content { Role = "user", Parts = attachmentParts } };
+            var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
             var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
             Console.WriteLine($"    - Video-Token: {videoCount.TotalTokens}");
 
             var contextParts = userPromptParts.Where(p => p.FileData?.MimeType == "text/plain").ToList();
             for (int i = 0; i < contextParts.Count; i++) {
-                var texContents = new List<Content> { new Content { Role = "user", Parts = [contextParts[i]] } };
+                var texContents = new List<Content> { new() { Role = "user", Parts = [contextParts[i]] } };
                 var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
                 Console.WriteLine($"    - Kontext-Datei {i + 1} ({Path.GetFileName(previousTexFiles[i])}) Token: {texCount.TotalTokens}");
             }
-            
+
             var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, history);
             Console.WriteLine($"    -> Gesamt-Token in History (Video + Kontext + Prompt): {totalCount.TotalTokens}\n");
         }

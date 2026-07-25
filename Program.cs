@@ -223,7 +223,9 @@ public partial class Program {
 
             string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps, config.InlineHistoryImages, config.FileActivationDelaySeconds, config.VideoUploadTimeoutSeconds, config.VideoUploadMaxRetries);
+            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps, config.InlineHistoryImages, config.FileActivationDelaySeconds, config.VideoUploadTimeoutSeconds, config.VideoUploadMaxRetries) {
+                ClientFactory = () => GoogleAiClientBuilder.BuildAiStudioClient(apiKey)
+            };
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
             var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load(); // Load config for refinement
             var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);

@@ -25,7 +25,8 @@ public partial class DirectAiChatSessionAiStudio {
     public static readonly string[] AvailableModels = [
         "gemini-3.6-flash",
         "gemini-3.5-flash",
-        "gemini-3-flash-preview"
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash"
     ];
 
     private readonly DirectAiChatSessionAiStudioConfig _config;
@@ -458,17 +459,14 @@ public partial class DirectAiChatSessionAiStudio {
             config.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        // [AI Context] Safely inject Thinking parameters ONLY for gemini-3-flash-preview.
-        // gemini-3.5-flash will bypass thinking configuration to keep extraction fast and stable.
+        // [AI Context] Safely inject Thinking parameters.
         if (SupportsThinking(selectedModel)) {
-            if (AIParams.ThinkingBudget.HasValue || !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
-                config.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
-                    config.ThinkingConfig.ThinkingLevel = AIParams.ThinkingLevel;
-                }
-                else if (AIParams.ThinkingBudget.HasValue) {
-                    config.ThinkingConfig.ThinkingBudget = AIParams.ThinkingBudget;
-                }
+            bool isGemini25 = selectedModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
+                config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
+            }
+            else if (AIParams.ThinkingBudget.HasValue) {
+                config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = AIParams.ThinkingBudget };
             }
         }
 

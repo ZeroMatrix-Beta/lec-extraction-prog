@@ -57,12 +57,20 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] If true, previous .tex files are appended as read-only reference context to subsequent parts.
     public bool DebugSendReferenceFile { get; set; } = true;
 
+    // [AI Context] If true, inlines previously generated lecture .tex parts as text before the video attachment.
+    // Placing preceding .tex content before the video allows Google's implicit prefix caching to match across sequential parts (e.g. Part 3 reuses the prefix from Part 2).
+    // [Human] Wenn aktiviert, werden vorherige .tex-Teile direkt vor dem Video im Prompt eingebettet. Dies ermöglicht schrittweises Prefix-Caching über aufeinanderfolgende Videoteile.
+    public bool InlinePrecedingLecTexParts { get; set; } = true;
+
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
     public bool GenerateAudioFile { get; set; } = true; // Set to true to match AiStudio
     
     // [AI Context] If true, the session will attempt to seamlessly refine the output into a single LaTeX document, provided other prerequisites are met.
     public bool GoIntoLatexRefinement { get; set; } = true;
+
+    // [AI Context] If true, the chosen extraction model and AI parameters will be used in-memory for all subsequent LaTeX refinement steps.
+    public bool UseChosenModelForRestOfPipeline { get; set; } = true;
 
     // [AI Context] Number of overlapping parts to split the video into for processing to circumvent AI Studio context limits.
     // [Human] Anzahl der überlappenden Video-Teile, in die die Vorlesung geschnitten wird. Standard: 3.

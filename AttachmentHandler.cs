@@ -33,6 +33,8 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
     // [AI Context] If true, image files are embedded as InlineData blobs instead of being uploaded via File API.
     // Inline blobs are part of the stable request prefix and enable Google's implicit prefix caching.
     private readonly bool _inlineImages = inlineImages;
+    public Func<Client>? ClientFactory { get; set; }
+
     private Client _client = client;
 
     /// <summary>
@@ -211,7 +213,8 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                         using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                         attemptCts.CancelAfter(TimeSpan.FromSeconds(_uploadTimeoutSeconds));
                         try {
-                            return await _client.Files.UploadAsync(filePath, config: uploadConfig, cancellationToken: attemptCts.Token);
+                            var activeClient = ClientFactory != null ? ClientFactory() : _client;
+                            return await activeClient.Files.UploadAsync(filePath, config: uploadConfig, cancellationToken: attemptCts.Token);
                         }
                         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
                             throw new TimeoutException($"Upload-Versuch für '{Path.GetFileName(filePath)}' hat nach {_uploadTimeoutSeconds}s nicht reagiert (Timeout).");

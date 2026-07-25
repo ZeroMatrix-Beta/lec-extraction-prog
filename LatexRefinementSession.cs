@@ -865,19 +865,14 @@ public partial class LatexRefinementSession {
         }
 
         if (SupportsThinking(backendParams.CurrentModel)) {
-            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel);
-            bool hasBudget = backendParams.ThinkingBudget.HasValue;
-
-            if (hasLevel || hasBudget) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel!;
-                }
-                else if (hasBudget) {
-                    int budget = backendParams.ThinkingBudget!.Value;
-                    if (budget > 32768) budget = 32768;
-                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
-                }
+            bool isGemini25 = backendParams.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = backendParams.ThinkingLevel };
+            }
+            else if (backendParams.ThinkingBudget.HasValue) {
+                int budget = backendParams.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 
@@ -1195,19 +1190,14 @@ public partial class LatexRefinementSession {
         };
 
         if (SupportsThinking(backendParams.CurrentModel)) {
-            bool hasLevel = !string.IsNullOrEmpty(backendParams.ThinkingLevel);
-            bool hasBudget = backendParams.ThinkingBudget.HasValue;
-
-            if (hasLevel || hasBudget) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = backendParams.ThinkingLevel!;
-                }
-                else if (hasBudget) {
-                    int budget = backendParams.ThinkingBudget!.Value;
-                    if (budget > 32768) budget = 32768;
-                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
-                }
+            bool isGemini25 = backendParams.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = backendParams.ThinkingLevel };
+            }
+            else if (backendParams.ThinkingBudget.HasValue) {
+                int budget = backendParams.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 

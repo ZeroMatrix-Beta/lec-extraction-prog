@@ -396,16 +396,14 @@ public class DirectAiChatSessionVertex {
         // [AI Context] Safely inject Thinking parameters ONLY for gemini-3-flash-preview.
         // gemini-3.5-flash will bypass thinking configuration to keep extraction fast and stable.
         if (SupportsThinking(selectedModel)) {
-            if (AIParams.ThinkingBudget.HasValue || !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
-                config.ThinkingConfig = new ThinkingConfig();
-                if (!string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
-                    config.ThinkingConfig.ThinkingLevel = AIParams.ThinkingLevel;
-                }
-                else if (AIParams.ThinkingBudget.HasValue) {
-                    int budget = AIParams.ThinkingBudget.Value;
-                    if (budget > 32768) budget = 32768;
-                    config.ThinkingConfig.ThinkingBudget = budget;
-                }
+            bool isGemini25 = selectedModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
+                config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
+            }
+            else if (AIParams.ThinkingBudget.HasValue) {
+                int budget = AIParams.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                config.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 

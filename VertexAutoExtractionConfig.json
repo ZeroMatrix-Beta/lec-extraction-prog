@@ -37,6 +37,7 @@
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "DebugSendReferenceFile": true,
+  "InlinePrecedingLecTexParts": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
   "NumberOfParts": 3,

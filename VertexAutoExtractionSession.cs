@@ -730,19 +730,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         if (SupportsThinking(_config.CurrentModel)) {
-            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
-            bool hasBudget = _config.ThinkingBudget.HasValue;
-
-            if (hasLevel || hasBudget) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
-                }
-                else if (hasBudget) {
-                    int budget = _config.ThinkingBudget!.Value;
-                    if (budget > 32768) budget = 32768;
-                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
-                }
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                int budget = _config.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 
@@ -918,19 +913,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
         }
         if (SupportsThinking(_config.CurrentModel)) {
-            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
-            bool hasBudget = _config.ThinkingBudget.HasValue;
-
-            if (hasLevel || hasBudget) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
-                }
-                else if (hasBudget) {
-                    int budget = _config.ThinkingBudget!.Value;
-                    if (budget > 32768) budget = 32768;
-                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
-                }
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                int budget = _config.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 
@@ -1575,17 +1565,35 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
-        // [AI Context] 1. Primary payload first (attachmentParts / video) to maintain prefix alignment.
-        // [Human] Zuerst das Video anfügen, damit der Prompt-Anfang für das Caching stabil bleibt.
+        // 1. If InlinePrecedingLecTexParts is enabled, inline previous .tex files BEFORE the video payload to enable implicit prefix caching across parts.
+        if (_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
+            Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
+            string contextText =
+                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+                "CRITICAL RULES:\n" +
+                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+                $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
+                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+            foreach (var texFile in previousTexFiles) {
+                Console.WriteLine($"    - {Path.GetFileName(texFile)}");
+                string content = await System.IO.File.ReadAllTextAsync(texFile);
+                contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
+            }
+            userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
+        }
+
+        // 2. Primary payload (attachmentParts / video)
         userPromptParts.AddRange(attachmentParts);
 
-        // 2. Add segment prompt parameters
+        // 3. Add segment prompt parameters
         if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
             userPromptParts.Add(new Part { Text = parsedPrompt });
         }
 
-        // 3. Append previous .tex files as read-only reference context AT THE END
-        if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
+        // 4. Fallback: Append previous .tex files AT THE END if InlinePrecedingLecTexParts is disabled
+        if (!_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
             string contextText =
                 "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
@@ -1637,19 +1645,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
         }
         if (SupportsThinking(_config.CurrentModel)) {
-            bool hasLevel = !string.IsNullOrEmpty(_config.ThinkingLevel);
-            bool hasBudget = _config.ThinkingBudget.HasValue;
-
-            if (hasLevel || hasBudget) {
-                requestConfig.ThinkingConfig = new ThinkingConfig();
-                if (hasLevel) {
-                    requestConfig.ThinkingConfig.ThinkingLevel = _config.ThinkingLevel!;
-                }
-                else if (hasBudget) {
-                    int budget = _config.ThinkingBudget!.Value;
-                    if (budget > 32768) budget = 32768;
-                    requestConfig.ThinkingConfig.ThinkingBudget = budget;
-                }
+            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+            }
+            else if (_config.ThinkingBudget.HasValue) {
+                int budget = _config.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 
