@@ -10,6 +10,15 @@
     <DisableImplicitProgramMain>true</DisableImplicitProgramMain>
   </PropertyGroup>
 
+  <!-- The project file sits in the repository root, so the default globs would sweep up
+       every .cs file underneath it. Keep the test project and local build artefacts out. -->
+  <ItemGroup>
+    <Compile Remove="tests/**" />
+    <Compile Remove="build_test_bin/**" />
+    <None Remove="tests/**" />
+    <None Remove="build_test_bin/**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Google.Cloud.AIPlatform.V1" Version="3.72.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.14.0" />

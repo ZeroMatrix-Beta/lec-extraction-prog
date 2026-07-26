@@ -60,3 +60,7 @@ TestResult.xml
 nunit-*.xml
 bild.jpg
 chat_log.md
+
+# Local build/inspection artefacts kept on disk but not tracked
+build_test_bin/
+git_show_result.txt

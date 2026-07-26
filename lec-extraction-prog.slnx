@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/LectureExtraction.Tests/LectureExtraction.Tests.csproj" />
+  </Folder>
+  <Project Path="lec-extraction-prog.csproj" />
+</Solution>
