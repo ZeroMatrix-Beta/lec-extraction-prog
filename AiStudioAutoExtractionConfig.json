@@ -6,7 +6,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "SourceFolder": "D:\\lecture-videos\\analysis2",
+  "SourceFolder": "D:\\lecture-videos\\grundstrukturen",
   "PredefinedSourceFolders": [
     "D:\\lecture-videos\\analysis2",
     "D:\\lecture-videos\\grundstrukturen",
@@ -41,8 +41,8 @@
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
-  "InlineHistoryImages": false,
-  "HistoryBatchCount": 3,
+  "InlineHistoryImages": true,
+  "HistoryBatchCount": 5,
   "DebugSendReferenceFile": true,
   "InlinePrecedingLecTexParts": true,
   "DebugHelloRoundtrip": false,
@@ -57,13 +57,13 @@
   "UseGoogleSearch": false,
   "FfmpegPreset": "fast",
   "VideoPartDelaySeconds": 150,
-  "SystemInstructionDelaySeconds": 94,
+  "SystemInstructionDelaySeconds": 150,
   "FileActivationDelaySeconds": 150,
   "VideoUploadTimeoutSeconds": 360,
   "VideoUploadMaxRetries": 3,
   "MergeSystemInstructionAndFirstHistoryBatch": true,
   "MergeAllConsecutiveHistoryBatches": false,
-  "SendDummyFileWithEachWarmUpRound": false,
-  "HistoryRateLimitDelaySeconds": 94,
+  "SendDummyFileWithEachWarmUpRound": true,
+  "HistoryRateLimitDelaySeconds": 150,
   "YouTubeTasks": []
 }
