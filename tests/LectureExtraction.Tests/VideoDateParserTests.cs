@@ -1,4 +1,4 @@
-using AutoExtraction;
+using LectureExtraction.Media;
 
 namespace LectureExtraction.Tests;
 

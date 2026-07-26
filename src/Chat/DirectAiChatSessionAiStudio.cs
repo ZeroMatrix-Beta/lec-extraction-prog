@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using AutoExtraction;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,14 +7,15 @@ using System.Threading;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
-using GoogleGenAi;
-using Config;
-using DirectChatAiInteraction;
-using Infrastructure;
+using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
+using LectureExtraction.Extraction;
+using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
 using static System.Console;
-using DirectChatAiInteraction.AiStudio;
 
-namespace DirectChatAiInteraction.AiStudio;
+namespace LectureExtraction.Chat;
+
 /// <summary>
 /// [AI Context] Core REPL (Read-Eval-Print Loop) manager for the conversational AI interface.
 /// Maintains stateful chat history and handles API interactions using the Google.GenAI SDK.
@@ -96,7 +96,7 @@ public partial class DirectAiChatSessionAiStudio {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
                 int idx = Array.IndexOf(_config.Model, newModel);
                 if (idx >= 0) _config.CurrentModelIndex = idx;
                 _config.CurrentModel = newModel;
@@ -526,8 +526,8 @@ public partial class DirectAiChatSessionAiStudio {
             // [AI Context] Rate-Limit & Quota Guardrail: Always wait 130s before every GenerateContentStreamAsync request to Google AI Studio.
             // HasJustUploaded is intentionally NOT checked here – the 130s in AttachmentHandler does not replace this per-request delay.
             // [Human] Wir warten VOR JEDEM AI-Studio-Request 130 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
-            if (!AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
-                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
+            if (!ExtractionHelpers.IsInSmartDelay) {
+                if (!await ExtractionHelpers.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
                     exceptionCaught = true;
                 }
             }
@@ -681,10 +681,10 @@ public partial class DirectAiChatSessionAiStudio {
             string? newApiKey;
             if (newProfile == 0) {
                 // [AI Context] Profile 0 is a convention for the dedicated, high-quota extraction key.
-                newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
+                newApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
             }
             else {
-                newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
+                newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
             }
 
             if (!string.IsNullOrEmpty(newApiKey)) {

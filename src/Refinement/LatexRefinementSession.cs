@@ -5,13 +5,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
-using DocumentUtilities;
-using Config;
-using AutoExtraction;
-using Infrastructure;
 using Google.Cloud.Storage.V1;
+using LectureExtraction.Configuration;
+using LectureExtraction.Extraction;
+using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
+using LectureExtraction.Latex;
+using LectureExtraction.Media;
 
-namespace DirectChatAiInteraction;
+namespace LectureExtraction.Refinement;
 
 /// <summary>
 /// [AI Context] Post-processing pipeline that takes sequentially extracted LaTeX chunks and deterministically merges them into a single, cohesive document.
@@ -485,7 +487,7 @@ public partial class LatexRefinementSession {
 
         List<Part> audioParts = [];
         if (audioExists) {
-            double dur = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(audioFilePath!);
+            double dur = await FfmpegToolkit.GetVideoDurationAsync(audioFilePath!);
             TimeSpan t = TimeSpan.FromSeconds(dur);
             audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
 
@@ -723,7 +725,7 @@ public partial class LatexRefinementSession {
             }
             // [AI Context] Reset the rate-limit timer to now: loading system instructions takes time,
             // so the guard will count from here and enforce a proper gap before the first API call.
-            AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+            ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         }
 
         // [AI Context] Context caching is Vertex AI only. AiStudio (Google API key) does not support caching.
@@ -947,11 +949,11 @@ public partial class LatexRefinementSession {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
             int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
-            double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < rateLimitDelay && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+            double secondsSinceLastGen = (DateTime.UtcNow - ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
+            if (secondsSinceLastGen < rateLimitDelay && !ExtractionHelpers.IsInSmartDelay) {
                 int waitRemaining = (int)Math.Ceiling(rateLimitDelay - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem nächsten API-Aufruf...");
-                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
+                if (!await ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
                     break;
                 }
             }
@@ -1127,7 +1129,7 @@ public partial class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
             Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
 
-            AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+            ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             return outPath;
         }
@@ -1217,11 +1219,11 @@ public partial class LatexRefinementSession {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
             int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds > 0 ? _config.Step3LastRefinement.RateLimitDelaySeconds : 130;
-            double secondsSinceLastGen = (DateTime.UtcNow - AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < fixDelay && !AutoExtraction.ExtractionHelpers.IsInSmartDelay) {
+            double secondsSinceLastGen = (DateTime.UtcNow - ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
+            if (secondsSinceLastGen < fixDelay && !ExtractionHelpers.IsInSmartDelay) {
                 int waitRemaining = (int)Math.Ceiling(fixDelay - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem PDF-Fix-Request...");
-                if (!await AutoExtraction.ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
+                if (!await ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
                     break;
                 }
             }
@@ -1329,7 +1331,7 @@ public partial class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(standalonePath, standaloneContent);
             Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (Versuch #{roundNumber}, mit Preamble) gespeichert unter: {standalonePath}");
 
-            AutoExtraction.ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+            ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             Console.WriteLine($"  [INFO] Starte PDF-Kompilierung für step5 (Fix-Versuch #{roundNumber})...");
             var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);
@@ -1375,7 +1377,7 @@ public partial class LatexRefinementSession {
             ? _config.AiStudioApiKeyEnvNames[_config.AiStudioActiveApiProfile]
             : "API_KEY";
 
-        string? apiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envVarName);
+        string? apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envVarName);
         if (string.IsNullOrEmpty(apiKey)) {
             Console.WriteLine($"\n[FEHLER] Antigravity Agent benötigt einen gültigen API-Key in der Umgebungsvariable '{envVarName}'.");
             return false;
@@ -1400,7 +1402,7 @@ public partial class LatexRefinementSession {
             string wrapperContent = preamble + "\n\\begin{document}\n\n" + $"\\input{{{finalFileName}}}\n\n" + "\\end{document}\n";
             await System.IO.File.WriteAllTextAsync(wrapperPath, wrapperContent);
 
-            var (success, log) = await DocumentUtilities.LatexToolkit.CompilePdfAsync(wrapperPath);
+            var (success, log) = await LatexToolkit.CompilePdfAsync(wrapperPath);
             string logContent = FormatLatexLog(log, success);
             string logPath = Path.Combine(targetFolder, "step4-compile-log.txt");
             await System.IO.File.WriteAllTextAsync(logPath, logContent);
@@ -1488,7 +1490,7 @@ Please return the fully corrected contents of `{finalFileName}` inside a ```late
                     }
 
                     if (!string.IsNullOrWhiteSpace(agentOutput)) {
-                        string cleanedText = AutoExtraction.ExtractionHelpers.CleanLatexResponse(agentOutput);
+                        string cleanedText = ExtractionHelpers.CleanLatexResponse(agentOutput);
                         
                         await System.IO.File.WriteAllTextAsync(finalTexFile, cleanedText);
                         Console.WriteLine($"\n✅ [Antigravity Agent API] Agent hat Korrekturen angewendet und in `{finalFileName}` gespeichert. Starte nächsten Kompilierungs-Versuch...");

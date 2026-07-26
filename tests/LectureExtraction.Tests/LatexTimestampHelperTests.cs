@@ -1,4 +1,4 @@
-using DocumentUtilities;
+using LectureExtraction.Latex;
 
 namespace LectureExtraction.Tests;
 

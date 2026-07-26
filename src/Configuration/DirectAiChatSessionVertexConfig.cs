@@ -1,9 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
-using Config;
-using DirectChatAiInteraction.Vertex;
 
-namespace DirectChatAiInteraction.Vertex;
+namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// [AI Context] DTO for Vertex AI specific configurations.

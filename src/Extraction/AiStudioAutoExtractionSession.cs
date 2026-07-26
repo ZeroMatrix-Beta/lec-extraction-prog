@@ -5,14 +5,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Globalization;
-using System.Threading.Tasks; // Removed DirectChatAiInteraction as SessionLogger is now in Infrastructure
-using Infrastructure;
+using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
-using Config; // Added for LatexRefinementConfig
-using DocumentUtilities; // Added for LatexTimestampHelper
+using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
+using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
+using LectureExtraction.Latex;
+using LectureExtraction.Media;
+using LectureExtraction.Refinement;
 
-namespace AutoExtraction;
+namespace LectureExtraction.Extraction;
 
 /// <summary>
 /// [AI Context] Orchestrates the fully automated transcription pipeline. 
@@ -603,7 +607,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
             }
             else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) {
-                var files = FfmpegUtilities.ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
+                var files = ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
                 if (files.Length > 0) {
                     await SetupContextAndProcessAsync(files);
                 }
@@ -650,14 +654,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (int.TryParse(profileInput, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
                     string? newApiKey;
                     if (newProfile == 0) {
-                        newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
+                        newApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
                     }
                     else {
-                        newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKey(newProfile);
+                        newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
                     }
 
                     if (!string.IsNullOrEmpty(newApiKey)) {
-                        _client = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
+                        _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
                         _attachmentHandler.UpdateClient(_client);
                         _config.ActiveApiProfile = newProfile;
                         ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
@@ -1128,7 +1132,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Removed dateStr from filename pattern for caching to work across days for 2-hour window
                 var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
 
-                double fullOriginalVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(file); // Get original video duration
+                double fullOriginalVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(file); // Get original video duration
                 TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
                 bool useCache = false;
 
@@ -1166,12 +1170,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                     if (wasInputFilePreCompressedWhenCached) {
                         // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
-                        speedVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(file);
+                        speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(file);
                     }
                     else {
                         // Otherwise, it was the output of ProcessGeneralVideoAsync that was cached.
                         string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
-                        speedVideoDuration = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
+                        speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                     }
                     double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0;
                     var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
@@ -1195,7 +1199,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
                 else {
                     Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
-                    videoToSplit = await FfmpegUtilities.FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true, preset: _config.FfmpegPreset);
+                    videoToSplit = await FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true, preset: _config.FfmpegPreset);
                     if (videoToSplit == null) {
                         Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
                         continue;
@@ -1203,7 +1207,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
 
                 Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
-                var rawPartsWithTimes = await FfmpegUtilities.FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: _config.FfmpegPreset);
+                var rawPartsWithTimes = await FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: _config.FfmpegPreset);
 
                 if (rawPartsWithTimes.Count > 0) {
                     List<(string FilePath, double StartTime)> safePartsWithTimes = [];
@@ -1269,7 +1273,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
                     if (_config.UseChosenModelForRestOfPipeline) {
                         Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...");
-                        void applyParams(Config.BackendParameters target) {
+                        void applyParams(BackendParameters target) {
                             target.CurrentModel = _config.CurrentModel;
                             target.Temperature = _config.Temperature;
                             target.TopP = _config.TopP;
@@ -1289,8 +1293,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
                     ? extractedRefinementEnvName
                     : "API_KEY-latex-refinement";
-                string refinementApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
-                refinementClient = GoogleGenAi.GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
+                string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
+                refinementClient = GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
             }
 
             // Handle Audio File Generation
@@ -1311,7 +1315,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     else {
                         audioExtractionTask = Task.Run(async () => {
                             Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await FfmpegUtilities.FfmpegToolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
+                            await FfmpegToolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
                             Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
                         });
                     }
@@ -1522,7 +1526,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
                 // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
-                var refinementSession = new DirectChatAiInteraction.LatexRefinementSession(
+                var refinementSession = new LatexRefinementSession(
                     refinementClient ?? _client,
                     _latexRefinementConfig!,
                     refinementTargetFile,
@@ -1624,7 +1628,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
-        double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
+        double partDurationSeconds = await FfmpegToolkit.GetVideoDurationAsync(partFile);
         TimeSpan partDuration = TimeSpan.FromSeconds(partDurationSeconds);
         string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", partDuration.Minutes, partDuration.Seconds);
 

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text; // Added for StringBuilder
 using System.Threading.Tasks;
 
-namespace FfmpegUtilities;
+namespace LectureExtraction.Media;
 
 
 /// <summary>

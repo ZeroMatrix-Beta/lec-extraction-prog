@@ -1,4 +1,4 @@
-using Infrastructure;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Tests;
 

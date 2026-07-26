@@ -1,4 +1,4 @@
-namespace Config;
+namespace LectureExtraction.Configuration;
 
 public interface IAutoExtractionConfig {
     bool GoIntoLatexRefinement { get; }

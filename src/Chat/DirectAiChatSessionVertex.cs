@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoExtraction;
 using System.Threading;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
-using Config;
-using Infrastructure;
-using DirectChatAiInteraction;
+using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
+using LectureExtraction.Extraction;
+using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
 using static System.Console;
-using DirectChatAiInteraction.Vertex; // Added for the config classes
 
-namespace DirectChatAiInteraction.Vertex;
+namespace LectureExtraction.Chat;
 
 /// <summary>
 /// [AI Context] Core REPL manager specifically for Google Cloud Vertex AI interactions.
@@ -73,7 +73,7 @@ public class DirectAiChatSessionVertex {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = FfmpegUtilities.ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
+            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
                 int idx = Array.IndexOf(_config.Model, newModel);
                 if (idx >= 0) _config.CurrentModelIndex = idx;
                 _config.CurrentModel = newModel;

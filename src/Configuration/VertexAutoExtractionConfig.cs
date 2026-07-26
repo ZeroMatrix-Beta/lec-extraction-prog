@@ -1,8 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
-using Config;
 
-namespace AutoExtraction;
+namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// [AI Context] Configuration for the enterprise Vertex AI tier.

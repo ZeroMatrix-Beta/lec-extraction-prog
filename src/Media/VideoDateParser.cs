@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 
-namespace AutoExtraction;
+namespace LectureExtraction.Media;
 
 /// <summary>
 /// [AI Context] Helper class to parse date, weekday, and week number information from video filenames.

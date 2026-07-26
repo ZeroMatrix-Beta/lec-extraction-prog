@@ -1,9 +1,5 @@
 using System.Reflection;
-using AutoExtraction;
-using Config;
-using DirectChatAiInteraction.AiStudio;
-using DirectChatAiInteraction.Vertex;
-using FfmpegUtilities;
+using LectureExtraction.Configuration;
 using Newtonsoft.Json.Linq;
 
 namespace LectureExtraction.Tests;

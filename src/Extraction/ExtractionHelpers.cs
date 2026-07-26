@@ -4,10 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Config;
-using Infrastructure;
+using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
+using LectureExtraction.Media;
 
-namespace AutoExtraction;
+namespace LectureExtraction.Extraction;
 
 /// <summary>
 /// [AI Context] Shared utility methods to reduce code duplication across different extraction session types.
@@ -264,7 +266,7 @@ public static partial class ExtractionHelpers {
             }
             else {
                 string ext = Path.GetExtension(child.Name).ToLowerInvariant();
-                string icon = FfmpegUtilities.ConsoleUiHelper.GetFileIcon(ext);
+                string icon = ConsoleUiHelper.GetFileIcon(ext);
                 string label = (showRelativePath && !string.IsNullOrEmpty(child.RelativePath) && !string.Equals(child.RelativePath, child.Name, StringComparison.OrdinalIgnoreCase))
                     ? $"{child.Name} ({child.RelativePath})"
                     : child.Name;

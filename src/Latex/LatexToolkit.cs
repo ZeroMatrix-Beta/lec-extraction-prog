@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DocumentUtilities;
+namespace LectureExtraction.Latex;
 
 /// <summary>
 /// [AI Context] This class acts as an autonomous local build agent. It does not interact with GenAI models.

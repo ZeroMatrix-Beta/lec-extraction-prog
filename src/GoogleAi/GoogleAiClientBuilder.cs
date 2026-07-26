@@ -2,7 +2,7 @@ using System;
 using Google.GenAI;
 using Google.GenAI.Types;
 
-namespace GoogleGenAi;
+namespace LectureExtraction.GoogleAi;
 
 /// <summary>
 /// [AI Context] Encapsulates the configuration, credential resolution, and instantiation of the Google GenAI SDK Client.

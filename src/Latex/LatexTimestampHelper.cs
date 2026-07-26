@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace DocumentUtilities;
+namespace LectureExtraction.Latex;
 
 public static partial class LatexTimestampHelper {
     /// <summary>

@@ -1,15 +1,16 @@
 using System;
 using System.Threading.Tasks;
-using DirectChatAiInteraction;
-using DirectChatAiInteraction.AiStudio;
-using DirectChatAiInteraction.Vertex;
-using FfmpegUtilities;
-using GoogleGenAi;
 using Google.GenAI;
-using Config;
-using Infrastructure;
+using LectureExtraction.Chat;
+using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
+using LectureExtraction.Extraction;
+using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
+using LectureExtraction.Media;
+using LectureExtraction.Refinement;
 
-namespace AutoExtraction;
+namespace LectureExtraction.App;
 
 /// <summary>
 /// [AI Context] Main application entry point. Orchestrates the execution flow by delegating
@@ -172,12 +173,12 @@ public partial class Program {
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
-                AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: true);
+                ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: true);
             });
             if (selectedModel == "__EXIT__") return;
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
-            AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: true);
+            ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: true);
 
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
             var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
@@ -197,12 +198,12 @@ public partial class Program {
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
-                AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: false);
+                ExtractionHelpers.SyncModelToRefinementConfig(newModel, isVertex: false);
             });
             if (selectedModel == "__EXIT__") return;
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
-            AutoExtraction.ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: false);
+            ExtractionHelpers.SyncModelToRefinementConfig(selectedModel, isVertex: false);
 
             int selectedProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
                 config.ActiveApiProfile,
@@ -236,7 +237,7 @@ public partial class Program {
     private static async Task RunLatexRefinementAsync() {
         var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
         var extractionConfig = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
-        await AutoExtraction.RefinementUiHelper.StartInteractiveRefinementAsync(config, extractionConfig);
+        await RefinementUiHelper.StartInteractiveRefinementAsync(config, extractionConfig);
     }
 
     // [AI Context] Interactive menu enabling users to inspect and update source folders across all session profiles.

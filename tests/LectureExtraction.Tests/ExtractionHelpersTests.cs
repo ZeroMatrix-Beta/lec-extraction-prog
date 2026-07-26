@@ -1,4 +1,4 @@
-using AutoExtraction;
+using LectureExtraction.Extraction;
 
 namespace LectureExtraction.Tests;
 

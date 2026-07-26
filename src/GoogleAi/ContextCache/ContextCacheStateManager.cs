@@ -9,7 +9,7 @@ using Google.GenAI.Types;
 using File = System.IO.File;
 using Environment = System.Environment;
 
-namespace AutoExtraction;
+namespace LectureExtraction.GoogleAi;
 
 /// <summary>
 /// [AI Context] Manages the lifecycle and disk persistence of Google Cloud Context Cache states.

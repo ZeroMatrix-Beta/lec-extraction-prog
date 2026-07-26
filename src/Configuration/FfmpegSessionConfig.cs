@@ -1,6 +1,4 @@
-using Config;
-
-namespace FfmpegUtilities;
+namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// [AI Context] Configuration DTO for the interactive FFmpeg session.

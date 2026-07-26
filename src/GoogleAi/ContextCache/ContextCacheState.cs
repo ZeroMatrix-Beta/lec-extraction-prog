@@ -1,6 +1,6 @@
 using System;
 
-namespace AutoExtraction;
+namespace LectureExtraction.GoogleAi;
 
 /// <summary>
 /// [AI Context] Persistent state model for Google Cloud Context Caching.

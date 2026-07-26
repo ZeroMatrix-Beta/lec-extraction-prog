@@ -1,8 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
-using Config;
 
-namespace AutoExtraction;
+namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// [AI Context] Configuration DTO for unattended batch processing using AI Studio endpoints.

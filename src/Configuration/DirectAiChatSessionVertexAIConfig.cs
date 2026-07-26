@@ -1,6 +1,4 @@
-using Config;
-
-namespace DirectChatAiInteraction.Vertex;
+namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// [AI Context] Localized generation parameters for the Vertex AI Enterprise session.

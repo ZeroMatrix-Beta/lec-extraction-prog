@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using AutoExtraction; // For ExtractionHelpers
+using LectureExtraction.Extraction; // For ExtractionHelpers
 using Google.GenAI.Types;
 
-namespace Infrastructure;
+namespace LectureExtraction.GoogleAi;
 
 /// <summary>
 /// [AI Context] Provides a centralized, resilient execution wrapper for Google GenAI API calls.

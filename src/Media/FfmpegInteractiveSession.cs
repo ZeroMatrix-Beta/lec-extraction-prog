@@ -4,9 +4,10 @@ using System.Globalization;
 using System.IO;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Config;
+using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
 
-namespace FfmpegUtilities;
+namespace LectureExtraction.Media;
 
 /// <summary>
 /// [AI Context] Manages FFmpeg preprocessing tasks for video/audio files before feeding them to the AI.

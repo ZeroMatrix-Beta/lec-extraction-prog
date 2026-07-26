@@ -1,6 +1,4 @@
-using Config;
-
-namespace Infrastructure;
+namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// Configuration for the SessionLogger, defining where log files should be stored.
