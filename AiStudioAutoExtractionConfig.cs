@@ -138,13 +138,6 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Wartezeit in Sekunden nach einzelnen Video-Teilen (Standard: 130s).
     public int VideoPartDelaySeconds { get; set; } = 130;
 
-    // [AI Context] Alias for VideoPartDelaySeconds for IAutoExtractionConfig interface compatibility.
-    [JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public int RateLimitDelaySeconds {
-        get => VideoPartDelaySeconds;
-        set => VideoPartDelaySeconds = value;
-    }
 
     // [AI Context] Dedicated rate limit delay in seconds after the base system instruction warmup (Step 0).
     // [Human] Wartezeit in Sekunden nach der Basis-System-Instruction (Step 0) (Standard: 65s).
@@ -169,6 +162,12 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [AI Context] If true, merges all consecutive history batches, handshaking only every second step to save API requests.
     // [Human] Wenn true, wird nur bei jedem zweiten History-Batch ein Handshake durchgeführt, um API-Aufrufe einzusparen.
     public bool MergeAllConsecutiveHistoryBatches { get; set; } = false;
+
+    // [AI Context] If true, the dummy-part0.tex file is included in EVERY warm-up handshake round, not just the last one.
+    // This ensures Google's implicit prefix cache sees a consistent user-turn structure (contextText + dummy + staticBeginning)
+    // across all warm-up rounds, potentially improving cache association and avoiding quota errors on the final round.
+    // [Human] Wenn true, wird dummy-part0.tex bei JEDEM Warm-up-Handshake mitgesendet (nicht nur beim letzten).
+    public bool SendDummyFileWithEachWarmUpRound { get; set; } = false;
 
     // [AI Context] Dedicated rate limit delay in seconds between history loading/cache warming steps (e.g. 65s)
     // to keep Google's implicit GPU prefix cache warm without causing cache eviction or token refill starvation.
