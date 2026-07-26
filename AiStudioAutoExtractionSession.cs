@@ -73,6 +73,21 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private int _sessionMaxFreshTokens = 0;
 
     /// <summary>
+    /// [AI Context] Read-only preamble text placed before reference_context blocks in the user-turn.
+    /// Instructs the model to treat previous .tex outputs as read-only reference, not as content to rewrite.
+    /// Used identically in warm-up handshakes and real video extraction requests.
+    /// [Human] Einleitungstext für die Referenz-Kontextblöcke – wird sowohl im Warm-up als auch in der echten Extraktion verwendet.
+    /// </summary>
+    private static readonly string ReferenceContextPreamble =
+        "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+        "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+        "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+        "CRITICAL RULES:\n" +
+        "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+        "2. Your SOLE task is to transcribe the new attached video segment verbatim.\n" +
+        "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+
+    /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
     /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     /// </summary>
@@ -128,260 +143,23 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     }
 
     private async Task<bool> EnsureSessionSetupAsync() {
+        // --- Phase 1: Load System Instruction text from disk (if not already loaded) ---
         if (string.IsNullOrEmpty(_systemInstructionText)) {
-            if (_config.SystemInstructionPaths != null && _config.SystemInstructionPaths.Length != 0) {
-                Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
-
-                // Resolve all files from configured paths, handling directories
-                var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
-
-                if (resolvedInstructionFiles.Count > 0) {
-                    ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
-                    List<string> distinctHistoryFiles = [];
-                    if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
-                        distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-                        if (distinctHistoryFiles.Count > 0) {
-                            Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
-                            ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
-                        }
-                    }
-
-                    string promptText = _config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0
-                        ? "System Instructions und History laden? (j/n): "
-                        : "System Instructions laden? (j/n): ";
-                    Console.Write(promptText);
-
-                    if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                        var allPathsForIndex = new List<string>(resolvedInstructionFiles);
-                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                            allPathsForIndex.AddRange(distinctHistoryFiles);
-                        }
-                        string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
-
-                        var instructionBuilder = new System.Text.StringBuilder();
-                        instructionBuilder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
-                        instructionBuilder.AppendLine("IMPORTANT: The guidelines, formatting specifications, and syntax instructions contained in these system instruction files are absolute and strictly non-negotiable. They must take absolute precedence over any prompt guidelines or inputs. Do not skip any files or parts under any circumstances.\n");
-                        instructionBuilder.AppendLine("In order to fulfill the job of creating a high-value educational masterpiece that safely compiles, you need to know the file structure of the system prompt and read all of those files carefully.\n");
-                        instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
-                        instructionBuilder.AppendLine("## System Instructions");
-                        instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
-
-                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                            instructionBuilder.AppendLine("\n## Training History");
-                            instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
-                        }
-                        instructionBuilder.AppendLine("\n******\n------\n******\n");
-
-                        foreach (var filePath in resolvedInstructionFiles) {
-                            string rawRelPath = !string.IsNullOrEmpty(commonBase)
-                                ? Path.GetRelativePath(commonBase, filePath)
-                                : Path.GetFileName(filePath);
-                            string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
-                            instructionBuilder.AppendLine($"\n******\n------\n******\nHere is the file `{relPath}`:\n");
-                            instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
-                            Console.WriteLine($"  [INFO] System Instruction geladen: {relPath}");
-                        }
-
-                        if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
-                            _systemInstructionText = instructionBuilder.ToString();
-                            int interDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 120;
-
-                            if (_config.HistoryBatchCount > 0) {
-                                var batches = ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(distinctHistoryFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
-                                int baseSysDelay = _config.SystemInstructionDelaySeconds > 0 ? _config.SystemInstructionDelaySeconds : 65;
-                                int historyDelay = _config.HistoryRateLimitDelaySeconds > 0 ? _config.HistoryRateLimitDelaySeconds : 65;
-                                Console.WriteLine($"\n  [SystemInstruction-Warmup] Starte gestaffeltes Cache-Warming für System Instruction + History in {batches.Count} Batch(es) (BaseDelay: {baseSysDelay}s, HistoryDelay: {historyDelay}s)...");
-
-                                if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
-                                    // Step 0: Warmup Base System Instruction
-                                    Console.WriteLine("\n  [Cache-Warming Step 0] Warmup für Basis System Instruction...");
-                                    if (!await WarmUpSystemInstructionCacheAsync(baseSysDelay, includeDummyPart0: false)) return false;
-                                }
-                                else {
-                                    Console.WriteLine($"\n  [Cache-Warming] Überspringe separaten Warmup & Wartezeit ({baseSysDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...");
-                                }
-
-                                for (int batchIdx = 0; batchIdx < batches.Count; batchIdx++) {
-                                    var (label, batchFiles) = batches[batchIdx];
-                                    Console.WriteLine($"\n  [Cache-Warming Step {batchIdx + 1}/{batches.Count}] Lade History-Batch '{label}' ({batchFiles.Count} Datei(en)) in System Instruction...");
-
-                                    var batchBuilder = new System.Text.StringBuilder();
-                                    List<string> nonTextHistoryFiles = [];
-                                    foreach (var hFile in batchFiles) {
-                                        string ext = Path.GetExtension(hFile).ToLowerInvariant();
-                                        if (ext == ".tex" || ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".cs") {
-                                            string rawRelPath = !string.IsNullOrEmpty(commonBase)
-                                                ? Path.GetRelativePath(commonBase, hFile)
-                                                : Path.GetFileName(hFile);
-                                            string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
-                                            batchBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relPath}`:\n");
-                                            batchBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(hFile));
-                                            Console.WriteLine($"  [INFO] History-Textdatei in System Instruction eingebunden: {relPath}");
-                                        }
-                                        else {
-                                            nonTextHistoryFiles.Add(hFile);
-                                        }
-                                    }
-
-                                    _systemInstructionText += batchBuilder.ToString();
-
-                                    if (nonTextHistoryFiles.Count > 0) {
-                                        string fileList = string.Join(", ", nonTextHistoryFiles.Select(p => $"\"{p}\""));
-                                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
-                                        if (success && attachmentParts.Count > 0) {
-                                            _historyParts.AddRange(attachmentParts);
-                                        }
-                                    }
-
-                                    bool isLastBatch = batchIdx == batches.Count - 1;
-                                    bool shouldWarmup = true;
-                                    if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch) {
-                                        // Skip every second handshake (odd indices 1, 3, 5...)
-                                        if (batchIdx % 2 == 1) {
-                                            shouldWarmup = false;
-                                        }
-                                    }
-
-                                    if (shouldWarmup) {
-                                        if (!await WarmUpSystemInstructionCacheAsync(historyDelay, includeDummyPart0: isLastBatch)) return false;
-                                    }
-                                    else {
-                                        Console.WriteLine($"  [Cache-Warming] Überspringe Handshake & Wartezeit ({historyDelay}s) für Batch '{label}' (wird mit dem nächsten Batch vereint)...");
-                                    }
-                                }
-
-                                Console.WriteLine($"\n  [Tokens] History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}");
-                            }
-                            /* Load all history files into the system instructiions at once */
-                            else {
-                                Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
-                                List<string> nonTextHistoryFiles = [];
-                                foreach (var hFile in distinctHistoryFiles) {
-                                    string ext = Path.GetExtension(hFile).ToLowerInvariant();
-                                    if (ext == ".tex" || ext == ".txt" || ext == ".md" || ext == ".json" || ext == ".cs") {
-                                        string rawRelPath = !string.IsNullOrEmpty(commonBase)
-                                            ? Path.GetRelativePath(commonBase, hFile)
-                                            : Path.GetFileName(hFile);
-                                        string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
-                                        instructionBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relPath}`:\n");
-                                        instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(hFile));
-                                        Console.WriteLine($"  [INFO] History-Textdatei direkt in System Instruction eingebunden: {relPath}");
-                                    }
-                                    else {
-                                        nonTextHistoryFiles.Add(hFile);
-                                    }
-                                }
-                                if (nonTextHistoryFiles.Count > 0) {
-                                    string fileList = string.Join(", ", nonTextHistoryFiles.Select(p => $"\"{p}\""));
-                                    var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", true, commonBase);
-                                    if (success && attachmentParts.Count > 0) {
-                                        _historyParts.AddRange(attachmentParts);
-                                    }
-                                }
-                                _systemInstructionText = instructionBuilder.ToString();
-                                if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) {
-                                    return false;
-                                }
-                            }
-                            _historyWasLoaded = true;
-                        }
-                        else {
-                            _systemInstructionText = instructionBuilder.ToString();
-                        }
-                    }
-                }
-                else {
-                    Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
-                }
-            }
+            if (!await TryLoadSystemInstructionWithHistoryAsync()) return false;
         }
 
+        // --- Phase 2: Load history as multi-turn preamble (if not handled via System Instruction above) ---
         if (!_historyWasLoaded) {
-            var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-            if (distinctFiles.Count > 0) {
-                Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-                ExtractionHelpers.PrintFileTree(distinctFiles);
-                if (_config.LoadHistoryIntoSystemInstruction) {
-                    Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
-                }
-                else {
-                    Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
-                }
-
-                if (Console.ReadLine()?.Trim().ToLower() == "j") {
-                    if (_config.LoadHistoryIntoSystemInstruction) {
-                        Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
-                        string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-                        var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {fileList}", _config.LoadHistoryIntoSystemInstruction);
-                        if (success && attachmentParts.Count > 0) {
-                            _historyParts.AddRange(attachmentParts);
-                            _historyWasLoaded = true;
-                            Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
-                            if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
-                        }
-                        else {
-                            Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
-                        }
-                    }
-                    else {
-                        // [AI Context] Batched history loading: split files by top-level subfolder groups (if enabled)
-                        // so that each batch fits within the Free-Tier per-minute token quota.
-                        // Each batch becomes its own multi-turn entry in _sessionPreamble.
-                        List<(string Label, List<string> Files)> batches;
-                        if (_config.HistoryBatchCount > 1) {
-                            batches = ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(distinctFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
-                            Console.WriteLine($"\n  [History-Batching] Aufgeteilt in {batches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
-                        }
-                        else {
-                            batches = [("(alle)", distinctFiles)];
-                        }
-
-                        bool allBatchesOk = true;
-                        for (int batchIdx = 0; batchIdx < batches.Count; batchIdx++) {
-                            var (label, batchFiles) = batches[batchIdx];
-                            bool isLast = batchIdx == batches.Count - 1;
-                            Console.WriteLine($"\n  [INFO] History-Batch {batchIdx + 1}/{batches.Count}: '{label}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
-
-                            string batchFileList = string.Join(", ", batchFiles.Select(p => $"\"{p}\""));
-                            var (success, _, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {batchFileList}", false);
-                            if (success && attachmentParts.Count > 0) {
-                                _historyParts.AddRange(attachmentParts);
-                                _historyWasLoaded = true;
-                                Console.WriteLine($"  [INFO] History-Batch {batchIdx + 1}/{batches.Count} erfolgreich geladen ({attachmentParts.Count} Part(s)).");
-                                if (!isLast) {
-                                    // [AI Context] Full inter-batch delay to let the per-minute rate-limit quota fully refill before sending the next batch.
-                                     int interDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 120;
-                                    Console.WriteLine($"  [Rate-Limit] Inter-Batch-Pause: {interDelay}s vor nächstem Batch...");
-                                    await ExtractionHelpers.SmartDelayAsync(interDelay, $"Warte zwischen Batch {batchIdx + 1} und {batchIdx + 2}...");
-                                }
-                            }
-                            else {
-                                Console.WriteLine($"  [FEHLER] Batch {batchIdx + 1}/{batches.Count} konnte nicht hochgeladen werden.");
-                                allBatchesOk = false;
-                                break;
-                            }
-                        }
-
-                        if (allBatchesOk && _historyWasLoaded) {
-                            // [AI Context] Token-Refill delay after all history batches: all history tokens consumed,
-                            // must wait for per-minute quota to refill before video processing starts.
-                             int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-                            Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill) nach History-Upload...");
-                            await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach History-Acknowledgment...");
-                        }
-                    }
-                }
-            }
+            await LoadHistoryAsMultiTurnPreambleAsync();
         }
 
+        // --- Phase 3: Warm-up handshake for System Instruction without history ---
         if (!_historyWasLoaded && !string.IsNullOrWhiteSpace(_systemInstructionText)) {
             if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
         }
 
-        // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
-        // can take significant time; the guard will count from here and enforce a proper gap before the first API call.
+        // --- Phase 4: Finalize session setup (logging, debug roundtrip) ---
         ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
-
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();
 
@@ -389,8 +167,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string logDest = !string.IsNullOrWhiteSpace(_sessionLogger.CurrentSessionLogPath)
                 ? _sessionLogger.CurrentSessionLogPath
                 : _config.LogFolder;
-
-            // Logg System instructions at `logDest`
             await ExtractionHelpers.LogSystemInstructionDumpAsync(logDest, _systemInstructionText, _historyParts);
         }
 
@@ -401,6 +177,282 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// [AI Context] Resolves system instruction files from disk, builds the instruction text,
+    /// and optionally loads history files into the system instruction (with batched or bulk warm-up).
+    /// Returns false only if the user declines to load, which is not an error.
+    /// [Human] Lädt die System-Instruction-Dateien und (optional) History-Dateien ein.
+    /// </summary>
+    private async Task<bool> TryLoadSystemInstructionWithHistoryAsync() {
+        if (_config.SystemInstructionPaths == null || _config.SystemInstructionPaths.Length == 0) return true;
+
+        Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
+        var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
+
+        if (resolvedInstructionFiles.Count == 0) {
+            Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
+            return true;
+        }
+
+        ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
+
+        // Optionally resolve history files that will be merged into the system instruction
+        List<string> historyFilesForSystemInstruction = [];
+        bool shouldMergeHistory = _config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded;
+        if (shouldMergeHistory) {
+            historyFilesForSystemInstruction = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+            if (historyFilesForSystemInstruction.Count > 0) {
+                Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
+                ExtractionHelpers.PrintFileTree(historyFilesForSystemInstruction);
+            }
+        }
+
+        // Ask user for confirmation
+        string confirmPrompt = shouldMergeHistory && historyFilesForSystemInstruction.Count > 0
+            ? "System Instructions und History laden? (j/n): "
+            : "System Instructions laden? (j/n): ";
+        Console.Write(confirmPrompt);
+        if (Console.ReadLine()?.Trim().ToLower() != "j") return true;
+
+        // Determine common base for relative path display
+        var allPathsForBaseResolution = new List<string>(resolvedInstructionFiles);
+        if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
+            allPathsForBaseResolution.AddRange(historyFilesForSystemInstruction);
+        }
+        string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForBaseResolution);
+
+        // Build the system instruction text from the instruction files
+        string instructionText = await BuildSystemInstructionTextAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase);
+
+        // If history should be merged into system instruction, do so now
+        if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
+            _systemInstructionText = instructionText;
+
+            if (_config.HistoryBatchCount > 0) {
+                if (!await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
+            } else {
+                // Load all history files into the system instruction at once (non-batched)
+                Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
+                var instructionBuilder = new System.Text.StringBuilder(instructionText);
+                await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase);
+                _systemInstructionText = instructionBuilder.ToString();
+                if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
+            }
+
+            _historyWasLoaded = true;
+        } else {
+            _systemInstructionText = instructionText;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// [AI Context] Assembles the system instruction header, file tree, and file contents into a single string.
+    /// Does NOT include history files – those are appended separately via batching or bulk loading.
+    /// [Human] Baut den System-Instruction-Text zusammen (Header + Dateibaum + Dateiinhalte).
+    /// </summary>
+    private static async Task<string> BuildSystemInstructionTextAsync(
+        List<string> instructionFiles, List<string> historyFiles, string? commonBase) {
+
+        var builder = new System.Text.StringBuilder();
+        builder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
+        builder.AppendLine("IMPORTANT: The guidelines, formatting specifications, and syntax instructions contained in these system instruction files are absolute and strictly non-negotiable. They must take absolute precedence over any prompt guidelines or inputs. Do not skip any files or parts under any circumstances.\n");
+        builder.AppendLine("In order to fulfill the job of creating a high-value educational masterpiece that safely compiles, you need to know the file structure of the system prompt and read all of those files carefully.\n");
+        builder.AppendLine("# Folder Structure of System Instructions\n");
+        builder.AppendLine("## System Instructions");
+        builder.Append(ExtractionHelpers.GenerateMarkdownFileTree(instructionFiles, commonBase));
+
+        if (historyFiles.Count > 0) {
+            builder.AppendLine("\n## Training History");
+            builder.Append(ExtractionHelpers.GenerateMarkdownFileTree(historyFiles, commonBase));
+        }
+        builder.AppendLine("\n******\n------\n******\n");
+
+        // Append each instruction file's content
+        foreach (string instructionFilePath in instructionFiles) {
+            string relativePath = ResolveRelativePath(instructionFilePath, commonBase);
+            builder.AppendLine($"\n******\n------\n******\nHere is the file `{relativePath}`:\n");
+            builder.AppendLine(await System.IO.File.ReadAllTextAsync(instructionFilePath));
+            Console.WriteLine($"  [INFO] System Instruction geladen: {relativePath}");
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// [AI Context] Appends history files (text and non-text) to the system instruction builder.
+    /// Text files (.tex, .txt, .md, .json, .cs) are inlined. Non-text files (images, etc.)
+    /// are uploaded via AttachmentHandler and stored in _historyParts.
+    /// [Human] Hängt History-Dateien an den System-Instruction-Builder an. Textdateien werden direkt eingebettet,
+    /// Nicht-Text-Dateien (Bilder etc.) werden über die File API hochgeladen.
+    /// </summary>
+    private async Task AppendHistoryFilesToInstructionAsync(
+        List<string> historyFiles, System.Text.StringBuilder targetBuilder, string? commonBase) {
+
+        List<string> nonTextFiles = [];
+        foreach (string historyFilePath in historyFiles) {
+            string extension = Path.GetExtension(historyFilePath).ToLowerInvariant();
+            if (extension is ".tex" or ".txt" or ".md" or ".json" or ".cs") {
+                string relativePath = ResolveRelativePath(historyFilePath, commonBase);
+                targetBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relativePath}`:\n");
+                targetBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(historyFilePath));
+                Console.WriteLine($"  [INFO] History-Textdatei in System Instruction eingebunden: {relativePath}");
+            } else {
+                nonTextFiles.Add(historyFilePath);
+            }
+        }
+
+        if (nonTextFiles.Count > 0) {
+            string quotedFileList = string.Join(", ", nonTextFiles.Select(p => $"\"{p}\""));
+            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedFileList}", true, commonBase);
+            if (uploadSuccess && uploadedParts.Count > 0) {
+                _historyParts.AddRange(uploadedParts);
+            }
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Performs staged cache warming: splits history files into batches and sends
+    /// incremental warm-up handshakes between each batch to pre-fill Google's implicit prefix cache.
+    /// Each batch appends its text files to _systemInstructionText and uploads non-text files.
+    /// [Human] Gestaffeltes Cache-Warming: History wird in Batches aufgeteilt, nach jedem Batch
+    /// wird ein Handshake gesendet, um den Google-Cache schrittweise aufzubauen.
+    /// </summary>
+    private async Task<bool> WarmUpWithBatchedHistoryAsync(List<string> historyFiles, string? commonBase) {
+        var batches = ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(
+            historyFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
+
+        int systemInstructionDelay = _config.SystemInstructionDelaySeconds > 0 ? _config.SystemInstructionDelaySeconds : 65;
+        int historyBatchDelay = _config.HistoryRateLimitDelaySeconds > 0 ? _config.HistoryRateLimitDelaySeconds : 65;
+
+        Console.WriteLine($"\n  [SystemInstruction-Warmup] Starte gestaffeltes Cache-Warming für System Instruction + History in {batches.Count} Batch(es) (BaseDelay: {systemInstructionDelay}s, HistoryDelay: {historyBatchDelay}s)...");
+
+        // Step 0: Optionally warm up base system instruction before adding history
+        if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
+            Console.WriteLine("\n  [Cache-Warming Step 0] Warmup für Basis System Instruction...");
+            if (!await WarmUpSystemInstructionCacheAsync(systemInstructionDelay, includeDummyPart0: false)) return false;
+        } else {
+            Console.WriteLine($"\n  [Cache-Warming] Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...");
+        }
+
+        // Process each history batch: append files, then warm up
+        for (int batchIndex = 0; batchIndex < batches.Count; batchIndex++) {
+            var (batchLabel, batchFiles) = batches[batchIndex];
+            bool isLastBatch = batchIndex == batches.Count - 1;
+
+            Console.WriteLine($"\n  [Cache-Warming Step {batchIndex + 1}/{batches.Count}] Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in System Instruction...");
+
+            // Append this batch's files to the growing system instruction text
+            var batchBuilder = new System.Text.StringBuilder();
+            await AppendHistoryFilesToInstructionAsync(batchFiles, batchBuilder, commonBase);
+            _systemInstructionText += batchBuilder.ToString();
+
+            // Decide whether to send a handshake for this batch
+            bool shouldSendHandshake = true;
+            if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch && batchIndex % 2 == 1) {
+                shouldSendHandshake = false;
+            }
+
+            if (shouldSendHandshake) {
+                if (!await WarmUpSystemInstructionCacheAsync(historyBatchDelay, includeDummyPart0: isLastBatch)) return false;
+            } else {
+                Console.WriteLine($"  [Cache-Warming] Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...");
+            }
+        }
+
+        Console.WriteLine($"\n  [Tokens] History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}");
+        return true;
+    }
+
+    /// <summary>
+    /// [AI Context] Loads history files as multi-turn preamble entries (not into system instruction).
+    /// This is the alternative path used when LoadHistoryIntoSystemInstruction is false.
+    /// Files are uploaded via AttachmentHandler and stored as acknowledged turns in _sessionPreamble.
+    /// [Human] Lädt History-Dateien als Multi-Turn-Preamble (nicht in die System Instruction).
+    /// </summary>
+    private async Task LoadHistoryAsMultiTurnPreambleAsync() {
+        var resolvedHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+        if (resolvedHistoryFiles.Count == 0) return;
+
+        Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+        ExtractionHelpers.PrintFileTree(resolvedHistoryFiles);
+
+        string confirmPrompt = _config.LoadHistoryIntoSystemInstruction
+            ? "Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): "
+            : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ";
+        Console.Write(confirmPrompt);
+        if (Console.ReadLine()?.Trim().ToLower() != "j") return;
+
+        if (_config.LoadHistoryIntoSystemInstruction) {
+            Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
+            string quotedFileList = string.Join(", ", resolvedHistoryFiles.Select(p => $"\"{p}\""));
+            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedFileList}", _config.LoadHistoryIntoSystemInstruction);
+            if (uploadSuccess && uploadedParts.Count > 0) {
+                _historyParts.AddRange(uploadedParts);
+                _historyWasLoaded = true;
+                Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
+                await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true);
+            } else {
+                Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+            }
+            return;
+        }
+
+        // Non-system-instruction path: upload as multi-turn batches
+        List<(string Label, List<string> Files)> historyBatches = _config.HistoryBatchCount > 1
+            ? ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(resolvedHistoryFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount)
+            : [("(alle)", resolvedHistoryFiles)];
+
+        if (_config.HistoryBatchCount > 1) {
+            Console.WriteLine($"\n  [History-Batching] Aufgeteilt in {historyBatches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
+        }
+
+        bool allBatchesSucceeded = true;
+        for (int batchIndex = 0; batchIndex < historyBatches.Count; batchIndex++) {
+            var (batchLabel, batchFiles) = historyBatches[batchIndex];
+            bool isLastBatch = batchIndex == historyBatches.Count - 1;
+
+            Console.WriteLine($"\n  [INFO] History-Batch {batchIndex + 1}/{historyBatches.Count}: '{batchLabel}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
+
+            string quotedBatchFiles = string.Join(", ", batchFiles.Select(p => $"\"{p}\""));
+            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedBatchFiles}", false);
+
+            if (uploadSuccess && uploadedParts.Count > 0) {
+                _historyParts.AddRange(uploadedParts);
+                _historyWasLoaded = true;
+                Console.WriteLine($"  [INFO] History-Batch {batchIndex + 1}/{historyBatches.Count} erfolgreich geladen ({uploadedParts.Count} Part(s)).");
+
+                if (!isLastBatch) {
+                    int interBatchDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 120;
+                    Console.WriteLine($"  [Rate-Limit] Inter-Batch-Pause: {interBatchDelay}s vor nächstem Batch...");
+                    await ExtractionHelpers.SmartDelayAsync(interBatchDelay, $"Warte zwischen Batch {batchIndex + 1} und {batchIndex + 2}...");
+                }
+            } else {
+                Console.WriteLine($"  [FEHLER] Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgeladen werden.");
+                allBatchesSucceeded = false;
+                break;
+            }
+        }
+
+        if (allBatchesSucceeded && _historyWasLoaded) {
+            int tokenRefillDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
+            Console.WriteLine($"  [Rate-Limit] Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
+            await ExtractionHelpers.SmartDelayAsync(tokenRefillDelay, "Warte auf Token-Refill nach History-Acknowledgment...");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Resolves a file path relative to a common base directory for display purposes.
+    /// [Human] Wandelt einen absoluten Pfad in einen relativen Pfad um (für Konsolenausgaben).
+    /// </summary>
+    private static string ResolveRelativePath(string filePath, string? commonBase) {
+        string rawRelPath = !string.IsNullOrEmpty(commonBase)
+            ? Path.GetRelativePath(commonBase, filePath)
+            : Path.GetFileName(filePath);
+        return ExtractionHelpers.NormalizeRelativePath(rawRelPath);
     }
 
     private async Task ProcessYouTubeTasksAsync() {
@@ -534,16 +586,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 PrintCommandsMenu();
             }
             else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
-                string val = "";
-                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput[9..].Trim();
-                else if (normalizedInput.StartsWith("2 ")) val = normalizedInput[2..].Trim();
+                string speedInput = "";
+                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) speedInput = normalizedInput[9..].Trim();
+                else if (normalizedInput.StartsWith("2 ")) speedInput = normalizedInput[2..].Trim();
                 else if (normalizedInput == "2") {
                     Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
-                    val = Console.ReadLine()?.Trim() ?? "";
+                    speedInput = Console.ReadLine()?.Trim() ?? "";
                 }
 
-                if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double s)) {
-                    _speed = s;
+                if (double.TryParse(speedInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedSpeed)) {
+                    _speed = parsedSpeed;
                     Console.WriteLine($"Speed gesetzt auf {_speed}x");
                 }
                 else {
@@ -579,23 +631,23 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
             }
             else if (normalizedInput == "9" || normalizedInput.StartsWith("9 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
-                string val = "";
+                string profileInput = "";
                 if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
-                    val = normalizedInput["change-key".Length..].Trim();
+                    profileInput = normalizedInput["change-key".Length..].Trim();
                 }
                 else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
-                    val = normalizedInput["change key".Length..].Trim();
+                    profileInput = normalizedInput["change key".Length..].Trim();
                 }
                 else if (normalizedInput.StartsWith("9 ")) {
-                    val = normalizedInput[2..].Trim();
+                    profileInput = normalizedInput[2..].Trim();
                 }
 
-                if (string.IsNullOrEmpty(val)) {
+                if (string.IsNullOrEmpty(profileInput)) {
                     Console.Write("Neues API-Key Profil (0-3): ");
-                    val = Console.ReadLine()?.Trim() ?? "";
+                    profileInput = Console.ReadLine()?.Trim() ?? "";
                 }
 
-                if (int.TryParse(val, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
+                if (int.TryParse(profileInput, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
                     string? newApiKey;
                     if (newProfile == 0) {
                         newApiKey = GoogleGenAi.GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
@@ -889,24 +941,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
         List<Part> warmupParts;
         if (shouldIncludeDummy) {
-            string contextText =
-                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
-                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
-                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
-                "CRITICAL RULES:\n" +
-                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
-                "2. Your SOLE task is to transcribe the new attached video segment verbatim.\n" +
-                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
-
             // [AI Context] dummy-part0.tex is ~4500 tokens of Lorem Ipsum – large enough to anchor Google's
             // implicit prefix cache on the user-turn portion even without relying solely on the system instruction.
             // This Part 0 is bit-identical to Part 1's pre-video text Part, ensuring maximum cache hits.
-            string dummyPart0Block = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
 
             // Part 0: pre-video prefix – token-identical to Part 1's first text Part.
             // Part 1: throwaway handshake – the response is irrelevant; only the cache priming matters.
             warmupParts = [
-                new Part { Text = contextText + dummyPart0Block + GetStaticPromptBeginning(1) },
+                new Part { Text = ReferenceContextPreamble + dummyReferenceBlock + GetStaticPromptBeginning(1) },
                 new Part { Text = handshakeText }
             ];
         } else {
@@ -1055,7 +1098,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// </summary>
     private async Task ProcessFilesAsync(string[] files) {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
-        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date).ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue).ThenBy(f => f)];
+        files = [.. files.OrderBy(videoFile => VideoDateParser.Parse(videoFile).Date).ThenBy(videoFile => VideoDateParser.Parse(videoFile).WeekNumber ?? int.MaxValue).ThenBy(videoFile => videoFile)];
 
         // [AI Context] We use a bounded channel (capacity 1) to synchronize the FFmpeg Producer task and the Gemini Consumer task.
         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
@@ -1096,8 +1139,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         // We expect exactly 3 parts. We also check if the files are actually valid (not 0 bytes)
                         // [Human] Wenn ein alter Lauf abgebrochen ist, liegen vielleicht nur 1-2 Teile im Cache, oder sie sind 0 Bytes groß. Das wird hier verhindert!
                         bool allFilesValid = true;
-                        foreach (var cp in cachedParts) {
-                            if (new FileInfo(cp).Length < 1024) { // less than 1KB is definitely invalid for a video
+                        foreach (var cachedPartFile in cachedParts) {
+                            if (new FileInfo(cachedPartFile).Length < 1024) { // less than 1KB is definitely invalid for a video
                                 allFilesValid = false;
                                 break;
                             }
@@ -1108,7 +1151,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         }
                         else {
                             Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen oder defekten Cache für '{Path.GetFileName(file)}' ({cachedParts.Count} Teil(e), valid: {allFilesValid}). FFmpeg wird neu gestartet...");
-                            foreach (var f in cachedParts) { try { System.IO.File.Delete(f); } catch { } }
+                            foreach (var stalePartFile in cachedParts) { try { System.IO.File.Delete(stalePartFile); } catch { } }
                         }
                     }
                 }
@@ -1345,13 +1388,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                 await audioExtractionTask;
                             }
                             var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
-                            string audioPath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
+                            string audioPath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
                                                ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                             if (System.IO.File.Exists(audioPath)) {
                                 Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
                                 var handler = new AttachmentHandler(refinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
-                                var (s, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
-                                if (s) return attached;
+                                var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
+                                if (audioUploadOk) return attached;
                             }
                             return [];
                         });
@@ -1390,24 +1433,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
 
                     // Prepend the start time to the individual part .tex file
-                    string partHeader = $"% ==========================================\n" +
-                                        $"% AutoExtraction Source Part: {Path.GetFileName(safePartPath)}\n" +
-                                        $"% Model: {_config.CurrentModel}\n" +
-                                        $"% Temperature: {_config.Temperature}\n" +
-                                        $"% TopP: {_config.TopP}\n" +
-                                        $"% TopK: {_config.TopK}\n" +
-                                        $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
-                                        (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
-                                        (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
-                                        $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                        $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
-                                        $"% ------------------------------------------\n" +
-                                        $"% Token Usage Analysis (Google GenAI):\n" +
-                                        $"%   - Total Prompt Tokens : {result.partInputTokens:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
-                                        $"%   - Cached Context      : {result.partCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
-                                        $"%   - Fresh Input Tokens  : {partFreshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
-                                        $"%   - Generated Output    : {result.partOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
-                                        $"% ==========================================\n\n";
+                    string partHeader = BuildTexPartHeader(
+                        sourcePartFileName: Path.GetFileName(safePartPath),
+                        partStartTimeSeconds: partStartTimeSeconds,
+                        inputTokens: result.partInputTokens,
+                        cachedTokens: result.partCachedTokens,
+                        freshTokens: partFreshTokens,
+                        outputTokens: result.partOutputTokens);
                     string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
@@ -1426,8 +1458,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     fileProcessingSuccess = false;
                     hasErrors = true;
                     // Clean up individual part files if processing failed mid-way
-                    foreach (var f in generatedTexFiles) {
-                        try { System.IO.File.Delete(f); } catch { /* Ignore */ }
+                    foreach (var failedTexFile in generatedTexFiles) {
+                        try { System.IO.File.Delete(failedTexFile); } catch { /* Ignore */ }
                     }
                     // Try to delete the file-specific output folder if it's empty or contains only temporary stuff
                     if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
@@ -1443,23 +1475,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 int fileTotalFreshTokens = Math.Max(0, fileTotalInputTokens - fileTotalCachedTokens);
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
-                string header = $"% ==========================================\n" +
-                                $"% AutoExtraction Combined Source: {Path.GetFileName(file)}\n" +
-                                $"% Model: {_config.CurrentModel}\n" +
-                                $"% Temperature: {_config.Temperature}\n" +
-                                $"% TopP: {_config.TopP}\n" +
-                                $"% TopK: {_config.TopK}\n" +
-                                $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
-                                (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
-                                (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
-                                $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                $"% ------------------------------------------\n" +
-                                $"% Token Usage Summary across {partsWithTimes.Count} Part(s):\n" +
-                                $"%   - Total Prompt Tokens : {fileTotalInputTokens:N0} (Summe aller Prompts über alle Teile)\n" +
-                                $"%   - Cached Context      : {fileTotalCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
-                                $"%   - Fresh Input Tokens  : {fileTotalFreshTokens:N0} (Echter neuer Payload für alle Video-Teile)\n" +
-                                $"%   - Total Output Tokens : {fileTotalOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
-                                $"% ==========================================\n\n";
+                string header = BuildTexCombinedHeader(
+                    sourceFileName: Path.GetFileName(file),
+                    totalParts: partsWithTimes.Count,
+                    totalInputTokens: fileTotalInputTokens,
+                    totalCachedTokens: fileTotalCachedTokens,
+                    totalFreshTokens: fileTotalFreshTokens,
+                    totalOutputTokens: fileTotalOutputTokens);
                 await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
                 Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
 
@@ -1495,7 +1517,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
                 // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
                 var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
-                string audioFilePath = aacFiles.OrderByDescending(f => System.IO.File.GetLastWriteTime(f)).FirstOrDefault()
+                string audioFilePath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
                                        ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
                 Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
@@ -1544,12 +1566,67 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return newPath;
     }
 
+    /// <summary>
+    /// [AI Context] Builds the metadata header for an individual .tex part file.
+    /// Includes model parameters, timestamp offset, and per-part token usage statistics.
+    /// [Human] Baut den Metadaten-Header für eine einzelne .tex-Teildatei.
+    /// </summary>
+    private string BuildTexPartHeader(string sourcePartFileName, double partStartTimeSeconds,
+        int inputTokens, int cachedTokens, int freshTokens, int outputTokens) {
+        return $"% ==========================================\n" +
+               $"% AutoExtraction Source Part: {sourcePartFileName}\n" +
+               BuildTexModelParameterBlock() +
+               $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+               $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
+               $"% ------------------------------------------\n" +
+               $"% Token Usage Analysis (Google GenAI):\n" +
+               $"%   - Total Prompt Tokens : {inputTokens:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
+               $"%   - Cached Context      : {cachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
+               $"%   - Fresh Input Tokens  : {freshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
+               $"%   - Generated Output    : {outputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
+               $"% ==========================================\n\n";
+    }
+
+    /// <summary>
+    /// [AI Context] Builds the metadata header for the combined (-all) .tex file.
+    /// Includes model parameters and aggregated token usage across all parts.
+    /// [Human] Baut den Metadaten-Header für die zusammengeführte (-all) .tex-Datei.
+    /// </summary>
+    private string BuildTexCombinedHeader(string sourceFileName, int totalParts,
+        int totalInputTokens, int totalCachedTokens, int totalFreshTokens, int totalOutputTokens) {
+        return $"% ==========================================\n" +
+               $"% AutoExtraction Combined Source: {sourceFileName}\n" +
+               BuildTexModelParameterBlock() +
+               $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+               $"% ------------------------------------------\n" +
+               $"% Token Usage Summary across {totalParts} Part(s):\n" +
+               $"%   - Total Prompt Tokens : {totalInputTokens:N0} (Summe aller Prompts über alle Teile)\n" +
+               $"%   - Cached Context      : {totalCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
+               $"%   - Fresh Input Tokens  : {totalFreshTokens:N0} (Echter neuer Payload für alle Video-Teile)\n" +
+               $"%   - Total Output Tokens : {totalOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
+               $"% ==========================================\n\n";
+    }
+
+    /// <summary>
+    /// [AI Context] Builds the common model parameter block used in all .tex headers.
+    /// [Human] Gemeinsamer Block mit Modell-Parametern für alle .tex-Header.
+    /// </summary>
+    private string BuildTexModelParameterBlock() {
+        return $"% Model: {_config.CurrentModel}\n" +
+               $"% Temperature: {_config.Temperature}\n" +
+               $"% TopP: {_config.TopP}\n" +
+               $"% TopK: {_config.TopK}\n" +
+               $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
+               (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
+               (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "");
+    }
+
     private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
         double partDurationSeconds = await FfmpegUtilities.FfmpegToolkit.GetVideoDurationAsync(partFile);
-        TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
-        string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
+        TimeSpan partDuration = TimeSpan.FromSeconds(partDurationSeconds);
+        string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", partDuration.Minutes, partDuration.Seconds);
 
         TimeSpan fullVideoTime = TimeSpan.FromSeconds(fullOriginalVideoDuration);
         string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
@@ -1620,31 +1697,25 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (_config.DebugSendReferenceFile) {
             // [AI Context] Always prepend dummy-part0.tex first. This creates a constant, large (~4500 token)
             // anchor that is bit-identical between the warm-up Part 0 and Part 1's Part 0, enabling Google's
-            // implicit prefix cache to hit on contextText + dummyBlock + staticBeginning for Part 1.
+            // implicit prefix cache to hit on the preamble + dummyBlock + staticBeginning for Part 1.
             // For Part 2+, the dummy block is still the first reference, followed by the previously
             // generated .tex parts – these grow with each part but the prefix still benefits from caching.
-            string contextText =
-                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
-                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
-                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
-                "CRITICAL RULES:\n" +
-                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
-                "2. Your SOLE task is to transcribe the new attached video segment verbatim.\n" +
-                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
 
-            string dummyPart0Block = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
-            contextText += dummyPart0Block;
+            var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
+            referenceContextBuilder.Append(dummyReferenceBlock);
 
             if (previousTexFiles.Count > 0) {
                 Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
-                foreach (var texFile in previousTexFiles) {
-                    Console.WriteLine($"    - {Path.GetFileName(texFile)}");
-                    string content = await System.IO.File.ReadAllTextAsync(texFile);
-                    contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
+                foreach (var previousTexFile in previousTexFiles) {
+                    string previousTexFileName = Path.GetFileName(previousTexFile);
+                    Console.WriteLine($"    - {previousTexFileName}");
+                    string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
+                    referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
                 }
             }
 
-            userPromptParts.Add(new Part { Text = contextText + staticBeginning });
+            userPromptParts.Add(new Part { Text = referenceContextBuilder.ToString() + staticBeginning });
         } else {
             userPromptParts.Add(new Part { Text = staticBeginning });
         }
