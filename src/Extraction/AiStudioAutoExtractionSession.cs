@@ -355,10 +355,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             await AppendHistoryFilesToInstructionAsync(batchFiles, batchBuilder, commonBase);
             _systemInstructionText += batchBuilder.ToString();
 
-            // Decide whether to send a handshake for this batch
+            // Decide whether to send a handshake for this batch.
+            // If MergeSystemInstructionAndFirstHistoryBatch is true, batch 0 already carries the
+            // system instruction and must send its own handshake (that IS the merge) — it is not a
+            // pairing candidate. Pairing among the remaining batches then starts fresh from there:
+            // pairs are (0,1),(2,3),... normally, or (1,2),(3,4),... when batch 0 is excluded.
             bool shouldSendHandshake = true;
-            if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch && batchIndex % 2 == 1) {
-                shouldSendHandshake = false;
+            if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch) {
+                int pairingStart = _config.MergeSystemInstructionAndFirstHistoryBatch ? 1 : 0;
+                if (batchIndex >= pairingStart && (batchIndex - pairingStart) % 2 == 0) {
+                    shouldSendHandshake = false;
+                }
             }
 
             if (shouldSendHandshake) {

@@ -36,7 +36,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
@@ -81,7 +81,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
@@ -120,13 +120,13 @@
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
-      "Temperature": 0.33,
+      "Temperature": 0.36,
       "TopP": 0.95,
       "TopK": 40,
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
