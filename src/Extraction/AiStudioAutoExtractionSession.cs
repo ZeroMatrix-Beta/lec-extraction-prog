@@ -1128,15 +1128,40 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
         bool hasErrors = false;
 
-        await foreach (var (file, fileSpecificOutputFolder, tmpFolderForFile, partsWithTimes, isCached, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
-            // Ensure the file-specific output folder exists before starting processing
-            if (!Directory.Exists(fileSpecificOutputFolder)) {
-                Directory.CreateDirectory(fileSpecificOutputFolder);
-            }
+        await foreach (var (file, fileSpecificOutputFolder, _, partsWithTimes, _, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
+            bool success = await ProcessPreparedVideoAsync(file, fileSpecificOutputFolder, partsWithTimes, fullOriginalVideoDuration);
+            if (!success) hasErrors = true;
+        }
+
+        // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
+        await producerTask;
+
+        if (hasErrors) {
+            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
+        }
+        else {
+            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Processes one already-split video end to end: sequentially extracts LaTeX from
+    /// each part via the Gemini API (with resume-from-disk caching, parallel pre-uploads, and rate-limit
+    /// pacing), writes the combined document, and launches LatexRefinementSession. Extracted from the
+    /// former single ~300-line ProcessFilesAsync consumer-loop body — one call per video.
+    /// [Human] Verarbeitet ein bereits gesplittetes Video vollständig: extrahiert LaTeX Teil für Teil
+    /// über die Gemini-API, schreibt das Gesamtdokument und startet das Refinement.
+    /// </summary>
+    /// <returns>false if any part failed and the file's processing was aborted (an error condition the caller reports as "hasErrors").</returns>
+    private async Task<bool> ProcessPreparedVideoAsync(string file, string fileSpecificOutputFolder, IReadOnlyList<VideoSegment> partsWithTimes, double fullOriginalVideoDuration) {
+        // Ensure the file-specific output folder exists before starting processing
+        if (!Directory.Exists(fileSpecificOutputFolder)) {
+            Directory.CreateDirectory(fileSpecificOutputFolder);
+        }
 
 
-            Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
-            List<string> generatedTexFiles = [];
+        Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
+        List<string> generatedTexFiles = [];
             string baseName = Path.GetFileNameWithoutExtension(file);
             baseName = SpeedCompressedRegex().Replace(baseName, "");
             baseName = CompressedRegex().Replace(baseName, "");
@@ -1235,7 +1260,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (!uploadSuccess) {
                     Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                     fileProcessingSuccess = false;
-                    hasErrors = true;
                     break;
                 }
 
@@ -1330,7 +1354,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 else {
                     Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                     fileProcessingSuccess = false;
-                    hasErrors = true;
                     // Clean up individual part files if processing failed mid-way
                     foreach (var failedTexFile in generatedTexFiles) {
                         try { System.IO.File.Delete(failedTexFile); } catch { /* Ignore */ }
@@ -1404,19 +1427,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 AttachmentHandler.HasJustUploaded = false;
                 await refinementSession.StartAsync();
-            }
         }
 
-        // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
-        await producerTask;
-
-        if (hasErrors) {
-            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
-        }
-        else {
-            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
-        }
+        return fileProcessingSuccess;
     }
+
     private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();

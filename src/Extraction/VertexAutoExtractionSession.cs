@@ -1075,21 +1075,47 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         bool hasErrors = false;
         bool isFirstVideo = true;
 
-        await foreach (var (file, fileSpecificOutputFolder, tmpFolderForFile, partsWithTimes, isCached, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
+        await foreach (var (file, fileSpecificOutputFolder, _, partsWithTimes, _, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
             if (isFirstVideo) {
                 isFirstVideo = false;
                 Console.WriteLine("\n[Optimierung] Erstes Video wurde gesplittet. Erstelle jetzt Google Cloud Context Cache...");
                 await InitializeContextCachingAsync();
             }
 
-            // Ensure the file-specific output folder exists before starting processing
-            if (!Directory.Exists(fileSpecificOutputFolder)) {
-                Directory.CreateDirectory(fileSpecificOutputFolder);
-            }
+            bool success = await ProcessPreparedVideoAsync(file, fileSpecificOutputFolder, partsWithTimes, fullOriginalVideoDuration);
+            if (!success) hasErrors = true;
+        }
+
+        // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
+        await producerTask;
+
+        if (hasErrors) {
+            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
+        }
+        else {
+            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Processes one already-split video end to end: sequentially extracts LaTeX from
+    /// each part via the Vertex API (with resume-from-disk caching, parallel pre-uploads, context-cache
+    /// validation, and rate-limit pacing), writes the combined document, and launches
+    /// LatexRefinementSession. Extracted from the former single ~285-line ProcessFilesAsync
+    /// consumer-loop body — one call per video.
+    /// [Human] Verarbeitet ein bereits gesplittetes Video vollständig: extrahiert LaTeX Teil für Teil
+    /// über die Vertex-API, schreibt das Gesamtdokument und startet das Refinement.
+    /// </summary>
+    /// <returns>false if any part failed and the file's processing was aborted (an error condition the caller reports as "hasErrors").</returns>
+    private async Task<bool> ProcessPreparedVideoAsync(string file, string fileSpecificOutputFolder, IReadOnlyList<VideoSegment> partsWithTimes, double fullOriginalVideoDuration) {
+        // Ensure the file-specific output folder exists before starting processing
+        if (!Directory.Exists(fileSpecificOutputFolder)) {
+            Directory.CreateDirectory(fileSpecificOutputFolder);
+        }
 
 
-            Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
-            List<string> generatedTexFiles = [];
+        Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
+        List<string> generatedTexFiles = [];
             string baseName = Path.GetFileNameWithoutExtension(file);
             baseName = SpeedCompressedSuffixRegex().Replace(baseName, "");
             baseName = CompressedSuffixRegex().Replace(baseName, "");
@@ -1145,7 +1171,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 if (!uploadSuccess) {
                     Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                     fileProcessingSuccess = false;
-                    hasErrors = true;
                     break;
                 }
 
@@ -1247,7 +1272,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 else {
                     Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                     fileProcessingSuccess = false;
-                    hasErrors = true;
                     // Clean up individual part files if processing failed mid-way
                     foreach (var f in generatedTexFiles) {
                         try { System.IO.File.Delete(f); } catch { /* Ignore */ }
@@ -1327,19 +1351,11 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     preUploadedAudioParts);
 
                 await refinementSession.StartAsync();
-            }
         }
 
-        // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
-        await producerTask;
-
-        if (hasErrors) {
-            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
-        }
-        else {
-            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
-        }
+        return fileProcessingSuccess;
     }
+
     private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
