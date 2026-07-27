@@ -92,7 +92,7 @@ public class DirectAiChatSessionVertex {
             bool loadedSysPrompt = false;
             if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
                 WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
-                ExtractionHelpers.PrintFileTree([SystemInstructionPath]);
+                FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
             }
             string sysPromptChoice = PromptWithCommands("[Setup] System Instruction laden? (j/n): ");
             if (sysPromptChoice == "__EXIT__") return;
@@ -449,7 +449,7 @@ public class DirectAiChatSessionVertex {
         bool isGenerating = true;
         var inputInterceptorTask = Task.Run(async () => {
             while (isGenerating) {
-                if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+                if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                     while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                     WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
                 }
@@ -575,7 +575,7 @@ public class DirectAiChatSessionVertex {
         if (distinctFiles.Count == 0) return null;
 
         WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        ExtractionHelpers.PrintFileTree(distinctFiles);
+        FileTreeRenderer.PrintFileTree(distinctFiles);
 
         string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
         if (historyChoice == "__EXIT__") return historyChoice;

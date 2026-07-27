@@ -164,7 +164,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         // --- Phase 4: Finalize session setup (logging, debug roundtrip) ---
-        ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+        InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();
 
@@ -194,23 +194,23 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (_config.SystemInstructionPaths == null || _config.SystemInstructionPaths.Length == 0) return true;
 
         Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
-        var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
+        var resolvedInstructionFiles = HistoryFileResolver.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
         if (resolvedInstructionFiles.Count == 0) {
             Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
             return true;
         }
 
-        ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
+        FileTreeRenderer.PrintFileTree(resolvedInstructionFiles);
 
         // Optionally resolve history files that will be merged into the system instruction
         List<string> historyFilesForSystemInstruction = [];
         bool shouldMergeHistory = _config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded;
         if (shouldMergeHistory) {
-            historyFilesForSystemInstruction = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+            historyFilesForSystemInstruction = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (historyFilesForSystemInstruction.Count > 0) {
                 Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
-                ExtractionHelpers.PrintFileTree(historyFilesForSystemInstruction);
+                FileTreeRenderer.PrintFileTree(historyFilesForSystemInstruction);
             }
         }
 
@@ -226,7 +226,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
             allPathsForBaseResolution.AddRange(historyFilesForSystemInstruction);
         }
-        string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForBaseResolution);
+        string? commonBase = FileTreeRenderer.FindCommonBaseDirectory(allPathsForBaseResolution);
 
         // Build the system instruction text from the instruction files
         string instructionText = await BuildSystemInstructionTextAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase);
@@ -268,11 +268,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         builder.AppendLine("In order to fulfill the job of creating a high-value educational masterpiece that safely compiles, you need to know the file structure of the system prompt and read all of those files carefully.\n");
         builder.AppendLine("# Folder Structure of System Instructions\n");
         builder.AppendLine("## System Instructions");
-        builder.Append(ExtractionHelpers.GenerateMarkdownFileTree(instructionFiles, commonBase));
+        builder.Append(FileTreeRenderer.GenerateMarkdownFileTree(instructionFiles, commonBase));
 
         if (historyFiles.Count > 0) {
             builder.AppendLine("\n## Training History");
-            builder.Append(ExtractionHelpers.GenerateMarkdownFileTree(historyFiles, commonBase));
+            builder.Append(FileTreeRenderer.GenerateMarkdownFileTree(historyFiles, commonBase));
         }
         builder.AppendLine("\n******\n------\n******\n");
 
@@ -327,7 +327,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// wird ein Handshake gesendet, um den Google-Cache schrittweise aufzubauen.
     /// </summary>
     private async Task<bool> WarmUpWithBatchedHistoryAsync(List<string> historyFiles, string? commonBase) {
-        var batches = ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(
+        var batches = HistoryFileResolver.GroupHistoryFilesByTopLevelSubfolder(
             historyFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
 
         int systemInstructionDelay = _config.SystemInstructionDelaySeconds > 0 ? _config.SystemInstructionDelaySeconds : 65;
@@ -387,11 +387,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Lädt History-Dateien als Multi-Turn-Preamble (nicht in die System Instruction).
     /// </summary>
     private async Task LoadHistoryAsMultiTurnPreambleAsync() {
-        var resolvedHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+        var resolvedHistoryFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
         if (resolvedHistoryFiles.Count == 0) return;
 
         Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        ExtractionHelpers.PrintFileTree(resolvedHistoryFiles);
+        FileTreeRenderer.PrintFileTree(resolvedHistoryFiles);
 
         string confirmPrompt = _config.LoadHistoryIntoSystemInstruction
             ? "Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): "
@@ -416,7 +416,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         // Non-system-instruction path: upload as multi-turn batches
         List<(string Label, List<string> Files)> historyBatches = _config.HistoryBatchCount > 1
-            ? ExtractionHelpers.GroupHistoryFilesByTopLevelSubfolder(resolvedHistoryFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount)
+            ? HistoryFileResolver.GroupHistoryFilesByTopLevelSubfolder(resolvedHistoryFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount)
             : [("(alle)", resolvedHistoryFiles)];
 
         if (_config.HistoryBatchCount > 1) {
@@ -441,7 +441,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (!isLastBatch) {
                     int interBatchDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 120;
                     Console.WriteLine($"  [Rate-Limit] Inter-Batch-Pause: {interBatchDelay}s vor nächstem Batch...");
-                    await ExtractionHelpers.SmartDelayAsync(interBatchDelay, $"Warte zwischen Batch {batchIndex + 1} und {batchIndex + 2}...");
+                    await InteractiveDelay.SmartDelayAsync(interBatchDelay, $"Warte zwischen Batch {batchIndex + 1} und {batchIndex + 2}...");
                 }
             } else {
                 Console.WriteLine($"  [FEHLER] Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgeladen werden.");
@@ -453,7 +453,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (allBatchesSucceeded && _historyWasLoaded) {
             int tokenRefillDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
             Console.WriteLine($"  [Rate-Limit] Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
-            await ExtractionHelpers.SmartDelayAsync(tokenRefillDelay, "Warte auf Token-Refill nach History-Acknowledgment...");
+            await InteractiveDelay.SmartDelayAsync(tokenRefillDelay, "Warte auf Token-Refill nach History-Acknowledgment...");
         }
     }
 
@@ -465,7 +465,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string rawRelPath = !string.IsNullOrEmpty(commonBase)
             ? Path.GetRelativePath(commonBase, filePath)
             : Path.GetFileName(filePath);
-        return ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+        return FileTreeRenderer.NormalizeRelativePath(rawRelPath);
     }
 
     private async Task ProcessYouTubeTasksAsync() {
@@ -476,7 +476,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.Write("Möchtest du diese ausführen (j/y) oder interaktiv eine neue YouTube-URL eingeben (u/url)? [Standard: j]: ");
             string choice = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
             if (choice == "u" || choice == "url" || choice == "n") {
-                var interactiveTask = ExtractionHelpers.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
+                var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
                 if (interactiveTask != null) {
                     tasksToProcess.Add(interactiveTask);
                 }
@@ -487,7 +487,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
         else {
             Console.WriteLine("\n[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration gefunden.");
-            var interactiveTask = ExtractionHelpers.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
+            var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
             if (interactiveTask != null) {
                 tasksToProcess.Add(interactiveTask);
             }
@@ -539,7 +539,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 )).LatexBody;
 
                 if (!string.IsNullOrWhiteSpace(texOutput)) {
-                    string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
+                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(texOutput);
                     fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
 
                     string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
@@ -622,7 +622,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
             }
             else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
-                var files = ExtractionHelpers.SelectAndFilterVideosForBatch(_config.SourceFolder);
+                var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
                 if (files.Length > 0) {
                     await SetupContextAndProcessAsync(files);
                 }
@@ -637,7 +637,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
                 SelectModel();
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
-                ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+                ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
                 Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und für die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
@@ -712,7 +712,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
             _config.CurrentModelIndex = idx - 1;
-            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+            ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
         }
         else if (choice.Contains('-')) {
             // Freetext model name – find or append
@@ -723,7 +723,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             else {
                 Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
             }
-            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+            ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
         }
     }
 
@@ -774,7 +774,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             bool isGenerating = true;
             var inputInterceptorTask = Task.Run(async () => {
                 while (isGenerating) {
-                    if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+                    if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                         while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                         Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
                     }
@@ -864,7 +864,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
+                    if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -1016,7 +1016,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
                 int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
                 Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill)...");
-                await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
+                await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
                 return true;
             }
         }
@@ -1024,7 +1024,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.WriteLine($"  [WARNUNG] Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.");
             int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
             Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill nach Handshake)...");
-            await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
+            await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
         }
         return true;
     }
@@ -1097,7 +1097,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 60;
             Console.WriteLine($"  [Rate-Limit] Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
-            await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
+            await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
             return true;
         }
         else {
@@ -1409,13 +1409,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
                         // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
                         Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
+                        await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
                     });
                 }
                 int partFreshTokens = result.Usage.Fresh;
 
                 if (!string.IsNullOrWhiteSpace(result.LatexBody)) {
-                    string cleanTex = ExtractionHelpers.CleanLatexResponse(result.LatexBody);
+                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(result.LatexBody);
 
                     // Store the raw output for the combined file without offset
                     fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
@@ -1857,7 +1857,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
             // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
             Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
+            if (!await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
+using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
 using static System.Console;
 
@@ -148,7 +149,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
         string rawDisplayPath = !string.IsNullOrEmpty(baseDirectory)
             ? Path.GetRelativePath(baseDirectory, filePath)
             : filePath;
-        string displayPath = ExtractionHelpers.NormalizeRelativePath(rawDisplayPath);
+        string displayPath = FileTreeRenderer.NormalizeRelativePath(rawDisplayPath);
 
         if (s_textExtensions.Contains(ext)) {
             if (asSystemInstruction) {
@@ -246,7 +247,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                     Write(".");
                     for (int i = 0; i < 50; i++) {
                         await Task.Delay(100, cancellationToken);
-                        if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+                        if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                             Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
                         }
@@ -272,7 +273,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                     // [Human] Bei der AI Studio Version warten wir nach großen Datei-Aktivierungen (Videos/Audio).
                     // Für Bilder, PDFs und andere kleine Dateien (z.B. History-Uploads) überspringen wir das,
                     // da der Token-Verbrauch erst beim GenerateContent-Call passiert, nicht beim File-Upload.
-                    if (!await ExtractionHelpers.SmartDelayAsync(_fileActivationDelaySeconds, $"Warte {_fileActivationDelaySeconds} Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
+                    if (!await InteractiveDelay.SmartDelayAsync(_fileActivationDelaySeconds, $"Warte {_fileActivationDelaySeconds} Sekunden nach Datei-Aktivierung (Token-Refill bei AI Studio, um Max-Token-Fehler zu verhindern)...")) {
                         return false;
                     }
                 }

@@ -118,7 +118,7 @@ public partial class DirectAiChatSessionAiStudio {
             bool loadedSysPrompt = false;
             if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
                 WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
-                ExtractionHelpers.PrintFileTree([SystemInstructionPath]);
+                FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
             }
             string sysPromptChoice = PromptWithCommands("[Setup] System Instruction laden? (j/n): ");
             if (sysPromptChoice == "__EXIT__") return;
@@ -512,7 +512,7 @@ public partial class DirectAiChatSessionAiStudio {
         bool isGenerating = true;
         var inputInterceptorTask = Task.Run(async () => {
             while (isGenerating) {
-                if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+                if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                     while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                     WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
                 }
@@ -526,8 +526,8 @@ public partial class DirectAiChatSessionAiStudio {
             // [AI Context] Rate-Limit & Quota Guardrail: Always wait 130s before every GenerateContentStreamAsync request to Google AI Studio.
             // HasJustUploaded is intentionally NOT checked here – the 130s in AttachmentHandler does not replace this per-request delay.
             // [Human] Wir warten VOR JEDEM AI-Studio-Request 130 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
-            if (!ExtractionHelpers.IsInSmartDelay) {
-                if (!await ExtractionHelpers.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
+            if (!InteractiveDelay.IsInSmartDelay) {
+                if (!await InteractiveDelay.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
                     exceptionCaught = true;
                 }
             }
@@ -656,7 +656,7 @@ public partial class DirectAiChatSessionAiStudio {
         }
 
         WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        ExtractionHelpers.PrintFileTree(distinctFiles);
+        FileTreeRenderer.PrintFileTree(distinctFiles);
 
         string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
         if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;

@@ -457,14 +457,24 @@ both twins call. The twins still exist after this phase — they just get thin.
 | `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` | Not started |
 | `PrefixCachePrimer` | `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`, `WarmUpWithBatchedHistoryAsync` | Not started |
 
-Also split the two grab-bags (not started):
-* `ExtractionHelpers` (583 lines, now slightly larger after absorbing
-  `GetUniqueTexPath`) → `HistoryFileResolver`, `FileTreeRenderer`,
-  `LatexResponseCleaner`, `InteractiveDelay`, `VideoBatchSelector`,
-  `YouTubeTaskPrompt`, `ModelSyncService`.
+Also split the two grab-bags:
+* `ExtractionHelpers` (611 lines) → `HistoryFileResolver`, `FileTreeRenderer`,
+  `LatexResponseCleaner` (moved to `Latex/`, matching §3.1),
+  `InteractiveDelay` (moved to `ConsoleUi/`, matching §3.1),
+  `VideoBatchSelector`, `YouTubeTaskPrompt`, `ModelSyncService`. **Done.**
+  `ExtractionHelpers` itself now only holds `GetUniqueTexPath` and
+  `LogSystemInstructionDumpAsync` (deliberately not split further — no
+  natural home for either in the target §3.1 list). Every extracted method
+  body was diffed byte-for-byte against the original before being wired up,
+  including the unicode/emoji-bearing ones (📁 tree icons, ⏳ delay marker,
+  the `‐`-`―` copy-suffix regex) after a transcription slip on the
+  first attempt was caught and fixed. All ~99 call sites across
+  `App`/`Chat`/`ConsoleUi`/`Extraction`/`GoogleAi`/`Refinement` updated to the
+  new type names; the old `ExtractionHelpersTests.cs` was split the same way
+  into `LatexResponseCleanerTests.cs` / `FileTreeRendererTests.cs`.
 * `ConsoleUiHelper` (547 lines) → `DirectoryTreeRenderer`,
   `FileSelectionPrompt`, `ConfigurationPrompts` — and out of the
-  `FfmpegUtilities` namespace.
+  `FfmpegUtilities` namespace. Not started.
 
 *Exit:* build 0/0, UI-string diff empty. Both extraction sessions should now be
 well under 1 000 lines each.

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LectureExtraction.Extraction; // For ExtractionHelpers
+using LectureExtraction.ConsoleUi;
 using Google.GenAI.Types;
 
 namespace LectureExtraction.GoogleAi;
@@ -231,7 +231,7 @@ public static partial class ApiResilience {
             }
         }
 
-        bool waitSuccess = await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage);
+        bool waitSuccess = await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage);
         return (waitSuccess, nextBackoff);
     }
 

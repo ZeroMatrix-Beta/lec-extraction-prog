@@ -145,7 +145,7 @@ public static class ConsoleUiHelper {
         // 1. Files first
         for (int i = 0; i < shownFiles; i++) {
             string fileName = Path.GetFileName(files[i]);
-            string cleanedFileName = ExtractionHelpers.CleanCopySuffix(fileName);
+            string cleanedFileName = FileTreeRenderer.CleanCopySuffix(fileName);
             items.Add(new() { IsDir = false, IsMsg = false, Name = cleanedFileName, Path = files[i] });
         }
         if (hasMoreFiles) {
@@ -156,7 +156,7 @@ public static class ConsoleUiHelper {
         if (currentDepth < maxDepth) {
             for (int i = 0; i < shownDirs; i++) {
                 string dirName = Path.GetFileName(subDirs[i]);
-                string cleanedDirName = ExtractionHelpers.CleanCopySuffix(dirName);
+                string cleanedDirName = FileTreeRenderer.CleanCopySuffix(dirName);
                 items.Add(new() { IsDir = true, IsMsg = false, Name = cleanedDirName, Path = subDirs[i] });
             }
             if (hasMoreDirs) {
@@ -189,7 +189,7 @@ public static class ConsoleUiHelper {
                 string ext = Path.GetExtension(item.Path).ToLowerInvariant();
                 string icon = GetFileIcon(ext);
                 string rawRelPath = Path.GetRelativePath(rootFolder, item.Path);
-                string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                string relPath = FileTreeRenderer.NormalizeRelativePath(rawRelPath);
                 string label = (!string.IsNullOrEmpty(relPath) && !string.Equals(relPath, item.Name, StringComparison.OrdinalIgnoreCase))
                     ? $"{item.Name} ({relPath})"
                     : item.Name;
@@ -359,7 +359,7 @@ public static class ConsoleUiHelper {
                 Console.WriteLine($"\nUnterordner (1-{count}):");
                 for (int i = 0; i < count; i++) {
                     string name = Path.GetFileName(subDirs[i]);
-                    string cleaned = ExtractionHelpers.CleanCopySuffix(name);
+                    string cleaned = FileTreeRenderer.CleanCopySuffix(name);
                     Console.WriteLine($"  {i + 1}) {cleaned}/");
                 }
                 if (subDirs.Length > shownLimit) {

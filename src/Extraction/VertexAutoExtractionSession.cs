@@ -124,16 +124,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
 
                 // Resolve all files from configured paths, handling directories
-                var resolvedInstructionFiles = ExtractionHelpers.ResolveHistoryFiles(_config.SystemInstructionPaths);
+                var resolvedInstructionFiles = HistoryFileResolver.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
                 if (resolvedInstructionFiles.Count > 0) {
-                    ExtractionHelpers.PrintFileTree(resolvedInstructionFiles);
+                    FileTreeRenderer.PrintFileTree(resolvedInstructionFiles);
                     List<string> distinctHistoryFiles = [];
                     if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
-                        distinctHistoryFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+                        distinctHistoryFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
                         if (distinctHistoryFiles.Count > 0) {
                             Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
-                            ExtractionHelpers.PrintFileTree(distinctHistoryFiles);
+                            FileTreeRenderer.PrintFileTree(distinctHistoryFiles);
                         }
                     }
 
@@ -147,7 +147,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                             allPathsForIndex.AddRange(distinctHistoryFiles);
                         }
-                        string? commonBase = ExtractionHelpers.FindCommonBaseDirectory(allPathsForIndex);
+                        string? commonBase = FileTreeRenderer.FindCommonBaseDirectory(allPathsForIndex);
 
                         var instructionBuilder = new System.Text.StringBuilder();
                         instructionBuilder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
@@ -155,11 +155,11 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         instructionBuilder.AppendLine("In order to fulfill the job of creating a high-value educational masterpiece that safely compiles, you need to know the file structure of the system prompt and read all of those files carefully.\n");
                         instructionBuilder.AppendLine("# Folder Structure of System Instructions\n");
                         instructionBuilder.AppendLine("## System Instructions");
-                        instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
+                        instructionBuilder.Append(FileTreeRenderer.GenerateMarkdownFileTree(resolvedInstructionFiles, commonBase));
 
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                             instructionBuilder.AppendLine("\n## Training History");
-                            instructionBuilder.Append(ExtractionHelpers.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
+                            instructionBuilder.Append(FileTreeRenderer.GenerateMarkdownFileTree(distinctHistoryFiles, commonBase));
                         }
                         instructionBuilder.AppendLine("\n******\n------\n******\n");
 
@@ -167,7 +167,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             string rawRelPath = !string.IsNullOrEmpty(commonBase)
                                 ? Path.GetRelativePath(commonBase, filePath)
                                 : Path.GetFileName(filePath);
-                            string relPath = ExtractionHelpers.NormalizeRelativePath(rawRelPath);
+                            string relPath = FileTreeRenderer.NormalizeRelativePath(rawRelPath);
                             instructionBuilder.AppendLine($"\n******\n------\n******\nHere is the file `{relPath}`:\n");
                             instructionBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(filePath));
                             Console.WriteLine($"  [INFO] System Instruction geladen: {relPath}");
@@ -196,10 +196,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         if (!_historyWasLoaded) {
-            var distinctFiles = ExtractionHelpers.ResolveHistoryFiles(_config.HistoryPreloadPaths);
+            var distinctFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (distinctFiles.Count > 0) {
                 Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-                ExtractionHelpers.PrintFileTree(distinctFiles);
+                FileTreeRenderer.PrintFileTree(distinctFiles);
                 if (_config.LoadHistoryIntoSystemInstruction) {
                     Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
                 }
@@ -236,7 +236,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         // [AI Context] Reset the rate-limit timer to now: session setup (loading system instructions and history)
         // can take significant time; the 150s guard will count from here and enforce a proper gap before the first API call.
-        ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+        InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();
@@ -260,7 +260,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             Console.Write("Möchtest du diese ausführen (j/y) oder interaktiv eine neue YouTube-URL eingeben (u/url)? [Standard: j]: ");
             string choice = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
             if (choice == "u" || choice == "url" || choice == "n") {
-                var interactiveTask = ExtractionHelpers.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
+                var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
                 if (interactiveTask != null) {
                     tasksToProcess.Add(interactiveTask);
                 }
@@ -271,7 +271,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
         else {
             Console.WriteLine("\n[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration gefunden.");
-            var interactiveTask = ExtractionHelpers.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
+            var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
             if (interactiveTask != null) {
                 tasksToProcess.Add(interactiveTask);
             }
@@ -329,7 +329,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     )).LatexBody;
 
                     if (!string.IsNullOrWhiteSpace(texOutput)) {
-                        string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
+                        string cleanTex = LatexResponseCleaner.CleanLatexResponse(texOutput);
                         fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
 
                         string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
@@ -534,7 +534,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
             }
             else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
-                var files = ExtractionHelpers.SelectAndFilterVideosForBatch(_config.SourceFolder);
+                var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
                 if (files.Length > 0) {
                     await SetupContextAndProcessAsync(files);
                 }
@@ -549,7 +549,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
                 SelectModel();
                 ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
-                ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
+                ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
                 Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und für die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
@@ -702,7 +702,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
             _config.CurrentModelIndex = idx - 1;
-            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
+            ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
         }
         else if (choice.Contains('-')) {
             int found = Array.IndexOf(models, choice);
@@ -712,7 +712,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             else {
                 Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
             }
-            ExtractionHelpers.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
+            ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
         }
     }
 
@@ -763,7 +763,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             bool isGenerating = true;
             var inputInterceptorTask = Task.Run(async () => {
                 while (isGenerating) {
-                    if (!ExtractionHelpers.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
+                    if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                         while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                         Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
                     }
@@ -853,7 +853,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
+                    if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -1026,7 +1026,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         waitTime = backoff;
                         Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
                     }
-                    if (!await ExtractionHelpers.SmartDelayAsync(waitTime, delayMessage)) { break; }
+                    if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { break; }
                 }
                 else {
                     Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
@@ -1332,7 +1332,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 int partFreshTokens = result.Usage.Fresh;
 
                 if (!string.IsNullOrWhiteSpace(result.LatexBody)) {
-                    string cleanTex = ExtractionHelpers.CleanLatexResponse(result.LatexBody);
+                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(result.LatexBody);
 
                     // Store the raw output for the combined file without offset
                     fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
@@ -1750,7 +1750,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             // [AI Context] Under Vertex AI, we do not have strict RPM / TPM limits, but a 150s delay provides a buffer to avoid transient concurrency limits or spikes.
             // [Human] Unter Vertex AI sind die Rate-Limits höher, aber eine Pause von 150s schützt vor temporären Server-Spikes. (Oder drücke Enter für sofortigen Skip)
             Console.WriteLine($"\n  [Timer] Warte 150 Sekunden vor der Fortsetzung... (Oder drücke Enter für sofortigen Skip)");
-            if (!await ExtractionHelpers.SmartDelayAsync(150, "Warte auf Fortsetzung (Sicherheits-Puffer)...")) {
+            if (!await InteractiveDelay.SmartDelayAsync(150, "Warte auf Fortsetzung (Sicherheits-Puffer)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
@@ -710,8 +711,8 @@ public partial class LatexRefinementSession {
         // Calling '.Any()' creates an enumerator object under the hood, which causes unnecessary memory allocation.
         if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Length > 0) {
             Console.WriteLine("\n[LaTeX Refinement] Folgende System-Instruktionen sind konfiguriert:");
-            var resolved = ExtractionHelpers.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
-            ExtractionHelpers.PrintFileTree(resolved);
+            var resolved = HistoryFileResolver.ResolveHistoryFiles(stepConfig.SystemInstructionPaths);
+            FileTreeRenderer.PrintFileTree(resolved);
             foreach (var path in resolved) {
                 if (System.IO.File.Exists(path)) {
                     Console.WriteLine($"  [INFO] Lade System-Instruktion: {path}");
@@ -724,7 +725,7 @@ public partial class LatexRefinementSession {
             }
             // [AI Context] Reset the rate-limit timer to now: loading system instructions takes time,
             // so the guard will count from here and enforce a proper gap before the first API call.
-            ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+            InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         }
 
         // [AI Context] Context caching is Vertex AI only. AiStudio (Google API key) does not support caching.
@@ -948,11 +949,11 @@ public partial class LatexRefinementSession {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
             int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
-            double secondsSinceLastGen = (DateTime.UtcNow - ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < rateLimitDelay && !ExtractionHelpers.IsInSmartDelay) {
+            double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
+            if (secondsSinceLastGen < rateLimitDelay && !InteractiveDelay.IsInSmartDelay) {
                 int waitRemaining = (int)Math.Ceiling(rateLimitDelay - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem nächsten API-Aufruf...");
-                if (!await ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
+                if (!await InteractiveDelay.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
                     break;
                 }
             }
@@ -1060,7 +1061,7 @@ public partial class LatexRefinementSession {
             // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
             // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
             Console.WriteLine($"  [Rate-Limit] Warte {rateLimitDelay} Sekunden (Token Refill), damit die Quota vor den Batch-Teilen vollständig zurückgesetzt ist...");
-            if (!await ExtractionHelpers.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
+            if (!await InteractiveDelay.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
                 break;
             }
@@ -1108,7 +1109,7 @@ public partial class LatexRefinementSession {
                 outputFileName = Path.GetFileName(outPath);
             }
 
-            string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
+            string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
 
             string fileHeader = $"% ==========================================\n" +
                                 $"% LatexRefinement Step Output: {outputFileName}\n" +
@@ -1128,7 +1129,7 @@ public partial class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
             Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
 
-            ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+            InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             return outPath;
         }
@@ -1200,11 +1201,11 @@ public partial class LatexRefinementSession {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
 
             int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds > 0 ? _config.Step3LastRefinement.RateLimitDelaySeconds : 130;
-            double secondsSinceLastGen = (DateTime.UtcNow - ExtractionHelpers.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < fixDelay && !ExtractionHelpers.IsInSmartDelay) {
+            double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
+            if (secondsSinceLastGen < fixDelay && !InteractiveDelay.IsInSmartDelay) {
                 int waitRemaining = (int)Math.Ceiling(fixDelay - secondsSinceLastGen);
                 Console.WriteLine($"\n[Rate-Limit & Quota Schutz] Warte verbleibende {waitRemaining} Sekunden vor dem PDF-Fix-Request...");
-                if (!await ExtractionHelpers.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
+                if (!await InteractiveDelay.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
                     break;
                 }
             }
@@ -1274,7 +1275,7 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
 
             Console.WriteLine($"\n  [Timer] Warte {fixDelay} Sekunden vor der Fortsetzung...");
-            if (!await ExtractionHelpers.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...")) {
+            if (!await InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 break;
             }
             currentRequest++;
@@ -1283,7 +1284,7 @@ public partial class LatexRefinementSession {
         Console.CancelKeyPress -= CancelHandler;
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
-            string cleanedText = ExtractionHelpers.CleanLatexResponse(fullResponseText);
+            string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
 
             // Version ohne Preamble und komplett bereinigt von \begin{document} / \end{document}
             string bodyOnlyText = cleanedText;
@@ -1312,7 +1313,7 @@ public partial class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(standalonePath, standaloneContent);
             Console.WriteLine($"[INFO] Gefixte LaTeX-Datei (Versuch #{roundNumber}, mit Preamble) gespeichert unter: {standalonePath}");
 
-            ExtractionHelpers.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+            InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             Console.WriteLine($"  [INFO] Starte PDF-Kompilierung für step5 (Fix-Versuch #{roundNumber})...");
             var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);
@@ -1471,7 +1472,7 @@ Please return the fully corrected contents of `{finalFileName}` inside a ```late
                     }
 
                     if (!string.IsNullOrWhiteSpace(agentOutput)) {
-                        string cleanedText = ExtractionHelpers.CleanLatexResponse(agentOutput);
+                        string cleanedText = LatexResponseCleaner.CleanLatexResponse(agentOutput);
                         
                         await System.IO.File.WriteAllTextAsync(finalTexFile, cleanedText);
                         Console.WriteLine($"\n✅ [Antigravity Agent API] Agent hat Korrekturen angewendet und in `{finalFileName}` gespeichert. Starte nächsten Kompilierungs-Versuch...");
