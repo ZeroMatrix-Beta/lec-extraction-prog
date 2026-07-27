@@ -753,35 +753,7 @@ public partial class LatexRefinementSession {
                     await ContextCacheStateManager.DeleteRemoteAsync(_client, savedState.CacheName);
                 }
                 Console.WriteLine("  [INFO] Erstelle neuen Google Kontext-Cache...");
-                try {
-                    var cacheConfig = new CreateCachedContentConfig {
-                        SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] },
-                        DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
-                        Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
-                    };
-                    var created = await _client.Caches.CreateAsync(backendParams.CurrentModel, cacheConfig);
-                    if (created != null && !string.IsNullOrEmpty(created.Name)) {
-                        cacheName = created.Name;
-                        savedState.CacheName = cacheName;
-                        savedState.Model = backendParams.CurrentModel;
-                        savedState.Temperature = backendParams.Temperature;
-                        savedState.TopP = backendParams.TopP;
-                        savedState.TopK = backendParams.TopK;
-                        savedState.MaxOutputTokens = backendParams.MaxOutputTokens;
-                        savedState.ThinkingBudget = backendParams.ThinkingBudget;
-                        savedState.ThinkingLevel = backendParams.ThinkingLevel;
-                        savedState.SystemInstructionChecksum = checksum;
-                        savedState.ExpireTimeUtc = DateTime.UtcNow.AddMinutes(backendParams.ContextCachingMinutes);
-                        if (created != null && created.ExpireTime.HasValue) {
-                            savedState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
-                        }
-                        ContextCacheStateManager.SaveState(savedState, cacheStateFileName);
-                        Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich erstellt: {cacheName}");
-                    }
-                }
-                catch (Exception ex) {
-                    Console.WriteLine($"  [FEHLER] Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
-                }
+                cacheName = await CreateContextCacheAsync(backendParams, systemInstructionText, outputFileName, checksum, cacheStateFileName, isRecreate: false);
             }
         }
         else if (_config.UseVertex && !backendParams.UseContextCaching) {
@@ -816,39 +788,8 @@ public partial class LatexRefinementSession {
             if (!cacheValid) {
                 Console.WriteLine("  [Cache] Cache abgelaufen oder ungültig. Erstelle neuen Google Kontext-Cache...");
                 ContextCacheStateManager.ClearState(cacheStateFileName);
-                cacheName = null;
-                try {
-                    string checksum = ContextCacheStateManager.ComputeChecksum(systemInstructionText);
-                    var cacheConfig = new CreateCachedContentConfig {
-                        SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] },
-                        DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
-                        Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
-                    };
-                    var created = await _client.Caches.CreateAsync(backendParams.CurrentModel, cacheConfig);
-                    if (created != null && !string.IsNullOrEmpty(created.Name)) {
-                        cacheName = created.Name;
-                        var newState = new ContextCacheState {
-                            CacheName = cacheName,
-                            Model = backendParams.CurrentModel,
-                            Temperature = backendParams.Temperature,
-                            TopP = backendParams.TopP,
-                            TopK = backendParams.TopK,
-                            MaxOutputTokens = backendParams.MaxOutputTokens,
-                            ThinkingBudget = backendParams.ThinkingBudget,
-                            ThinkingLevel = backendParams.ThinkingLevel,
-                            SystemInstructionChecksum = checksum,
-                            ExpireTimeUtc = DateTime.UtcNow.AddMinutes(backendParams.ContextCachingMinutes)
-                        };
-                        if (created.ExpireTime.HasValue) {
-                            newState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
-                        }
-                        ContextCacheStateManager.SaveState(newState, cacheStateFileName);
-                        Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich neu erstellt: {cacheName}");
-                    }
-                }
-                catch (Exception ex) {
-                    Console.WriteLine($"  [FEHLER] Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
-                }
+                string checksum = ContextCacheStateManager.ComputeChecksum(systemInstructionText);
+                cacheName = await CreateContextCacheAsync(backendParams, systemInstructionText, outputFileName, checksum, cacheStateFileName, isRecreate: true);
             }
         }
 
@@ -1137,6 +1078,53 @@ public partial class LatexRefinementSession {
             Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
             return null;
         }
+    }
+
+    /// <summary>
+    /// [AI Context] Creates a new Vertex context cache for a refinement step's system instruction and
+    /// persists its state. Shared by the two ExecuteGenerativeStepAsync creation paths (initial
+    /// cache-miss and expired-cache recreation), which were previously two near-identical inline copies.
+    /// [Human] Legt einen neuen Kontext-Cache für einen Refinement-Schritt an und speichert dessen Zustand.
+    /// </summary>
+    private async Task<string?> CreateContextCacheAsync(BackendParameters backendParams, string systemInstructionText, string outputFileName, string checksum, string cacheStateFileName, bool isRecreate) {
+        try {
+            var cacheConfig = new CreateCachedContentConfig {
+                SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] },
+                DisplayName = $"latex-ref-{Path.GetFileNameWithoutExtension(outputFileName)}",
+                Ttl = $"{backendParams.ContextCachingMinutes * 60}s"
+            };
+            var created = await _client.Caches.CreateAsync(backendParams.CurrentModel, cacheConfig);
+            if (created != null && !string.IsNullOrEmpty(created.Name)) {
+                string cacheName = created.Name;
+                var newState = new ContextCacheState {
+                    CacheName = cacheName,
+                    Model = backendParams.CurrentModel,
+                    Temperature = backendParams.Temperature,
+                    TopP = backendParams.TopP,
+                    TopK = backendParams.TopK,
+                    MaxOutputTokens = backendParams.MaxOutputTokens,
+                    ThinkingBudget = backendParams.ThinkingBudget,
+                    ThinkingLevel = backendParams.ThinkingLevel,
+                    SystemInstructionChecksum = checksum,
+                    ExpireTimeUtc = DateTime.UtcNow.AddMinutes(backendParams.ContextCachingMinutes)
+                };
+                if (created.ExpireTime.HasValue) {
+                    newState.ExpireTimeUtc = created.ExpireTime.Value.ToUniversalTime();
+                }
+                ContextCacheStateManager.SaveState(newState, cacheStateFileName);
+                if (isRecreate) {
+                    Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich neu erstellt: {cacheName}");
+                }
+                else {
+                    Console.WriteLine($"  [INFO] Google Kontext-Cache erfolgreich erstellt: {cacheName}");
+                }
+                return cacheName;
+            }
+        }
+        catch (Exception ex) {
+            Console.WriteLine($"  [FEHLER] Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+        }
+        return null;
     }
 
     /// <summary>
