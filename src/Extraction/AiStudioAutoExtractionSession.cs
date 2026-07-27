@@ -1122,123 +1122,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var channel = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
         // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
-        var producerTask = Task.Run(async () => {
-            foreach (var file in files) {
-                string baseName = Path.GetFileNameWithoutExtension(file);
-                baseName = SpeedCompressedRegex().Replace(baseName, "");
-                baseName = CompressedRegex().Replace(baseName, "");
-                // Create a file-specific output folder within the main target folder
-                string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
-                if (!Directory.Exists(fileSpecificOutputFolder)) {
-                    Directory.CreateDirectory(fileSpecificOutputFolder);
-                }
-                // Create a file-specific temporary folder inside the file-specific output folder
-                string tmpFolderForFile = Path.Combine(fileSpecificOutputFolder, "tmp");
-                if (!Directory.Exists(tmpFolderForFile)) {
-                    Directory.CreateDirectory(tmpFolderForFile);
-                }
-
-                // Audio extraction was moved to the Consumer loop to run in parallel with API calls
-
-                // Removed dateStr from filename pattern for caching to work across days for 2-hour window
-                var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
-
-                double fullOriginalVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(file); // Get original video duration
-                TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
-                bool useCache = false;
-
-                if (cachedParts.Count > 0) {
-                    var fileInfo = new FileInfo(cachedParts[0]);
-                    if ((DateTime.Now - fileInfo.LastWriteTime) <= cacheDuration) {
-                        // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs, and against
-                        // stale caches left over from a run with a different NumberOfParts (split geometry only
-                        // matches the exact part count it was produced with). We also check if the files are
-                        // actually valid (not 0 bytes).
-                        // [Human] Wenn ein alter Lauf abgebrochen ist, liegen vielleicht nur 1-2 Teile im Cache, oder sie sind 0 Bytes groß. Das wird hier verhindert!
-                        bool allFilesValid = true;
-                        foreach (var cachedPartFile in cachedParts) {
-                            if (new FileInfo(cachedPartFile).Length < 1024) { // less than 1KB is definitely invalid for a video
-                                allFilesValid = false;
-                                break;
-                            }
-                        }
-
-                        if (cachedParts.Count == _config.NumberOfParts && allFilesValid) {
-                            useCache = true;
-                        }
-                        else {
-                            Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen oder defekten Cache für '{Path.GetFileName(file)}' ({cachedParts.Count} Teil(e), valid: {allFilesValid}). FFmpeg wird neu gestartet...");
-                            foreach (var stalePartFile in cachedParts) { try { System.IO.File.Delete(stalePartFile); } catch { } }
-                        }
-                    }
-                }
-
-                if (useCache) {
-                    Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 48h):");
-                    cachedParts.Sort();
-
-                    // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
-                    double speedVideoDuration;
-                    bool wasInputFilePreCompressedWhenCached = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
-
-                    if (wasInputFilePreCompressedWhenCached) {
-                        // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
-                        speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(file);
-                    }
-                    else {
-                        // Otherwise, it was the output of ProcessGeneralVideoAsync that was cached.
-                        string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{_speed.ToString(System.Globalization.CultureInfo.InvariantCulture)}-compressed.mp4");
-                        speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
-                    }
-                    double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0;
-                    var cachedPartsWithTimes = new List<VideoSegment>();
-                    for (int i = 0; i < cachedParts.Count; i++) {
-                        double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - _config.OverlapSeconds) : 0;
-                        Console.WriteLine($"  - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
-                        cachedPartsWithTimes.Add(new VideoSegment(cachedParts[i], startTime));
-                    }
-
-                    await channel.Writer.WriteAsync(new PreparedVideo(file, fileSpecificOutputFolder, tmpFolderForFile, cachedPartsWithTimes, true, fullOriginalVideoDuration));
-                    continue;
-                }
-
-                // Determine if the file is already in a "compressed" format
-                bool isPreCompressed = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
-
-                string? videoToSplit;
-                if (isPreCompressed) {
-                    Console.WriteLine($"\n[FFmpeg Producer] {Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...");
-                    videoToSplit = file; // Use the original file directly for splitting
-                }
-                else {
-                    Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
-                    videoToSplit = await FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: _speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true, preset: _config.FfmpegPreset);
-                    if (videoToSplit == null) {
-                        Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
-                        continue;
-                    }
-                }
-
-                Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
-                var rawPartsWithTimes = await FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: _config.FfmpegPreset);
-
-                if (rawPartsWithTimes.Count > 0) {
-                    List<VideoSegment> safePartsWithTimes = [];
-                    for (int i = 0; i < rawPartsWithTimes.Count; i++) {
-                        string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
-
-                        if (!string.Equals(rawPartsWithTimes[i].FilePath, safePartPath, StringComparison.OrdinalIgnoreCase)) {
-                            if (System.IO.File.Exists(safePartPath)) System.IO.File.Delete(safePartPath);
-                            System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
-                        }
-
-                        safePartsWithTimes.Add(new VideoSegment(safePartPath, rawPartsWithTimes[i].StartTimeSeconds));
-                    }
-                    await channel.Writer.WriteAsync(new PreparedVideo(file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
-                }
-            }
-            channel.Writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
-        });
+        var producerTask = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, _config, _speed));
 
         // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
@@ -1878,9 +1762,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     [System.Text.RegularExpressions.GeneratedRegex(@"-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex CompressedRegex();
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex PreCompressedFileRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex SegmentCompleteRegex();

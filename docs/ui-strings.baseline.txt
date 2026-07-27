@@ -570,8 +570,8 @@ Console.WriteLine($"\n[FATAL ERROR] The application encountered an unhandled exc
 Console.WriteLine($"\n[FEHLER] Antigravity Agent API Aufruf fehlgeschlagen: {response.StatusCode}");
 Console.WriteLine($"\n[FEHLER] Antigravity Agent benötigt einen gültigen API-Key in der Umgebungsvariable '{envVarName}'.");
 Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
-Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
-Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
+Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {config.NumberOfParts} Teile ({config.OverlapSeconds}s Overlap)...");
+Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({speed}x Speed, 1 FPS, Mono)...");
 Console.WriteLine($"\n[FFmpeg Producer] {Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...");
 Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(sourceVideoPath)} abgeschlossen.");
 Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(sourceVideoPath)}...");
