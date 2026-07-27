@@ -752,7 +752,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
             }
             else if (_config.ThinkingBudget.HasValue) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+                int budget = _config.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 
@@ -1648,7 +1650,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
             }
             else if (_config.ThinkingBudget.HasValue) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = _config.ThinkingBudget };
+                int budget = _config.ThinkingBudget.Value;
+                if (budget > 32768) budget = 32768;
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
             }
         }
 

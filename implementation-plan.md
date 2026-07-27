@@ -450,10 +450,10 @@ both twins call. The twins still exist after this phase — they just get thin.
 | `TexDocumentWriter` | 2× `GetUniqueTexPath` (**done, folded into existing `ExtractionHelpers` rather than a new type, commit `23c0c1b`**), `BuildTexPartHeader`, `BuildTexCombinedHeader`, offset-file writing (not started) | Partial |
 | `AudioTrackExtractor` | the `startAudioTask` local function + cache check | **Done** |
 | `GcsWorkspace` | the 2 byte-identical `CleanupBucketAsync` copies (Vertex extraction, LaTeX refinement) — **done**. `CleanupGcsBucketAsync` (AI Studio chat) / `ForcePurgeGcsBucketAsync` (Vertex chat) intentionally left alone: real behavioral differences (`IsAiStudio` free-tier guard, richer Vertex error diagnostics incl. a billing-account branch, English vs German strings) | Partial |
-| `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` | Not started |
-| `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | Not started |
-| `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) | Not started |
-| `GenerationConfigBuilder` | thinking/temperature/topP/topK/maxTokens assembly, repeated 5× | Not started |
+| `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` | Downgraded — see progress note, not pursuing further |
+| `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | Not started, deferred — see progress note |
+| `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) | Investigated, real per-backend divergence (AI-Studio-only `applyParams` override + dedicated API key resolution; Vertex has neither, uses ADC) — not pursuing further |
+| `GenerationConfigBuilder` | thinking/temperature/topP/topK/maxTokens assembly, repeated 5× | Investigated; found and fixed a real clamp-bug (AI Studio wasn't capping `ThinkingBudget` at 32768 like Vertex does — see progress note). Not extracting a shared type beyond that fix |
 | `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` | Not started |
 | `PrefixCachePrimer` | `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`, `WarmUpWithBatchedHistoryAsync` | Not started |
 
@@ -487,12 +487,44 @@ correct, permanent per-backend difference, not drift to fix. Not extracting
 further; not worth a new type for ~10 lines of glue plus one small
 AI-Studio-only warning branch.
 
+`RefinementLauncher` was investigated and dropped for the same reason: AI
+Studio applies a 3-step `applyParams` override (copies the chosen extraction
+model/temperature/topP/topK/maxTokens/thinking settings onto each refinement
+step) and resolves its own dedicated API key by env name; Vertex does neither
+(no param override block at all, relies on ADC instead of an API key). The
+only line genuinely identical between them is the "deactivate Step 1 merger
+when `NumberOfParts <= 1`" check — not worth extracting alone.
+
+`GenerationConfigBuilder` (the `GenerateContentConfig` assembly repeated
+~5×) was investigated and surfaced a real discrepancy: at both AI Studio
+`ThinkingBudget` call sites (`DebugChatAsync` and the main
+`GenerateTexFromUploadedPartAsync` path), the budget was sent unclamped,
+while **both** Vertex call sites clamped it to 32768 before sending. Websearch
+on 2026-07-27 found no evidence that AI Studio and Vertex have different
+`thinkingBudget` ceilings for the same model — both platforms document the
+same 0-32768 range for the Gemini 2.5-era models this code path targets — so
+the AI Studio side looks like a missing safety clamp rather than an
+intentional per-backend limit. Fixed by adding the same `if (budget > 32768)
+budget = 32768;` clamp to both AI Studio sites, matching Vertex. No
+configured `ThinkingBudget` value in any JSON file exceeds 32768 today
+(32765 / 32768), so this changes zero observed behavior right now — it's a
+guard against future misconfiguration. UI-string diff confirmed clean.
+Not extracting a shared `GenerationConfigBuilder` type beyond this — the
+remaining 3-4 call sites per session were not individually checked for
+further drift; assume more may exist if this area gets revisited.
+`VideoSegmentProducer` and `ContextCacheCoordinator`/`PrefixCachePrimer`
+were not investigated at all this session — expect the same
+looks-like-duplication-but-isn't pattern found in every other item above,
+and treat them with the same suspicion before merging.
+
 Suggested order for what remains, cheapest/lowest-drift first:
-~~`AudioTrackExtractor`~~ → ~~`SystemInstructionLoader` (downgraded, see above)~~
-→ ~~`GcsWorkspace` (partial, see above)~~ → `RefinementLauncher` →
-`GenerationConfigBuilder` → `VideoSegmentProducer` →
-`ContextCacheCoordinator`/`PrefixCachePrimer` (hardest, most drift) → the two
-grab-bag splits (mechanical, do anytime).
+~~`AudioTrackExtractor`~~ → ~~`SystemInstructionLoader` (downgraded)~~ →
+~~`GcsWorkspace` (partial)~~ → ~~`RefinementLauncher` (dropped)~~ →
+~~`GenerationConfigBuilder` (clamp bug fixed, not extracted further)~~ →
+`VideoSegmentProducer` → `ContextCacheCoordinator`/`PrefixCachePrimer`
+(hardest, most drift, not yet even inspected) → the two grab-bag splits
+(mechanical, do anytime, no AI-call behavior involved — safest remaining
+Phase 3 work).
 
 Also, in passing: `AppConfig.DefaultModel` / `AppConfig.RefinementModel`
 (and the matching `appsettings.json` keys) were found unused — every session
