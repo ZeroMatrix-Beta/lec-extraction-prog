@@ -36,7 +36,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.5-flash",
+        "gemini-3.6-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
@@ -81,7 +81,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.5-flash",
+        "gemini-3.6-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,
@@ -126,7 +126,7 @@
       "MaxOutputTokens": 65535,
       "Model": [
         "gemini-3.6-flash",
-        "gemini-3.5-flash",
+        "gemini-3.6-flash",
         "gemini-3-flash-preview"
       ],
       "ThinkingBudget": 32765,

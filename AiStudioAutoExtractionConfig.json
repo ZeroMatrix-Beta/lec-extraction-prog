@@ -19,9 +19,21 @@
   "SystemInstructionPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples2.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples3.md"
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-conventions.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-hierarchy.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-environment-usage.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-spoken-clean-structuring.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-proof-structuring.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-formula-formatting.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-typography-notation.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-list-enumeration.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-tikz-patterns.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-worked-examples.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-example-scenarios.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-anti-patterns.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-audio-fidelity.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-fallback-strategy.md",
+    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-compilation-errors.md"
   ],
   "HistoryPreloadPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
@@ -39,13 +51,13 @@
     "gemini-2.5-flash"
   ],
   "UseChosenModelForRestOfPipeline": true,
-  "CurrentModelIndex": 1,
+  "CurrentModelIndex": 0,
   "ThinkingBudget": 32765,
   "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "InlineHistoryImages": true,
-  "HistoryBatchCount": 4,
+  "HistoryBatchCount": 3,
   "MergeSystemInstructionAndFirstHistoryBatch": true,
   "MergeAllConsecutiveHistoryBatches": true,
   "DebugSendReferenceFile": true,

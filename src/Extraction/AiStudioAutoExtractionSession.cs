@@ -356,8 +356,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             _systemInstructionText += batchBuilder.ToString();
 
             // Decide whether to send a handshake for this batch.
-            // If MergeSystemInstructionAndFirstHistoryBatch is true, batch 0 already carries the
-            // system instruction and must send its own handshake (that IS the merge) — it is not a
+            // If MergeSystemInstructionAndFirstHistoryBatch is true, batch 0 is sent immediately together
+            // with the system instruction (its own handshake IS that merge, kept small and early on purpose
+            // to start Google's prefix-cache warming ASAP without a large fresh-token spike) — it is not a
             // pairing candidate. Pairing among the remaining batches then starts fresh from there:
             // pairs are (0,1),(2,3),... normally, or (1,2),(3,4),... when batch 0 is excluded.
             bool shouldSendHandshake = true;
@@ -1147,8 +1148,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (cachedParts.Count > 0) {
                     var fileInfo = new FileInfo(cachedParts[0]);
                     if ((DateTime.Now - fileInfo.LastWriteTime) <= cacheDuration) {
-                        // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs.
-                        // We expect exactly 3 parts. We also check if the files are actually valid (not 0 bytes)
+                        // [AI Context] Defend against incomplete caches from interrupted FFmpeg runs, and against
+                        // stale caches left over from a run with a different NumberOfParts (split geometry only
+                        // matches the exact part count it was produced with). We also check if the files are
+                        // actually valid (not 0 bytes).
                         // [Human] Wenn ein alter Lauf abgebrochen ist, liegen vielleicht nur 1-2 Teile im Cache, oder sie sind 0 Bytes groß. Das wird hier verhindert!
                         bool allFilesValid = true;
                         foreach (var cachedPartFile in cachedParts) {
@@ -1158,7 +1161,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                             }
                         }
 
-                        if (cachedParts.Count >= _config.NumberOfParts && allFilesValid) {
+                        if (cachedParts.Count == _config.NumberOfParts && allFilesValid) {
                             useCache = true;
                         }
                         else {
@@ -1307,16 +1310,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Task? audioExtractionTask = null;
             void startAudioTask() {
                 if (_config.GenerateAudioFile && audioExtractionTask == null) {
+                    // [AI Context] Audio extraction is a deterministic derivative of the source video, so unlike
+                    // the LLM-generated .tex parts it never goes stale — no TTL, just existence + a sanity size check.
                     string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
-                    bool useCachedAudio = false;
-                    if (System.IO.File.Exists(expectedAudioPath)) {
-                        TimeSpan audioCacheDuration = TimeSpan.FromHours(48);
-                        if ((DateTime.Now - System.IO.File.GetLastWriteTime(expectedAudioPath)) <= audioCacheDuration) {
-                            useCachedAudio = true;
-                        }
-                    }
+                    bool useCachedAudio = System.IO.File.Exists(expectedAudioPath) && new FileInfo(expectedAudioPath).Length >= 1024;
                     if (useCachedAudio) {
-                        Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei (jünger als 48h) gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
+                        Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
                     }
                     else {
                         audioExtractionTask = Task.Run(async () => {
