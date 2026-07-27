@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Draft for review · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26
+**Status:** In progress, Phase 2 underway · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-27
 
 ---
 
@@ -399,6 +399,25 @@ Purely mechanical and fully compiler-verified.
    with plain `using` directives.
 
 *Exit:* build 0/0, tests green, UI-string diff empty.
+
+**Outcome — done, in commits `2a2ec17` and `08eebec` (executed together with part of
+Phase 3, ahead of this plan document).**
+
+* `src/` now holds one folder per bounded context exactly as in §3.1
+  (`App`, `Configuration`, `Extraction`, `Refinement`, `Chat`, `GoogleAi`
+  (+ `GoogleAi/ContextCache`), `Media`, `Latex`, `ConsoleUi`, `Infrastructure`).
+* Every file's namespace is `LectureExtraction.<Folder>` — verified by grepping
+  all `namespace` declarations under `src/`, no stragglers left on the old
+  `AutoExtraction` / `Config` / `FfmpegUtilities` / `DirectChatAiInteraction` /
+  `GoogleGenAi` names.
+* Not yet done from the original Phase 1 checklist: some config classes were
+  split into one-type-per-file as part of this work (`BackendParameters.cs`,
+  `RefinementStepConfig.cs`, `PdfCompilationConfig.cs`,
+  `DirectAiChatSessionAiStudioGenerationConfig.cs` etc. now exist standalone),
+  which is technically Phase 3 scope pulled forward. Twin classes
+  (`AiStudioAutoExtractionSession` 1932 lines / `VertexAutoExtractionSession`
+  1859 lines) and the god methods inside them are untouched.
+* Build 0/0, 80 tests green, confirmed 2026-07-27.
 
 ### Phase 2 — Domain model · low risk
 
