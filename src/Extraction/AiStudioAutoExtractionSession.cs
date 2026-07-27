@@ -1308,13 +1308,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
 
                     // Prepend the start time to the individual part .tex file
-                    string partHeader = BuildTexPartHeader(
+                    string partHeader = TexDocumentWriter.BuildPartHeader(
                         sourcePartFileName: Path.GetFileName(safePartPath),
                         partStartTimeSeconds: partStartTimeSeconds,
-                        inputTokens: result.Usage.Input,
-                        cachedTokens: result.Usage.Cached,
-                        freshTokens: partFreshTokens,
-                        outputTokens: result.Usage.Output);
+                        usage: result.Usage,
+                        model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
+                        maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
                     string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
@@ -1348,15 +1347,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
                 string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
-                int fileTotalFreshTokens = fileTotalTokens.Fresh;
                 string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
-                string header = BuildTexCombinedHeader(
+                string header = TexDocumentWriter.BuildCombinedHeader(
                     sourceFileName: Path.GetFileName(file),
                     totalParts: partsWithTimes.Count,
-                    totalInputTokens: fileTotalTokens.Input,
-                    totalCachedTokens: fileTotalTokens.Cached,
-                    totalFreshTokens: fileTotalFreshTokens,
-                    totalOutputTokens: fileTotalTokens.Output);
+                    totalUsage: fileTotalTokens,
+                    model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
+                    maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
                 await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
                 Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
 
@@ -1420,61 +1417,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
         }
     }
-    /// <summary>
-    /// [AI Context] Builds the metadata header for an individual .tex part file.
-    /// Includes model parameters, timestamp offset, and per-part token usage statistics.
-    /// [Human] Baut den Metadaten-Header für eine einzelne .tex-Teildatei.
-    /// </summary>
-    private string BuildTexPartHeader(string sourcePartFileName, double partStartTimeSeconds,
-        int inputTokens, int cachedTokens, int freshTokens, int outputTokens) {
-        return $"% ==========================================\n" +
-               $"% AutoExtraction Source Part: {sourcePartFileName}\n" +
-               BuildTexModelParameterBlock() +
-               $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-               $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
-               $"% ------------------------------------------\n" +
-               $"% Token Usage Analysis (Google GenAI):\n" +
-               $"%   - Total Prompt Tokens : {inputTokens:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
-               $"%   - Cached Context      : {cachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
-               $"%   - Fresh Input Tokens  : {freshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
-               $"%   - Generated Output    : {outputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
-               $"% ==========================================\n\n";
-    }
-
-    /// <summary>
-    /// [AI Context] Builds the metadata header for the combined (-all) .tex file.
-    /// Includes model parameters and aggregated token usage across all parts.
-    /// [Human] Baut den Metadaten-Header für die zusammengeführte (-all) .tex-Datei.
-    /// </summary>
-    private string BuildTexCombinedHeader(string sourceFileName, int totalParts,
-        int totalInputTokens, int totalCachedTokens, int totalFreshTokens, int totalOutputTokens) {
-        return $"% ==========================================\n" +
-               $"% AutoExtraction Combined Source: {sourceFileName}\n" +
-               BuildTexModelParameterBlock() +
-               $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-               $"% ------------------------------------------\n" +
-               $"% Token Usage Summary across {totalParts} Part(s):\n" +
-               $"%   - Total Prompt Tokens : {totalInputTokens:N0} (Summe aller Prompts über alle Teile)\n" +
-               $"%   - Cached Context      : {totalCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
-               $"%   - Fresh Input Tokens  : {totalFreshTokens:N0} (Echter neuer Payload für alle Video-Teile)\n" +
-               $"%   - Total Output Tokens : {totalOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
-               $"% ==========================================\n\n";
-    }
-
-    /// <summary>
-    /// [AI Context] Builds the common model parameter block used in all .tex headers.
-    /// [Human] Gemeinsamer Block mit Modell-Parametern für alle .tex-Header.
-    /// </summary>
-    private string BuildTexModelParameterBlock() {
-        return $"% Model: {_config.CurrentModel}\n" +
-               $"% Temperature: {_config.Temperature}\n" +
-               $"% TopP: {_config.TopP}\n" +
-               $"% TopK: {_config.TopK}\n" +
-               $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
-               (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
-               (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "");
-    }
-
     private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();

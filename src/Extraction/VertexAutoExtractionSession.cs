@@ -1225,24 +1225,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     }
 
                     // Prepend the start time to the individual part .tex file
-                    string partHeader = $"% ==========================================\n" +
-                                        $"% AutoExtraction Source Part: {Path.GetFileName(safePartPath)}\n" +
-                                        $"% Model: {_config.CurrentModel}\n" +
-                                        $"% Temperature: {_config.Temperature}\n" +
-                                        $"% TopP: {_config.TopP}\n" +
-                                        $"% TopK: {_config.TopK}\n" +
-                                        $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
-                                        (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
-                                        (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
-                                        $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                        $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
-                                        $"% ------------------------------------------\n" +
-                                        $"% Token Usage Analysis (Google GenAI):\n" +
-                                        $"%   - Total Prompt Tokens : {result.Usage.Input:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
-                                        $"%   - Cached Context      : {result.Usage.Cached:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
-                                        $"%   - Fresh Input Tokens  : {partFreshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
-                                        $"%   - Generated Output    : {result.Usage.Output:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
-                                        $"% ==========================================\n\n";
+                    string partHeader = TexDocumentWriter.BuildPartHeader(
+                        sourcePartFileName: Path.GetFileName(safePartPath),
+                        partStartTimeSeconds: partStartTimeSeconds,
+                        usage: result.Usage,
+                        model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
+                        maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
                     string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
@@ -1276,25 +1264,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
                 string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
-                int fileTotalFreshTokens = fileTotalTokens.Fresh;
                 string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
-                string header = $"% ==========================================\n" +
-                                $"% AutoExtraction Combined Source: {Path.GetFileName(file)}\n" +
-                                $"% Model: {_config.CurrentModel}\n" +
-                                $"% Temperature: {_config.Temperature}\n" +
-                                $"% TopP: {_config.TopP}\n" +
-                                $"% TopK: {_config.TopK}\n" +
-                                $"% MaxOutputTokens: {_config.MaxOutputTokens}\n" +
-                                (_config.ThinkingBudget.HasValue ? $"% ThinkingBudget: {_config.ThinkingBudget.Value}\n" : "") +
-                                (!string.IsNullOrEmpty(_config.ThinkingLevel) ? $"% ThinkingLevel: {_config.ThinkingLevel}\n" : "") +
-                                $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                $"% ------------------------------------------\n" +
-                                $"% Token Usage Summary across {partsWithTimes.Count} Part(s):\n" +
-                                $"%   - Total Prompt Tokens : {fileTotalTokens.Input:N0} (Summe aller Prompts über alle Teile)\n" +
-                                $"%   - Cached Context      : {fileTotalTokens.Cached:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
-                                $"%   - Fresh Input Tokens  : {fileTotalFreshTokens:N0} (Echter neuer Payload für alle Video-Teile)\n" +
-                                $"%   - Total Output Tokens : {fileTotalTokens.Output:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
-                                $"% ==========================================\n\n";
+                string header = TexDocumentWriter.BuildCombinedHeader(
+                    sourceFileName: Path.GetFileName(file),
+                    totalParts: partsWithTimes.Count,
+                    totalUsage: fileTotalTokens,
+                    model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
+                    maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
                 await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
                 Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
 
