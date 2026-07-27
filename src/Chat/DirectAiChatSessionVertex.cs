@@ -73,7 +73,7 @@ public class DirectAiChatSessionVertex {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
+            string selectedModel = ConfigurationPrompts.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
                 int idx = Array.IndexOf(_config.Model, newModel);
                 if (idx >= 0) _config.CurrentModelIndex = idx;
                 _config.CurrentModel = newModel;

@@ -108,7 +108,7 @@ public partial class Program {
 
     private static async Task RunDirectAiStudioChatAsync() {
         var config = ConfigLoader<DirectAiChatSessionAiStudioConfig>.Load();
-        int profile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+        int profile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
             config.ActiveApiProfile,
             "Direct AI Studio Chat",
             newProfile => {
@@ -164,11 +164,11 @@ public partial class Program {
 
         if (extChoice == "2" && Activate_Vertex) {
             var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
-            config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
+            config.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "Vertex AI Auto-Extraktion", config.Model, newModel => {
+            string selectedModel = ConfigurationPrompts.ConfirmOrChangeModel(config.CurrentModel, "Vertex AI Auto-Extraktion", config.Model, newModel => {
                 int idx = Array.IndexOf(config.Model, newModel);
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
@@ -189,11 +189,11 @@ public partial class Program {
         }
         else {
             var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
-            config.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
+            config.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(config.CurrentModel, "AI Studio Auto-Extraktion", config.Model, newModel => {
+            string selectedModel = ConfigurationPrompts.ConfirmOrChangeModel(config.CurrentModel, "AI Studio Auto-Extraktion", config.Model, newModel => {
                 int idx = Array.IndexOf(config.Model, newModel);
                 if (idx >= 0) config.CurrentModelIndex = idx;
                 config.CurrentModel = newModel;
@@ -205,7 +205,7 @@ public partial class Program {
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
             ModelSyncService.SyncModelToRefinementConfig(selectedModel, isVertex: false);
 
-            int selectedProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+            int selectedProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                 config.ActiveApiProfile,
                 "AI Studio Auto-Extraktion",
                 newProfile => {
@@ -264,26 +264,26 @@ public partial class Program {
 
             switch (choice) {
                 case "1":
-                    aiStudioConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
+                    aiStudioConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
                         aiStudioConfig.SourceFolder = newFolder;
                         ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
                     }, aiStudioConfig.PredefinedSourceFolders);
                     break;
                 case "2":
-                    vertexConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(vertexConfig.SourceFolder, newFolder => {
+                    vertexConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(vertexConfig.SourceFolder, newFolder => {
                         vertexConfig.SourceFolder = newFolder;
                         ConfigLoader<VertexAutoExtractionConfig>.Save(vertexConfig);
                     }, vertexConfig.PredefinedSourceFolders);
                     break;
                 case "3":
-                    ffmpegConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(ffmpegConfig.SourceFolder, newFolder => {
+                    ffmpegConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(ffmpegConfig.SourceFolder, newFolder => {
                         ffmpegConfig.SourceFolder = newFolder;
                         ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
                     });
                     break;
                 case "4":
                     string currentLatexSource = string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder;
-                    latexConfig.SourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(currentLatexSource, newFolder => {
+                    latexConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(currentLatexSource, newFolder => {
                         latexConfig.SourceFolder = newFolder;
                         ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
                     });
@@ -324,7 +324,7 @@ public partial class Program {
 
             switch (choice) {
                 case "1":
-                    aiStudioConfig.ActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                    aiStudioConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                         aiStudioConfig.ActiveApiProfile,
                         "AI Studio Auto-Extraktion",
                         newProfile => {
@@ -335,7 +335,7 @@ public partial class Program {
                     );
                     break;
                 case "2":
-                    chatConfig.ActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                    chatConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                         chatConfig.ActiveApiProfile,
                         "Direct AI Studio Chat",
                         newProfile => {
@@ -346,7 +346,7 @@ public partial class Program {
                     );
                     break;
                 case "3":
-                    latexConfig.AiStudioActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                    latexConfig.AiStudioActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                         latexConfig.AiStudioActiveApiProfile,
                         "LaTeX Refinement Session",
                         newProfile => {

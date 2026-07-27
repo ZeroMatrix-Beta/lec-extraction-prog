@@ -96,7 +96,7 @@ public partial class DirectAiChatSessionAiStudio {
     /// </summary>
     public async Task StartAsync() {
         while (true) {
-            string selectedModel = ConsoleUiHelper.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
+            string selectedModel = ConfigurationPrompts.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
                 int idx = Array.IndexOf(_config.Model, newModel);
                 if (idx >= 0) _config.CurrentModelIndex = idx;
                 _config.CurrentModel = newModel;

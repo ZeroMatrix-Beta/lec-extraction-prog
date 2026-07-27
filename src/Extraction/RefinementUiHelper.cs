@@ -67,7 +67,7 @@ public static class RefinementUiHelper {
                     Console.WriteLine("API Profile sind nur für AI Studio relevant.");
                     continue;
                 }
-                refinementConfig.AiStudioActiveApiProfile = ConsoleUiHelper.ConfirmOrChangeApiKeyProfile(
+                refinementConfig.AiStudioActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                     refinementConfig.AiStudioActiveApiProfile,
                     "LaTeX Refinement Session",
                     newProfile => {
@@ -115,7 +115,7 @@ public static class RefinementUiHelper {
 
         var uiConfig = ConfigLoader<RefinementUiHelperConfig>.Load();
 
-        string searchFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(uiConfig.PredefinedPath, newFolder => {
+        string searchFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(uiConfig.PredefinedPath, newFolder => {
             uiConfig.PredefinedPath = newFolder;
             ConfigLoader<RefinementUiHelperConfig>.Save(uiConfig);
         });

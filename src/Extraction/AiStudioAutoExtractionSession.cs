@@ -616,7 +616,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
             }
             else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) {
-                var files = ConsoleUiHelper.SelectSingleFile(_config.SourceFolder);
+                var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
                 if (files.Length > 0) {
                     await SetupContextAndProcessAsync(files);
                 }

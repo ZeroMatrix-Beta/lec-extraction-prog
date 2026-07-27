@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 2 done, Phases 3-7 not started (paused deliberately - see note) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-27
+**Status:** Phase 3 done (safe items only, see notes), Phases 4-7 not started (paused deliberately per user request) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-27
 
 **Note (2026-07-27):** Stopped here on purpose. Phases 3-7 touch the two
 ~1900-line twin classes directly (extracting shared services, splitting god
@@ -473,8 +473,18 @@ Also split the two grab-bags:
   new type names; the old `ExtractionHelpersTests.cs` was split the same way
   into `LatexResponseCleanerTests.cs` / `FileTreeRendererTests.cs`.
 * `ConsoleUiHelper` (547 lines) → `DirectoryTreeRenderer`,
-  `FileSelectionPrompt`, `ConfigurationPrompts` — and out of the
-  `FfmpegUtilities` namespace. Not started.
+  `FileSelectionPrompt`, `ConfigurationPrompts`. **Done.** (Already lived in
+  `LectureExtraction.ConsoleUi`, not `FfmpegUtilities` — that part of the
+  plan item was stale, fixed in an earlier phase.) Same byte-for-byte diff
+  discipline as the `ExtractionHelpers` split; all call sites across
+  `App`/`Chat`/`Extraction`/`Media` updated; `ConsoleUiHelper.cs` deleted.
+
+**Phase 3 exit reached** for everything judged safe to do without paid-API
+validation: build 0/0, 85 tests green, UI-string diff empty. Deliberately
+left open for a future session (see notes above): `TexDocumentWriter`'s
+offset-file writing, `VideoSegmentProducer`, `ContextCacheCoordinator`,
+`PrefixCachePrimer` — all need either a live API call to validate or
+carry the same kind of per-backend divergence risk documented above.
 
 *Exit:* build 0/0, UI-string diff empty. Both extraction sessions should now be
 well under 1 000 lines each.

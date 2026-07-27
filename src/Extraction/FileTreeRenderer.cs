@@ -162,7 +162,7 @@ public static partial class FileTreeRenderer {
             }
             else {
                 string ext = Path.GetExtension(child.Name).ToLowerInvariant();
-                string icon = ConsoleUiHelper.GetFileIcon(ext);
+                string icon = DirectoryTreeRenderer.GetFileIcon(ext);
                 string label = (showRelativePath && !string.IsNullOrEmpty(child.RelativePath) && !string.Equals(child.RelativePath, child.Name, StringComparison.OrdinalIgnoreCase))
                     ? $"{child.Name} ({child.RelativePath})"
                     : child.Name;

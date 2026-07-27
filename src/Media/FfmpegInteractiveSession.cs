@@ -111,7 +111,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         string currentSource = string.IsNullOrEmpty(DefaultSourceFolder) ? ffmpegConfig.SourceFolder : DefaultSourceFolder;
 
         // Use our nice folder selector (which now supports predefined folders and explorer!)
-        sourceFolder = ConsoleUiHelper.ConfirmOrChangeSourceFolder(currentSource, newFolder => {
+        sourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(currentSource, newFolder => {
             ffmpegConfig.SourceFolder = newFolder;
             ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
         });
@@ -158,10 +158,10 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         
         string choice = Console.ReadLine()?.Trim() ?? "";
         if (choice == "2") {
-            return ConsoleUiHelper.SelectBatchFiles(sourceFolder);
+            return FileSelectionPrompt.SelectBatchFiles(sourceFolder);
         }
         else {
-            return ConsoleUiHelper.SelectSingleFile(sourceFolder);
+            return FileSelectionPrompt.SelectSingleFile(sourceFolder);
         }
     }
 
