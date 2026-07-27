@@ -1,34 +1,38 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done (safe items only, see notes), Phases 4-7 not started (paused deliberately per user request) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-27
+**Status:** Phase 3 done, Phase 4 in progress · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
-**Note (2026-07-27, updated):** Stopped here on purpose, again. Phase 3 is
-now closed out (see its section below for exactly what was and wasn't done).
-**Pick up at Phase 4 next time** — decomposing the god methods
-(`ProcessFilesAsync`, `ExecuteGenerativeStepAsync`, etc., see §4 Phase 4).
-Same reason as before: this next phase touches the ~1900-line twin classes
-directly with zero automated test coverage over that logic and real
-paid-API cost to validate against — not something to rush through in a
-single low-budget session.
+**Note (2026-07-28):** Phase 3 is now fully closed — the three items a prior
+session left open (`VideoSegmentProducer`, `TexDocumentWriter`,
+`ContextCacheCoordinator`/`PrefixCachePrimer`) were all investigated this
+session. `VideoSegmentProducer` and `TexDocumentWriter` turned out to be
+genuine byte-identical (or near-identical) duplication and were extracted.
+`ContextCacheCoordinator`/`PrefixCachePrimer` were investigated and confirmed
+to be the "hardest, most-drifted pair" the plan predicted — real per-callsite
+divergence, not extracted further (see Phase 3 section below for the
+reasoning, same category as `SystemInstructionLoader`/`RefinementLauncher`).
+One safe sub-extraction did come out of that investigation: the two inline
+cache-creation blocks duplicated *within* `LatexRefinementSession.ExecuteGenerativeStepAsync`
+itself were merged. Now moving into **Phase 4** — decomposing the god methods
+(`ProcessFilesAsync`, `ExecuteGenerativeStepAsync`, etc., see §4). Same
+caution as before applies here too: these are the ~1900-line twin classes
+with zero automated test coverage over this logic and real paid-API cost to
+validate against, so each split is verified by build + UI-string diff, one
+method at a time, one commit at a time.
 
-**What Phase 3 did NOT do** (left for a future session, on purpose — see the
-Phase 3 section for why each one):
-* `TexDocumentWriter` — offset-file writing, `BuildTexPartHeader` /
-  `BuildTexCombinedHeader` were never moved out of the twins.
-* `VideoSegmentProducer` — the FFmpeg producer lambda (~115 lines) in
-  `ProcessFilesAsync`. **Not even investigated** this session.
-* `ContextCacheCoordinator` / `PrefixCachePrimer` — the cache
-  create/validate/extend block and the AI-Studio warm-up logic. **Not even
-  investigated** — flagged in the plan as the hardest, most-drifted pair.
-* `SystemInstructionLoader` — investigated, deliberately *not* extracted:
-  turned out to be real per-backend divergence (AI Studio's implicit
-  prefix-cache warm-up has no Vertex equivalent), not duplication.
-* `RefinementLauncher` — investigated, deliberately *not* extracted: same
-  reason, AI Studio's `applyParams` override + dedicated API key resolution
-  has no Vertex equivalent.
+**What Phase 3 did NOT do, permanently** (investigated and deliberately left
+unmerged — real per-backend/per-callsite divergence, not drift to fix):
+* `SystemInstructionLoader` — AI Studio's implicit prefix-cache warm-up has
+  no Vertex equivalent.
+* `RefinementLauncher` — AI Studio's `applyParams` override + dedicated API
+  key resolution has no Vertex equivalent.
+* `ContextCacheCoordinator` / `PrefixCachePrimer` — extraction-session cache
+  creation includes history `Contents`, refinement-session cache creation is
+  plain system-instruction text; several console strings differ per call
+  site in ways that would break the frozen-UI-strings rule if merged.
 * The `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` chat-session pair
-  — left unmerged, real behavioral differences between them (free-tier
-  guard, richer Vertex error diagnostics, mixed EN/DE strings).
+  — real behavioral differences between them (free-tier guard, richer
+  Vertex error diagnostics, mixed EN/DE strings).
 
 ---
 
@@ -469,15 +473,15 @@ both twins call. The twins still exist after this phase — they just get thin.
 | New type | Absorbs | Status |
 |---|---|---|
 | `ModelCapabilities` | the 5 `SupportsThinking` copies | **Done, commit `23c0c1b`** |
-| `TexDocumentWriter` | 2× `GetUniqueTexPath` (**done, folded into existing `ExtractionHelpers` rather than a new type, commit `23c0c1b`**), `BuildTexPartHeader`, `BuildTexCombinedHeader`, offset-file writing (not started) | Partial |
+| `TexDocumentWriter` | 2× `GetUniqueTexPath` (**done, folded into existing `ExtractionHelpers` rather than a new type, commit `23c0c1b`**); `BuildTexPartHeader`/`BuildTexCombinedHeader`/`BuildTexModelParameterBlock` **done, commit `05080e3`** (AI Studio had these as methods, Vertex had the identical templates inlined — confirmed byte-identical before merging) | **Done** |
 | `AudioTrackExtractor` | the `startAudioTask` local function + cache check | **Done** |
 | `GcsWorkspace` | the 2 byte-identical `CleanupBucketAsync` copies (Vertex extraction, LaTeX refinement) — **done**. `CleanupGcsBucketAsync` (AI Studio chat) / `ForcePurgeGcsBucketAsync` (Vertex chat) intentionally left alone: real behavioral differences (`IsAiStudio` free-tier guard, richer Vertex error diagnostics incl. a billing-account branch, English vs German strings) | Partial |
 | `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` | Downgraded — see progress note, not pursuing further |
-| `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | Not started, deferred — see progress note |
+| `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | **Done, commit `d9b54d7`** — confirmed byte-identical (modulo cosmetic naming/regex-method naming) before merging |
 | `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) | Investigated, real per-backend divergence (AI-Studio-only `applyParams` override + dedicated API key resolution; Vertex has neither, uses ADC) — not pursuing further |
 | `GenerationConfigBuilder` | thinking/temperature/topP/topK/maxTokens assembly, repeated 5× | Investigated; found and fixed a real clamp-bug (AI Studio wasn't capping `ThinkingBudget` at 32768 like Vertex does — see progress note). Not extracting a shared type beyond that fix |
-| `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` | Not started |
-| `PrefixCachePrimer` | `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`, `WarmUpWithBatchedHistoryAsync` | Not started |
+| `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` | Investigated (2026-07-28), real per-callsite divergence — see below. Not extracting the cross-file coordinator. Did extract the one safe piece: the two inline cache-creation blocks duplicated *within* `ExecuteGenerativeStepAsync` itself, commit `b3374a5` |
+| `PrefixCachePrimer` | `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`, `WarmUpWithBatchedHistoryAsync` | Investigated (2026-07-28): this is AI-Studio-only code with no Vertex counterpart at all, so there is no cross-twin duplication to remove — extracting it into its own file would be a pure organizational move (shrinking `AiStudioAutoExtractionSession`), not deduplication. Deprioritized below Phase 4 |
 
 Also split the two grab-bags:
 * `ExtractionHelpers` (611 lines) → `HistoryFileResolver`, `FileTreeRenderer`,
@@ -501,15 +505,16 @@ Also split the two grab-bags:
   discipline as the `ExtractionHelpers` split; all call sites across
   `App`/`Chat`/`Extraction`/`Media` updated; `ConsoleUiHelper.cs` deleted.
 
-**Phase 3 exit reached** for everything judged safe to do without paid-API
-validation: build 0/0, 85 tests green, UI-string diff empty. Deliberately
-left open for a future session (see notes above): `TexDocumentWriter`'s
-offset-file writing, `VideoSegmentProducer`, `ContextCacheCoordinator`,
-`PrefixCachePrimer` — all need either a live API call to validate or
-carry the same kind of per-backend divergence risk documented above.
+**Phase 3 is now fully closed (2026-07-28).** All items in the table above
+are either done or investigated-and-deliberately-not-merged for documented
+reasons. Build 0/0, 85 tests green, UI-string diff empty after every commit.
+`TexDocumentWriter`'s offset-file *writing* (the two `File.WriteAllTextAsync`
+calls per twin) stays inline in each `ProcessFilesAsync` — it differs only in
+which path gets written to and isn't worth a wrapper on its own.
 
 *Exit:* build 0/0, UI-string diff empty. Both extraction sessions should now be
-well under 1 000 lines each.
+well under 1 000 lines each. **Not yet true** — see Phase 4, this is what the
+god-method decomposition is for.
 
 **Progress note (2026-07-27):** Items with byte-identical duplicate bodies
 (confirmed by diffing before merging) are done — those carried zero
@@ -554,19 +559,40 @@ guard against future misconfiguration. UI-string diff confirmed clean.
 Not extracting a shared `GenerationConfigBuilder` type beyond this — the
 remaining 3-4 call sites per session were not individually checked for
 further drift; assume more may exist if this area gets revisited.
-`VideoSegmentProducer` and `ContextCacheCoordinator`/`PrefixCachePrimer`
-were not investigated at all this session — expect the same
-looks-like-duplication-but-isn't pattern found in every other item above,
-and treat them with the same suspicion before merging.
 
-Suggested order for what remains, cheapest/lowest-drift first:
-~~`AudioTrackExtractor`~~ → ~~`SystemInstructionLoader` (downgraded)~~ →
-~~`GcsWorkspace` (partial)~~ → ~~`RefinementLauncher` (dropped)~~ →
-~~`GenerationConfigBuilder` (clamp bug fixed, not extracted further)~~ →
-`VideoSegmentProducer` → `ContextCacheCoordinator`/`PrefixCachePrimer`
-(hardest, most drift, not yet even inspected) → the two grab-bag splits
-(mechanical, do anytime, no AI-call behavior involved — safest remaining
-Phase 3 work).
+**Progress note (2026-07-28):** Finished the remaining three items.
+`VideoSegmentProducer` turned out to be genuinely byte-identical between the
+twins (only cosmetic local-variable and generated-regex-method naming
+differed) and was extracted verbatim. `TexDocumentWriter`'s header builders
+were likewise byte-identical in content (AI Studio already had them as
+methods; Vertex had the same string templates inlined) and were extracted.
+
+`ContextCacheCoordinator`/`PrefixCachePrimer` were investigated and confirmed
+as the plan predicted — the hardest, most-drifted pair, real divergence, not
+just drift:
+* Cache *creation* differs in shape: `VertexAutoExtractionSession.InitializeContextCachingAsync`
+  builds `SystemInstruction` from a `Parts` list plus optional history
+  `Contents`; `LatexRefinementSession.ExecuteGenerativeStepAsync` builds it
+  from a single plain-text `SystemInstruction`. Forcing both through one
+  shape would add real coupling for a handful of shared lines.
+* Cache *validate-or-extend* logic (checking remaining TTL, extending near
+  expiry, else a remote validity check) is structurally similar between the
+  two call sites, but the German console messages printed at each step
+  genuinely differ (e.g. `"Nur noch {remainingMin} min verbleibend..."` vs
+  `"TTL knapp ({remainingMin} min)..."`) — merging them would violate the
+  frozen-UI-strings rule (§2.1) for a ~20-line saving.
+* One safe win *was* found: `ExecuteGenerativeStepAsync` itself had **two**
+  near-identical inline cache-creation blocks (initial miss vs.
+  expired-cache recreate) — pure same-file, same-method duplication with no
+  cross-backend risk. Extracted into a private `CreateContextCacheAsync`
+  helper, commit `b3374a5`.
+* `PrefixCachePrimer` (AI Studio's implicit-prefix warm-up) has no Vertex
+  equivalent at all — nothing to deduplicate, only a possible file-organization
+  move. Deprioritized below Phase 4 since it doesn't reduce duplication.
+
+Suggested order for what remains: the two grab-bag splits below (mechanical,
+do anytime, no AI-call behavior involved — safest remaining Phase 3 work,
+done), then Phase 4.
 
 Also, in passing: `AppConfig.DefaultModel` / `AppConfig.RefinementModel`
 (and the matching `appsettings.json` keys) were found unused — every session
