@@ -292,145 +292,170 @@ public partial class DirectAiChatSessionAiStudio {
     private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText, CancellationToken cancellationToken) {
         string normalizedInput = input.TrimStart('/');
 
-        if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-            ShowCommands();
-            return true;
-        }
-
-        if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
-            history.Clear();
-            history.AddRange(initialHistory);
-            WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
-            string tempValueStr = normalizedInput[9..].Trim();
-            if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
-                AIParams.Temperature = newTemp;
-                WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
-            }
-            else {
-                WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
-            }
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
-            string tokenValueStr = normalizedInput[11..].Trim();
-            if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
-                AIParams.MaxOutputTokens = newTokens;
-                WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
-            }
-            else {
-                WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
-            }
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
-            string budgetValueStr = normalizedInput[18..].Trim();
-            if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
-                AIParams.ThinkingBudget = newBudget;
-                WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
-            }
-            else {
-                WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
-            }
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
-            string levelValueStr = normalizedInput[17..].Trim().ToUpper();
-            var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
-            if (validLevels.Contains(levelValueStr)) {
-                AIParams.ThinkingLevel = levelValueStr;
-                WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
-            }
-            else {
-                WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
-            }
-            return true;
-        }
-
-        if (MyRegex().IsMatch(normalizedInput)) {
-            HandleChangeKey(normalizedInput);
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set grounding ", StringComparison.OrdinalIgnoreCase)) {
-            string val = normalizedInput[14..].Trim().ToLowerInvariant();
-            if (val == "on" || val == "true" || val == "ja" || val == "yes" || val == "1") {
-                AIParams.UseGoogleSearch = true;
-                WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
-            }
-            else if (val == "off" || val == "false" || val == "nein" || val == "no" || val == "0") {
-                AIParams.UseGoogleSearch = false;
-                WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
-            }
-            else {
-                WriteLine("[Fehler] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
-            }
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
-            string arg = normalizedInput.Length > 9 ? normalizedInput[9..].Trim() : "";
-            string newModel = "";
-            if (string.IsNullOrEmpty(arg)) {
-                WriteLine("\nVerfügbare Modelle:");
-                for (int i = 0; i < AvailableModels.Length; i++) {
-                    WriteLine($" {i + 1}) {AvailableModels[i]}");
-                }
-                Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
-                string? choice = ReadLine()?.Trim();
-                if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                    newModel = AvailableModels[idx - 1];
-                }
-                else if (!string.IsNullOrEmpty(choice)) {
-                    newModel = choice;
-                }
-            }
-            else {
-                if (int.TryParse(arg, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                    newModel = AvailableModels[idx - 1];
-                }
-                else {
-                    newModel = arg;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(newModel)) {
-                _activeModel = newModel;
-                WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
-
-                Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
-                string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
-                if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
-                    int idx = Array.IndexOf(AvailableModels, _activeModel);
-                    if (idx >= 0) _config.CurrentModelIndex = idx;
-                    _config.CurrentModel = _activeModel;
-                    ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
-                    WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
-                }
-                else {
-                    WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
-                }
-            }
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
-            var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput, cancellationToken: cancellationToken);
-
-            if (!success) return true; // Handled, but failed. Returning true with empty 'parts' forces the main loop to cleanly skip the turn.
-
-            parts.AddRange(attachmentParts);
-            updatePromptText(parsedPrompt);
-            return true;
-        }
+        if (TryHandleHelpCommand(normalizedInput)) return true;
+        if (TryHandleClearCommand(normalizedInput, history, initialHistory)) return true;
+        if (TryHandleSetTempCommand(normalizedInput)) return true;
+        if (TryHandleSetTokensCommand(normalizedInput)) return true;
+        if (TryHandleSetThinkingBudgetCommand(normalizedInput)) return true;
+        if (TryHandleSetThinkingLevelCommand(normalizedInput)) return true;
+        if (TryHandleChangeKeyCommand(normalizedInput)) return true;
+        if (TryHandleSetGroundingCommand(normalizedInput)) return true;
+        if (TryHandleSetModelCommand(normalizedInput)) return true;
+        if (await TryHandleAttachCommandAsync(normalizedInput, parts, updatePromptText, cancellationToken)) return true;
 
         return false; // Not a built-in command
+    }
+
+    private bool TryHandleHelpCommand(string normalizedInput) {
+        if (!normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+        ShowCommands();
+        return true;
+    }
+
+    private static bool TryHandleClearCommand(string normalizedInput, List<Content> history, List<Content> initialHistory) {
+        if (!normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+        history.Clear();
+        history.AddRange(initialHistory);
+        WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
+        return true;
+    }
+
+    private bool TryHandleSetTempCommand(string normalizedInput) {
+        if (!normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) return false;
+        string tempValueStr = normalizedInput[9..].Trim();
+        if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
+            AIParams.Temperature = newTemp;
+            WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
+        }
+        else {
+            WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
+        }
+        return true;
+    }
+
+    private bool TryHandleSetTokensCommand(string normalizedInput) {
+        if (!normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) return false;
+        string tokenValueStr = normalizedInput[11..].Trim();
+        if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
+            AIParams.MaxOutputTokens = newTokens;
+            WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
+        }
+        else {
+            WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
+        }
+        return true;
+    }
+
+    private bool TryHandleSetThinkingBudgetCommand(string normalizedInput) {
+        if (!normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) return false;
+        string budgetValueStr = normalizedInput[18..].Trim();
+        if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
+            AIParams.ThinkingBudget = newBudget;
+            WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
+        }
+        else {
+            WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
+        }
+        return true;
+    }
+
+    private bool TryHandleSetThinkingLevelCommand(string normalizedInput) {
+        if (!normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) return false;
+        string levelValueStr = normalizedInput[17..].Trim().ToUpper();
+        var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
+        if (validLevels.Contains(levelValueStr)) {
+            AIParams.ThinkingLevel = levelValueStr;
+            WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
+        }
+        else {
+            WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
+        }
+        return true;
+    }
+
+    private bool TryHandleChangeKeyCommand(string normalizedInput) {
+        if (!MyRegex().IsMatch(normalizedInput)) return false;
+        HandleChangeKey(normalizedInput);
+        return true;
+    }
+
+    private bool TryHandleSetGroundingCommand(string normalizedInput) {
+        if (!normalizedInput.StartsWith("set grounding ", StringComparison.OrdinalIgnoreCase)) return false;
+        string val = normalizedInput[14..].Trim().ToLowerInvariant();
+        if (val == "on" || val == "true" || val == "ja" || val == "yes" || val == "1") {
+            AIParams.UseGoogleSearch = true;
+            WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
+        }
+        else if (val == "off" || val == "false" || val == "nein" || val == "no" || val == "0") {
+            AIParams.UseGoogleSearch = false;
+            WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
+        }
+        else {
+            WriteLine("[Fehler] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
+        }
+        return true;
+    }
+
+    private bool TryHandleSetModelCommand(string normalizedInput) {
+        if (!normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) return false;
+        string arg = normalizedInput.Length > 9 ? normalizedInput[9..].Trim() : "";
+        string newModel = "";
+        if (string.IsNullOrEmpty(arg)) {
+            WriteLine("\nVerfügbare Modelle:");
+            for (int i = 0; i < AvailableModels.Length; i++) {
+                WriteLine($" {i + 1}) {AvailableModels[i]}");
+            }
+            Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
+            string? choice = ReadLine()?.Trim();
+            if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
+                newModel = AvailableModels[idx - 1];
+            }
+            else if (!string.IsNullOrEmpty(choice)) {
+                newModel = choice;
+            }
+        }
+        else {
+            if (int.TryParse(arg, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
+                newModel = AvailableModels[idx - 1];
+            }
+            else {
+                newModel = arg;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(newModel)) {
+            _activeModel = newModel;
+            WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
+
+            Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+            string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
+            if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+                int idx = Array.IndexOf(AvailableModels, _activeModel);
+                if (idx >= 0) _config.CurrentModelIndex = idx;
+                _config.CurrentModel = _activeModel;
+                ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
+                WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
+            }
+            else {
+                WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
+            }
+        }
+        return true;
+    }
+
+    private async Task<bool> TryHandleAttachCommandAsync(string normalizedInput, List<Part> parts, Action<string> updatePromptText, CancellationToken cancellationToken) {
+        if (!normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) return false;
+        var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput, cancellationToken: cancellationToken);
+
+        if (!success) return true; // Handled, but failed. Returning true with empty 'parts' forces the main loop to cleanly skip the turn.
+
+        parts.AddRange(attachmentParts);
+        updatePromptText(parsedPrompt);
+        return true;
     }
 
     /// <summary>
@@ -440,14 +465,29 @@ public partial class DirectAiChatSessionAiStudio {
     /// </summary>
     private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
         Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
-        string fullResponse = "";
 
-        int inputTokens = 0;
-        int outputTokens = 0;
-        int cachedTokens = 0;
+        var (config, apiContents) = BuildChatRequestConfig(selectedModel, history);
+        var (fullResponse, inputTokens, outputTokens, cachedTokens) = await StreamChatTurnAsync(selectedModel, apiContents, config);
 
-        // [AI Context] Maps current dynamic AI params to the Request payload.
-        // Generierungs-Konfiguration anpassen (Temperatur auf 0 für maximale Präzision bei Transkripten)
+        // 7. KI-Antwort in die Historie aufnehmen
+        if (!string.IsNullOrWhiteSpace(fullResponse)) {
+            history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
+            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens, cachedTokens);
+        }
+        else {
+            // [AI Context] Falls abgebrochen wurde, bevor die KI etwas gesagt hat,
+            // müssen wir die User-Nachricht entfernen, um "Consecutive User Message"-Errors zu vermeiden.
+            history.RemoveAt(history.Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Maps current dynamic AI params (temperature, thinking, grounding) and the system
+    /// instruction onto the request. Gemma models (pre-v4) don't support the 'system' role, so for
+    /// those the instruction is prepended into the first user message instead of the dedicated field.
+    /// [Human] Baut die Anfrage-Konfiguration und den ggf. für Gemma angepassten History-Kontext.
+    /// </summary>
+    private (GenerateContentConfig Config, List<Content> ApiContents) BuildChatRequestConfig(string selectedModel, List<Content> history) {
         var config = new GenerateContentConfig {
             Temperature = AIParams.Temperature,
             TopP = AIParams.TopP,
@@ -500,6 +540,21 @@ public partial class DirectAiChatSessionAiStudio {
                 config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };
             }
         }
+
+        return (config, apiContents);
+    }
+
+    /// <summary>
+    /// [AI Context] Streams one chat turn: rate-limit guardrail, retry-wrapped streaming call with a
+    /// background key-press interceptor (so accidental keystrokes don't abort generation), grounding
+    /// source printing, and session token-total bookkeeping.
+    /// [Human] Streamt eine Chat-Antwort, inkl. Rate-Limit-Schutz, Tastatur-Interceptor und Token-Reporting.
+    /// </summary>
+    private async Task<(string FullResponse, int InputTokens, int OutputTokens, int CachedTokens)> StreamChatTurnAsync(string selectedModel, List<Content> apiContents, GenerateContentConfig config) {
+        string fullResponse = "";
+        int inputTokens = 0;
+        int outputTokens = 0;
+        int cachedTokens = 0;
 
         bool exceptionCaught = false;
         using var cts = new CancellationTokenSource();
@@ -600,16 +655,7 @@ public partial class DirectAiChatSessionAiStudio {
             }
         }
 
-        // 7. KI-Antwort in die Historie aufnehmen
-        if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
-            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens, cachedTokens);
-        }
-        else {
-            // [AI Context] Falls abgebrochen wurde, bevor die KI etwas gesagt hat, 
-            // müssen wir die User-Nachricht entfernen, um "Consecutive User Message"-Errors zu vermeiden.
-            history.RemoveAt(history.Count - 1);
-        }
+        return (fullResponse, inputTokens, outputTokens, cachedTokens);
     }
 
     /// <summary>
