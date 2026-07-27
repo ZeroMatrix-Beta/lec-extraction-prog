@@ -11,6 +11,25 @@ directly with zero automated test coverage over that logic and real
 paid-API cost to validate against — not something to rush through in a
 single low-budget session.
 
+**What Phase 3 did NOT do** (left for a future session, on purpose — see the
+Phase 3 section for why each one):
+* `TexDocumentWriter` — offset-file writing, `BuildTexPartHeader` /
+  `BuildTexCombinedHeader` were never moved out of the twins.
+* `VideoSegmentProducer` — the FFmpeg producer lambda (~115 lines) in
+  `ProcessFilesAsync`. **Not even investigated** this session.
+* `ContextCacheCoordinator` / `PrefixCachePrimer` — the cache
+  create/validate/extend block and the AI-Studio warm-up logic. **Not even
+  investigated** — flagged in the plan as the hardest, most-drifted pair.
+* `SystemInstructionLoader` — investigated, deliberately *not* extracted:
+  turned out to be real per-backend divergence (AI Studio's implicit
+  prefix-cache warm-up has no Vertex equivalent), not duplication.
+* `RefinementLauncher` — investigated, deliberately *not* extracted: same
+  reason, AI Studio's `applyParams` override + dedicated API key resolution
+  has no Vertex equivalent.
+* The `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` chat-session pair
+  — left unmerged, real behavioral differences between them (free-tier
+  guard, richer Vertex error diagnostics, mixed EN/DE strings).
+
 ---
 
 ## 0. Baseline (measured, not guessed)
