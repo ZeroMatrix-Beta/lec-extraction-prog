@@ -20,8 +20,8 @@ public static class FfmpegToolkit {
     /// This ensures the AI model doesn't miss any spoken sentences or context right at the cut points.
     /// [Human] Schneidet große Videos in Stücke, lässt aber die Enden "überlappen", damit die KI beim Wechsel keinen Satz verpasst.
     /// </summary>
-    public static async Task<List<(string FilePath, double StartTime)>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false, string? cacheFileNamePrefix = null, string preset = "fast") {
-        var generatedFiles = new List<(string FilePath, double StartTime)>();
+    public static async Task<List<VideoSegment>> ProcessSplitVideoAsync(string inputFile, string destFolder, int parts = 3, double overlapSeconds = 180, bool downmixToMono = false, bool streamCopy = false, bool overwrite = false, string? cacheFileNamePrefix = null, string preset = "fast") {
+        var generatedFiles = new List<VideoSegment>();
 
         if (!File.Exists(inputFile)) {
             Console.WriteLine($"\n  [FFmpegToolkit] Error: Input file not found: '{inputFile}'");
@@ -48,7 +48,7 @@ public static class FfmpegToolkit {
             string outputFile = overwrite ? Path.Combine(destFolder, $"{fileName}-compressed.mp4") : GetUniqueFilePath(destFolder, $"{fileName}-compressed", ".mp4");
             string ffmpegArgs = streamCopy ? $"-i \"{inputFile}\" -c copy \"{outputFile}\"" : $"-i \"{inputFile}\" -vf \"fps=1\" -c:v libx264 -preset {preset} -crf 28 -tune stillimage -g 30 {audioArgs} -r 1 \"{outputFile}\"";
 
-            if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add((outputFile, 0));
+            if (await RunFfmpegAsync(ffmpegArgs)) generatedFiles.Add(new VideoSegment(outputFile, 0));
             return generatedFiles;
         }
 
@@ -69,7 +69,7 @@ public static class FfmpegToolkit {
             }
             else {
                 Console.WriteLine($"  [SUCCESS] Part {i + 1} completed => {outputFile}");
-                generatedFiles.Add((outputFile, start));
+                generatedFiles.Add(new VideoSegment(outputFile, start));
             }
         }
         return generatedFiles;

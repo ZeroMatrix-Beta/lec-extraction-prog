@@ -11,6 +11,7 @@ using Google.GenAI.Types;
 using LectureExtraction.App;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Extraction.Model;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
 using LectureExtraction.Latex;
@@ -323,9 +324,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         Part.FromUri(task.VideoUrl, "video/mp4")
                     };
 
-                    var (texOutput, _, _, _) = await GenerateTexFromUploadedPartAsync(
+                    string texOutput = (await GenerateTexFromUploadedPartAsync(
                         task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
-                    );
+                    )).LatexBody;
 
                     if (!string.IsNullOrWhiteSpace(texOutput)) {
                         string cleanTex = ExtractionHelpers.CleanLatexResponse(texOutput);
@@ -1062,7 +1063,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
         // [Human] Wir nutzen einen 'Kanal' (Channel), um FFmpeg (Videobearbeitung) und Gemini (KI-Analyse) parallel laufen zu lassen.
         // Während die KI das erste Video analysiert, schneidet FFmpeg im Hintergrund schon das zweite. Das spart enorm Zeit!
-        var channel = Channel.CreateBounded<(string originalFile, string fileSpecificOutputFolder, string tmpFolderForFile, List<(string FilePath, double StartTime)> parts, bool isCached, double fullOriginalVideoDuration)>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
+        var channel = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
         // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
         var producerTask = Task.Run(async () => {
@@ -1132,14 +1133,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                     }
                     double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (_config.NumberOfParts - 1) * _config.OverlapSeconds) / _config.NumberOfParts : 0;
-                    var cachedPartsWithTimes = new List<(string FilePath, double StartTime)>();
+                    var cachedPartsWithTimes = new List<VideoSegment>();
                     for (int i = 0; i < cachedParts.Count; i++) {
                         double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - _config.OverlapSeconds) : 0;
                         Console.WriteLine($"  - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
-                        cachedPartsWithTimes.Add((cachedParts[i], startTime));
+                        cachedPartsWithTimes.Add(new VideoSegment(cachedParts[i], startTime));
                     }
 
-                    await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, cachedPartsWithTimes, true, fullOriginalVideoDuration));
+                    await channel.Writer.WriteAsync(new PreparedVideo(file, fileSpecificOutputFolder, tmpFolderForFile, cachedPartsWithTimes, true, fullOriginalVideoDuration));
                     continue;
                 }
 
@@ -1164,7 +1165,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 var rawPartsWithTimes = await FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: _config.NumberOfParts, overlapSeconds: _config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: _config.FfmpegPreset);
 
                 if (rawPartsWithTimes.Count > 0) {
-                    List<(string FilePath, double StartTime)> safePartsWithTimes = [];
+                    List<VideoSegment> safePartsWithTimes = [];
                     for (int i = 0; i < rawPartsWithTimes.Count; i++) {
                         string safePartPath = Path.Combine(tmpFolderForFile, $"{baseName}-part{i + 1}.mp4");
 
@@ -1173,9 +1174,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             System.IO.File.Move(rawPartsWithTimes[i].FilePath, safePartPath);
                         }
 
-                        safePartsWithTimes.Add((safePartPath, rawPartsWithTimes[i].StartTime));
+                        safePartsWithTimes.Add(new VideoSegment(safePartPath, rawPartsWithTimes[i].StartTimeSeconds));
                     }
-                    await channel.Writer.WriteAsync((file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
+                    await channel.Writer.WriteAsync(new PreparedVideo(file, fileSpecificOutputFolder, tmpFolderForFile, safePartsWithTimes, false, fullOriginalVideoDuration));
                 }
             }
             channel.Writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
@@ -1209,9 +1210,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
             string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
             string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
-            int fileTotalInputTokens = 0;
-            int fileTotalOutputTokens = 0;
-            int fileTotalCachedTokens = 0;
+            TokenUsage fileTotalTokens = default;
             bool fileProcessingSuccess = true;
             TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
             Task? audioExtractionTask = null;
@@ -1238,12 +1237,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
             }
 
-            Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)>? pendingVideoUploadTask = null;
+            Task<SegmentUpload>? pendingVideoUploadTask = null;
             Task<List<Part>>? pendingAudioUploadTask = null;
 
             for (int i = 0; i < partsWithTimes.Count; i++) {
                 string safePartPath = partsWithTimes[i].FilePath;
-                double partStartTimeSeconds = partsWithTimes[i].StartTime;
+                double partStartTimeSeconds = partsWithTimes[i].StartTimeSeconds;
                 string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}.tex");
 
                 Console.WriteLine($"\nVerarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
@@ -1260,12 +1259,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     continue;
                 }
 
-                (string texOutput, int partInputTokens, int partOutputTokens, int partCachedTokens) result;
+                SegmentTranscript result;
                 bool uploadSuccess;
                 string? parsedPrompt;
                 List<Part> attachmentParts;
 
-                Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> uploadTask;
+                Task<SegmentUpload> uploadTask;
 
                 if (_config.EnableParallelFileUploads && pendingVideoUploadTask != null) {
                     Console.WriteLine($"  [Pre-Upload] Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...");
@@ -1275,7 +1274,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
                 }
 
-                (uploadSuccess, parsedPrompt, attachmentParts) = await uploadTask;
+                SegmentUpload upload = await uploadTask;
+                (uploadSuccess, parsedPrompt, attachmentParts) = (upload.Succeeded, upload.Prompt, upload.Attachments);
                 if (!uploadSuccess) {
                     Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                     fileProcessingSuccess = false;
@@ -1346,18 +1346,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
                 result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
-                fileTotalInputTokens += result.partInputTokens;
-                fileTotalOutputTokens += result.partOutputTokens;
-                fileTotalCachedTokens += result.partCachedTokens;
-                int partFreshTokens = Math.Max(0, result.partInputTokens - result.partCachedTokens);
+                fileTotalTokens += result.Usage;
+                int partFreshTokens = result.Usage.Fresh;
 
-                if (!string.IsNullOrWhiteSpace(result.texOutput)) {
-                    string cleanTex = ExtractionHelpers.CleanLatexResponse(result.texOutput);
+                if (!string.IsNullOrWhiteSpace(result.LatexBody)) {
+                    string cleanTex = ExtractionHelpers.CleanLatexResponse(result.LatexBody);
 
                     // Store the raw output for the combined file without offset
-                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.partInputTokens:N0}, Gecacht {result.partCachedTokens:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.partOutputTokens:N0}) ---\n" + cleanTex;
+                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
                     if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.partInputTokens:N0}, Gecacht {result.partCachedTokens:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.partOutputTokens:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
                     }
 
                     // Prepend the start time to the individual part .tex file
@@ -1374,10 +1372,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                                         $"% PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}\n" +
                                         $"% ------------------------------------------\n" +
                                         $"% Token Usage Analysis (Google GenAI):\n" +
-                                        $"%   - Total Prompt Tokens : {result.partInputTokens:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
-                                        $"%   - Cached Context      : {result.partCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
+                                        $"%   - Total Prompt Tokens : {result.Usage.Input:N0} (Gesamtumfang des Aufmerksamkeitshorizonts)\n" +
+                                        $"%   - Cached Context      : {result.Usage.Cached:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
                                         $"%   - Fresh Input Tokens  : {partFreshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
-                                        $"%   - Generated Output    : {result.partOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
+                                        $"%   - Generated Output    : {result.Usage.Output:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
                                         $"% ==========================================\n\n";
                     string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
@@ -1412,7 +1410,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
                 string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
-                int fileTotalFreshTokens = Math.Max(0, fileTotalInputTokens - fileTotalCachedTokens);
+                int fileTotalFreshTokens = fileTotalTokens.Fresh;
                 string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
                 string header = $"% ==========================================\n" +
                                 $"% AutoExtraction Combined Source: {Path.GetFileName(file)}\n" +
@@ -1426,10 +1424,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                                 $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
                                 $"% ------------------------------------------\n" +
                                 $"% Token Usage Summary across {partsWithTimes.Count} Part(s):\n" +
-                                $"%   - Total Prompt Tokens : {fileTotalInputTokens:N0} (Summe aller Prompts über alle Teile)\n" +
-                                $"%   - Cached Context      : {fileTotalCachedTokens:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
+                                $"%   - Total Prompt Tokens : {fileTotalTokens.Input:N0} (Summe aller Prompts über alle Teile)\n" +
+                                $"%   - Cached Context      : {fileTotalTokens.Cached:N0} (Aus Google Context-Cache recycelt, rabattiert)\n" +
                                 $"%   - Fresh Input Tokens  : {fileTotalFreshTokens:N0} (Echter neuer Payload für alle Video-Teile)\n" +
-                                $"%   - Total Output Tokens : {fileTotalOutputTokens:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
+                                $"%   - Total Output Tokens : {fileTotalTokens.Output:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
                                 $"% ==========================================\n\n";
                 await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
                 Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
@@ -1521,7 +1519,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         return newPath;
     }
 
-    private async Task<(bool success, string? parsedPrompt, List<Part> attachmentParts)> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
+    private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
         string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
@@ -1557,9 +1555,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                   "</context_and_parameters>";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
-        if (!uploadSuccess || attachmentParts.Count == 0) return (false, null, []);
+        if (!uploadSuccess || attachmentParts.Count == 0) return new SegmentUpload(false, null, []);
 
-        return (true, parsedPrompt, attachmentParts);
+        return new SegmentUpload(true, parsedPrompt, attachmentParts);
     }
 
     /// <summary>
@@ -1567,7 +1565,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// Prompt parts are assembled in strict prefix-stable order (payload first, parameters second, reference context trailing) to preserve cache alignment.
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment über Vertex AI.
     /// </summary>
-    private async Task<(string texOutput, int inputTokens, int outputTokens, int cachedTokens)> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+    private async Task<SegmentTranscript> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
         // 1. If InlinePrecedingLecTexParts is enabled, inline previous .tex files BEFORE the video payload to enable implicit prefix caching across parts.
@@ -1800,7 +1798,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         Console.CancelKeyPress -= cancelHandler;
-        return (fullResponse, interactionInputTokens, interactionOutputTokens, interactionCachedTokens);
+        return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens));
     }
 
     /// <summary>
