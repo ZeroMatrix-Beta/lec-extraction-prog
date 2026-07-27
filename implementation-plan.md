@@ -448,10 +448,10 @@ both twins call. The twins still exist after this phase — they just get thin.
 |---|---|---|
 | `ModelCapabilities` | the 5 `SupportsThinking` copies | **Done, commit `23c0c1b`** |
 | `TexDocumentWriter` | 2× `GetUniqueTexPath` (**done, folded into existing `ExtractionHelpers` rather than a new type, commit `23c0c1b`**), `BuildTexPartHeader`, `BuildTexCombinedHeader`, offset-file writing (not started) | Partial |
+| `AudioTrackExtractor` | the `startAudioTask` local function + cache check | **Done** |
 | `GcsWorkspace` | `CleanupBucketAsync` / `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` | Not started |
 | `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` | Not started |
 | `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | Not started |
-| `AudioTrackExtractor` | the `startAudioTask` local function + cache check | Not started |
 | `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) | Not started |
 | `GenerationConfigBuilder` | thinking/temperature/topP/topK/maxTokens assembly, repeated 5× | Not started |
 | `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` | Not started |
@@ -469,16 +469,19 @@ Also split the two grab-bags (not started):
 *Exit:* build 0/0, UI-string diff empty. Both extraction sessions should now be
 well under 1 000 lines each.
 
-**Progress note (2026-07-27):** Only the two items with byte-identical
-duplicate bodies (confirmed by diffing before merging) are done — those
-carried zero judgment-call risk. Everything else in this table involves code
-that has already visibly drifted between the twins (see §1.1) and needs an
-actual side-by-side read, not a mechanical move. Suggested order for next
-session, cheapest/lowest-drift first: `AudioTrackExtractor` →
-`SystemInstructionLoader` → `GcsWorkspace` → `RefinementLauncher` →
-`GenerationConfigBuilder` → `VideoSegmentProducer` →
+**Progress note (2026-07-27):** Three items with byte-identical duplicate
+bodies (confirmed by diffing before merging) are done — those carried zero
+judgment-call risk. Everything else in this table involves code that has
+already visibly drifted between the twins (see §1.1) and needs an actual
+side-by-side read, not a mechanical move. Suggested order, cheapest/lowest-drift
+first: ~~`AudioTrackExtractor`~~ → `SystemInstructionLoader` → `GcsWorkspace` →
+`RefinementLauncher` → `GenerationConfigBuilder` → `VideoSegmentProducer` →
 `ContextCacheCoordinator`/`PrefixCachePrimer` (hardest, most drift) → the two
 grab-bag splits (mechanical, do anytime).
+
+Also, in passing: `AppConfig.DefaultModel` / `AppConfig.RefinementModel`
+(and the matching `appsettings.json` keys) were found unused — every session
+already carries its own `Model` array in its own JSON config — and removed.
 
 ### Phase 4 — Decompose the god methods · medium risk
 

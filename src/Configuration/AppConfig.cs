@@ -50,8 +50,6 @@ public static class AppConfig {
     public static string VertexGcsBucketName => _options.VertexGcsBucketName;
 
     // --- Standard KI-Parameter ---
-    public static string DefaultModel => _options.DefaultModel;
-    public static string RefinementModel => _options.RefinementModel;
     public static float DefaultTemperature => _options.DefaultTemperature;
     public static float DefaultTopP => _options.DefaultTopP;
     public static int DefaultTopK => _options.DefaultTopK;

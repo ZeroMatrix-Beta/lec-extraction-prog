@@ -559,7 +559,7 @@ Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. �
 Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...");
 Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss des parallelen Audio-Uploads...");
 Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 48h):");
-Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei (jünger als 48h) gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
+Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
 Console.WriteLine($"\n[DEBUG] Empty text in chunk. FinishReason: {chunk.Candidates[0].FinishReason}");
 Console.WriteLine($"\n[Exception Caught] Type: {ex.GetType().Name}");
 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
@@ -574,8 +574,8 @@ Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.Get
 Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {_config.NumberOfParts} Teile ({_config.OverlapSeconds}s Overlap)...");
 Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({_speed}x Speed, 1 FPS, Mono)...");
 Console.WriteLine($"\n[FFmpeg Producer] {Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...");
-Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
-Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
+Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(sourceVideoPath)} abgeschlossen.");
+Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(sourceVideoPath)}...");
 Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
 Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
 Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");

@@ -1307,25 +1307,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
 
             // Handle Audio File Generation
-            Task? audioExtractionTask = null;
-            void startAudioTask() {
-                if (_config.GenerateAudioFile && audioExtractionTask == null) {
-                    // [AI Context] Audio extraction is a deterministic derivative of the source video, so unlike
-                    // the LLM-generated .tex parts it never goes stale — no TTL, just existence + a sanity size check.
-                    string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(file)}_audio.aac");
-                    bool useCachedAudio = System.IO.File.Exists(expectedAudioPath) && new FileInfo(expectedAudioPath).Length >= 1024;
-                    if (useCachedAudio) {
-                        Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
-                    }
-                    else {
-                        audioExtractionTask = Task.Run(async () => {
-                            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(file)}...");
-                            await FfmpegToolkit.ExtractAudioAsAacAsync(file, fileSpecificOutputFolder);
-                            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(file)} abgeschlossen.");
-                        });
-                    }
-                }
-            }
+            var audioTrackExtractor = new AudioTrackExtractor(file, fileSpecificOutputFolder);
 
             for (int i = 0; i < partsWithTimes.Count; i++) {
                 string safePartPath = partsWithTimes[i].FilePath;
@@ -1342,7 +1324,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     if (_config.GenerateOffsetFiles) {
                         fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.AdjustTimestamps(LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
                     }
-                    startAudioTask();
+                    audioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
                     continue;
                 }
 
@@ -1371,7 +1353,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     break;
                 }
 
-                startAudioTask();
+                audioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
 
                 if (rateLimitDelayTask != null) {
                     Console.WriteLine("  [Rate-Limit] Warte auf Freigabe des vorherigen Timers...");
@@ -1393,8 +1375,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
                     else if (i == partsWithTimes.Count - 1 && _config.GenerateAudioFile && _config.GoIntoLatexRefinement) {
                         pendingAudioUploadTask = Task.Run(async () => {
-                            if (audioExtractionTask != null) {
-                                await audioExtractionTask;
+                            if (audioTrackExtractor.PendingTask != null) {
+                                await audioTrackExtractor.PendingTask;
                             }
                             var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
                             string audioPath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
@@ -1507,9 +1489,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
                 // Warten, bis das Audio fertig ist, bevor das Refinement startet,
                 // da das Refinement die Audiodatei für die API benötigt!
-                if (audioExtractionTask != null) {
+                if (audioTrackExtractor.PendingTask != null) {
                     Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...");
-                    await audioExtractionTask;
+                    await audioTrackExtractor.PendingTask;
                 }
 
                 // LatexRefinementSession uses its own dedicated API key (resolved at the start of the processing loop)

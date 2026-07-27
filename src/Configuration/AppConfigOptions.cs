@@ -11,8 +11,6 @@ public class AppConfigOptions {
     public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
     public string VertexLocation { get; set; } = "global";
     public string VertexGcsBucketName { get; set; } = "vertex-ai-experiments-upload-bucket-us";
-    public string DefaultModel { get; set; } = "gemini-3.5-flash"; // This is for other sessions
-    public string RefinementModel { get; set; } = "gemini-3.5-flash"; // This is for LatexRefinement
     public float DefaultTemperature { get; set; } = 0.35f;
     public float DefaultTopP { get; set; } = 0.90f;
     public int DefaultTopK { get; set; } = 40;
