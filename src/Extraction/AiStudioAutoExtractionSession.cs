@@ -595,96 +595,133 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string normalizedInput = input.TrimStart('/');
             if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
 
-            if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-                PrintCommandsMenu();
-            }
-            else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
-                string speedInput = "";
-                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) speedInput = normalizedInput[9..].Trim();
-                else if (normalizedInput.StartsWith("2 ")) speedInput = normalizedInput[2..].Trim();
-                else if (normalizedInput == "2") {
-                    Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
-                    speedInput = Console.ReadLine()?.Trim() ?? "";
-                }
+            if (TryHandleReplShowCommands(normalizedInput)) continue;
+            if (TryHandleReplSetSpeed(normalizedInput)) continue;
+            if (await TryHandleReplConvertChosenVideoAsync(normalizedInput)) continue;
+            if (await TryHandleReplConvertAllVideosAsync(normalizedInput)) continue;
+            if (TryHandleReplClearDebugHistory(normalizedInput)) continue;
+            if (await TryHandleReplYouTubeAsync(normalizedInput)) continue;
+            if (TryHandleReplSetModel(normalizedInput)) continue;
+            if (await TryHandleReplRunRefinementAsync(normalizedInput)) continue;
+            if (TryHandleReplChangeKey(normalizedInput)) continue;
 
-                if (double.TryParse(speedInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedSpeed)) {
-                    _speed = parsedSpeed;
-                    Console.WriteLine($"Speed gesetzt auf {_speed}x");
-                }
-                else {
-                    Console.WriteLine("Ungültiger Wert für speed.");
-                }
-            }
-            else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) {
-                var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
-                if (files.Length > 0) {
-                    await SetupContextAndProcessAsync(files);
-                }
-            }
-            else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
-                var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
-                if (files.Length > 0) {
-                    await SetupContextAndProcessAsync(files);
-                }
-            }
-            else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
-                _debugChatHistory.Clear();
-                Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
-            }
-            else if (normalizedInput == "6" || normalizedInput.Equals("youtube", StringComparison.OrdinalIgnoreCase)) {
-                await ProcessYouTubeTasksAsync();
-            }
-            else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
-                SelectModel();
-                ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
-                ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
-                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und für die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
-            }
-            else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
-                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
-            }
-            else if (normalizedInput == "9" || normalizedInput.StartsWith("9 ") || normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) || normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
-                string profileInput = "";
-                if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
-                    profileInput = normalizedInput["change-key".Length..].Trim();
-                }
-                else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
-                    profileInput = normalizedInput["change key".Length..].Trim();
-                }
-                else if (normalizedInput.StartsWith("9 ")) {
-                    profileInput = normalizedInput[2..].Trim();
-                }
+            await DebugChatAsync(input); // Chat erhält den originalen Input
+        }
+    }
 
-                if (string.IsNullOrEmpty(profileInput)) {
-                    Console.Write("Neues API-Key Profil (0-3): ");
-                    profileInput = Console.ReadLine()?.Trim() ?? "";
-                }
+    private bool TryHandleReplShowCommands(string normalizedInput) {
+        if (normalizedInput != "1" && !normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) return false;
+        PrintCommandsMenu();
+        return true;
+    }
 
-                if (int.TryParse(profileInput, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
-                    string? newApiKey;
-                    if (newProfile == 0) {
-                        newApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
-                    }
-                    else {
-                        newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
-                    }
+    private bool TryHandleReplSetSpeed(string normalizedInput) {
+        if (normalizedInput != "2" && !normalizedInput.StartsWith("2 ") && !normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) return false;
 
-                    if (!string.IsNullOrEmpty(newApiKey)) {
-                        _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
-                        _attachmentHandler.UpdateClient(_client);
-                        _config.ActiveApiProfile = newProfile;
-                        ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
-                        Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt und in Konfiguration gespeichert!");
-                    }
-                }
-                else {
-                    Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
-                }
+        string speedInput = "";
+        if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) speedInput = normalizedInput[9..].Trim();
+        else if (normalizedInput.StartsWith("2 ")) speedInput = normalizedInput[2..].Trim();
+        else if (normalizedInput == "2") {
+            Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
+            speedInput = Console.ReadLine()?.Trim() ?? "";
+        }
+
+        if (double.TryParse(speedInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedSpeed)) {
+            _speed = parsedSpeed;
+            Console.WriteLine($"Speed gesetzt auf {_speed}x");
+        }
+        else {
+            Console.WriteLine("Ungültiger Wert für speed.");
+        }
+        return true;
+    }
+
+    private async Task<bool> TryHandleReplConvertChosenVideoAsync(string normalizedInput) {
+        if (normalizedInput != "3" && !normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) return false;
+        var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
+        if (files.Length > 0) {
+            await SetupContextAndProcessAsync(files);
+        }
+        return true;
+    }
+
+    private async Task<bool> TryHandleReplConvertAllVideosAsync(string normalizedInput) {
+        if (normalizedInput != "4" && !normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) return false;
+        var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
+        if (files.Length > 0) {
+            await SetupContextAndProcessAsync(files);
+        }
+        return true;
+    }
+
+    private bool TryHandleReplClearDebugHistory(string normalizedInput) {
+        if (!normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) return false;
+        _debugChatHistory.Clear();
+        Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
+        return true;
+    }
+
+    private async Task<bool> TryHandleReplYouTubeAsync(string normalizedInput) {
+        if (normalizedInput != "6" && !normalizedInput.Equals("youtube", StringComparison.OrdinalIgnoreCase)) return false;
+        await ProcessYouTubeTasksAsync();
+        return true;
+    }
+
+    private bool TryHandleReplSetModel(string normalizedInput) {
+        if (normalizedInput != "7" && !normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) return false;
+        SelectModel();
+        ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+        ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
+        Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und für die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
+        return true;
+    }
+
+    private async Task<bool> TryHandleReplRunRefinementAsync(string normalizedInput) {
+        if (normalizedInput != "8" && !normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) return false;
+        await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig, _config);
+        return true;
+    }
+
+    private bool TryHandleReplChangeKey(string normalizedInput) {
+        if (normalizedInput != "9" && !normalizedInput.StartsWith("9 ") && !normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase) && !normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) return false;
+
+        string profileInput = "";
+        if (normalizedInput.StartsWith("change-key", StringComparison.OrdinalIgnoreCase)) {
+            profileInput = normalizedInput["change-key".Length..].Trim();
+        }
+        else if (normalizedInput.StartsWith("change key", StringComparison.OrdinalIgnoreCase)) {
+            profileInput = normalizedInput["change key".Length..].Trim();
+        }
+        else if (normalizedInput.StartsWith("9 ")) {
+            profileInput = normalizedInput[2..].Trim();
+        }
+
+        if (string.IsNullOrEmpty(profileInput)) {
+            Console.Write("Neues API-Key Profil (0-3): ");
+            profileInput = Console.ReadLine()?.Trim() ?? "";
+        }
+
+        if (int.TryParse(profileInput, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
+            string? newApiKey;
+            if (newProfile == 0) {
+                newApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
             }
             else {
-                await DebugChatAsync(input); // Chat erhält den originalen Input
+                newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
+            }
+
+            if (!string.IsNullOrEmpty(newApiKey)) {
+                _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
+                _attachmentHandler.UpdateClient(_client);
+                _config.ActiveApiProfile = newProfile;
+                ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+                Console.WriteLine($"  [INFO] API-Key erfolgreich auf Profil {newProfile} gewechselt und in Konfiguration gespeichert!");
             }
         }
+        else {
+            Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
+        }
+        return true;
     }
 
     /// <summary>
@@ -758,6 +795,28 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
+        var (fullResponse, exceptionCaught, wasCancelled) = await StreamDebugChatResponseAsync(requestConfig);
+
+        if (exceptionCaught || wasCancelled) {
+            Console.WriteLine("\n\n[INFO] Debug-Chat durch Benutzer abgebrochen.");
+        }
+        else if (!string.IsNullOrWhiteSpace(fullResponse)) {
+            _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
+        }
+        else if (_debugChatHistory.Count > 0 && _debugChatHistory.Last().Role == "user") {
+            // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
+            _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Streams the debug-chat response with a hand-rolled retry/backoff loop (distinct from
+    /// ApiResilience.ExecuteStreamWithRetryAsync used elsewhere): network errors wait 5 minutes, "high
+    /// demand" waits a flat 3 minutes, the first rate-limit reads the server-suggested delay + 20s
+    /// buffer, and subsequent rate-limits increment linearly by 30s rather than backing off exponentially.
+    /// [Human] Streamt die Debug-Chat-Antwort mit eigener Retry-/Backoff-Logik (Netzwerkfehler, Rate-Limits).
+    /// </summary>
+    private async Task<(string FullResponse, bool ExceptionCaught, bool WasCancelled)> StreamDebugChatResponseAsync(GenerateContentConfig requestConfig) {
         Console.Write($"\n[Debug Chat] {_config.CurrentModel} (Strg+C zum Abbrechen): ");
 
         using var cts = new CancellationTokenSource();
@@ -877,16 +936,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         Console.CancelKeyPress -= cancelHandler;
 
-        if (exceptionCaught || cts.IsCancellationRequested) {
-            Console.WriteLine("\n\n[INFO] Debug-Chat durch Benutzer abgebrochen.");
-        }
-        else if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
-        }
-        else if (_debugChatHistory.Count > 0 && _debugChatHistory.Last().Role == "user") {
-            // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
-            _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
-        }
+        return (fullResponse, exceptionCaught, cts.IsCancellationRequested);
     }
 
     private List<Part> GetValidSystemInstructionParts() {
