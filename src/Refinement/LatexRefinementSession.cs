@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
-using Google.Cloud.Storage.V1;
 using LectureExtraction.Configuration;
 using LectureExtraction.Extraction;
 using LectureExtraction.GoogleAi;
@@ -1143,25 +1142,7 @@ public partial class LatexRefinementSession {
     /// [AI Context] Financial Guardrail: Ensures the GCS bucket is purged after processing to prevent long-term storage costs.
     /// [Human] Löscht temporäre Dateien im Google Cloud Storage Bucket, damit am Ende des Monats keine überraschenden Kosten entstehen.
     /// </summary>
-    private async Task CleanupBucketAsync() {
-        if (string.IsNullOrWhiteSpace(_config.VertexGcsBucketName)) return;
-        try {
-            Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{_config.VertexGcsBucketName}'...");
-            var storageClient = await StorageClient.CreateAsync();
-            var objects = storageClient.ListObjectsAsync(_config.VertexGcsBucketName);
-            int count = 0;
-            await foreach (var obj in objects) {
-                await storageClient.DeleteObjectAsync(_config.VertexGcsBucketName, obj.Name);
-                count++;
-            }
-            if (count > 0) Console.WriteLine($"  [GCS] {count} temporäre Datei(en) gelöscht, um Storage-Kosten zu sparen.");
-        }
-        catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-            Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
-        }
-    }
+    private Task CleanupBucketAsync() => GcsWorkspace.PurgeAsync(_config.VertexGcsBucketName);
 
     /// <summary>
     /// [AI Context] Fallback routine when initial PDF compilation fails. Sends the compile error log, preamble reference, and document body back to Gemini in a clean session (no system instructions, no context cache) to fix LaTeX syntax errors without outputting the preamble to save tokens.

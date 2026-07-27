@@ -449,7 +449,7 @@ both twins call. The twins still exist after this phase — they just get thin.
 | `ModelCapabilities` | the 5 `SupportsThinking` copies | **Done, commit `23c0c1b`** |
 | `TexDocumentWriter` | 2× `GetUniqueTexPath` (**done, folded into existing `ExtractionHelpers` rather than a new type, commit `23c0c1b`**), `BuildTexPartHeader`, `BuildTexCombinedHeader`, offset-file writing (not started) | Partial |
 | `AudioTrackExtractor` | the `startAudioTask` local function + cache check | **Done** |
-| `GcsWorkspace` | `CleanupBucketAsync` / `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` | Not started |
+| `GcsWorkspace` | the 2 byte-identical `CleanupBucketAsync` copies (Vertex extraction, LaTeX refinement) — **done**. `CleanupGcsBucketAsync` (AI Studio chat) / `ForcePurgeGcsBucketAsync` (Vertex chat) intentionally left alone: real behavioral differences (`IsAiStudio` free-tier guard, richer Vertex error diagnostics incl. a billing-account branch, English vs German strings) | Partial |
 | `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` | Not started |
 | `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | Not started |
 | `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) | Not started |
@@ -469,13 +469,28 @@ Also split the two grab-bags (not started):
 *Exit:* build 0/0, UI-string diff empty. Both extraction sessions should now be
 well under 1 000 lines each.
 
-**Progress note (2026-07-27):** Three items with byte-identical duplicate
-bodies (confirmed by diffing before merging) are done — those carried zero
+**Progress note (2026-07-27):** Items with byte-identical duplicate bodies
+(confirmed by diffing before merging) are done — those carried zero
 judgment-call risk. Everything else in this table involves code that has
 already visibly drifted between the twins (see §1.1) and needs an actual
-side-by-side read, not a mechanical move. Suggested order, cheapest/lowest-drift
-first: ~~`AudioTrackExtractor`~~ → `SystemInstructionLoader` → `GcsWorkspace` →
-`RefinementLauncher` → `GenerationConfigBuilder` → `VideoSegmentProducer` →
+side-by-side read, not a mechanical move.
+
+`SystemInstructionLoader` was investigated and downgraded: the genuinely
+shared file-resolution/tree-printing work already lives in `ExtractionHelpers`
+(both sessions already call it identically). What's left un-shared is thin,
+backend-specific orchestration — notably AI Studio's implicit-prefix-cache
+warm-up (`WarmUpWithBatchedHistoryAsync` / `WarmUpSystemInstructionCacheAsync`),
+which has **no Vertex equivalent at all** because Vertex uses the real
+`CachedContent` API (`ContextCacheCoordinator`/`InitializeContextCachingAsync`)
+instead of an implicit-prefix trick. Confirmed with the user — this is a
+correct, permanent per-backend difference, not drift to fix. Not extracting
+further; not worth a new type for ~10 lines of glue plus one small
+AI-Studio-only warning branch.
+
+Suggested order for what remains, cheapest/lowest-drift first:
+~~`AudioTrackExtractor`~~ → ~~`SystemInstructionLoader` (downgraded, see above)~~
+→ ~~`GcsWorkspace` (partial, see above)~~ → `RefinementLauncher` →
+`GenerationConfigBuilder` → `VideoSegmentProducer` →
 `ContextCacheCoordinator`/`PrefixCachePrimer` (hardest, most drift) → the two
 grab-bag splits (mechanical, do anytime).
 

@@ -1765,25 +1765,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// <summary>
     /// [AI Context] Financial Guardrail: Ensures the cloud storage bucket is purged immediately after processing to prevent accumulating storage costs for massive temporary video files.
     /// </summary>
-    private async Task CleanupBucketAsync() {
-        if (string.IsNullOrWhiteSpace(_config.GcsBucketName)) return;
-        try {
-            Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{_config.GcsBucketName}'...");
-            var storageClient = await Google.Cloud.Storage.V1.StorageClient.CreateAsync();
-            var objects = storageClient.ListObjectsAsync(_config.GcsBucketName);
-            int count = 0;
-            await foreach (var obj in objects) {
-                await storageClient.DeleteObjectAsync(_config.GcsBucketName, obj.Name);
-                count++;
-            }
-            if (count > 0) Console.WriteLine($"  [GCS] {count} temporäre Datei(en) gelöscht, um Storage-Kosten zu sparen.");
-        }
-        catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-            Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
-        }
-    }
+    private Task CleanupBucketAsync() => GcsWorkspace.PurgeAsync(_config.GcsBucketName);
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Segment\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex SegmentCompleteRegex();

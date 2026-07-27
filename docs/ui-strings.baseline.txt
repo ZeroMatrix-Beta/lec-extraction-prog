@@ -503,8 +503,7 @@ Console.WriteLine($"\n  [FFmpegToolkit] Processing (Custom): {Path.GetFileName(i
 Console.WriteLine($"\n  [FFmpegToolkit] Processing (Fast 720p): {Path.GetFileName(inputFile)}...");
 Console.WriteLine($"\n  [FFmpegToolkit] Processing AI Video ({speedMultiplier}x Speed, {fps} FPS, Preset={preset}): {Path.GetFileName(inputFile)}...");
 Console.WriteLine($"\n  [FFmpegToolkit] Splitting into {parts} parts: {Path.GetFileName(inputFile)} (Total Duration: {duration:F2}s)");
-Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{_config.GcsBucketName}'...");
-Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{_config.VertexGcsBucketName}'...");
+Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{bucketName}'...");
 Console.WriteLine($"\n  [History-Batching] Aufgeteilt in {historyBatches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
 Console.WriteLine($"\n  [INFO] History-Batch {batchIndex + 1}/{historyBatches.Count}: '{batchLabel}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
 Console.WriteLine($"\n  [LatexToolkit] Starte PDF-Kompilierung für {fileName}...");
