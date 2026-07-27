@@ -794,8 +794,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 _sessionTotalInputTokens += requestInputTokens;
                 _sessionTotalOutputTokens += requestOutputTokens;
                 _sessionTotalCachedTokens += requestCachedTokens;
-                Console.WriteLine($"\n  [Request Tokens] Input: {requestInputTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
-                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
+                Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {Math.Max(0, requestInputTokens - requestCachedTokens):N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
+                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens):N0} | Output: {_sessionTotalOutputTokens:N0}");
 
                 Console.WriteLine();
                 isGenerating = false;
@@ -1830,8 +1830,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             int freshPartTokens = Math.Max(0, interactionInputTokens - interactionCachedTokens);
             int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
-            Console.WriteLine($"\n  [Request Tokens] Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Part Total Tokens] Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
+            Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
+            Console.WriteLine($"  [Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
             Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
 
             fullResponse += chunkResp;

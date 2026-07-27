@@ -513,7 +513,7 @@ public class DirectAiChatSessionVertex {
                 _sessionTotalInputTokens += inputTokens;
                 _sessionTotalOutputTokens += outputTokens;
                 _sessionTotalCachedTokens += cachedTokens;
-                WriteLine($"\n[Request Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {(Math.Max(0, inputTokens - cachedTokens)):N0} | Output: {outputTokens:N0} (inkl. Thinking Tokens)");
+                WriteLine($"\n[Request Tokens]       Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {(Math.Max(0, inputTokens - cachedTokens)):N0} | Output: {outputTokens:N0} (inkl. Thinking Tokens)");
                 WriteLine($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
             }
 

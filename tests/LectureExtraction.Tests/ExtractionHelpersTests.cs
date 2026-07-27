@@ -53,17 +53,16 @@ public class ExtractionHelpersTests {
     }
 
     /// <summary>
-    /// Documents a known gap rather than a desired behaviour: SystemMessageRegex allows
-    /// leading <c>* _ %</c> markers only when they sit flush against the bracket
-    /// (<c>%[SYSTEM]</c>). A LaTeX comment written the normal way, <c>% [SYSTEM]</c>
-    /// with a space, is therefore NOT stripped and leaks into the .tex output.
-    /// If the regex is ever widened, this test should start failing — update it then.
+    /// SystemMessageRegex used to only allow leading <c>* _ %</c> markers flush against the
+    /// bracket (<c>%[SYSTEM]</c>), so a LaTeX comment written the normal way, <c>% [SYSTEM]</c>
+    /// with a space, leaked into the .tex output. Fixed by allowing whitespace between the
+    /// marker and the bracket.
     /// </summary>
     [Fact]
-    public void CleanLatexResponse_DoesNotStripChatter_BehindASpacedLatexCommentMarker() {
+    public void CleanLatexResponse_StripsChatter_BehindASpacedLatexCommentMarker() {
         const string raw = "\\section{A}\n% [AI-MODEL] Video complete";
 
-        Assert.Equal(raw, ExtractionHelpers.CleanLatexResponse(raw));
+        Assert.Equal("\\section{A}", ExtractionHelpers.CleanLatexResponse(raw));
     }
 
     [Fact]

@@ -604,7 +604,7 @@ public static partial class ExtractionHelpers {
     [GeneratedRegex(@"```\r?\n?")]
     private static partial Regex CodeBlockRegex();
 
-    [GeneratedRegex(@"(?im)^[ \t]*(?:\*|_|%)*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?")]
+    [GeneratedRegex(@"(?im)^[ \t]*(?:\*|_|%)*[ \t]*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?")]
     private static partial Regex SystemMessageRegex();
 
     [GeneratedRegex(@"\s*[\-\u2010-\u2015]\s*(?:Kopie|Copy)\b", RegexOptions.IgnoreCase)]
