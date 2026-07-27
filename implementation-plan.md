@@ -433,26 +433,33 @@ Phase 3, ahead of this plan document).**
 
 *Exit:* build 0/0, UI-string diff empty.
 
+**Outcome — done, commit `409542a`.** `TokenUsage`, `VideoSegment` (placed in
+`Media`, not `Extraction.Model`, since `FfmpegToolkit` produces it and must
+not depend on the extraction pipeline), `PreparedVideo`, `SegmentUpload`,
+`SegmentTranscript` all added and wired into both extraction sessions. Build
+0/0, 85 tests green.
+
 ### Phase 3 — Extract shared services · medium risk
 
 Pull genuinely shared code out of the twins into single implementations that
 both twins call. The twins still exist after this phase — they just get thin.
 
-| New type | Absorbs |
-|---|---|
-| `ModelCapabilities` | the 5 `SupportsThinking` copies |
-| `TexDocumentWriter` | 2× `GetUniqueTexPath`, `BuildTexPartHeader`, `BuildTexCombinedHeader`, offset-file writing |
-| `GcsWorkspace` | `CleanupBucketAsync` / `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` |
-| `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` |
-| `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` |
-| `AudioTrackExtractor` | the `startAudioTask` local function + cache check |
-| `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) |
-| `GenerationConfigBuilder` | thinking/temperature/topP/topK/maxTokens assembly, repeated 5× |
-| `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` |
-| `PrefixCachePrimer` | `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`, `WarmUpWithBatchedHistoryAsync` |
+| New type | Absorbs | Status |
+|---|---|---|
+| `ModelCapabilities` | the 5 `SupportsThinking` copies | **Done, commit `23c0c1b`** |
+| `TexDocumentWriter` | 2× `GetUniqueTexPath` (**done, folded into existing `ExtractionHelpers` rather than a new type, commit `23c0c1b`**), `BuildTexPartHeader`, `BuildTexCombinedHeader`, offset-file writing (not started) | Partial |
+| `GcsWorkspace` | `CleanupBucketAsync` / `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` | Not started |
+| `SystemInstructionLoader` | the path-resolution + concat block repeated in both sessions **and** in `ExecuteGenerativeStepAsync` | Not started |
+| `VideoSegmentProducer` | the whole FFmpeg producer lambda (~115 lines) from both `ProcessFilesAsync` | Not started |
+| `AudioTrackExtractor` | the `startAudioTask` local function + cache check | Not started |
+| `RefinementLauncher` | refinement-client construction, `applyParams`, refinement session start (~70 lines, both sessions) | Not started |
+| `GenerationConfigBuilder` | thinking/temperature/topP/topK/maxTokens assembly, repeated 5× | Not started |
+| `ContextCacheCoordinator` | the ~150-line cache create/validate/extend block in `ExecuteGenerativeStepAsync` + `InitializeContextCachingAsync` | Not started |
+| `PrefixCachePrimer` | `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`, `WarmUpWithBatchedHistoryAsync` | Not started |
 
-Also split the two grab-bags:
-* `ExtractionHelpers` (583 lines) → `HistoryFileResolver`, `FileTreeRenderer`,
+Also split the two grab-bags (not started):
+* `ExtractionHelpers` (583 lines, now slightly larger after absorbing
+  `GetUniqueTexPath`) → `HistoryFileResolver`, `FileTreeRenderer`,
   `LatexResponseCleaner`, `InteractiveDelay`, `VideoBatchSelector`,
   `YouTubeTaskPrompt`, `ModelSyncService`.
 * `ConsoleUiHelper` (547 lines) → `DirectoryTreeRenderer`,
@@ -461,6 +468,17 @@ Also split the two grab-bags:
 
 *Exit:* build 0/0, UI-string diff empty. Both extraction sessions should now be
 well under 1 000 lines each.
+
+**Progress note (2026-07-27):** Only the two items with byte-identical
+duplicate bodies (confirmed by diffing before merging) are done — those
+carried zero judgment-call risk. Everything else in this table involves code
+that has already visibly drifted between the twins (see §1.1) and needs an
+actual side-by-side read, not a mechanical move. Suggested order for next
+session, cheapest/lowest-drift first: `AudioTrackExtractor` →
+`SystemInstructionLoader` → `GcsWorkspace` → `RefinementLauncher` →
+`GenerationConfigBuilder` → `VideoSegmentProducer` →
+`ContextCacheCoordinator`/`PrefixCachePrimer` (hardest, most drift) → the two
+grab-bag splits (mechanical, do anytime).
 
 ### Phase 4 — Decompose the god methods · medium risk
 
