@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done, Phase 4 done for AI Studio (Vertex intentionally untouched, see below) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phase 3 done, Phase 4 done for AI Studio (Vertex intentionally untouched, see below) · **Pick up next:** candidate Phase 4.5 (class-level split of `AiStudioAutoExtractionSession.cs`, see its section under Phase 4) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Decision (2026-07-28): Vertex is out of scope for Phase 4+.** Vertex AI
 stays disabled (`Program.Activate_Vertex` stays hardcoded `false`, per the
@@ -677,6 +677,39 @@ of this document. `ProcessPreparedVideoAsync`'s further split into
 — would need a small mutable state object first (see above), left for a
 future session if the nesting/line-count metrics are re-measured and still
 found wanting.
+
+**Important caveat: Phase 4 fixed long methods, not the god class.**
+`AiStudioAutoExtractionSession.cs` is still 1809 lines and ~49 methods after
+Phase 4 — barely smaller than before (it was ~1928), because splitting a
+300-line method into six 50-line methods doesn't remove any responsibility
+from the class, it just names the pieces. The class still does all of:
+
+* FFmpeg batch pipeline orchestration (`ProcessFilesAsync` / `ProcessPreparedVideoAsync`)
+* Gemini request building + streaming (`BuildGenerationRequestAsync`, `StreamAndCollectAsync`)
+* Prefix-cache warm-up (`WarmUpSystemInstructionCacheAsync`, `GetDummyPart0Content`, `WarmUpWithBatchedHistoryAsync`)
+* A full debug-chat REPL (`ReplLoopAsync`, `DebugChatAsync`, `StreamDebugChatResponseAsync`, 9 `TryHandleReplX` methods)
+* Model-selection / menu UI (`SelectModel`, `PrintCommandsMenu`)
+* YouTube task handling, upload prep, system-instruction loading
+
+This is a **class-level** decomposition problem, distinct from — and doable
+independently of — the twin-merge/`IAiBackend` question in §6 and Phase 5.
+Extracting `PrefixCachePrimer`, `ExtractionRepl`, and `SystemInstructionLoader`
+(already named in §3.1's target architecture) out of this one file would cut
+it roughly in half without touching the Vertex question at all. **Candidate
+Phase 4.5, not yet started:**
+
+1. `ExtractionRepl` — `ReplLoopAsync`, `DebugChatAsync`,
+   `StreamDebugChatResponseAsync`, all 9 `TryHandleReplX` methods,
+   `SelectModel`, `PrintCommandsMenu`. Biggest single win — this is a
+   self-contained debug/menu feature with almost no coupling to the
+   extraction pipeline beyond reading `_config`/`_client`.
+2. `PrefixCachePrimer` — `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`,
+   `WarmUpWithBatchedHistoryAsync`. Same content the Phase 3 investigation
+   found has no Vertex equivalent (§ above) — extracting it now is a pure
+   move, no merge-with-Vertex risk.
+3. Re-measure line count and nesting after 1–2; decide whether a third pass
+   (e.g. pulling `PrepareAndUploadPartAsync` + upload-scheduling into its own
+   type) is still warranted.
 
 ### Phase 5 — Unify the twins · highest risk · see §6 open decision
 
