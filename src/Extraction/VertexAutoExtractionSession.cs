@@ -1403,6 +1403,24 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment über Vertex AI.
     /// </summary>
     private async Task<SegmentTranscript> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+        var (requestConfig, history) = await BuildGenerationRequestAsync(partFile, partNumber, parsedPrompt, attachmentParts, previousTexFiles);
+
+        string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
+        if (previousTexFiles.Count > 0) {
+            logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+        }
+        logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
+
+        return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext);
+    }
+
+    /// <summary>
+    /// [AI Context] Assembles the request history (reference-context .tex inlining, video payload,
+    /// prompt parameters) and GenerateContentConfig (context cache / system instruction, thinking,
+    /// Google Search) for one part's generation call.
+    /// [Human] Baut den History-Kontext und die Anfrage-Konfiguration für einen Teil auf.
+    /// </summary>
+    private async Task<(GenerateContentConfig RequestConfig, List<Content> History)> BuildGenerationRequestAsync(string partFile, int partNumber, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
         // 1. If InlinePrecedingLecTexParts is enabled, inline previous .tex files BEFORE the video payload to enable implicit prefix caching across parts.
@@ -1496,18 +1514,21 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
         }
 
+        return (requestConfig, history);
+    }
+
+    /// <summary>
+    /// [AI Context] Sends the request, streaming the response and handling the "Continue" retry loop
+    /// (segment/video completion markers, max-request cap, rate-limit pacing between continuations).
+    /// [Human] Sendet die Anfrage, streamt die Antwort und behandelt die "Continue"-Fortsetzungslogik.
+    /// </summary>
+    private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext) {
         string fullResponse = "";
         int currentRequest = 1;
         int maxRequestsPerPart = 6;
         int interactionInputTokens = 0;
         int interactionOutputTokens = 0;
         int interactionCachedTokens = 0;
-
-        string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
-        if (previousTexFiles.Count > 0) {
-            logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
-        }
-        logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
         string currentLogPrompt = logContext;
 
         using var cts = new CancellationTokenSource();

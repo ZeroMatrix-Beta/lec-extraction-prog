@@ -1472,6 +1472,26 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment. Hält die Prompt-Reihenfolge strikt ein, damit Googles impliziter Cache optimal greift.
     /// </summary>
     private async Task<SegmentTranscript> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+        var (requestConfig, history) = await BuildGenerationRequestAsync(partNumber, parsedPrompt, attachmentParts, previousTexFiles);
+
+        await LogTokenCountsAsync(attachmentParts, history, previousTexFiles);
+
+        string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
+        if (previousTexFiles.Count > 0) {
+            logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+        }
+        logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
+
+        return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext);
+    }
+
+    /// <summary>
+    /// [AI Context] Assembles the GenerateContentConfig (system instruction, thinking, Google Search)
+    /// and the request history (prefix-cache-stable prompt beginning + optional reference context +
+    /// video payload + dynamic prompt parameters) for one part's generation call.
+    /// [Human] Baut die Anfrage-Konfiguration und den History-Kontext für einen Teil auf.
+    /// </summary>
+    private async Task<(GenerateContentConfig RequestConfig, List<Content> History)> BuildGenerationRequestAsync(int partNumber, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
             TopP = _config.TopP,
@@ -1545,27 +1565,24 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         history.AddRange(_sessionPreamble);
         history.Add(new Content { Role = "user", Parts = userPromptParts });
 
-        string fullResponse = "";
-        int currentRequest = 1;
-        int maxRequestsPerPart = 6;
-        int interactionInputTokens = 0;
-        int interactionOutputTokens = 0;
-        int interactionCachedTokens = 0;
+        return (requestConfig, history);
+    }
 
-        string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
-        if (previousTexFiles.Count > 0) {
-            logContext += $"\n[Kontext-Dateien]: {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
-        }
-        logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
-        string currentLogPrompt = logContext;
-
+    /// <summary>
+    /// [AI Context] Logs a token-count breakdown (video / inlined reference context / total history)
+    /// before sending the request. Purely diagnostic console output — failures here are swallowed so
+    /// they never abort the actual generation call.
+    /// [Human] Protokolliert eine Token-Analyse vor dem Senden der Anfrage (nur Diagnose-Ausgabe).
+    /// </summary>
+    private async Task LogTokenCountsAsync(List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles) {
         try {
             Console.WriteLine("\n  [Token-Analyse] Berechne Token-Anzahl für die einzelnen Bestandteile...");
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
             var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
             Console.WriteLine($"    - Video-Token: {videoCount.TotalTokens}");
 
-            if (_config.DebugSendReferenceFile && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
+            var userPromptParts = history[^1].Parts;
+            if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
                 var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
                 var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
                 string fileInfo = previousTexFiles.Count > 0
@@ -1580,6 +1597,21 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         catch (Exception ex) {
             Console.WriteLine($"  [Token-Analyse] Fehler beim Zählen der Token: {ex.Message}\n");
         }
+    }
+
+    /// <summary>
+    /// [AI Context] Sends the request, streaming the response and handling the "Continue" retry loop
+    /// (segment/video completion markers, max-request cap, rate-limit pacing between continuations).
+    /// [Human] Sendet die Anfrage, streamt die Antwort und behandelt die "Continue"-Fortsetzungslogik.
+    /// </summary>
+    private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext) {
+        string fullResponse = "";
+        int currentRequest = 1;
+        int maxRequestsPerPart = 6;
+        int interactionInputTokens = 0;
+        int interactionOutputTokens = 0;
+        int interactionCachedTokens = 0;
+        string currentLogPrompt = logContext;
 
         using var cts = new CancellationTokenSource();
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
