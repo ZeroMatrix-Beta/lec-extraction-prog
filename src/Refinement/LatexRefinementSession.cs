@@ -705,6 +705,95 @@ public partial class LatexRefinementSession {
     private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
+        string systemInstructionText = await ResolveSystemInstructionTextAsync(stepConfig);
+        string? cacheName = await EnsureContextCacheAsync(backendParams, systemInstructionText, outputFileName, cacheStateFileName);
+        var requestConfig = BuildStepRequestConfig(backendParams, cacheName, systemInstructionText);
+
+        // Inject completion marker constraint into the last user message
+        var lastUserMsg = history.LastOrDefault(c => c.Role == "user");
+        if (lastUserMsg != null && lastUserMsg.Parts != null) {
+            lastUserMsg.Parts.Add(new Part { Text = "\n\nCRITICAL INSTRUCTION: When you have completely finished writing your response and there is nothing left to output, you MUST append the exact text '% [SYSTEM] Refinement complete' on a new line at the very end of your response. This is mandatory for the system to know you are done." });
+        }
+
+        await DumpPromptLogAsync(history, systemInstructionText, targetOutputFolder, outputFileName);
+        var (expectedSpokenClean, expectedMathStroke) = ComputeExpectedStructuralCounts(history);
+
+        var (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens) =
+            await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName);
+
+        // --- STRUCTURAL INTEGRITY VERIFICATION ---
+        if (!string.IsNullOrEmpty(fullResponseText) && (expectedSpokenClean > 0 || expectedMathStroke > 0)) {
+            int actualSpokenClean = SpokenCleanRegex().Count(fullResponseText);
+            int actualMathStroke = MathStrokeRegex().Count(fullResponseText);
+
+            // Tolerance: LLM shouldn't drop more than 40% of the blocks (allows normal merging by Schritt 1).
+            int minExpectedSpoken = (int)(expectedSpokenClean * 0.6);
+            int minExpectedMath = (int)(expectedMathStroke * 0.6);
+
+            if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
+                Console.WriteLine($"\n[FATAL ERROR] SILENT TRUNCATION DETECTED!");
+                Console.WriteLine($"[FATAL ERROR] Das Modell hat einen großen Teil des Textes übersprungen oder abgeschnitten.");
+                Console.WriteLine($"[FATAL ERROR] Erwartet: ~{expectedSpokenClean} spoken-clean / ~{expectedMathStroke} math-stroke.");
+                Console.WriteLine($"[FATAL ERROR] Erhalten: {actualSpokenClean} spoken-clean / {actualMathStroke} math-stroke.");
+                Console.WriteLine($"[FATAL ERROR] Datei wird aus Sicherheitsgründen NICHT gespeichert, da massiver Datenverlust vorliegt.");
+                return null;
+            }
+            else {
+                Console.WriteLine($"  [INFO] Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} spoken-clean, {actualMathStroke}/{expectedMathStroke} math-stroke.");
+            }
+        }
+        // -----------------------------------------
+
+        if (!string.IsNullOrEmpty(fullResponseText)) {
+            if (!Directory.Exists(targetOutputFolder)) Directory.CreateDirectory(targetOutputFolder);
+            string outPath = Path.Combine(targetOutputFolder, outputFileName);
+
+            if (System.IO.File.Exists(outPath)) {
+                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(outputFileName);
+                string ext = Path.GetExtension(outputFileName);
+                int copyIndex = 1;
+                while (System.IO.File.Exists(outPath)) {
+                    outPath = Path.Combine(targetOutputFolder, $"{fileNameWithoutExt}-copy{copyIndex}{ext}");
+                    copyIndex++;
+                }
+                outputFileName = Path.GetFileName(outPath);
+            }
+
+            string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
+
+            string fileHeader = $"% ==========================================\n" +
+                                $"% LatexRefinement Step Output: {outputFileName}\n" +
+                                $"% Model: {backendParams.CurrentModel}\n" +
+                                $"% Temperature: {backendParams.Temperature}\n" +
+                                $"% TopP: {backendParams.TopP}\n" +
+                                $"% TopK: {backendParams.TopK}\n" +
+                                $"% MaxOutputTokens: {backendParams.MaxOutputTokens}\n" +
+                                (backendParams.ThinkingBudget.HasValue ? $"% ThinkingBudget: {backendParams.ThinkingBudget.Value}\n" : "") +
+                                (!string.IsNullOrEmpty(backendParams.ThinkingLevel) ? $"% ThinkingLevel: {backendParams.ThinkingLevel}\n" : "") +
+                                $"% Prompt Tokens: {totalInputTokens:N0}\n" +
+                                $"% Candidates Tokens: {totalOutputTokens:N0} (inkl. Thinking Tokens)\n" +
+                                $"% Cached Tokens: {totalCachedTokens:N0}\n" +
+                                $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
+                                $"% ==========================================\n\n";
+
+            await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
+            Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
+
+            InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
+
+            return outPath;
+        }
+        else {
+            Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Loads and concatenates a refinement step's configured system-instruction files.
+    /// [Human] Lädt und verkettet die konfigurierten System-Instruktions-Dateien eines Refinement-Schritts.
+    /// </summary>
+    private async Task<string> ResolveSystemInstructionTextAsync(RefinementStepConfig stepConfig) {
         string systemInstructionText = "";
         // [AI Context] Note on Performance (.Length vs .Any()):
         // For arrays, checking '.Length > 0' is a direct property lookup (O(1)).
@@ -727,8 +816,16 @@ public partial class LatexRefinementSession {
             // so the guard will count from here and enforce a proper gap before the first API call.
             InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         }
+        return systemInstructionText;
+    }
 
-        // [AI Context] Context caching is Vertex AI only. AiStudio (Google API key) does not support caching.
+    /// <summary>
+    /// [AI Context] Context caching is Vertex AI only. Loads the saved cache state, checks whether it
+    /// still matches the current config/system-instruction checksum and is valid remotely, extends it
+    /// if close to expiry, or creates a new one otherwise.
+    /// [Human] Prüft/verlängert/erstellt den Google-Kontext-Cache für einen Refinement-Schritt (nur Vertex AI).
+    /// </summary>
+    private async Task<string?> EnsureContextCacheAsync(BackendParameters backendParams, string systemInstructionText, string outputFileName, string cacheStateFileName) {
         string? cacheName = null;
         if (_config.UseVertex && backendParams.UseContextCaching && !string.IsNullOrWhiteSpace(systemInstructionText)) {
             string checksum = ContextCacheStateManager.ComputeChecksum(systemInstructionText);
@@ -793,6 +890,15 @@ public partial class LatexRefinementSession {
             }
         }
 
+        return cacheName;
+    }
+
+    /// <summary>
+    /// [AI Context] Assembles the GenerateContentConfig for a refinement step: cached content or plain
+    /// system instruction (mutually exclusive), plus thinking config.
+    /// [Human] Baut die Anfrage-Konfiguration für einen Refinement-Schritt.
+    /// </summary>
+    private static GenerateContentConfig BuildStepRequestConfig(BackendParameters backendParams, string? cacheName, string systemInstructionText) {
         var requestConfig = new GenerateContentConfig {
             Temperature = backendParams.Temperature,
             TopP = backendParams.TopP,
@@ -819,13 +925,15 @@ public partial class LatexRefinementSession {
             }
         }
 
-        // Inject completion marker constraint into the last user message
-        var lastUserMsg = history.LastOrDefault(c => c.Role == "user");
-        if (lastUserMsg != null && lastUserMsg.Parts != null) {
-            lastUserMsg.Parts.Add(new Part { Text = "\n\nCRITICAL INSTRUCTION: When you have completely finished writing your response and there is nothing left to output, you MUST append the exact text '% [SYSTEM] Refinement complete' on a new line at the very end of your response. This is mandatory for the system to know you are done." });
-        }
+        return requestConfig;
+    }
 
-        // Dump the full conversation history that Gemini will read into a log file
+    /// <summary>
+    /// [AI Context] Dumps the full conversation history Gemini will read into a log file, for debugging.
+    /// Failure here is non-fatal -- only the log write is skipped.
+    /// [Human] Speichert den vollständigen Gemini-Prompt-Verlauf als Log-Datei (nur Diagnose).
+    /// </summary>
+    private static async Task DumpPromptLogAsync(List<Content> history, string systemInstructionText, string targetOutputFolder, string outputFileName) {
         try {
             var sbPrompt = new System.Text.StringBuilder();
             sbPrompt.AppendLine("# SYSTEM INSTRUCTION");
@@ -851,7 +959,14 @@ public partial class LatexRefinementSession {
             Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
             Console.WriteLine($"  [WARNUNG] Konnte Prompt-Log nicht speichern.");
         }
+    }
 
+    /// <summary>
+    /// [AI Context] Counts how many 'spoken-clean'/'math-stroke' environments the input contains, so the
+    /// post-generation structural-integrity check can detect silent truncation by the model.
+    /// [Human] Zählt erwartete 'spoken-clean'/'math-stroke' Blöcke im Input für die Integritätsprüfung.
+    /// </summary>
+    private (int ExpectedSpokenClean, int ExpectedMathStroke) ComputeExpectedStructuralCounts(List<Content> history) {
         int expectedSpokenClean = 0;
         int expectedMathStroke = 0;
         try {
@@ -872,7 +987,17 @@ public partial class LatexRefinementSession {
             }
         }
         catch { }
+        return (expectedSpokenClean, expectedMathStroke);
+    }
 
+    /// <summary>
+    /// [AI Context] Sends the refinement step's request, streaming the response and handling the
+    /// "Continue" retry loop (empty-response retries, completion-marker detection, max-request cap,
+    /// rate-limit pacing between continuations).
+    /// [Human] Sendet die Refinement-Anfrage, streamt die Antwort und behandelt die "Continue"-Logik.
+    /// </summary>
+    private async Task<(string FullResponseText, int TotalInputTokens, int TotalOutputTokens, int TotalCachedTokens)> StreamAndCollectAsync(
+        RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName) {
         int totalInputTokens = 0;
         int totalOutputTokens = 0;
         int totalCachedTokens = 0;
@@ -1012,72 +1137,7 @@ public partial class LatexRefinementSession {
 
         Console.CancelKeyPress -= CancelHandler;
 
-        // --- STRUCTURAL INTEGRITY VERIFICATION ---
-        if (!string.IsNullOrEmpty(fullResponseText) && (expectedSpokenClean > 0 || expectedMathStroke > 0)) {
-            int actualSpokenClean = SpokenCleanRegex().Count(fullResponseText);
-            int actualMathStroke = MathStrokeRegex().Count(fullResponseText);
-            
-            // Tolerance: LLM shouldn't drop more than 40% of the blocks (allows normal merging by Schritt 1).
-            int minExpectedSpoken = (int)(expectedSpokenClean * 0.6);
-            int minExpectedMath = (int)(expectedMathStroke * 0.6);
-
-            if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
-                Console.WriteLine($"\n[FATAL ERROR] SILENT TRUNCATION DETECTED!");
-                Console.WriteLine($"[FATAL ERROR] Das Modell hat einen großen Teil des Textes übersprungen oder abgeschnitten.");
-                Console.WriteLine($"[FATAL ERROR] Erwartet: ~{expectedSpokenClean} spoken-clean / ~{expectedMathStroke} math-stroke.");
-                Console.WriteLine($"[FATAL ERROR] Erhalten: {actualSpokenClean} spoken-clean / {actualMathStroke} math-stroke.");
-                Console.WriteLine($"[FATAL ERROR] Datei wird aus Sicherheitsgründen NICHT gespeichert, da massiver Datenverlust vorliegt.");
-                return null;
-            }
-            else {
-                Console.WriteLine($"  [INFO] Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} spoken-clean, {actualMathStroke}/{expectedMathStroke} math-stroke.");
-            }
-        }
-        // -----------------------------------------
-
-        if (!string.IsNullOrEmpty(fullResponseText)) {
-            if (!Directory.Exists(targetOutputFolder)) Directory.CreateDirectory(targetOutputFolder);
-            string outPath = Path.Combine(targetOutputFolder, outputFileName);
-
-            if (System.IO.File.Exists(outPath)) {
-                string fileNameWithoutExt = Path.GetFileNameWithoutExtension(outputFileName);
-                string ext = Path.GetExtension(outputFileName);
-                int copyIndex = 1;
-                while (System.IO.File.Exists(outPath)) {
-                    outPath = Path.Combine(targetOutputFolder, $"{fileNameWithoutExt}-copy{copyIndex}{ext}");
-                    copyIndex++;
-                }
-                outputFileName = Path.GetFileName(outPath);
-            }
-
-            string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
-
-            string fileHeader = $"% ==========================================\n" +
-                                $"% LatexRefinement Step Output: {outputFileName}\n" +
-                                $"% Model: {backendParams.CurrentModel}\n" +
-                                $"% Temperature: {backendParams.Temperature}\n" +
-                                $"% TopP: {backendParams.TopP}\n" +
-                                $"% TopK: {backendParams.TopK}\n" +
-                                $"% MaxOutputTokens: {backendParams.MaxOutputTokens}\n" +
-                                (backendParams.ThinkingBudget.HasValue ? $"% ThinkingBudget: {backendParams.ThinkingBudget.Value}\n" : "") +
-                                (!string.IsNullOrEmpty(backendParams.ThinkingLevel) ? $"% ThinkingLevel: {backendParams.ThinkingLevel}\n" : "") +
-                                $"% Prompt Tokens: {totalInputTokens:N0}\n" +
-                                $"% Candidates Tokens: {totalOutputTokens:N0} (inkl. Thinking Tokens)\n" +
-                                $"% Cached Tokens: {totalCachedTokens:N0}\n" +
-                                $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                $"% ==========================================\n\n";
-
-            await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
-            Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
-
-            InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
-
-            return outPath;
-        }
-        else {
-            Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
-            return null;
-        }
+        return (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens);
     }
 
     /// <summary>
