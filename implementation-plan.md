@@ -589,6 +589,17 @@ own change, per your instruction.
 7. Progress/token reporting is `Console.WriteLine` scattered through the
    pipeline — a small `IProgressReporter` would let the pipeline stay silent
    and testable.
+8. Bracket-tag vocabulary is inconsistent across the whole app: error is
+   spelled `[FEHLER]` (20x), `[Fehler]` (5x), `[ERROR]` (1x), `[Error]` (1x)
+   depending on which file printed it; same problem for warnings
+   (`[WARNUNG]` / `[Warning]` / `[GCS Warnung]`), success
+   (`[OK]` / `[SUCCESS]` / `[Erfolg]`), and info (`[INFO]` / `[Info]` /
+   `[DEBUG]` / `[Debug]`). Found via `tools/dump-ui-strings.sh | grep -oE
+   '\[[A-Za-z ]+\]' | sort | uniq -c | sort -rn` — 20+ variant spellings
+   across 624 strings. Worth picking one canonical tag per severity level
+   and a shared `SessionLogger`-style print helper, rather than a find/replace
+   (some variants may be intentionally scoped, e.g. `[LaTeX Refinement] [FEHLER]`
+   prefixing which subsystem failed).
 
 ---
 
