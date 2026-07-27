@@ -1,6 +1,12 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** In progress, Phase 2 underway · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-27
+**Status:** Phase 2 done, Phases 3-7 not started (paused deliberately - see note) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-27
+
+**Note (2026-07-27):** Stopped here on purpose. Phases 3-7 touch the two
+~1900-line twin classes directly (extracting shared services, splitting god
+methods, eventually merging the twins) with zero automated test coverage over
+that logic and real paid-API cost to validate against - not something to rush
+through in a single low-budget session. Pick up at Phase 3 next time.
 
 ---
 
