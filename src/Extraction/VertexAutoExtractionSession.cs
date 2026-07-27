@@ -735,7 +735,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
         }
 
-        if (SupportsThinking(_config.CurrentModel)) {
+        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
             bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
@@ -918,7 +918,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (SupportsThinking(_config.CurrentModel)) {
+        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
             bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
@@ -1377,14 +1377,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                                         $"%   - Fresh Input Tokens  : {partFreshTokens:N0} (Echter neuer Payload: Video-Segment + Prompt)\n" +
                                         $"%   - Generated Output    : {result.Usage.Output:N0} (Generiertes LaTeX + Thinking Tokens)\n" +
                                         $"% ==========================================\n\n";
-                    string uniqueTargetPartPath = GetUniqueTexPath(targetPartPath);
+                    string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
                     if (_config.GenerateOffsetFiles) {
                         // NEW: Save the offsetted version of this individual part
                         string offsettedPartContent = LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                         string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
-                        string uniqueTargetPartPathOffset = GetUniqueTexPath(targetPartPathOffset);
+                        string uniqueTargetPartPathOffset = ExtractionHelpers.GetUniqueTexPath(targetPartPathOffset);
                         await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
                         Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
                     }
@@ -1411,7 +1411,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
                 int fileTotalFreshTokens = fileTotalTokens.Fresh;
-                string uniqueTargetFilePath = GetUniqueTexPath(targetFilePath);
+                string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
                 string header = $"% ==========================================\n" +
                                 $"% AutoExtraction Combined Source: {Path.GetFileName(file)}\n" +
                                 $"% Model: {_config.CurrentModel}\n" +
@@ -1438,7 +1438,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     // New: Generate the offset version
                     // Note: The last part's StartTime is used as a reference point, but the overall offset should be partStartTimeSeconds from the respective part.
                     // We already accumulated the correctly offsetted text in fullOutputTextOffsetted within the loop.
-                    string uniqueTargetFilePathOffset = GetUniqueTexPath(targetFilePathOffset);
+                    string uniqueTargetFilePathOffset = ExtractionHelpers.GetUniqueTexPath(targetFilePathOffset);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
                     Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
                     refinementTargetFile = uniqueTargetFilePathOffset;
@@ -1498,27 +1498,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
         }
     }
-
-    private static string GetUniqueTexPath(string originalPath) {
-        if (!System.IO.File.Exists(originalPath)) {
-            return originalPath;
-        }
-
-        Console.WriteLine($"  [Hinweis] Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.");
-        string dir = Path.GetDirectoryName(originalPath) ?? string.Empty;
-        string baseName = Path.GetFileNameWithoutExtension(originalPath);
-        string ext = Path.GetExtension(originalPath);
-        int copyIndex = 1;
-        string newPath;
-        do {
-            newPath = Path.Combine(dir, $"{baseName}-copy-{copyIndex}{ext}");
-            copyIndex++;
-        } while (System.IO.File.Exists(newPath));
-
-        Console.WriteLine($"  [Info] Neue Datei wird erstellt: '{Path.GetFileName(newPath)}'");
-        return newPath;
-    }
-
     private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
@@ -1647,7 +1626,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (SupportsThinking(_config.CurrentModel)) {
+        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
             bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
@@ -1829,17 +1808,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
-    /// <summary>
-    /// [AI Context] Determines whether a Gemini model supports thinking parameters (`ThinkingConfig`, `HIGH`/`LOW` levels, `ThinkingBudget`).
-    /// [Human] Prüft, ob das gewählte KI-Modell die erweiterten Denk-Parameter (Thinking Level/Budget) unterstützt.
-    /// </summary>
-    private static bool SupportsThinking(string modelName) {
-        if (string.IsNullOrWhiteSpace(modelName)) return false;
-        return modelName.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase) ||
-               modelName.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase) ||
-               modelName.Contains("thinking", StringComparison.OrdinalIgnoreCase);
-    }
-
     [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
     private static partial System.Text.RegularExpressions.Regex MyRegex();
 

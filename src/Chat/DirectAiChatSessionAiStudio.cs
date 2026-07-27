@@ -460,7 +460,7 @@ public partial class DirectAiChatSessionAiStudio {
         }
 
         // [AI Context] Safely inject Thinking parameters.
-        if (SupportsThinking(selectedModel)) {
+        if (ModelCapabilities.SupportsThinking(selectedModel)) {
             bool isGemini25 = selectedModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
                 config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
@@ -737,17 +737,6 @@ public partial class DirectAiChatSessionAiStudio {
                 WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
             }
         }
-    }
-
-    /// <summary>
-    /// [AI Context] Determines whether a Gemini model supports thinking parameters (`ThinkingConfig`, `HIGH`/`LOW` levels, `ThinkingBudget`).
-    /// [Human] Prüft, ob das gewählte KI-Modell die erweiterten Denk-Parameter (Thinking Level/Budget) unterstützt.
-    /// </summary>
-    private static bool SupportsThinking(string modelName) {
-        if (string.IsNullOrWhiteSpace(modelName)) return false;
-        return modelName.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase) ||
-               modelName.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase) ||
-               modelName.Contains("thinking", StringComparison.OrdinalIgnoreCase);
     }
 
     [System.Text.RegularExpressions.GeneratedRegex(@"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase, "de-CH")]

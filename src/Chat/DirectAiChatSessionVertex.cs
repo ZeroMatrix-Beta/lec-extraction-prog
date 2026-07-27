@@ -395,7 +395,7 @@ public class DirectAiChatSessionVertex {
 
         // [AI Context] Safely inject Thinking parameters ONLY for gemini-3-flash-preview.
         // gemini-3.5-flash will bypass thinking configuration to keep extraction fast and stable.
-        if (SupportsThinking(selectedModel)) {
+        if (ModelCapabilities.SupportsThinking(selectedModel)) {
             bool isGemini25 = selectedModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(AIParams.ThinkingLevel)) {
                 config.ThinkingConfig = new ThinkingConfig { ThinkingLevel = AIParams.ThinkingLevel };
@@ -635,16 +635,5 @@ public class DirectAiChatSessionVertex {
                 WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
             }
         }
-    }
-
-    /// <summary>
-    /// [AI Context] Determines whether a Gemini model supports thinking parameters (`ThinkingConfig`, `HIGH`/`LOW` levels, `ThinkingBudget`).
-    /// [Human] Prüft, ob das gewählte KI-Modell die erweiterten Denk-Parameter (Thinking Level/Budget) unterstützt.
-    /// </summary>
-    private static bool SupportsThinking(string modelName) {
-        if (string.IsNullOrWhiteSpace(modelName)) return false;
-        return modelName.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase) ||
-               modelName.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase) ||
-               modelName.Contains("thinking", StringComparison.OrdinalIgnoreCase);
     }
 }

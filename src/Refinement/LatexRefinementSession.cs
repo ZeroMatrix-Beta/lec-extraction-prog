@@ -866,7 +866,7 @@ public partial class LatexRefinementSession {
             requestConfig.SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] };
         }
 
-        if (SupportsThinking(backendParams.CurrentModel)) {
+        if (ModelCapabilities.SupportsThinking(backendParams.CurrentModel)) {
             bool isGemini25 = backendParams.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = backendParams.ThinkingLevel };
@@ -1191,7 +1191,7 @@ public partial class LatexRefinementSession {
             MaxOutputTokens = backendParams.MaxOutputTokens
         };
 
-        if (SupportsThinking(backendParams.CurrentModel)) {
+        if (ModelCapabilities.SupportsThinking(backendParams.CurrentModel)) {
             bool isGemini25 = backendParams.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
             if (!isGemini25 && !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = backendParams.ThinkingLevel };
@@ -1513,18 +1513,6 @@ Please return the fully corrected contents of `{finalFileName}` inside a ```late
         return false;
     }
 
-
-    /// <summary>
-    /// [AI Context] Determines whether a Gemini model supports thinking parameters (`ThinkingConfig`, `HIGH`/`LOW` levels, `ThinkingBudget`).
-    /// All `gemini-3*`, `gemini-2.5*`, and models explicitly containing `"thinking"` in their identifier require thinking configurations.
-    /// [Human] Prüft, ob das gewählte KI-Modell die erweiterten Denk-Parameter (Thinking Level/Budget) unterstützt.
-    /// </summary>
-    private static bool SupportsThinking(string modelName) {
-        if (string.IsNullOrWhiteSpace(modelName)) return false;
-        return modelName.StartsWith("gemini-2.5", StringComparison.OrdinalIgnoreCase) ||
-               modelName.StartsWith("gemini-3", StringComparison.OrdinalIgnoreCase) ||
-               modelName.Contains("thinking", StringComparison.OrdinalIgnoreCase);
-    }
 
     private static string GetCleanBaseName(string filePath) {
         string name = Path.GetFileNameWithoutExtension(filePath);

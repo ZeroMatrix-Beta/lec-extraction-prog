@@ -15,6 +15,32 @@ namespace LectureExtraction.Extraction;
 /// [AI Context] Shared utility methods to reduce code duplication across different extraction session types.
 /// </summary>
 public static partial class ExtractionHelpers {
+    /// <summary>
+    /// [AI Context] Was copy-pasted byte-identically in both extraction sessions before being
+    /// consolidated here. Appends "-copy-N" if the target .tex path already exists on disk.
+    /// [Human] Haengt "-copy-N" an den Zielpfad an, falls die Datei schon existiert. War vorher 2x dupliziert.
+    /// </summary>
+    public static string GetUniqueTexPath(string originalPath) {
+        if (!File.Exists(originalPath)) {
+            return originalPath;
+        }
+
+        Console.WriteLine($"  [Hinweis] Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.");
+        string dir = Path.GetDirectoryName(originalPath) ?? string.Empty;
+        string baseName = Path.GetFileNameWithoutExtension(originalPath);
+        string ext = Path.GetExtension(originalPath);
+        int copyIndex = 1;
+        string newPath;
+        do {
+            newPath = Path.Combine(dir, $"{baseName}-copy-{copyIndex}{ext}");
+            copyIndex++;
+        } while (File.Exists(newPath));
+
+        Console.WriteLine($"  [Info] Neue Datei wird erstellt: '{Path.GetFileName(newPath)}'");
+        return newPath;
+    }
+
+
     // [AI Context] Globale Flag, um Input-Intercepting-Tasks (z.B. im REPL) während eines Delays zu pausieren
     // Fixed IDE warning: Non-constant fields should not be visible. Converted to a property with a volatile backing field for thread safety.
     private static volatile bool _isInSmartDelay = false;
