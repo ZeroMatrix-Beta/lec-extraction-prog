@@ -3,7 +3,7 @@ using LectureExtraction.Infrastructure;
 namespace LectureExtraction.Tests;
 
 /// <summary>
-/// Characterization tests for the <see cref="StringHelper"/> extension methods.
+/// Characterization tests for the <see cref="StringExtensions"/> extension methods.
 /// <c>FixMalformedEndTags</c> matters most: it repairs a specific model output defect
 /// (<c>\end{env&gt;</c> instead of <c>\end{env}</c>) that would otherwise break LaTeX compilation.
 /// </summary>

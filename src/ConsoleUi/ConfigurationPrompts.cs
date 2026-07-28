@@ -14,7 +14,7 @@ public static class ConfigurationPrompts {
     /// [AI Context] Interactive prompt verifying or updating the configured source directory.
     /// Displays predefined folders if configured, launches the folder explorer, or allows direct path input.
     /// </summary>
-    public static string ConfirmOrChangeSourceFolder(string currentFolder, Action<string>? onFolderChanged = null, string[]? predefinedFolders = null) {
+    public static string PromptForSourceFolder(string currentFolder, Action<string>? onFolderChanged = null, string[]? predefinedFolders = null) {
         Console.WriteLine($"\n==================================================");
         Console.WriteLine($" 📁 Quellordner-Auswahl");
         Console.WriteLine($"==================================================");

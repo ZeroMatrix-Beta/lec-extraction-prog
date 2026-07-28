@@ -25,7 +25,7 @@ namespace LectureExtraction.Extraction;
 /// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos. 
 /// Schau bitte auch das entsprechende .json-File an!
 /// </summary>
-public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
         "gemini-3.6-flash",
         "gemini-3.5-flash",
@@ -36,10 +36,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
     private Client _client = client;
     private readonly AiStudioAutoExtractionConfig _config = config;
-    private readonly AttachmentHandler _attachmentHandler = attachmentHandler;
+    private readonly AttachmentUploader _attachmentHandler = attachmentHandler;
     private readonly SessionLogger _sessionLogger = sessionLogger;
     private readonly LatexRefinementSessionConfig _latexRefinementConfig = latexRefinementConfig;
-    private double _speed = 1.0;
+    private double _playbackSpeedMultiplier = 1.0;
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
     private readonly List<Part> _historyParts = [];
@@ -136,7 +136,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         // --- Phase 3: Warm-up handshake for System Instruction without history ---
         if (_config.EnableImplicitPrefixCacheWarmup && !_historyWasLoaded && !string.IsNullOrWhiteSpace(_systemInstructionText)) {
-            if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
+            if (!await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
         }
 
         // --- Phase 4: Finalize session setup (logging, debug roundtrip) ---
@@ -219,7 +219,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 var instructionBuilder = new System.Text.StringBuilder(instructionText);
                 await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase);
                 _systemInstructionText = instructionBuilder.ToString();
-                if (_config.EnableImplicitPrefixCacheWarmup && !await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
+                if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
             }
 
             _historyWasLoaded = true;
@@ -266,7 +266,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// <summary>
     /// [AI Context] Appends history files (text and non-text) to the system instruction builder.
     /// Text files (.tex, .txt, .md, .json, .cs) are inlined. Non-text files (images, etc.)
-    /// are uploaded via AttachmentHandler and stored in _historyParts.
+    /// are uploaded via AttachmentUploader and stored in _historyParts.
     /// [Human] Hängt History-Dateien an den System-Instruction-Builder an. Textdateien werden direkt eingebettet,
     /// Nicht-Text-Dateien (Bilder etc.) werden über die File API hochgeladen.
     /// </summary>
@@ -299,7 +299,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// <summary>
     /// [AI Context] Loads history files as multi-turn preamble entries (not into system instruction).
     /// This is the alternative path used when LoadHistoryIntoSystemInstruction is false.
-    /// Files are uploaded via AttachmentHandler and stored as acknowledged turns in _sessionPreamble.
+    /// Files are uploaded via AttachmentUploader and stored as acknowledged turns in _sessionPreamble.
     /// [Human] Lädt History-Dateien als Multi-Turn-Preamble (nicht in die System Instruction).
     /// </summary>
     private async Task LoadHistoryAsMultiTurnPreambleAsync() {
@@ -324,7 +324,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 _historyWasLoaded = true;
                 Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
                 if (_config.EnableImplicitPrefixCacheWarmup) {
-                    await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true);
+                    await PrimePrefixCacheAsync(includeDummyPart0: true);
                 }
             } else {
                 Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
@@ -452,7 +452,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     Part.FromUri(task.VideoUrl, "video/mp4")
                 };
 
-                string texOutput = (await GenerateTexFromUploadedPartAsync(
+                string texOutput = (await TranscribeSegmentToLatexAsync(
                     task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
                 )).LatexBody;
 
@@ -606,7 +606,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var channel = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
         // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
-        var producerTask = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, _config, _speed));
+        var producerTask = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, _config, _playbackSpeedMultiplier));
 
         // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
@@ -696,7 +696,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
             if (_config.UseChosenModelForRestOfPipeline) {
                 Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...");
-                void applyParams(BackendParameters target) {
+                void ApplyModelParametersTo(BackendParameters target) {
                     target.CurrentModel = _config.CurrentModel;
                     target.Temperature = _config.Temperature;
                     target.TopP = _config.TopP;
@@ -705,9 +705,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     target.ThinkingBudget = _config.ThinkingBudget;
                     target.ThinkingLevel = _config.ThinkingLevel;
                 }
-                if (_latexRefinementConfig.Step1MergeAndTimestamp?.AiStudio != null) applyParams(_latexRefinementConfig.Step1MergeAndTimestamp.AiStudio);
-                if (_latexRefinementConfig.Step2SpeechRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step2SpeechRefinement.AiStudio);
-                if (_latexRefinementConfig.Step3LastRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step3LastRefinement.AiStudio);
+                if (_latexRefinementConfig.Step1MergeAndTimestamp?.AiStudio != null) ApplyModelParametersTo(_latexRefinementConfig.Step1MergeAndTimestamp.AiStudio);
+                if (_latexRefinementConfig.Step2SpeechRefinement?.AiStudio != null) ApplyModelParametersTo(_latexRefinementConfig.Step2SpeechRefinement.AiStudio);
+                if (_latexRefinementConfig.Step3LastRefinement?.AiStudio != null) ApplyModelParametersTo(_latexRefinementConfig.Step3LastRefinement.AiStudio);
             }
         }
         string? extractedRefinementEnvName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
@@ -734,7 +734,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         public readonly TimeSpan CacheDuration = TimeSpan.FromHours(2);
         public readonly List<string> GeneratedTexFiles = [];
         // [AI Context] The dummy-part0.tex reference block is now prepended directly from disk in
-        // GenerateTexFromUploadedPartAsync. No part0 file needs to be written or tracked here.
+        // TranscribeSegmentToLatexAsync. No part0 file needs to be written or tracked here.
         public string FullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
         public string FullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
         public TokenUsage FileTotalTokens;
@@ -764,9 +764,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
                 string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
                 state.GeneratedTexFiles.Add(targetPartPath);
-                state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
+                state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
                 if (_config.GenerateOffsetFiles) {
-                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.AdjustTimestamps(LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
+                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
                 }
                 state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
                 continue;
@@ -785,7 +785,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 uploadTask = state.PendingVideoUploadTask;
             }
             else {
-                uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
+                uploadTask = UploadSegmentAndBuildPromptAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
             }
 
             SegmentUpload upload = await uploadTask;
@@ -810,7 +810,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 2}.tex");
                     if (!System.IO.File.Exists(nextTexPath)) {
                         Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
-                        state.PendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
+                        state.PendingVideoUploadTask = UploadSegmentAndBuildPromptAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
                     }
                     else {
                         state.PendingVideoUploadTask = null;
@@ -826,7 +826,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                            ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                         if (System.IO.File.Exists(audioPath)) {
                             Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
-                            var handler = new AttachmentHandler(state.RefinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
+                            var handler = new AttachmentUploader(state.RefinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
                             var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
                             if (audioUploadOk) return attached;
                         }
@@ -836,11 +836,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
 
             /************************************************************************************************************************
-             * [Human Context] Here is where all the magic happens. We call the function   GenerateTexFromUploadedPartAsync to generate the LaTeX code for the current part.
+             * [Human Context] Here is where all the magic happens. We call the function   TranscribeSegmentToLatexAsync to generate the LaTeX code for the current part.
              * This function is the core of the program and is responsible for generating the LaTeX code for the current part.
              ************************************************************************************************************************/
 
-            result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles); // generated TexFiles could contain part0 for instance.
+            result = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles); // generated TexFiles could contain part0 for instance.
 
             state.FileTotalTokens += result.Usage;
 
@@ -861,7 +861,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Store the raw output for the combined file without offset
                 state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
                 if (_config.GenerateOffsetFiles) {
-                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
                 }
 
                 // Prepend the start time to the individual part .tex file
@@ -871,14 +871,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     usage: result.Usage,
                     model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
                     maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
-                string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
+                string uniqueTargetPartPath = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPath);
                 await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
                 if (_config.GenerateOffsetFiles) {
                     // NEW: Save the offsetted version of this individual part
-                    string offsettedPartContent = LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+                    string offsettedPartContent = LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                     string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}-offset.tex");
-                    string uniqueTargetPartPathOffset = ExtractionHelpers.GetUniqueTexPath(targetPartPathOffset);
+                    string uniqueTargetPartPathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPathOffset);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
                     Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
                 }
@@ -910,7 +910,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all.tex");
         string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all-offset.tex");
 
-        string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
+        string uniqueTargetFilePath = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePath);
         string header = TexDocumentWriter.BuildCombinedHeader(
             sourceFileName: Path.GetFileName(file),
             totalParts: totalParts,
@@ -926,7 +926,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             // New: Generate the offset version
             // Note: The last part's StartTime is used as a reference point, but the overall offset should be partStartTimeSeconds from the respective part.
             // We already accumulated the correctly offsetted text in fullOutputTextOffsetted within the loop.
-            string uniqueTargetFilePathOffset = ExtractionHelpers.GetUniqueTexPath(targetFilePathOffset);
+            string uniqueTargetFilePathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePathOffset);
             await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + state.FullOutputTextOffsetted);
             Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
             refinementTargetFile = uniqueTargetFilePathOffset;
@@ -965,11 +965,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             audioFilePath,
             preUploadedAudioParts);
 
-        AttachmentHandler.HasJustUploaded = false;
+        AttachmentUploader.HasJustUploaded = false;
         await refinementSession.StartAsync();
     }
 
-    private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
+    private async Task<SegmentUpload> UploadSegmentAndBuildPromptAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
         double partDurationSeconds = await FfmpegToolkit.GetVideoDurationAsync(partFile);
@@ -980,7 +980,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
 
         // Dynamic parameters only – the static prompt beginning (GetStaticPromptBeginning) is
-        // prepended as a separate Part BEFORE the video in GenerateTexFromUploadedPartAsync.
+        // prepended as a separate Part BEFORE the video in TranscribeSegmentToLatexAsync.
         string weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown";
         string weekInfo = dateInfo.WeekInfo ?? "N/A";
         string dateMetadata = partNumber == 1
@@ -1008,7 +1008,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// 3. Segment-specific parameters third.
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment. Hält die Prompt-Reihenfolge strikt ein, damit Googles impliziter Cache optimal greift.
     /// </summary>
-    private async Task<SegmentTranscript> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+    private async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
         await LogTokenCountsAsync(attachmentParts, history, previousTexFiles);
@@ -1070,7 +1070,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             // implicit prefix cache to hit on the preamble + dummyBlock + staticBeginning for Part 1.
             // For Part 2+, the dummy block is still the first reference, followed by the previously
             // generated .tex parts – these grow with each part but the prefix still benefits from caching.
-            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n";
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
 
             var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
             referenceContextBuilder.Append(dummyReferenceBlock);
@@ -1164,7 +1164,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             bool callSuccess = false;
 
             try {
-                callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
                     onChunkReceived: async (chunk) => {
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
@@ -1276,7 +1276,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         Console.CancelKeyPress -= cancelHandler;
-        AttachmentHandler.HasJustUploaded = false;
+        AttachmentUploader.HasJustUploaded = false;
         return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens));
     }
 

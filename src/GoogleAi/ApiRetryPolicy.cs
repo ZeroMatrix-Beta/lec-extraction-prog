@@ -13,7 +13,7 @@ namespace LectureExtraction.GoogleAi;
 /// Implements linear backoff, server-suggested delay parsing, and user-cancellable waits.
 /// [Human] Diese Klasse schützt das Programm vor API-Ausfällen und Ratelimits. Sie wiederholt fehlgeschlagene Google-Anfragen intelligent.
 /// </summary>
-public static partial class ApiResilience {
+public static partial class ApiRetryPolicy {
     /// <summary>
     /// [AI Context] Executes a streaming API call with a robust retry mechanism.
     /// On each retry, the optional <paramref name="onRetry"/> callback is invoked BEFORE the new attempt

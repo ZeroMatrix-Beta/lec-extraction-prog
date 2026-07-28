@@ -469,7 +469,7 @@ Console.WriteLine($"Originaler Fehlertext: {killEx.Message}");
 Console.WriteLine($"Project ID: {refinementConfig.VertexProjectId}");
 Console.WriteLine($"Raw JSON (erste 1000 Zeichen): {(responseBody.Length > 1000 ? string.Concat(responseBody.AsSpan(0, 1000), "...") : responseBody)}");
 Console.WriteLine($"Response: {responseBody}");
-Console.WriteLine($"Speed gesetzt auf {_speed}x");
+Console.WriteLine($"Speed gesetzt auf {_playbackSpeedMultiplier}x");
 Console.WriteLine($"Stack Trace:\n{ex.StackTrace}");
 Console.WriteLine($"Type: {ex.GetType().Name}");
 Console.WriteLine($"Warte 5 Sekunden vor Versuch {emptyResponseRetries}/3...");

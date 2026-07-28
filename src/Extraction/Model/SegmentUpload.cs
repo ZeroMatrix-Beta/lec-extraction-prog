@@ -7,7 +7,7 @@ namespace LectureExtraction.Extraction.Model;
 /// [AI Context] Result of uploading one video segment (and building its accompanying prompt
 /// text) to the Google backend, before the transcription call is made. Replaces the anonymous
 /// `(bool success, string? parsedPrompt, List&lt;Part&gt; attachmentParts)` tuple returned by
-/// `PrepareAndUploadPartAsync` in both extraction sessions.
+/// `UploadSegmentAndBuildPromptAsync` in both extraction sessions.
 /// [Human] Ergebnis des Hochladens eines Videosegments samt dazugehörigem Prompt-Text, bevor der
 /// eigentliche Transkriptions-Aufruf erfolgt.
 /// </summary>

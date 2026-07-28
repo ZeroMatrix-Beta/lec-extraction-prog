@@ -24,7 +24,7 @@ public partial class VertexAutoExtractionSession {
     /// [AI Context] Returns the static, per-partNumber prefix of the user-turn prompt. This text is
     /// deterministic and placed BEFORE the video payload in every request, forming a stable, growing cache
     /// prefix that the warm-up can pre-activate in the same token order. Ported (2026-07-28) from the
-    /// content Vertex's own PrepareAndUploadPartAsync already sent — merging_and_scope and segment_start
+    /// content Vertex's own UploadSegmentAndBuildPromptAsync already sent — merging_and_scope and segment_start
     /// are the exact same wording Vertex used before this port, just relocated from after the video to
     /// before it; nothing new was invented. partNumber == 1  → no segment_start parameter (matches the
     /// warm-up dummy turn exactly). partNumber  > 1 → adds the segment_start parameter for mid-lecture
@@ -51,12 +51,12 @@ public partial class VertexAutoExtractionSession {
     /// AI Studio, NOT the explicit CachedContent reference — that cache is created later, in
     /// InitializeContextCachingAsync, after this setup-time warmup has already run) to activate Google's
     /// implicit prefix cache for the stable per-part preamble before the first real video request. Ported
-    /// (2026-07-28) from AiStudioAutoExtractionSession.WarmUpSystemInstructionCacheAsync, simplified to a
+    /// (2026-07-28) from AiStudioAutoExtractionSession.PrimePrefixCacheAsync, simplified to a
     /// single-shot handshake (no batched-history variant, since Vertex has no equivalent batching config).
     /// [Human] Wärme-Handshake für Vertex (portiert von AI Studio, vereinfacht auf einen einzelnen
     /// Handshake ohne History-Batching).
     /// </summary>
-    private async Task<bool> WarmUpSystemInstructionCacheAsync() {
+    private async Task<bool> PrimePrefixCacheAsync() {
         Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um den stabilen Prompt-Anfang bei Google im impliziten Cache zu aktivieren...");
 
         var requestConfig = new GenerateContentConfig {
@@ -80,7 +80,7 @@ public partial class VertexAutoExtractionSession {
         // [AI Context] Part 0: dummy-part0.tex anchor + static preamble, bit-identical to the real Part 1
         // request's pre-video Part (see BuildGenerationRequestAsync). Part 1: throwaway handshake — the
         // response is irrelevant, only the cache priming matters.
-        string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n";
+        string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
         var warmupParts = new List<Part> {
             new() { Text = dummyReferenceBlock + GetStaticPromptBeginning(1) },
             new() { Text = handshakeText }
@@ -94,7 +94,7 @@ public partial class VertexAutoExtractionSession {
             string responseText = "";
             int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
 
-            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+            bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";

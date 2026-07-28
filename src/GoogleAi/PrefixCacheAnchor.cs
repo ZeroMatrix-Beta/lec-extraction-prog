@@ -8,7 +8,7 @@ namespace LectureExtraction.GoogleAi;
 /// the first reference_context block in implicit-prefix-cache warm-up requests. Being big and constant, it
 /// anchors Google's implicit prefix cache on a stable, bit-identical prefix before the video payload.
 /// Shared between AiStudioAutoExtractionSession and VertexAutoExtractionSession (2026-07-28) — the two
-/// backends' copies were byte-identical, unlike GetStaticPromptBeginning/WarmUpSystemInstructionCacheAsync,
+/// backends' copies were byte-identical, unlike GetStaticPromptBeginning/PrimePrefixCacheAsync,
 /// which have real per-backend differences and stay separate.
 /// [Human] Lädt und cached dummy-part0.tex: das gemeinsame Platzhalterdokument für konsistentes
 /// Prefix-Caching, geteilt zwischen AI Studio und Vertex.
@@ -16,7 +16,7 @@ namespace LectureExtraction.GoogleAi;
 public static class PrefixCacheAnchor {
     private static string? _dummyPart0Content;
 
-    public static string GetDummyPart0Content() {
+    public static string LoadPrefixCacheAnchorText() {
         if (_dummyPart0Content != null) return _dummyPart0Content;
         string[] candidates = [
             Path.Combine(Directory.GetCurrentDirectory(), "dummy-part0.tex"),

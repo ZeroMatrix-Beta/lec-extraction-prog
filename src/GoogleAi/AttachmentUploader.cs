@@ -21,7 +21,7 @@ namespace LectureExtraction.GoogleAi;
 /// [AI Context] Injects required runtime dependencies.
 /// [Human] Konstruktor: Bekommt alle wichtigen Einstellungen (Pfade, Google Client) übergeben.
 /// </remarks>
-public class AttachmentHandler(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null, bool inlineImages = false, int fileActivationDelaySeconds = 130, int uploadTimeoutSeconds = 240, int uploadMaxRetries = 10) {
+public class AttachmentUploader(Client client, string uploadFolder, string[] includePaths, bool isAiStudio, string gcsBucketName, double? googleVideoFps = null, bool inlineImages = false, int fileActivationDelaySeconds = 130, int uploadTimeoutSeconds = 240, int uploadMaxRetries = 10) {
     private static readonly HashSet<string> s_textExtensions = [".md", ".txt", ".cs", ".json", ".xml", ".html", ".py", ".js", ".ts", ".css", ".tex"];
     public static bool HasJustUploaded { get; set; } = false;
     private readonly string _uploadFolder = uploadFolder;
@@ -210,7 +210,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             try {
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
-                var uploadedFile = await ApiResilience.ExecuteWithRetryAsync(
+                var uploadedFile = await ApiRetryPolicy.ExecuteWithRetryAsync(
                     async () => {
                         using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                         attemptCts.CancelAfter(TimeSpan.FromSeconds(_uploadTimeoutSeconds));
@@ -238,7 +238,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"  [AI Studio] Upload-Dauer: {stopwatch.Elapsed.Minutes} Minuten und {stopwatch.Elapsed.Seconds} Sekunden.");
                 Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
 
-                var fileInfo = await ApiResilience.ExecuteWithRetryAsync(
+                var fileInfo = await ApiRetryPolicy.ExecuteWithRetryAsync(
                     () => _client.Files.GetAsync(remoteFileName, config: null, cancellationToken: cancellationToken),
                     maxRetries: 10,
                     retryContext: $"Check File State: {Path.GetFileName(filePath)}"
@@ -252,7 +252,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                             Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
                         }
                     }
-                    fileInfo = await ApiResilience.ExecuteWithRetryAsync(
+                    fileInfo = await ApiRetryPolicy.ExecuteWithRetryAsync(
                         () => _client.Files.GetAsync(remoteFileName, config: null, cancellationToken: cancellationToken),
                         maxRetries: 10,
                         retryContext: $"Check File State: {Path.GetFileName(filePath)}"
@@ -301,7 +301,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                if (ApiResilience.IsNetworkConnectionError(ex)) {
+                if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                     WriteLine("  [Netzwerk-Fehler] Der Google-Server konnte nicht erreicht werden.");
                     WriteLine("  Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
                 }
@@ -315,7 +315,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
             // [Human] Das ist der Upload in deinen (ggf. kostenpflichtigen) Google Cloud Storage Bucket.
             WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
             try {
-                var uploadResult = await ApiResilience.ExecuteWithRetryAsync(async () => {
+                var uploadResult = await ApiRetryPolicy.ExecuteWithRetryAsync(async () => {
                     var storageClient = await StorageClient.CreateAsync();
                     storageClient.Service.HttpClient.Timeout = TimeSpan.FromMinutes(20);
                     string objectName = $"{Guid.NewGuid()}_{Path.GetFileName(filePath)}";
@@ -356,7 +356,7 @@ public class AttachmentHandler(Client client, string uploadFolder, string[] incl
                 WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                if (ApiResilience.IsNetworkConnectionError(ex)) {
+                if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                     WriteLine("  [Netzwerk-Fehler] Der Google Cloud Storage konnte nicht erreicht werden.");
                     WriteLine("  Bitte prüfe deine Internetverbindung.");
                 }

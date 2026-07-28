@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace LectureExtraction.Infrastructure;
 
-public static partial class StringHelper {
+public static partial class StringExtensions {
     /// <summary>
     /// Truncates a string to the specified length and appends an ellipsis if necessary.
     /// </summary>

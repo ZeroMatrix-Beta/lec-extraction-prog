@@ -114,7 +114,7 @@ public static class RefinementUiHelper {
 
         var uiConfig = ConfigLoader<RefinementUiHelperConfig>.Load();
 
-        string searchFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(uiConfig.PredefinedPath, newFolder => {
+        string searchFolder = ConfigurationPrompts.PromptForSourceFolder(uiConfig.PredefinedPath, newFolder => {
             uiConfig.PredefinedPath = newFolder;
             ConfigLoader<RefinementUiHelperConfig>.Save(uiConfig);
         });

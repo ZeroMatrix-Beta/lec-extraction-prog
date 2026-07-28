@@ -37,7 +37,7 @@ public class DirectAiChatSessionVertex {
     private readonly string SystemInstructionPath;
     private string? _systemInstructionText; // Stores the content of the system instruction file
     private readonly DirectAiChatSessionVertexAIConfig AIParams; // Localized generation parameters for the current session
-    private readonly AttachmentHandler _attachmentHandler;
+    private readonly AttachmentUploader _attachmentHandler;
     private readonly SessionLogger _sessionLogger;
     private readonly Client _client;
     private int _sessionTotalInputTokens = 0;
@@ -46,7 +46,7 @@ public class DirectAiChatSessionVertex {
     private string _activeModel = "";
 
     // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
-    public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentHandler attachmentHandler) {
+    public DirectAiChatSessionVertex(Client client, DirectAiChatSessionVertexConfig config, SessionLogger logger, AttachmentUploader attachmentHandler) {
         _config = config;
         _client = client;
         _sessionLogger = logger;
@@ -134,7 +134,7 @@ public class DirectAiChatSessionVertex {
         string userName = "Vertex AI User";
 
         WriteLine($"\n--- Vertex Chat gestartet ({_activeModel}) ---");
-        ShowCommands();
+        WriteCommandHelp();
 
         while (true) {
             using var turnCts = new CancellationTokenSource();
@@ -219,7 +219,7 @@ public class DirectAiChatSessionVertex {
         }
     }
 
-    private static void ShowCommands() {
+    private static void WriteCommandHelp() {
         WriteLine("\n📋 Befehle:");
         WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
         WriteLine("  🚪 exit / quit             -> Beendet den Chat");
@@ -241,7 +241,7 @@ public class DirectAiChatSessionVertex {
         string normalizedInput = input.TrimStart('/');
 
         if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-            ShowCommands();
+            WriteCommandHelp();
             return true;
         }
 
@@ -460,7 +460,7 @@ public class DirectAiChatSessionVertex {
         GroundingMetadata? accumulatedGrounding = null;
 
         try {
-            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+            bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
                 onChunkReceived: async (chunk) => {
                     string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";

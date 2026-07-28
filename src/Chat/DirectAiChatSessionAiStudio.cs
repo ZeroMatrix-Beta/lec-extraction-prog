@@ -54,7 +54,7 @@ public partial class DirectAiChatSessionAiStudio {
     private string? _systemInstructionText;
     private readonly DirectAiChatSessionAiStudioGenerationConfig AIParams;
     private readonly bool IsAiStudio;
-    private readonly AttachmentHandler _attachmentHandler;
+    private readonly AttachmentUploader _attachmentHandler;
     private readonly SessionLogger _sessionLogger;
     private Client _client;
     private int _activeApiProfile;
@@ -64,7 +64,7 @@ public partial class DirectAiChatSessionAiStudio {
     private string _activeModel = "";
 
     // [AI Context] Constructor injects config dependencies to isolate state.
-    public DirectAiChatSessionAiStudio(Client client, DirectAiChatSessionAiStudioConfig config, SessionLogger logger, AttachmentHandler attachmentHandler, bool isAiStudio) {
+    public DirectAiChatSessionAiStudio(Client client, DirectAiChatSessionAiStudioConfig config, SessionLogger logger, AttachmentUploader attachmentHandler, bool isAiStudio) {
         _config = config;
         _client = client;
         _sessionLogger = logger;
@@ -169,7 +169,7 @@ public partial class DirectAiChatSessionAiStudio {
         string userName = "AI Studio User";
 
         WriteLine($"\n--- Chat gestartet ({_activeModel} | API Profil: {_activeApiProfile}) ---");
-        ShowCommands();
+        WriteCommandHelp();
 
         while (true) {
             using var turnCts = new CancellationTokenSource();
@@ -269,7 +269,7 @@ public partial class DirectAiChatSessionAiStudio {
         }
     }
 
-    private static void ShowCommands() {
+    private static void WriteCommandHelp() {
         WriteLine("\n📋 Befehle:");
         WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
         WriteLine("  🚪 exit / quit             -> Beendet den Chat");
@@ -310,7 +310,7 @@ public partial class DirectAiChatSessionAiStudio {
         if (!normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
             return false;
         }
-        ShowCommands();
+        WriteCommandHelp();
         return true;
     }
 
@@ -579,17 +579,17 @@ public partial class DirectAiChatSessionAiStudio {
 
         try {
             // [AI Context] Rate-Limit & Quota Guardrail: Always wait 130s before every GenerateContentStreamAsync request to Google AI Studio.
-            // HasJustUploaded is intentionally NOT checked here – the 130s in AttachmentHandler does not replace this per-request delay.
+            // HasJustUploaded is intentionally NOT checked here – the 130s in AttachmentUploader does not replace this per-request delay.
             // [Human] Wir warten VOR JEDEM AI-Studio-Request 130 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
             if (!InteractiveDelay.IsInSmartDelay) {
                 if (!await InteractiveDelay.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
                     exceptionCaught = true;
                 }
             }
-            AttachmentHandler.HasJustUploaded = false;
+            AttachmentUploader.HasJustUploaded = false;
 
             if (!exceptionCaught) {
-                bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+                bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                     streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
                     onChunkReceived: async (chunk) => {
                         string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";

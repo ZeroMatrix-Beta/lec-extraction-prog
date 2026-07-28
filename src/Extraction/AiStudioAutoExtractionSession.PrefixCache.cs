@@ -47,7 +47,7 @@ public partial class AiStudioAutoExtractionSession {
         // Step 0: Optionally warm up base system instruction before adding history
         if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
             Console.WriteLine("\n  [Cache-Warming Step 0] Warmup für Basis System Instruction...");
-            if (!await WarmUpSystemInstructionCacheAsync(systemInstructionDelay, includeDummyPart0: false)) return false;
+            if (!await PrimePrefixCacheAsync(systemInstructionDelay, includeDummyPart0: false)) return false;
         } else {
             Console.WriteLine($"\n  [Cache-Warming] Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...");
         }
@@ -79,7 +79,7 @@ public partial class AiStudioAutoExtractionSession {
             }
 
             if (shouldSendHandshake) {
-                if (!await WarmUpSystemInstructionCacheAsync(historyBatchDelay, includeDummyPart0: isLastBatch)) return false;
+                if (!await PrimePrefixCacheAsync(historyBatchDelay, includeDummyPart0: isLastBatch)) return false;
             } else {
                 Console.WriteLine($"  [Cache-Warming] Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...");
             }
@@ -95,7 +95,7 @@ public partial class AiStudioAutoExtractionSession {
     /// before heavy video processing begins, preventing Quota Errors and ensuring high cache hits.
     /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
     /// </summary>
-    private async Task<bool> WarmUpSystemInstructionCacheAsync(int? customDelay = null, bool includeDummyPart0 = false) {
+    private async Task<bool> PrimePrefixCacheAsync(int? customDelay = null, bool includeDummyPart0 = false) {
         Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...");
 
         var requestConfig = new GenerateContentConfig {
@@ -127,7 +127,7 @@ public partial class AiStudioAutoExtractionSession {
             // [AI Context] dummy-part0.tex is ~4500 tokens of Lorem Ipsum – large enough to anchor Google's
             // implicit prefix cache on the user-turn portion even without relying solely on the system instruction.
             // This Part 0 is bit-identical to Part 1's pre-video text Part, ensuring maximum cache hits.
-            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n";
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
 
             // Part 0: pre-video prefix – token-identical to Part 1's first text Part.
             // Part 1: throwaway handshake – the response is irrelevant; only the cache priming matters.
@@ -151,7 +151,7 @@ public partial class AiStudioAutoExtractionSession {
             string responseText = "";
             int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
 
-            bool success = await ApiResilience.ExecuteStreamWithRetryAsync(
+            bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";

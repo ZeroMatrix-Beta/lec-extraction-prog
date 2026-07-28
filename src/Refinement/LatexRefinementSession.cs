@@ -101,7 +101,7 @@ public partial class LatexRefinementSession {
 
         // [AI Context] Reset HasJustUploaded when starting the pipeline so that any background audio upload
         // or prior extraction steps don't suppress the initial 130-second token refill timer.
-        AttachmentHandler.HasJustUploaded = false;
+        AttachmentUploader.HasJustUploaded = false;
 
         await ExecutePipelineAsync();
     }
@@ -146,7 +146,7 @@ public partial class LatexRefinementSession {
             }
             else {
                 Console.WriteLine("\n--- [LaTeX Refinement - Schritt 1: Merge & Zeitstempel-Abgleich] ---");
-                string? step1Output = await ExecuteStep1MergeAsync(currentFiles, _audioFilePath, baseName, targetFolder);
+                string? step1Output = await MergeSegmentsAndAlignTimestampsAsync(currentFiles, _audioFilePath, baseName, targetFolder);
                 if (step1Output == null) {
                     Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Schritt 1 (Merge) fehlgeschlagen. Breche Pipeline ab.");
                     return;
@@ -158,7 +158,7 @@ public partial class LatexRefinementSession {
         // Step 2: Speech Refinement
         if (_config.Step2SpeechRefinement.Enabled) {
             Console.WriteLine("\n--- [LaTeX Refinement - Schritt 2: Textkorrektur & Grammatik-Polishing] ---");
-            string? step2Output = await ExecuteStep2SpeechRefinementAsync(currentFiles[0], _audioFilePath, baseName, targetFolder);
+            string? step2Output = await RefineAgainstSpeechAsync(currentFiles[0], _audioFilePath, baseName, targetFolder);
             if (step2Output == null) {
                 Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Schritt 2 (Speech Refinement) fehlgeschlagen. Breche Pipeline ab.");
                 return;
@@ -187,7 +187,7 @@ public partial class LatexRefinementSession {
             CleanupPrecheckFiles(targetFolder, currentFiles[0], "step3-precheck", alreadyCompiles);
 
             Console.WriteLine("  [INFO] Starte finalen Durchlauf für Schritt 3 (Last Refinement)...");
-            var finalOutput = await ExecuteStep3LastRefinementAsync(currentFiles[0], baseName, targetFolder, alreadyCompiles, compileLog);
+            var finalOutput = await ApplyFinalPolishAsync(currentFiles[0], baseName, targetFolder, alreadyCompiles, compileLog);
             if (finalOutput == null) {
                 Console.WriteLine("\n[LaTeX Refinement] [FEHLER] Schritt 3 (Last Refinement) fehlgeschlagen.");
             }
@@ -298,7 +298,7 @@ public partial class LatexRefinementSession {
                 if (allowRetryOnFailure) {
                     if (_config.PdfCompilation?.UseAntiGravityAgent == true) {
                         Console.WriteLine("\n[AntiGravity Agent Mode] PDF-Kompilierung fehlgeschlagen. Starte sofort interaktive Reparatur über AntiGravity (keine automatischen Gemini-Fix-Versuche)...");
-                        return await RunAntiGravityAgentFixLoopAsync(finalTexFile, baseName, targetFolder, preambleText);
+                        return await RunExternalAgentRepairLoopAsync(finalTexFile, baseName, targetFolder, preambleText);
                     }
 
                     int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
@@ -313,7 +313,7 @@ public partial class LatexRefinementSession {
                         Console.WriteLine($"🤖 [AI PDF Fix Loop] Starte Reparatur-Runde {round} von {maxRounds}...");
                         Console.WriteLine($"==================================================================");
 
-                        bool roundSuccess = await ExecutePdfFixAttemptAsync(preambleText, currentBodyTex, currentLog, baseName, targetFolder, round);
+                        bool roundSuccess = await TryRepairFailedPdfBuildAsync(preambleText, currentBodyTex, currentLog, baseName, targetFolder, round);
 
                         // Clean up previous failed round files so only the latest try remains
                         for (int prev = 1; prev < round; prev++) {
@@ -475,7 +475,7 @@ public partial class LatexRefinementSession {
     /// [AI Context] Step 1: Merges overlapping LaTeX chunks. If an audio file is provided, its metadata is attached to align timestamps correctly.
     /// [Human] Schritt 1: Führt die einzelnen Video-Teile zusammen. Nutzt (falls vorhanden) die Audio-Spur, um kaputte Zeitstempel zu korrigieren.
     /// </summary>
-    private async Task<string?> ExecuteStep1MergeAsync(string[] inputFiles, string? audioFilePath, string baseName, string targetFolder) {
+    private async Task<string?> MergeSegmentsAndAlignTimestampsAsync(string[] inputFiles, string? audioFilePath, string baseName, string targetFolder) {
         if (inputFiles.Length == 0) return null;
         int partsCount = _extractionConfig?.NumberOfParts ?? inputFiles.Length;
         int overlapMin = (_extractionConfig?.OverlapSeconds ?? 180) / 60;
@@ -510,10 +510,10 @@ public partial class LatexRefinementSession {
                 if (_preUploadedAudioAttachments != null && _preUploadedAudioAttachments.Count > 0) {
                     Console.WriteLine("  [INFO] Verwende parallel im Hintergrund hochgeladene Audio-Datei.");
                     audioParts.AddRange(_preUploadedAudioAttachments);
-                    AttachmentHandler.HasJustUploaded = false;
+                    AttachmentUploader.HasJustUploaded = false;
                 }
                 else {
-                    var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+                    var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
                     var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                     if (success) {
                         audioParts.AddRange(attached);
@@ -560,7 +560,7 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Console.WriteLine("  [INFO] Verwende Multi-Turn-Struktur für Schritt 1 (Simulation von Audio + Textsegmenten).");
-            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
         else {
             // SINGLE TURN APPROACH (Fallback)
@@ -576,8 +576,8 @@ public partial class LatexRefinementSession {
                 string content = await System.IO.File.ReadAllTextAsync(file);
                 parts.Add(new Part { Text = $"<input_file name=\"{Path.GetFileName(file)}\">\n{content}\n</input_file>" });
             }
-            AttachmentHandler.HasJustUploaded = false;
-            result = await ExecuteGenerativeStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+            AttachmentUploader.HasJustUploaded = false;
+            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
 
         if (_config.UseVertex) {
@@ -588,15 +588,15 @@ public partial class LatexRefinementSession {
     }
 
     // Overload that takes single string
-    private async Task<string?> ExecuteStep1MergeAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
-        return await ExecuteStep1MergeAsync([inputFile], audioFilePath, baseName, targetFolder);
+    private async Task<string?> MergeSegmentsAndAlignTimestampsAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
+        return await MergeSegmentsAndAlignTimestampsAsync([inputFile], audioFilePath, baseName, targetFolder);
     }
 
     /// <summary>
     /// [AI Context] Step 2: Focuses strictly on fixing transcription errors within the `spoken-clean` environments by listening to the full audio.
     /// [Human] Schritt 2: Konzentriert sich nur auf den gesprochenen Text und verbessert ihn (Grammatik, Fehler), ohne den Mathe-Code kaputt zu machen.
     /// </summary>
-    private async Task<string?> ExecuteStep2SpeechRefinementAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
+    private async Task<string?> RefineAgainstSpeechAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
         bool audioAttached = _config.Step2SpeechRefinement.AttachAudio && audioFilePath != null && System.IO.File.Exists(audioFilePath);
         var audioParts = new List<Part>();
 
@@ -604,10 +604,10 @@ public partial class LatexRefinementSession {
             if (_preUploadedAudioAttachments != null && _preUploadedAudioAttachments.Count > 0) {
                 Console.WriteLine("  [INFO] Verwende parallel im Hintergrund hochgeladene Audio-Datei.");
                 audioParts.AddRange(_preUploadedAudioAttachments);
-                AttachmentHandler.HasJustUploaded = false;
+                AttachmentUploader.HasJustUploaded = false;
             }
             else {
-                var handler = new AttachmentHandler(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+                var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
                 var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                 if (success) {
                     audioParts.AddRange(attached);
@@ -643,8 +643,8 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Console.WriteLine("  [INFO] Verwende Multi-Turn-Struktur für Schritt 2 (Simulation von Text-Dokument + Audio-Refinement).");
-            AttachmentHandler.HasJustUploaded = false;
-            result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+            AttachmentUploader.HasJustUploaded = false;
+            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
         }
         else {
             // SINGLE TURN APPROACH (Fallback without audio)
@@ -652,8 +652,8 @@ public partial class LatexRefinementSession {
                 new() { Text = "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps." },
                 new() { Text = $"<input_tex>\n{content}\n</input_tex>" }
             };
-            AttachmentHandler.HasJustUploaded = false;
-            result = await ExecuteGenerativeStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+            AttachmentUploader.HasJustUploaded = false;
+            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
         }
 
         if (_config.UseVertex) {
@@ -667,7 +667,7 @@ public partial class LatexRefinementSession {
     /// [AI Context] Step 3: Final pass to fix general formatting issues or minor logical inconsistencies according to the system instructions.
     /// [Human] Schritt 3: Der letzte Feinschliff für das LaTeX-Dokument, bevor es kompiliert wird.
     /// </summary>
-    private async Task<string?> ExecuteStep3LastRefinementAsync(string inputFile, string baseName, string targetFolder, bool alreadyCompiles, string compilerFeedbackLog) {
+    private async Task<string?> ApplyFinalPolishAsync(string inputFile, string baseName, string targetFolder, bool alreadyCompiles, string compilerFeedbackLog) {
         // Simplified using target‑typed new and collection literal; the compiler infers List<Part>.
         List<Part> parts = [new() { Text = "Perform the final refinement and formatting pass on this document according to the system instructions." }];
         if (alreadyCompiles) {
@@ -682,8 +682,8 @@ public partial class LatexRefinementSession {
         parts.Add(new Part { Text = $"<input_tex>\n{content}\n</input_tex>" });
 
         string outputFileName = $"step4-{baseName}-offset-final.tex";
-        AttachmentHandler.HasJustUploaded = false;
-        var result = await ExecuteGenerativeStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
+        AttachmentUploader.HasJustUploaded = false;
+        var result = await RunRefinementStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
 
         if (_config.UseVertex) {
             await CleanupBucketAsync();
@@ -696,13 +696,13 @@ public partial class LatexRefinementSession {
     /// [AI Context] Generic method to execute a generative API call. Handles automated retries, thinking budgets, system instructions, and completion markers.
     /// [Human] Die zentrale Funktion, um Prompts an Gemini zu senden. Behandelt auch Fehler, Warteschlangen und die "Thinking"-Modelle.
     /// </summary>
-    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
+    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         var finalPromptParts = new List<Part>(userPromptParts);
         var history = new List<Content> { new() { Role = "user", Parts = finalPromptParts } };
-        return await ExecuteGenerativeStepAsync(stepConfig, history, targetOutputFolder, outputFileName, cacheStateFileName);
+        return await RunRefinementStepAsync(stepConfig, history, targetOutputFolder, outputFileName, cacheStateFileName);
     }
 
-    private async Task<string?> ExecuteGenerativeStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
+    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
         string systemInstructionText = await ResolveSystemInstructionTextAsync(stepConfig);
@@ -1023,7 +1023,7 @@ public partial class LatexRefinementSession {
                     break;
                 }
             }
-            AttachmentHandler.HasJustUploaded = false;
+            AttachmentUploader.HasJustUploaded = false;
 
             Console.WriteLine($"\n  [API] Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
 
@@ -1031,7 +1031,7 @@ public partial class LatexRefinementSession {
             bool callSuccess = false;
 
             try {
-                callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                   streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
                   onChunkReceived: async (chunk) => {
                       string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
@@ -1142,7 +1142,7 @@ public partial class LatexRefinementSession {
 
     /// <summary>
     /// [AI Context] Creates a new Vertex context cache for a refinement step's system instruction and
-    /// persists its state. Shared by the two ExecuteGenerativeStepAsync creation paths (initial
+    /// persists its state. Shared by the two RunRefinementStepAsync creation paths (initial
     /// cache-miss and expired-cache recreation), which were previously two near-identical inline copies.
     /// [Human] Legt einen neuen Kontext-Cache für einen Refinement-Schritt an und speichert dessen Zustand.
     /// </summary>
@@ -1197,7 +1197,7 @@ public partial class LatexRefinementSession {
     /// [AI Context] Fallback routine when initial PDF compilation fails. Sends the compile error log, preamble reference, and document body back to Gemini in a clean session (no system instructions, no context cache) to fix LaTeX syntax errors without outputting the preamble to save tokens.
     /// [Human] Neuer Versuch bei PDF-Fehlern: Schickt das Fehlerlog und den LaTeX-Body an Gemini zurück, um die Fehler zu korrigieren (ohne Preamble-Output zum Token-Sparen).
     /// </summary>
-    private async Task<bool> ExecutePdfFixAttemptAsync(string preambleText, string failedBodyTex, string compileLog, string baseName, string targetFolder, int roundNumber = 1) {
+    private async Task<bool> TryRepairFailedPdfBuildAsync(string preambleText, string failedBodyTex, string compileLog, string baseName, string targetFolder, int roundNumber = 1) {
         Console.WriteLine($"\n--- [Schritt 4 Retry: PDF LaTeX Fix (-final-attempt, Runde #{roundNumber})] ---");
         BackendParameters backendParams = _config.UseVertex ? _config.Step3LastRefinement.Vertex : _config.Step3LastRefinement.AiStudio;
 
@@ -1331,7 +1331,7 @@ public partial class LatexRefinementSession {
                     break;
                 }
             }
-            AttachmentHandler.HasJustUploaded = false;
+            AttachmentUploader.HasJustUploaded = false;
 
             Console.WriteLine($"\n  [API] Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...");
 
@@ -1339,7 +1339,7 @@ public partial class LatexRefinementSession {
             bool callSuccess = false;
 
             try {
-                callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                   streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
                   onChunkReceived: async (chunk) => {
                       string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
@@ -1411,7 +1411,7 @@ public partial class LatexRefinementSession {
     /// [AI Context] Automated loop that calls the Google Antigravity Agent via v1beta/interactions REST API to fix compilation errors in a secure remote sandbox.
     /// [Human] Ruft den echten Google Antigravity-Agenten über die REST-Schnittstelle auf, um LaTeX-Fehler vollautomatisch in einer Sandbox zu reparieren.
     /// </summary>
-    private async Task<bool> RunAntiGravityAgentFixLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText) {
+    private async Task<bool> RunExternalAgentRepairLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText) {
         int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
         if (maxRounds <= 0) maxRounds = 1;
 

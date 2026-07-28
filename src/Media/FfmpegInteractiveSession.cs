@@ -111,7 +111,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         string currentSource = string.IsNullOrEmpty(DefaultSourceFolder) ? ffmpegConfig.SourceFolder : DefaultSourceFolder;
 
         // Use our nice folder selector (which now supports predefined folders and explorer!)
-        sourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(currentSource, newFolder => {
+        sourceFolder = ConfigurationPrompts.PromptForSourceFolder(currentSource, newFolder => {
             ffmpegConfig.SourceFolder = newFolder;
             ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
         });

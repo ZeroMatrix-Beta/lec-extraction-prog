@@ -38,7 +38,7 @@ public static class SessionFactory {
 
         string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-        var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
+        var attachmentHandler = new AttachmentUploader(client, config.UploadFolder, config.IncludePaths, true, config.GcsBucketName);
         var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
         var chatSession = new DirectAiChatSessionAiStudio(client, config, sessionLogger, attachmentHandler, isAiStudio: true);
         await chatSession.StartAsync();
@@ -47,7 +47,7 @@ public static class SessionFactory {
     public static async Task RunDirectVertexChatAsync() {
         var config = ConfigLoader<DirectAiChatSessionVertexConfig>.Load();
         Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-        var attachmentHandler = new AttachmentHandler(client, config.UploadFolder, config.IncludePaths, false, config.GcsBucketName);
+        var attachmentHandler = new AttachmentUploader(client, config.UploadFolder, config.IncludePaths, false, config.GcsBucketName);
         var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
         var chatSession = new DirectAiChatSessionVertex(client, config, sessionLogger, attachmentHandler);
         await chatSession.StartAsync();
@@ -75,7 +75,7 @@ public static class SessionFactory {
 
         if (extChoice == "2" && AppConfig.IsVertexAiEnabled) {
             var config = ConfigLoader<VertexAutoExtractionConfig>.Load();
-            config.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
+            config.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;
                 ConfigLoader<VertexAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
@@ -92,7 +92,7 @@ public static class SessionFactory {
             ModelSyncService.SyncModelToRefinementConfig(selectedModel, isVertex: true);
 
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
+            var attachmentHandler = new AttachmentUploader(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
             var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
             var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
@@ -100,7 +100,7 @@ public static class SessionFactory {
         }
         else {
             var config = ConfigLoader<AiStudioAutoExtractionConfig>.Load();
-            config.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(config.SourceFolder, newFolder => {
+            config.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(config.SourceFolder, newFolder => {
                 config.SourceFolder = newFolder;
                 ConfigLoader<AiStudioAutoExtractionConfig>.Save(config);
             }, config.PredefinedSourceFolders);
@@ -131,7 +131,7 @@ public static class SessionFactory {
 
             string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
-            var attachmentHandler = new AttachmentHandler(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps, config.InlineHistoryImages, config.FileActivationDelaySeconds, config.VideoUploadTimeoutSeconds, config.VideoUploadMaxRetries) {
+            var attachmentHandler = new AttachmentUploader(client, config.SourceFolder, [config.SourceFolder], true, "", config.GoogleVideoFps, config.InlineHistoryImages, config.FileActivationDelaySeconds, config.VideoUploadTimeoutSeconds, config.VideoUploadMaxRetries) {
                 ClientFactory = () => GoogleAiClientBuilder.BuildAiStudioClient(apiKey)
             };
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());

@@ -14,7 +14,7 @@ public static class ExtractionHelpers {
     /// consolidated here. Appends "-copy-N" if the target .tex path already exists on disk.
     /// [Human] Haengt "-copy-N" an den Zielpfad an, falls die Datei schon existiert. War vorher 2x dupliziert.
     /// </summary>
-    public static string GetUniqueTexPath(string originalPath) {
+    public static string ResolveNonClashingTexPath(string originalPath) {
         if (!File.Exists(originalPath)) {
             return originalPath;
         }

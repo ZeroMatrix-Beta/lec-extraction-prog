@@ -32,7 +32,7 @@ public partial class AiStudioAutoExtractionSession {
     /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
     /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
     /// </summary>
-    private void PrintCommandsMenu() {
+    private void WriteCommandHelp() {
         Console.WriteLine("\n📋 Befehle:");
         Console.WriteLine("  1) 📜 Befehle anzeigen");
         Console.WriteLine("  2) ⚡ Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
@@ -48,7 +48,7 @@ public partial class AiStudioAutoExtractionSession {
     }
 
     private async Task ReplLoopAsync() {
-        PrintCommandsMenu();
+        WriteCommandHelp();
 
         while (true) {
             if (!Console.IsInputRedirected) {
@@ -71,13 +71,13 @@ public partial class AiStudioAutoExtractionSession {
             if (await TryHandleReplRunRefinementAsync(normalizedInput)) continue;
             if (TryHandleReplChangeKey(normalizedInput)) continue;
 
-            await DebugChatAsync(input); // Chat erhält den originalen Input
+            await RunDiagnosticChatTurnAsync(input); // Chat erhält den originalen Input
         }
     }
 
     private bool TryHandleReplShowCommands(string normalizedInput) {
         if (normalizedInput != "1" && !normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) return false;
-        PrintCommandsMenu();
+        WriteCommandHelp();
         return true;
     }
 
@@ -93,8 +93,8 @@ public partial class AiStudioAutoExtractionSession {
         }
 
         if (double.TryParse(speedInput, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double parsedSpeed)) {
-            _speed = parsedSpeed;
-            Console.WriteLine($"Speed gesetzt auf {_speed}x");
+            _playbackSpeedMultiplier = parsedSpeed;
+            Console.WriteLine($"Speed gesetzt auf {_playbackSpeedMultiplier}x");
         }
         else {
             Console.WriteLine("Ungültiger Wert für speed.");
@@ -235,7 +235,7 @@ public partial class AiStudioAutoExtractionSession {
     /// Contains identical retry/backoff logic to the main extraction loop to accurately simulate API conditions.
     /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
     /// </summary>
-    private async Task DebugChatAsync(string input) {
+    private async Task RunDiagnosticChatTurnAsync(string input) {
         _debugChatHistory.Add(new Content { Role = "user", Parts = [new() { Text = input }] });
 
         var requestConfig = new GenerateContentConfig {
@@ -277,7 +277,7 @@ public partial class AiStudioAutoExtractionSession {
 
     /// <summary>
     /// [AI Context] Streams the debug-chat response with a hand-rolled retry/backoff loop (distinct from
-    /// ApiResilience.ExecuteStreamWithRetryAsync used elsewhere): network errors wait 5 minutes, "high
+    /// ApiRetryPolicy.ExecuteStreamWithRetryAsync used elsewhere): network errors wait 5 minutes, "high
     /// demand" waits a flat 3 minutes, the first rate-limit reads the server-suggested delay + 20s
     /// buffer, and subsequent rate-limits increment linearly by 30s rather than backing off exponentially.
     /// [Human] Streamt die Debug-Chat-Antwort mit eigener Retry-/Backoff-Logik (Netzwerkfehler, Rate-Limits).
@@ -350,7 +350,7 @@ public partial class AiStudioAutoExtractionSession {
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                bool isOverloaded = ApiResilience.IsTransientError(ex);
+                bool isOverloaded = ApiRetryPolicy.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -360,7 +360,7 @@ public partial class AiStudioAutoExtractionSession {
                     string contextMsg = " [Debug Chat]";
                     string delayMessage = "Still waiting for the acknowledgment / processing...";
 
-                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                    if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                         waitTime = 300; // 5 Minuten
                         Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
                         Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");

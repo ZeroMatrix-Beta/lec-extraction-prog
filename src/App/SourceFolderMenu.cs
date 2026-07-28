@@ -33,26 +33,26 @@ public static class SourceFolderMenu {
 
             switch (choice) {
                 case "1":
-                    aiStudioConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
+                    aiStudioConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
                         aiStudioConfig.SourceFolder = newFolder;
                         ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
                     }, aiStudioConfig.PredefinedSourceFolders);
                     break;
                 case "2":
-                    vertexConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(vertexConfig.SourceFolder, newFolder => {
+                    vertexConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(vertexConfig.SourceFolder, newFolder => {
                         vertexConfig.SourceFolder = newFolder;
                         ConfigLoader<VertexAutoExtractionConfig>.Save(vertexConfig);
                     }, vertexConfig.PredefinedSourceFolders);
                     break;
                 case "3":
-                    ffmpegConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(ffmpegConfig.SourceFolder, newFolder => {
+                    ffmpegConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(ffmpegConfig.SourceFolder, newFolder => {
                         ffmpegConfig.SourceFolder = newFolder;
                         ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
                     });
                     break;
                 case "4":
                     string currentLatexSource = string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder;
-                    latexConfig.SourceFolder = ConfigurationPrompts.ConfirmOrChangeSourceFolder(currentLatexSource, newFolder => {
+                    latexConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(currentLatexSource, newFolder => {
                         latexConfig.SourceFolder = newFolder;
                         ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
                     });

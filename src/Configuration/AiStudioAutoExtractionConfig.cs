@@ -174,7 +174,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public int HistoryRateLimitDelaySeconds { get; set; } = 65;
 
     // [AI Context] If true (default, matching the existing always-on behavior), performs the implicit
-    // prefix-cache warm-up handshake(s) (WarmUpSystemInstructionCacheAsync / WarmUpWithBatchedHistoryAsync)
+    // prefix-cache warm-up handshake(s) (PrimePrefixCacheAsync / WarmUpWithBatchedHistoryAsync)
     // during session setup. Set false to skip the handshake entirely (e.g. for a quick debug run).
     // [Human] Wenn true (Standard, unverändertes Verhalten), wird der Cache-Warmup-Handshake beim Setup
     // durchgeführt. Auf false setzen, um den Handshake komplett zu überspringen.

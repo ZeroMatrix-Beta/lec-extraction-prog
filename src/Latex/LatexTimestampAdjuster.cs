@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace LectureExtraction.Latex;
 
-public static partial class LatexTimestampHelper {
+public static partial class LatexTimestampAdjuster {
     /// <summary>
     /// Removes the PART_START_SECONDS comment from the beginning of the LaTeX content, if present.
     /// </summary>

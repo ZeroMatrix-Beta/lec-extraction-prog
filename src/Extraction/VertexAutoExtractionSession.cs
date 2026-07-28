@@ -29,7 +29,7 @@ namespace LectureExtraction.Extraction;
 /// Note: This class is 'partial' because it uses the [GeneratedRegex] attribute 
 /// at the bottom of the file for compile-time regex generation (SYSLIB1045).
 /// </remarks>
-public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentHandler attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
         "gemini-3.6-flash",
         "gemini-3.5-flash",
@@ -38,10 +38,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
     private readonly Client _client = client;
     private readonly VertexAutoExtractionConfig _config = config;
-    private readonly AttachmentHandler _attachmentHandler = attachmentHandler;
+    private readonly AttachmentUploader _attachmentHandler = attachmentHandler;
     private readonly SessionLogger _sessionLogger = sessionLogger;
     private readonly LatexRefinementSessionConfig _latexRefinementConfig = latexRefinementConfig;
-    private double _speed = 1.0;
+    private double _playbackSpeedMultiplier = 1.0;
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
     private readonly List<Part> _historyParts = [];
@@ -223,7 +223,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         }
                         else {
                             Console.WriteLine("  [INFO] History-Dateien erfolgreich hochgeladen und für die Session zwischengespeichert.");
-                            if (!await AcknowledgeHistoryAsync(fileList)) return false;
+                            if (!await SendHistoryHandshakeAsync(fileList)) return false;
                         }
                     }
                     else {
@@ -253,7 +253,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         // here, before InitializeContextCachingAsync creates Vertex's explicit CachedContent -- the two
         // mechanisms are independent and can both be active.
         if (_config.EnableImplicitPrefixCacheWarmup) {
-            if (!await WarmUpSystemInstructionCacheAsync()) return false;
+            if (!await PrimePrefixCacheAsync()) return false;
         }
 
         return true;
@@ -331,7 +331,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         Part.FromUri(task.VideoUrl, "video/mp4")
                     };
 
-                    string texOutput = (await GenerateTexFromUploadedPartAsync(
+                    string texOutput = (await TranscribeSegmentToLatexAsync(
                         task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
                     )).LatexBody;
 
@@ -483,7 +483,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
     /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
     /// </summary>
-    private void PrintCommandsMenu() {
+    private void WriteCommandHelp() {
         Console.WriteLine("\n📋 Befehle:");
         Console.WriteLine("  1) 📜 Befehle anzeigen");
         Console.WriteLine("  2) ⚡ Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
@@ -501,7 +501,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     }
 
     private async Task ReplLoopAsync() {
-        PrintCommandsMenu();
+        WriteCommandHelp();
 
         while (true) {
             if (!Console.IsInputRedirected) {
@@ -515,7 +515,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
 
             if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-                PrintCommandsMenu();
+                WriteCommandHelp();
             }
             else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
                 string val = "";
@@ -527,8 +527,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
 
                 if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double s)) {
-                    _speed = s;
-                    Console.WriteLine($"Speed gesetzt auf {_speed}x");
+                    _playbackSpeedMultiplier = s;
+                    Console.WriteLine($"Speed gesetzt auf {_playbackSpeedMultiplier}x");
                 }
                 else {
                     Console.WriteLine("Ungültiger Wert für speed.");
@@ -679,7 +679,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
             }
             else {
-                await DebugChatAsync(input); // Chat erhält den originalen Input
+                await RunDiagnosticChatTurnAsync(input); // Chat erhält den originalen Input
             }
         }
     }
@@ -728,7 +728,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// Contains identical retry/backoff logic to the main extraction loop to accurately simulate API conditions.
     /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
     /// </summary>
-    private async Task DebugChatAsync(string input) {
+    private async Task RunDiagnosticChatTurnAsync(string input) {
         _debugChatHistory.Add(new Content { Role = "user", Parts = [new() { Text = input }] });
 
         var requestConfig = new GenerateContentConfig {
@@ -821,7 +821,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
 
-                bool isOverloaded = ApiResilience.IsTransientError(ex);
+                bool isOverloaded = ApiRetryPolicy.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -831,7 +831,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     string contextMsg = " [Debug Chat]";
                     string delayMessage = "Still waiting for the acknowledgment / processing...";
 
-                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                    if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                         waitTime = 300; // 5 Minuten
                         Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
                         Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
@@ -891,7 +891,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// This guarantees the model context is correctly primed before batch processing starts and provides immediate visual feedback.
     /// [Human] Sendet die geladenen History-Dateien an Gemini und wartet auf eine Bestätigung. So stellen wir sicher, dass die KI den Kontext gefressen hat, bevor es losgeht.
     /// </summary>
-    private async Task<bool> AcknowledgeHistoryAsync(string loadedFiles = "") {
+    private async Task<bool> SendHistoryHandshakeAsync(string loadedFiles = "") {
         var historyPromptParts = new List<Part>(_historyParts) {
             new() { Text = $"Here is the material from my history. In the history, you may find some tex code from the previous weeks of the lecture. Don't treat them as source-material for the transcription. Please read it carefully. Acknowledge the receipt without exception with exactly the following text: '[AI-Model: {_config.CurrentModel}] Material [...] received and analyzed. I am standing by for your instructions.' Wait for my next instructions afterwards." }
         };
@@ -994,7 +994,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             catch (Exception ex) {
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                bool isOverloaded = ApiResilience.IsTransientError(ex);
+                bool isOverloaded = ApiRetryPolicy.IsTransientError(ex);
                 if (isOverloaded && attempt < maxRetries) {
                     // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
                     // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
@@ -1004,7 +1004,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     string contextMsg = " [History Bestätigung]";
                     string delayMessage = "Still waiting for the acknowledgment / processing...";
 
-                    if (ApiResilience.IsNetworkConnectionError(ex)) {
+                    if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                         waitTime = 300; // 5 Minuten
                         Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
                         Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
@@ -1075,7 +1075,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         var channel = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
         // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
-        var producerTask = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, _config, _speed));
+        var producerTask = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, _config, _playbackSpeedMultiplier));
 
         // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
@@ -1150,9 +1150,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
                     string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
                     generatedTexFiles.Add(targetPartPath);
-                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
+                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
                     if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.AdjustTimestamps(LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
+                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
                     }
                     audioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
                     continue;
@@ -1170,7 +1170,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     uploadTask = pendingVideoUploadTask;
                 }
                 else {
-                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
+                    uploadTask = UploadSegmentAndBuildPromptAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
                 }
 
                 SegmentUpload upload = await uploadTask;
@@ -1217,7 +1217,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 2}.tex");
                         if (!System.IO.File.Exists(nextTexPath)) {
                             Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
-                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
+                            pendingVideoUploadTask = UploadSegmentAndBuildPromptAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
                         }
                         else {
                             pendingVideoUploadTask = null;
@@ -1233,7 +1233,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                                                ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                             if (System.IO.File.Exists(audioPath)) {
                                 Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
-                                var handler = new AttachmentHandler(_client, fileSpecificOutputFolder, [fileSpecificOutputFolder], false, _config.GcsBucketName);
+                                var handler = new AttachmentUploader(_client, fileSpecificOutputFolder, [fileSpecificOutputFolder], false, _config.GcsBucketName);
                                 var (s, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
                                 if (s) return attached;
                             }
@@ -1242,7 +1242,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     }
                 }
 
-                result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+                result = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
                 fileTotalTokens += result.Usage;
                 int partFreshTokens = result.Usage.Fresh;
@@ -1253,7 +1253,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     // Store the raw output for the combined file without offset
                     fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
                     if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
                     }
 
                     // Prepend the start time to the individual part .tex file
@@ -1263,14 +1263,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         usage: result.Usage,
                         model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
                         maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
-                    string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
+                    string uniqueTargetPartPath = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPath);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
                     if (_config.GenerateOffsetFiles) {
                         // NEW: Save the offsetted version of this individual part
-                        string offsettedPartContent = LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+                        string offsettedPartContent = LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                         string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
-                        string uniqueTargetPartPathOffset = ExtractionHelpers.GetUniqueTexPath(targetPartPathOffset);
+                        string uniqueTargetPartPathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPathOffset);
                         await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
                         Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
                     }
@@ -1295,7 +1295,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
                 string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
-                string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
+                string uniqueTargetFilePath = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePath);
                 string header = TexDocumentWriter.BuildCombinedHeader(
                     sourceFileName: Path.GetFileName(file),
                     totalParts: partsWithTimes.Count,
@@ -1311,7 +1311,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     // New: Generate the offset version
                     // Note: The last part's StartTime is used as a reference point, but the overall offset should be partStartTimeSeconds from the respective part.
                     // We already accumulated the correctly offsetted text in fullOutputTextOffsetted within the loop.
-                    string uniqueTargetFilePathOffset = ExtractionHelpers.GetUniqueTexPath(targetFilePathOffset);
+                    string uniqueTargetFilePathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePathOffset);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
                     Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
                     refinementTargetFile = uniqueTargetFilePathOffset;
@@ -1372,7 +1372,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// [Human] Baut die dynamische Hälfte des Prompts (nach dem Video). Die statische Hälfte steht jetzt
     /// in GetStaticPromptBeginning und wird vor dem Video gesendet.
     /// </summary>
-    private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
+    private async Task<SegmentUpload> UploadSegmentAndBuildPromptAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
         string weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown";
@@ -1406,7 +1406,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// Prompt parts are assembled in strict prefix-stable order (payload first, parameters second, reference context trailing) to preserve cache alignment.
     /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment über Vertex AI.
     /// </summary>
-    private async Task<SegmentTranscript> GenerateTexFromUploadedPartAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+    private async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partFile, partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
         string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
@@ -1434,7 +1434,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         //    it — Phase 4.5 port (2026-07-28) of AI Studio's equivalent BuildGenerationRequestAsync step.
         var preVideoBuilder = new System.Text.StringBuilder();
         if (_config.EnableImplicitPrefixCacheWarmup) {
-            preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n");
+            preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n");
         }
         if (_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
@@ -1559,7 +1559,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             bool callSuccess = false;
 
             try {
-                callSuccess = await ApiResilience.ExecuteStreamWithRetryAsync(
+                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
                     onChunkReceived: async (chunk) => {
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
