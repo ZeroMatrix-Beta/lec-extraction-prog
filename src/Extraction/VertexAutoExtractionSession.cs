@@ -1439,19 +1439,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
         if (_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
-            preVideoBuilder.Append(
-                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
-                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
-                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
-                "CRITICAL RULES:\n" +
-                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
-                $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
-                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n");
-            foreach (var texFile in previousTexFiles) {
-                Console.WriteLine($"    - {Path.GetFileName(texFile)}");
-                string content = await System.IO.File.ReadAllTextAsync(texFile);
-                preVideoBuilder.Append($"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n");
-            }
+            preVideoBuilder.Append(await BuildPreviousTexReferenceBlockAsync(partFile, previousTexFiles));
         }
         preVideoBuilder.Append(GetStaticPromptBeginning(partNumber));
         userPromptParts.Add(new Part { Text = preVideoBuilder.ToString() });
@@ -1467,19 +1455,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         // 4. Fallback: Append previous .tex files AT THE END if InlinePrecedingLecTexParts is disabled
         if (!_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):");
-            string contextText =
-                "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
-                "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
-                "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
-                "CRITICAL RULES:\n" +
-                "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
-                $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
-                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
-            foreach (var texFile in previousTexFiles) {
-                Console.WriteLine($"    - {Path.GetFileName(texFile)}");
-                string content = await System.IO.File.ReadAllTextAsync(texFile);
-                contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
-            }
+            string contextText = await BuildPreviousTexReferenceBlockAsync(partFile, previousTexFiles);
             userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
         }
 
@@ -1529,6 +1505,31 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         return (requestConfig, history);
+    }
+
+    /// <summary>
+    /// [AI Context] Builds the "IMPORTANT CONTEXT WARNING" reference-context block for previously
+    /// generated .tex parts, shared between BuildGenerationRequestAsync's two InlinePrecedingLecTexParts
+    /// placements (pre-video inline vs. appended-at-the-end fallback). Extracted (2026-07-28) — the text
+    /// was byte-identical in both call sites within this same class, just placed in different Parts.
+    /// [Human] Baut den Referenzkontext-Textblock für vorherige .tex-Teile (gemeinsam für beide
+    /// Platzierungen).
+    /// </summary>
+    private static async Task<string> BuildPreviousTexReferenceBlockAsync(string partFile, List<string> previousTexFiles) {
+        var builder = new System.Text.StringBuilder(
+            "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+            "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+            "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+            "CRITICAL RULES:\n" +
+            "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+            $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
+            "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n");
+        foreach (var texFile in previousTexFiles) {
+            Console.WriteLine($"    - {Path.GetFileName(texFile)}");
+            string content = await System.IO.File.ReadAllTextAsync(texFile);
+            builder.Append($"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n");
+        }
+        return builder.ToString();
     }
 
     /// <summary>
