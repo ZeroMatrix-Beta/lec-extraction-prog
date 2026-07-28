@@ -630,7 +630,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [AI Context] Processes one already-split video end to end: sequentially extracts LaTeX from
     /// each part via the Gemini API (with resume-from-disk caching, parallel pre-uploads, and rate-limit
     /// pacing), writes the combined document, and launches LatexRefinementSession. Extracted from the
-    /// former single ~300-line ProcessFilesAsync consumer-loop body — one call per video.
+    /// former single ~300-line ProcessFilesAsync consumer-loop body — one call per video. Further split
+    /// (Phase 4.5) into TranscribeSegmentsAsync (the per-part loop) and FinalizeVideoOutputAsync (combined
+    /// document + refinement launch), sharing state via VideoProcessingState since the loop mutates several
+    /// values across iterations (pending upload/rate-limit tasks, accumulated text and tokens).
     /// [Human] Verarbeitet ein bereits gesplittetes Video vollständig: extrahiert LaTeX Teil für Teil
     /// über die Gemini-API, schreibt das Gesamtdokument und startet das Refinement.
     /// </summary>
@@ -641,277 +644,327 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Directory.CreateDirectory(fileSpecificOutputFolder);
         }
 
-
         Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
-        List<string> generatedTexFiles = [];
-            string baseName = Path.GetFileNameWithoutExtension(file);
-            baseName = SpeedCompressedRegex().Replace(baseName, "");
-            baseName = CompressedRegex().Replace(baseName, "");
-            if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
-                baseName = "step1-" + baseName;
-            }
 
-            // [AI Context] The dummy-part0.tex reference block is now prepended directly from disk in
-            // GenerateTexFromUploadedPartAsync. No part0 file needs to be written or tracked here.
-            string fullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
-            string fullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
-            TokenUsage fileTotalTokens = default;
-            bool fileProcessingSuccess = true;
-            Task<SegmentUpload>? pendingVideoUploadTask = null;
-            Task<List<Part>>? pendingAudioUploadTask = null;
-            Task? rateLimitDelayTask = null;
-            TimeSpan cacheDuration = TimeSpan.FromHours(2); // Define cache duration once
+        // Handle Audio File Generation
+        var state = new VideoProcessingState(ComputeBaseName(file), new AudioTrackExtractor(file, fileSpecificOutputFolder)) {
+            RefinementClient = ResolveRefinementClientAndConfigureParams()
+        };
 
-            // [AI Context] Initialize refinementClient early because the parallel audio upload task (pendingAudioUploadTask)
-            // needs to upload the audio to the EXACT SAME Google Cloud Project / API Key that LatexRefinementSession will use.
-            // Otherwise, LatexRefinementSession gets a ClientError: "You do not have permission to access the File".
-            Client? refinementClient = null;
-            if (_config.GoIntoLatexRefinement) {
-                if (_latexRefinementConfig != null) {
-                    _latexRefinementConfig.UseVertex = false;
-                    if (_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
-                        Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
-                        _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
-                    }
-                    if (_config.UseChosenModelForRestOfPipeline) {
-                        Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...");
-                        void applyParams(BackendParameters target) {
-                            target.CurrentModel = _config.CurrentModel;
-                            target.Temperature = _config.Temperature;
-                            target.TopP = _config.TopP;
-                            target.TopK = _config.TopK;
-                            target.MaxOutputTokens = _config.MaxOutputTokens;
-                            target.ThinkingBudget = _config.ThinkingBudget;
-                            target.ThinkingLevel = _config.ThinkingLevel;
-                        }
-                        if (_latexRefinementConfig.Step1MergeAndTimestamp?.AiStudio != null) applyParams(_latexRefinementConfig.Step1MergeAndTimestamp.AiStudio);
-                        if (_latexRefinementConfig.Step2SpeechRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step2SpeechRefinement.AiStudio);
-                        if (_latexRefinementConfig.Step3LastRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step3LastRefinement.AiStudio);
-                    }
-                }
-                string? extractedRefinementEnvName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
-                    ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
-                    : null;
-                string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
-                    ? extractedRefinementEnvName
-                    : "API_KEY-latex-refinement";
-                string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
-                refinementClient = GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
-            }
+        await TranscribeSegmentsAsync(state, file, fileSpecificOutputFolder, partsWithTimes, fullOriginalVideoDuration);
 
-            // Handle Audio File Generation
-            var audioTrackExtractor = new AudioTrackExtractor(file, fileSpecificOutputFolder);
-
-            for (int i = 0; i < partsWithTimes.Count; i++) {
-                string safePartPath = partsWithTimes[i].FilePath;
-                double partStartTimeSeconds = partsWithTimes[i].StartTimeSeconds;
-                string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}.tex");
-
-                Console.WriteLine($"\nVerarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
-                // Check if the .tex file already exists and is not older than 2 hours
-                if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= cacheDuration) {
-                    Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
-                    string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
-                    generatedTexFiles.Add(targetPartPath);
-                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
-                    if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.AdjustTimestamps(LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
-                    }
-                    audioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
-                    continue;
-                }
-
-                SegmentTranscript result;
-
-                bool uploadSuccess;
-                string? parsedPrompt;
-                List<Part> attachmentParts;
-
-                Task<SegmentUpload> uploadTask;
-
-                if (_config.EnableParallelFileUploads && pendingVideoUploadTask != null) {
-                    Console.WriteLine($"  [Pre-Upload] Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...");
-                    uploadTask = pendingVideoUploadTask;
-                }
-                else {
-                    uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
-                }
-
-                SegmentUpload upload = await uploadTask;
-                (uploadSuccess, parsedPrompt, attachmentParts) = (upload.Succeeded, upload.Prompt, upload.Attachments);
-                if (!uploadSuccess) {
-                    Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
-                    fileProcessingSuccess = false;
-                    break;
-                }
-
-                audioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
-
-                if (rateLimitDelayTask != null) {
-                    Console.WriteLine("  [Rate-Limit] Warte auf Freigabe des vorherigen Timers...");
-                    await rateLimitDelayTask;
-                    rateLimitDelayTask = null;
-                }
-
-                // If EnableParallelFileUploads is enabled, start pre-uploading the next part (or the audio file if this is the last part) while Gemini processes the current part.
-                if (_config.EnableParallelFileUploads) {
-                    if (i + 1 < partsWithTimes.Count) {
-                        string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 2}.tex");
-                        if (!System.IO.File.Exists(nextTexPath)) {
-                            Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
-                            pendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
-                        }
-                        else {
-                            pendingVideoUploadTask = null;
-                        }
-                    }
-                    else if (i == partsWithTimes.Count - 1 && _config.GenerateAudioFile && _config.GoIntoLatexRefinement) {
-                        pendingAudioUploadTask = Task.Run(async () => {
-                            if (audioTrackExtractor.PendingTask != null) {
-                                await audioTrackExtractor.PendingTask;
-                            }
-                            var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
-                            string audioPath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
-                                               ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
-                            if (System.IO.File.Exists(audioPath)) {
-                                Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
-                                var handler = new AttachmentHandler(refinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
-                                var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
-                                if (audioUploadOk) return attached;
-                            }
-                            return [];
-                        });
-                    }
-                }
-
-                /************************************************************************************************************************
-                 * [Human Context] Here is where all the magic happens. We call the function   GenerateTexFromUploadedPartAsync to generate the LaTeX code for the current part. 
-                 * This function is the core of the program and is responsible for generating the LaTeX code for the current part.
-                 ************************************************************************************************************************/
-
-                result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles); // generated TexFiles could contain part0 for instance.
-
-                fileTotalTokens += result.Usage;
-
-                if (i + 1 < partsWithTimes.Count) {
-                    rateLimitDelayTask = Task.Run(async () => {
-                        int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-                        // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
-                        // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-                        Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
-                        await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
-                    });
-                }
-                int partFreshTokens = result.Usage.Fresh;
-
-                if (!string.IsNullOrWhiteSpace(result.LatexBody)) {
-                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(result.LatexBody);
-
-                    // Store the raw output for the combined file without offset
-                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
-                    if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
-                    }
-
-                    // Prepend the start time to the individual part .tex file
-                    string partHeader = TexDocumentWriter.BuildPartHeader(
-                        sourcePartFileName: Path.GetFileName(safePartPath),
-                        partStartTimeSeconds: partStartTimeSeconds,
-                        usage: result.Usage,
-                        model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
-                        maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
-                    string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
-                    await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
-
-                    if (_config.GenerateOffsetFiles) {
-                        // NEW: Save the offsetted version of this individual part
-                        string offsettedPartContent = LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
-                        string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
-                        string uniqueTargetPartPathOffset = ExtractionHelpers.GetUniqueTexPath(targetPartPathOffset);
-                        await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
-                        Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
-                    }
-                    generatedTexFiles.Add(uniqueTargetPartPath);
-                }
-                else {
-                    Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
-                    fileProcessingSuccess = false;
-                    // Clean up individual part files if processing failed mid-way
-                    foreach (var failedTexFile in generatedTexFiles) {
-                        try { System.IO.File.Delete(failedTexFile); } catch { /* Ignore */ }
-                    }
-                    // Try to delete the file-specific output folder if it's empty or contains only temporary stuff
-                    if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
-                        Directory.Delete(fileSpecificOutputFolder);
-                    }
-                    break;
-                }
-            }
-
-            if (fileProcessingSuccess) {
-                string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
-                string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
-
-                string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
-                string header = TexDocumentWriter.BuildCombinedHeader(
-                    sourceFileName: Path.GetFileName(file),
-                    totalParts: partsWithTimes.Count,
-                    totalUsage: fileTotalTokens,
-                    model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
-                    maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
-                await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
-                Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
-
-                string refinementTargetFile = uniqueTargetFilePath;
-
-                if (_config.GenerateOffsetFiles) {
-                    // New: Generate the offset version
-                    // Note: The last part's StartTime is used as a reference point, but the overall offset should be partStartTimeSeconds from the respective part.
-                    // We already accumulated the correctly offsetted text in fullOutputTextOffsetted within the loop.
-                    string uniqueTargetFilePathOffset = ExtractionHelpers.GetUniqueTexPath(targetFilePathOffset);
-                    await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
-                    Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
-                    refinementTargetFile = uniqueTargetFilePathOffset;
-                }
-
-                // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
-                // Warten, bis das Audio fertig ist, bevor das Refinement startet,
-                // da das Refinement die Audiodatei für die API benötigt!
-                if (audioTrackExtractor.PendingTask != null) {
-                    Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...");
-                    await audioTrackExtractor.PendingTask;
-                }
-
-                // LatexRefinementSession uses its own dedicated API key (resolved at the start of the processing loop)
-                // refinementClient is already initialized and the audio file was uploaded using it.
-
-                List<Part>? preUploadedAudioParts = null;
-                if (_config.EnableParallelFileUploads && pendingAudioUploadTask != null) {
-                    Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss des parallelen Audio-Uploads...");
-                    preUploadedAudioParts = await pendingAudioUploadTask;
-                }
-
-                // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
-                // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
-                var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
-                string audioFilePath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
-                                       ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
-
-                Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
-                // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
-                var refinementSession = new LatexRefinementSession(
-                    refinementClient ?? _client,
-                    _latexRefinementConfig!,
-                    refinementTargetFile,
-                    _config,
-                    audioFilePath,
-                    preUploadedAudioParts);
-
-                AttachmentHandler.HasJustUploaded = false;
-                await refinementSession.StartAsync();
+        if (state.FileProcessingSuccess) {
+            await FinalizeVideoOutputAsync(state, file, fileSpecificOutputFolder, partsWithTimes.Count);
         }
 
-        return fileProcessingSuccess;
+        return state.FileProcessingSuccess;
+    }
+
+    /// <summary>
+    /// [AI Context] Strips the -speed-N-compressed / -compressed suffixes FFmpeg preprocessing adds and
+    /// ensures the step1- prefix, giving the stable base name used for every part/combined output file.
+    /// [Human] Baut den Basisnamen für die Ausgabedateien aus dem Videodateinamen.
+    /// </summary>
+    private static string ComputeBaseName(string file) {
+        string baseName = Path.GetFileNameWithoutExtension(file);
+        baseName = SpeedCompressedRegex().Replace(baseName, "");
+        baseName = CompressedRegex().Replace(baseName, "");
+        if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
+            baseName = "step1-" + baseName;
+        }
+        return baseName;
+    }
+
+    /// <summary>
+    /// [AI Context] Initializes refinementClient early because the parallel audio upload task
+    /// (pendingAudioUploadTask) needs to upload the audio to the EXACT SAME Google Cloud Project / API Key
+    /// that LatexRefinementSession will use. Otherwise, LatexRefinementSession gets a ClientError: "You do
+    /// not have permission to access the File". Also applies UseChosenModelForRestOfPipeline's parameter
+    /// override onto the refinement steps as a side effect, same as before the Phase 4.5 split.
+    /// [Human] Löst den Client für das Refinement auf und übernimmt bei Bedarf die gewählten Modell-Parameter.
+    /// </summary>
+    private Client? ResolveRefinementClientAndConfigureParams() {
+        if (!_config.GoIntoLatexRefinement) return null;
+
+        if (_latexRefinementConfig != null) {
+            _latexRefinementConfig.UseVertex = false;
+            if (_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
+                Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
+                _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
+            }
+            if (_config.UseChosenModelForRestOfPipeline) {
+                Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...");
+                void applyParams(BackendParameters target) {
+                    target.CurrentModel = _config.CurrentModel;
+                    target.Temperature = _config.Temperature;
+                    target.TopP = _config.TopP;
+                    target.TopK = _config.TopK;
+                    target.MaxOutputTokens = _config.MaxOutputTokens;
+                    target.ThinkingBudget = _config.ThinkingBudget;
+                    target.ThinkingLevel = _config.ThinkingLevel;
+                }
+                if (_latexRefinementConfig.Step1MergeAndTimestamp?.AiStudio != null) applyParams(_latexRefinementConfig.Step1MergeAndTimestamp.AiStudio);
+                if (_latexRefinementConfig.Step2SpeechRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step2SpeechRefinement.AiStudio);
+                if (_latexRefinementConfig.Step3LastRefinement?.AiStudio != null) applyParams(_latexRefinementConfig.Step3LastRefinement.AiStudio);
+            }
+        }
+        string? extractedRefinementEnvName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
+            ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
+            : null;
+        string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
+            ? extractedRefinementEnvName
+            : "API_KEY-latex-refinement";
+        string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
+        return GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
+    }
+
+    /// <summary>
+    /// [AI Context] Holds the mutable state that ProcessPreparedVideoAsync's former single loop body
+    /// threads across iterations (pending pre-upload/rate-limit tasks, accumulated output text and token
+    /// totals) plus the per-video values TranscribeSegmentsAsync and FinalizeVideoOutputAsync both need.
+    /// Extracted (Phase 4.5) purely so the loop and the finalization step could become separate methods
+    /// without a 6+ parameter/ref-parameter list.
+    /// [Human] Der pro Video gemeinsam genutzte, veränderliche Zustand für Transkription und Abschluss.
+    /// </summary>
+    private sealed class VideoProcessingState(string baseName, AudioTrackExtractor audioTrackExtractor) {
+        public readonly string BaseName = baseName;
+        public readonly AudioTrackExtractor AudioTrackExtractor = audioTrackExtractor;
+        public readonly TimeSpan CacheDuration = TimeSpan.FromHours(2);
+        public readonly List<string> GeneratedTexFiles = [];
+        // [AI Context] The dummy-part0.tex reference block is now prepended directly from disk in
+        // GenerateTexFromUploadedPartAsync. No part0 file needs to be written or tracked here.
+        public string FullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
+        public string FullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
+        public TokenUsage FileTotalTokens;
+        public bool FileProcessingSuccess = true;
+        public Task<SegmentUpload>? PendingVideoUploadTask;
+        public Task<List<Part>>? PendingAudioUploadTask;
+        public Task? RateLimitDelayTask;
+        public Client? RefinementClient;
+    }
+
+    /// <summary>
+    /// [AI Context] Sequentially extracts LaTeX for every part of one video (resume-from-disk caching,
+    /// parallel pre-uploads, rate-limit pacing), mutating VideoProcessingState as it goes. Sets
+    /// state.FileProcessingSuccess = false and returns early on the first unrecoverable part failure,
+    /// mirroring the former inline loop's break semantics exactly.
+    /// [Human] Extrahiert LaTeX Teil für Teil für ein Video.
+    /// </summary>
+    private async Task TranscribeSegmentsAsync(VideoProcessingState state, string file, string fileSpecificOutputFolder, IReadOnlyList<VideoSegment> partsWithTimes, double fullOriginalVideoDuration) {
+        for (int i = 0; i < partsWithTimes.Count; i++) {
+            string safePartPath = partsWithTimes[i].FilePath;
+            double partStartTimeSeconds = partsWithTimes[i].StartTimeSeconds;
+            string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}.tex");
+
+            Console.WriteLine($"\nVerarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
+            // Check if the .tex file already exists and is not older than 2 hours
+            if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= state.CacheDuration) {
+                Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
+                string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
+                state.GeneratedTexFiles.Add(targetPartPath);
+                state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
+                if (_config.GenerateOffsetFiles) {
+                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampHelper.AdjustTimestamps(LatexTimestampHelper.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
+                }
+                state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
+                continue;
+            }
+
+            SegmentTranscript result;
+
+            bool uploadSuccess;
+            string? parsedPrompt;
+            List<Part> attachmentParts;
+
+            Task<SegmentUpload> uploadTask;
+
+            if (_config.EnableParallelFileUploads && state.PendingVideoUploadTask != null) {
+                Console.WriteLine($"  [Pre-Upload] Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...");
+                uploadTask = state.PendingVideoUploadTask;
+            }
+            else {
+                uploadTask = PrepareAndUploadPartAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
+            }
+
+            SegmentUpload upload = await uploadTask;
+            (uploadSuccess, parsedPrompt, attachmentParts) = (upload.Succeeded, upload.Prompt, upload.Attachments);
+            if (!uploadSuccess) {
+                Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+                state.FileProcessingSuccess = false;
+                break;
+            }
+
+            state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
+
+            if (state.RateLimitDelayTask != null) {
+                Console.WriteLine("  [Rate-Limit] Warte auf Freigabe des vorherigen Timers...");
+                await state.RateLimitDelayTask;
+                state.RateLimitDelayTask = null;
+            }
+
+            // If EnableParallelFileUploads is enabled, start pre-uploading the next part (or the audio file if this is the last part) while Gemini processes the current part.
+            if (_config.EnableParallelFileUploads) {
+                if (i + 1 < partsWithTimes.Count) {
+                    string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 2}.tex");
+                    if (!System.IO.File.Exists(nextTexPath)) {
+                        Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
+                        state.PendingVideoUploadTask = PrepareAndUploadPartAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
+                    }
+                    else {
+                        state.PendingVideoUploadTask = null;
+                    }
+                }
+                else if (i == partsWithTimes.Count - 1 && _config.GenerateAudioFile && _config.GoIntoLatexRefinement) {
+                    state.PendingAudioUploadTask = Task.Run(async () => {
+                        if (state.AudioTrackExtractor.PendingTask != null) {
+                            await state.AudioTrackExtractor.PendingTask;
+                        }
+                        var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
+                        string audioPath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
+                                           ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
+                        if (System.IO.File.Exists(audioPath)) {
+                            Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
+                            var handler = new AttachmentHandler(state.RefinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
+                            var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
+                            if (audioUploadOk) return attached;
+                        }
+                        return [];
+                    });
+                }
+            }
+
+            /************************************************************************************************************************
+             * [Human Context] Here is where all the magic happens. We call the function   GenerateTexFromUploadedPartAsync to generate the LaTeX code for the current part.
+             * This function is the core of the program and is responsible for generating the LaTeX code for the current part.
+             ************************************************************************************************************************/
+
+            result = await GenerateTexFromUploadedPartAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles); // generated TexFiles could contain part0 for instance.
+
+            state.FileTotalTokens += result.Usage;
+
+            if (i + 1 < partsWithTimes.Count) {
+                state.RateLimitDelayTask = Task.Run(async () => {
+                    int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
+                    // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
+                    // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
+                    Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+                    await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
+                });
+            }
+            int partFreshTokens = result.Usage.Fresh;
+
+            if (!string.IsNullOrWhiteSpace(result.LatexBody)) {
+                string cleanTex = LatexResponseCleaner.CleanLatexResponse(result.LatexBody);
+
+                // Store the raw output for the combined file without offset
+                state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
+                if (_config.GenerateOffsetFiles) {
+                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                }
+
+                // Prepend the start time to the individual part .tex file
+                string partHeader = TexDocumentWriter.BuildPartHeader(
+                    sourcePartFileName: Path.GetFileName(safePartPath),
+                    partStartTimeSeconds: partStartTimeSeconds,
+                    usage: result.Usage,
+                    model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
+                    maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
+                string uniqueTargetPartPath = ExtractionHelpers.GetUniqueTexPath(targetPartPath);
+                await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
+
+                if (_config.GenerateOffsetFiles) {
+                    // NEW: Save the offsetted version of this individual part
+                    string offsettedPartContent = LatexTimestampHelper.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+                    string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}-offset.tex");
+                    string uniqueTargetPartPathOffset = ExtractionHelpers.GetUniqueTexPath(targetPartPathOffset);
+                    await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
+                    Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
+                }
+                state.GeneratedTexFiles.Add(uniqueTargetPartPath);
+            }
+            else {
+                Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
+                state.FileProcessingSuccess = false;
+                // Clean up individual part files if processing failed mid-way
+                foreach (var failedTexFile in state.GeneratedTexFiles) {
+                    try { System.IO.File.Delete(failedTexFile); } catch { /* Ignore */ }
+                }
+                // Try to delete the file-specific output folder if it's empty or contains only temporary stuff
+                if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
+                    Directory.Delete(fileSpecificOutputFolder);
+                }
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Writes the combined (and, if enabled, offset-corrected) document for one video, then
+    /// launches LatexRefinementSession once any pending parallel audio work has finished. Only called when
+    /// TranscribeSegmentsAsync succeeded for every part.
+    /// [Human] Schreibt das Gesamtdokument und startet das Refinement.
+    /// </summary>
+    private async Task FinalizeVideoOutputAsync(VideoProcessingState state, string file, string fileSpecificOutputFolder, int totalParts) {
+        string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all.tex");
+        string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all-offset.tex");
+
+        string uniqueTargetFilePath = ExtractionHelpers.GetUniqueTexPath(targetFilePath);
+        string header = TexDocumentWriter.BuildCombinedHeader(
+            sourceFileName: Path.GetFileName(file),
+            totalParts: totalParts,
+            totalUsage: state.FileTotalTokens,
+            model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
+            maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
+        await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + state.FullOutputTextRaw);
+        Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
+
+        string refinementTargetFile = uniqueTargetFilePath;
+
+        if (_config.GenerateOffsetFiles) {
+            // New: Generate the offset version
+            // Note: The last part's StartTime is used as a reference point, but the overall offset should be partStartTimeSeconds from the respective part.
+            // We already accumulated the correctly offsetted text in fullOutputTextOffsetted within the loop.
+            string uniqueTargetFilePathOffset = ExtractionHelpers.GetUniqueTexPath(targetFilePathOffset);
+            await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + state.FullOutputTextOffsetted);
+            Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
+            refinementTargetFile = uniqueTargetFilePathOffset;
+        }
+
+        // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
+        // Warten, bis das Audio fertig ist, bevor das Refinement startet,
+        // da das Refinement die Audiodatei für die API benötigt!
+        if (state.AudioTrackExtractor.PendingTask != null) {
+            Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...");
+            await state.AudioTrackExtractor.PendingTask;
+        }
+
+        // LatexRefinementSession uses its own dedicated API key (resolved at the start of the processing loop)
+        // refinementClient is already initialized and the audio file was uploaded using it.
+
+        List<Part>? preUploadedAudioParts = null;
+        if (_config.EnableParallelFileUploads && state.PendingAudioUploadTask != null) {
+            Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss des parallelen Audio-Uploads...");
+            preUploadedAudioParts = await state.PendingAudioUploadTask;
+        }
+
+        // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
+        // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
+        var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
+        string audioFilePath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
+                               ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
+
+        Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
+        // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
+        var refinementSession = new LatexRefinementSession(
+            state.RefinementClient ?? _client,
+            _latexRefinementConfig!,
+            refinementTargetFile,
+            _config,
+            audioFilePath,
+            preUploadedAudioParts);
+
+        AttachmentHandler.HasJustUploaded = false;
+        await refinementSession.StartAsync();
     }
 
     private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
