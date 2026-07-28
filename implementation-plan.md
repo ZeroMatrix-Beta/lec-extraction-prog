@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phases 0–4 done, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off), **Phase 5 (full twin unification) declined — see §6.1**, **Phase 6 done**, **Phase 7 done**. This refactor is now essentially complete — everything in the original 8-phase plan is either done or explicitly declined with reasoning recorded. · **Pick up next:** (a) user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex when possible — the one piece of this session's work not verified against the real API; (b) otherwise, incremental common-helper extraction as areas get touched (see §6.1) is the ongoing mode of work, not a new phase · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phases 0–4 done, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off), **Phase 5 (full twin unification) declined — see §6.1**, **Phase 6 done**, **Phase 7 done**. This refactor is now essentially complete — everything in the original 8-phase plan is either done or explicitly declined with reasoning recorded. · **Pick up next:** §5 (console/UX cleanup) is now the live work list — item 9 (file-tree console spam) is the user's stated priority. Also: (a) user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex when possible — the one piece of this session's work not verified against the real API; (b) otherwise, incremental common-helper extraction as areas get touched (see §6.1) is the ongoing mode of work, not a new phase · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
@@ -1008,6 +1008,49 @@ own change, per your instruction.
    and a shared `SessionLogger`-style print helper, rather than a find/replace
    (some variants may be intentionally scoped, e.g. `[LaTeX Refinement] [FEHLER]`
    prefixing which subsystem failed).
+9. **Every system-instruction / history file is printed to the console twice
+   on session start** — user-reported (2026-07-28), and the most annoying
+   item on this list in day-to-day use. Two independent layers:
+   * `FileTreeRenderer.PrintFileTree(...)` renders the full recursive tree
+     *before* the "laden? (j/n)" confirm prompt — **12 call sites** across
+     `AiStudioAutoExtractionSession` (3), `VertexAutoExtractionSession` (3),
+     both chat sessions (2 each), `LatexRefinementSession` (1),
+     `FileTreeRenderer` itself (definition).
+   * Then, during the actual load, each file prints its own line again —
+     `"  [INFO] System Instruction geladen: {relativePath}"`
+     (`AiStudioAutoExtractionSession.cs:260`, `VertexAutoExtractionSession.cs:172`)
+     and `"  [INFO] History-Textdatei in System Instruction eingebunden: {relativePath}"`
+     (`AiStudioAutoExtractionSession.cs:283`).
+
+   With ~20 `SystemInstructionPaths` entries plus the whole
+   `transcription/training-history` directory, that's hundreds of lines
+   scrolled past before the session is even usable. Suggested shape: default
+   to a **summary** (`"  [INFO] 23 System-Instruction-Dateien geladen (4 Ordner, 1.2 MB)"`),
+   keep the full tree behind a config flag (e.g. `VerboseFileListing`, default
+   `false`) or an explicit REPL command. The tree still has real value when
+   first wiring up `SystemInstructionPaths` — this is about it not being the
+   *default* every single run. Note `PrintFileTree` and
+   `GenerateMarkdownFileTree` are **different** methods with different
+   purposes: the Markdown one feeds the actual prompt payload (Attention Map
+   Priming, see `Documentation.md` §4.2) and must **not** be touched — only
+   the console-printing one is noise.
+10. **`InlinePrecedingLecTexParts` is dead config on the AI Studio path.**
+    Found in passing during the Phase 7 rename sweep: `VertexAutoExtractionSession`
+    reads it (twice, in `BuildGenerationRequestAsync`), but
+    `AiStudioAutoExtractionSession` **never reads it at all** — `grep -rn
+    "InlinePrecedingLecTexParts" src/Extraction/AiStudioAutoExtractionSession*.cs`
+    returns nothing. It's still present and documented in
+    `AiStudioAutoExtractionConfig` (defaulting `true`), so on the backend the
+    user actually runs, toggling it silently does nothing. Either wire it up
+    on the AI Studio side (its prompt assembly always inlines preceding
+    `.tex` parts before the video, so `false` would be a real behavior
+    change) or delete it from that config and its JSON. **Decide which —
+    don't silently pick one**, since it changes what gets sent to a paid API.
+
+**Note (2026-07-28):** the "deliberately not executed now" framing above was
+written when the refactor was still in flight. The refactor has now landed
+(Phases 0–7 done or explicitly declined), so **this section is the actual
+next body of work**, not a parking lot. Item 9 is the user's stated priority.
 
 ---
 
