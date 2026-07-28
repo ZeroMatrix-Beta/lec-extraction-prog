@@ -17,4 +17,6 @@ public interface IAutoExtractionConfig {
     string FfmpegPreset { get; }
     bool DebugSendReferenceFile { get; }
     bool InlinePrecedingLecTexParts { get; }
+    bool VerboseConsoleOutput { get; }
 }
+

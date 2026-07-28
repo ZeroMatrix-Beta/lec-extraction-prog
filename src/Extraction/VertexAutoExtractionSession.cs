@@ -126,13 +126,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 var resolvedInstructionFiles = HistoryFileResolver.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
                 if (resolvedInstructionFiles.Count > 0) {
-                    FileTreeRenderer.PrintFileTree(resolvedInstructionFiles);
+                    FileTreeRenderer.PrintFileTree(resolvedInstructionFiles, _config.VerboseConsoleOutput);
                     List<string> distinctHistoryFiles = [];
                     if (_config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded) {
                         distinctHistoryFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
                         if (distinctHistoryFiles.Count > 0) {
                             Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
-                            FileTreeRenderer.PrintFileTree(distinctHistoryFiles);
+                            FileTreeRenderer.PrintFileTree(distinctHistoryFiles, _config.VerboseConsoleOutput);
                         }
                     }
 
@@ -198,7 +198,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             var distinctFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (distinctFiles.Count > 0) {
                 Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-                FileTreeRenderer.PrintFileTree(distinctFiles);
+                FileTreeRenderer.PrintFileTree(distinctFiles, _config.VerboseConsoleOutput);
                 if (_config.LoadHistoryIntoSystemInstruction) {
                     Console.Write("Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): ");
                 }
@@ -1627,9 +1627,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             int freshPartTokens = Math.Max(0, interactionInputTokens - interactionCachedTokens);
             int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
-            Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+            if (_config.VerboseConsoleOutput) {
+                Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
+                Console.WriteLine($"  [Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
+                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+            } else {
+                Console.WriteLine($"  [Tokens] Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out");
+            }
 
             fullResponse += chunkResp;
             await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.CurrentModel, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);

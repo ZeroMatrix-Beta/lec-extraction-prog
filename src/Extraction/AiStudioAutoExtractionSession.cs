@@ -177,7 +177,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             return true;
         }
 
-        FileTreeRenderer.PrintFileTree(resolvedInstructionFiles);
+        FileTreeRenderer.PrintFileTree(resolvedInstructionFiles, _config.VerboseConsoleOutput);
 
         // Optionally resolve history files that will be merged into the system instruction
         List<string> historyFilesForSystemInstruction = [];
@@ -186,7 +186,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             historyFilesForSystemInstruction = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (historyFilesForSystemInstruction.Count > 0) {
                 Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
-                FileTreeRenderer.PrintFileTree(historyFilesForSystemInstruction);
+                FileTreeRenderer.PrintFileTree(historyFilesForSystemInstruction, _config.VerboseConsoleOutput);
             }
         }
 
@@ -205,7 +205,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string? commonBase = FileTreeRenderer.FindCommonBaseDirectory(allPathsForBaseResolution);
 
         // Build the system instruction text from the instruction files
-        string instructionText = await BuildSystemInstructionTextAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase);
+        string instructionText = await BuildSystemInstructionTextAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase, _config.VerboseConsoleOutput);
 
         // If history should be merged into system instruction, do so now
         if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
@@ -217,7 +217,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Load all history files into the system instruction at once (non-batched)
                 Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
                 var instructionBuilder = new System.Text.StringBuilder(instructionText);
-                await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase);
+                await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase, _config.VerboseConsoleOutput);
                 _systemInstructionText = instructionBuilder.ToString();
                 if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
             }
@@ -225,18 +225,20 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             _historyWasLoaded = true;
         } else {
             _systemInstructionText = instructionText;
+            if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
         }
 
+        Console.WriteLine("\n  [OK] System Instructions erfolgreich geladen.");
         return true;
     }
 
     /// <summary>
-    /// [AI Context] Assembles the system instruction header, file tree, and file contents into a single string.
+    /// [AI Context] Builds the system instruction text from configured instruction files (and optional history file tree header).
     /// Does NOT include history files – those are appended separately via batching or bulk loading.
     /// [Human] Baut den System-Instruction-Text zusammen (Header + Dateibaum + Dateiinhalte).
     /// </summary>
     private static async Task<string> BuildSystemInstructionTextAsync(
-        List<string> instructionFiles, List<string> historyFiles, string? commonBase) {
+        List<string> instructionFiles, List<string> historyFiles, string? commonBase, bool verboseConsoleOutput = false) {
 
         var builder = new System.Text.StringBuilder();
         builder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
@@ -257,7 +259,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             string relativePath = ResolveRelativePath(instructionFilePath, commonBase);
             builder.AppendLine($"\n******\n------\n******\nHere is the file `{relativePath}`:\n");
             builder.AppendLine(await System.IO.File.ReadAllTextAsync(instructionFilePath));
-            Console.WriteLine($"  [INFO] System Instruction geladen: {relativePath}");
+            if (verboseConsoleOutput) {
+                Console.WriteLine($"  [INFO] System Instruction geladen: {relativePath}");
+            }
+        }
+        if (!verboseConsoleOutput && instructionFiles.Count > 0) {
+            Console.WriteLine($"  [INFO] {instructionFiles.Count} System-Instruction-Datei(en) geladen.");
         }
 
         return builder.ToString();
@@ -271,19 +278,26 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// Nicht-Text-Dateien (Bilder etc.) werden über die File API hochgeladen.
     /// </summary>
     private async Task AppendHistoryFilesToInstructionAsync(
-        List<string> historyFiles, System.Text.StringBuilder targetBuilder, string? commonBase) {
+        List<string> historyFiles, System.Text.StringBuilder targetBuilder, string? commonBase, bool verboseConsoleOutput = false) {
 
         List<string> nonTextFiles = [];
+        int textFileCount = 0;
         foreach (string historyFilePath in historyFiles) {
             string extension = Path.GetExtension(historyFilePath).ToLowerInvariant();
             if (extension is ".tex" or ".txt" or ".md" or ".json" or ".cs") {
                 string relativePath = ResolveRelativePath(historyFilePath, commonBase);
                 targetBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relativePath}`:\n");
                 targetBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(historyFilePath));
-                Console.WriteLine($"  [INFO] History-Textdatei in System Instruction eingebunden: {relativePath}");
+                textFileCount++;
+                if (verboseConsoleOutput) {
+                    Console.WriteLine($"  [INFO] History-Textdatei in System Instruction eingebunden: {relativePath}");
+                }
             } else {
                 nonTextFiles.Add(historyFilePath);
             }
+        }
+        if (!verboseConsoleOutput && textFileCount > 0) {
+            Console.WriteLine($"  [INFO] {textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
         }
 
         if (nonTextFiles.Count > 0) {
@@ -307,7 +321,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (resolvedHistoryFiles.Count == 0) return;
 
         Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        FileTreeRenderer.PrintFileTree(resolvedHistoryFiles);
+        FileTreeRenderer.PrintFileTree(resolvedHistoryFiles, _config.VerboseConsoleOutput);
 
         string confirmPrompt = _config.LoadHistoryIntoSystemInstruction
             ? "Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): "
@@ -1112,6 +1126,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Protokolliert eine Token-Analyse vor dem Senden der Anfrage (nur Diagnose-Ausgabe).
     /// </summary>
     private async Task LogTokenCountsAsync(List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles) {
+        if (!_config.VerboseConsoleOutput) return;
         try {
             Console.WriteLine("\n  [Token-Analyse] Berechne Token-Anzahl für die einzelnen Bestandteile...");
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
@@ -1232,9 +1247,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             int freshPartTokens = Math.Max(0, interactionInputTokens - interactionCachedTokens);
             int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
-            Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
-            Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+            if (_config.VerboseConsoleOutput) {
+                Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
+                Console.WriteLine($"  [Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
+                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+            } else {
+                Console.WriteLine($"  [Tokens] Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out");
+            }
 
             fullResponse += chunkResp;
             await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.CurrentModel, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);

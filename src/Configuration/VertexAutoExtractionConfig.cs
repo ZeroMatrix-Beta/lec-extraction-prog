@@ -61,6 +61,10 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Wenn aktiviert, werden vorherige .tex-Teile direkt vor dem Video im Prompt eingebettet. Dies ermöglicht schrittweises Prefix-Caching über aufeinanderfolgende Videoteile.
     public bool InlinePrecedingLecTexParts { get; set; } = true;
 
+    // [AI Context] Controls console verbosity. If false (default), suppresses verbose file trees, extra token count API calls, and long token summaries.
+    // [Human] Wenn false (Standard), werden Dateibäume und Token-Diagnosen auf der Konsole kompakt zusammengefasst.
+    public bool VerboseConsoleOutput { get; set; } = false;
+
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
     public bool GenerateAudioFile { get; set; } = true; // Set to true to match AiStudio

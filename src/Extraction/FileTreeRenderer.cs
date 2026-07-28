@@ -14,10 +14,16 @@ public static partial class FileTreeRenderer {
     /// <summary>
     /// [AI Context] Prints a list of file paths in a structured, hierarchical tree format showing files first, then folders.
     /// </summary>
-    public static void PrintFileTree(List<string> filePaths) {
+    public static void PrintFileTree(List<string> filePaths, bool verbose = false) {
         if (filePaths == null || filePaths.Count == 0) return;
 
         string? baseDir = FindCommonBaseDirectory(filePaths);
+        if (!verbose) {
+            string dirInfo = !string.IsNullOrEmpty(baseDir) ? $" in {baseDir}" : "";
+            Console.WriteLine($"  [INFO] {filePaths.Count} Datei(en){dirInfo} geladen.");
+            return;
+        }
+
         var root = BuildVirtualTree(filePaths, baseDir);
         if (!string.IsNullOrEmpty(baseDir)) {
             Console.WriteLine($"  📁 {baseDir}");

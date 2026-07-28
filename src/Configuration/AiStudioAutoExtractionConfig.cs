@@ -99,6 +99,10 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Wenn aktiviert, wird ein einfacher "Hello"-Roundtrip zum Debuggen gesendet.
     public bool DebugHelloRoundtrip { get; set; } = false;
 
+    // [AI Context] Controls console verbosity. If false (default), suppresses verbose file trees, extra token count API calls, and long token summaries.
+    // [Human] Wenn false (Standard), werden Dateibäume und Token-Diagnosen auf der Konsole kompakt zusammengefasst.
+    public bool VerboseConsoleOutput { get; set; } = false;
+
     // [AI Context] If true, commands FFmpeg to extract an AAC of the entire lecture video before chunking.
     // [Human] Wenn aktiviert, wird vor der Verarbeitung eine komplette AAC-Audiospur der Vorlesung extrahiert.
     public bool GenerateAudioFile { get; set; } = true;
