@@ -135,7 +135,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         // --- Phase 3: Warm-up handshake for System Instruction without history ---
-        if (!_historyWasLoaded && !string.IsNullOrWhiteSpace(_systemInstructionText)) {
+        if (_config.EnableImplicitPrefixCacheWarmup && !_historyWasLoaded && !string.IsNullOrWhiteSpace(_systemInstructionText)) {
             if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
         }
 
@@ -212,14 +212,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             _systemInstructionText = instructionText;
 
             if (_config.HistoryBatchCount > 0) {
-                if (!await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
+                if (_config.EnableImplicitPrefixCacheWarmup && !await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
             } else {
                 // Load all history files into the system instruction at once (non-batched)
                 Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
                 var instructionBuilder = new System.Text.StringBuilder(instructionText);
                 await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase);
                 _systemInstructionText = instructionBuilder.ToString();
-                if (!await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
+                if (_config.EnableImplicitPrefixCacheWarmup && !await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true)) return false;
             }
 
             _historyWasLoaded = true;
@@ -323,7 +323,9 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 _historyParts.AddRange(uploadedParts);
                 _historyWasLoaded = true;
                 Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
-                await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true);
+                if (_config.EnableImplicitPrefixCacheWarmup) {
+                    await WarmUpSystemInstructionCacheAsync(includeDummyPart0: true);
+                }
             } else {
                 Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
             }

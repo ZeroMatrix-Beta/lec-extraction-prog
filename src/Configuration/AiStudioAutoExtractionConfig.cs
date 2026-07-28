@@ -173,5 +173,12 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     // [Human] Spezielle Wartezeit in Sekunden während des History-Aufbaus (Standard: 65s).
     public int HistoryRateLimitDelaySeconds { get; set; } = 65;
 
+    // [AI Context] If true (default, matching the existing always-on behavior), performs the implicit
+    // prefix-cache warm-up handshake(s) (WarmUpSystemInstructionCacheAsync / WarmUpWithBatchedHistoryAsync)
+    // during session setup. Set false to skip the handshake entirely (e.g. for a quick debug run).
+    // [Human] Wenn true (Standard, unverändertes Verhalten), wird der Cache-Warmup-Handshake beim Setup
+    // durchgeführt. Auf false setzen, um den Handshake komplett zu überspringen.
+    public bool EnableImplicitPrefixCacheWarmup { get; set; } = true;
+
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

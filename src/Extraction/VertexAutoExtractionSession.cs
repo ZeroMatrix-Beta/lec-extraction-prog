@@ -249,6 +249,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         await _sessionLogger.LogSessionSetupAsync();
+
+        // [AI Context] Implicit prefix-cache warm-up, ported from AiStudioAutoExtractionSession. Runs once
+        // here, before InitializeContextCachingAsync creates Vertex's explicit CachedContent -- the two
+        // mechanisms are independent and can both be active.
+        if (_config.EnableImplicitPrefixCacheWarmup) {
+            if (!await WarmUpSystemInstructionCacheAsync()) return false;
+        }
+
         return true;
     }
 
@@ -1356,17 +1364,19 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         return fileProcessingSuccess;
     }
 
+    /// <summary>
+    /// [AI Context] Builds the dynamic (post-video) half of the per-part prompt: lecture_metadata,
+    /// source_video, segment_info, duration_and_timestamps. The static half (merging_and_scope,
+    /// segment_start) moved to GetStaticPromptBeginning and is now sent as a Part BEFORE the video instead
+    /// — Phase 4.5 Vertex port (2026-07-28), reusing the exact same wording Vertex already sent, just
+    /// relocated so the pre-video Part becomes a stable, cacheable prefix like AI Studio's.
+    /// [Human] Baut die dynamische Hälfte des Prompts (nach dem Video). Die statische Hälfte steht jetzt
+    /// in GetStaticPromptBeginning und wird vor dem Video gesendet.
+    /// </summary>
     private async Task<SegmentUpload> PrepareAndUploadPartAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
         string dateContext = dateInfo.GetFormattedContext();
-        string prompt = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.";
-
-        if (partNumber == 1) {
-            prompt = $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}), and week number ({dateInfo.WeekInfo ?? "N/A"}) are important metadata since this is part 1 of the lecture. " + prompt;
-        }
-        else {
-            prompt = $"The lecture took place on {dateContext} (Day of the week: {dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown"}). This is not so important since this is part {partNumber} of the lecture. " + prompt;
-        }
+        string weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown";
 
         double partDurationSeconds = await FfmpegToolkit.GetVideoDurationAsync(partFile);
         TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
@@ -1375,21 +1385,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         TimeSpan fullVideoTime = TimeSpan.FromSeconds(fullOriginalVideoDuration);
         string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
 
-        prompt += "\n\n<context_and_parameters>\n" +
-                  "IMPORTANT: The System Instructions (System Prompt) contain the absolute rules, syntax specifications, and constraints for this transcription and MUST be followed strictly. The parameters below only specify details for this video fragment:\n\n" +
-                  $"<parameter name=\"source_video\">You must transcribe the video attachment named `{Path.GetFileName(partFile)}` verbatim according to the system instructions. Ensure you transcribe every single spoken word up to the very last second of the video, even if it cuts off mid-sentence.</parameter>\n" +
-                  $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long. The duration of the entire lecture video is {fullDurationString}.</parameter>\n" +
-                  $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).</parameter>\n";
+        string dateMetadata = partNumber == 1
+            ? $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({weekday}), and week number ({dateInfo.WeekInfo ?? "N/A"}) are important metadata since this is part 1 of the lecture."
+            : $"The lecture took place on {dateContext} (Day of the week: {weekday}). This is not so important since this is part {partNumber} of the lecture.";
 
-        if (partNumber != 1) {
-            prompt += "<parameter name=\"segment_start\">\n" +
-                      "1. Start the transcription EXACTLY where the audio begins in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction.\n" +
-                      "2. If the previous part ended in the middle of an environment (like a `proof`, `short-proof`, or `math-stroke`), you MUST logically continue that environment in this part (e.g., start with `\\begin{proof}` or `\\begin{math-stroke}` if the professor is still doing the proof/derivation). However, you must still transcribe the spoken words exactly from where this new video segment begins.\n" +
-                      "</parameter>\n";
-        }
-
-        prompt += "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts (i.e. do not try to fix the cut). Focus solely on transcribing this fragment as it is. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n" +
-                  "</context_and_parameters>";
+        string prompt =
+            $"<parameter name=\"lecture_metadata\">{dateMetadata}</parameter>\n" +
+            $"<parameter name=\"source_video\">You must transcribe the video attachment named `{Path.GetFileName(partFile)}` verbatim according to the system instructions. Ensure you transcribe every single spoken word up to the very last second of the video, even if it cuts off mid-sentence.</parameter>\n" +
+            $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long. The duration of the entire lecture video is {fullDurationString}.</parameter>\n" +
+            $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).</parameter>\n" +
+            "</context_and_parameters>";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
         if (!uploadSuccess || attachmentParts.Count == 0) return new SegmentUpload(false, null, []);
@@ -1423,24 +1428,33 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     private async Task<(GenerateContentConfig RequestConfig, List<Content> History)> BuildGenerationRequestAsync(string partFile, int partNumber, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var userPromptParts = new List<Part>();
 
-        // 1. If InlinePrecedingLecTexParts is enabled, inline previous .tex files BEFORE the video payload to enable implicit prefix caching across parts.
+        // 1. Pre-video Part: static prompt beginning (merging_and_scope / segment_start), optionally
+        //    preceded by the dummy-part0.tex anchor (EnableImplicitPrefixCacheWarmup) and/or inlined
+        //    reference-context .tex files (InlinePrecedingLecTexParts). This Part is bit-identical between
+        //    the warm-up handshake and the real Part-1 turn, letting Vertex's implicit prefix cache match
+        //    it — Phase 4.5 port (2026-07-28) of AI Studio's equivalent BuildGenerationRequestAsync step.
+        var preVideoBuilder = new System.Text.StringBuilder();
+        if (_config.EnableImplicitPrefixCacheWarmup) {
+            preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n");
+        }
         if (_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
-            string contextText =
+            preVideoBuilder.Append(
                 "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
                 "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
                 "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
                 "CRITICAL RULES:\n" +
                 "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
                 $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
-                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+                "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n");
             foreach (var texFile in previousTexFiles) {
                 Console.WriteLine($"    - {Path.GetFileName(texFile)}");
                 string content = await System.IO.File.ReadAllTextAsync(texFile);
-                contextText += $"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n";
+                preVideoBuilder.Append($"<reference_context file=\"{Path.GetFileName(texFile)}\">\n{content}\n</reference_context>\n\n");
             }
-            userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
         }
+        preVideoBuilder.Append(GetStaticPromptBeginning(partNumber));
+        userPromptParts.Add(new Part { Text = preVideoBuilder.ToString() });
 
         // 2. Primary payload (attachmentParts / video)
         userPromptParts.AddRange(attachmentParts);

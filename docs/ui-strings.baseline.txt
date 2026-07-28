@@ -197,6 +197,7 @@ Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'
 Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort (Max Tokens?). Bereite automatisierten 'Continue'-Prompt vor...");
 Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...");
 Console.WriteLine("\n  [Cache-Warming Step 0] Warmup für Basis System Instruction...");
+Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um den stabilen Prompt-Anfang bei Google im impliziten Cache zu aktivieren...");
 Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...");
 Console.WriteLine("\n  [Debug] Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
 Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");

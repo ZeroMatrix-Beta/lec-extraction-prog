@@ -111,5 +111,17 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public bool UseGoogleSearch { get; set; } = false;
     public string FfmpegPreset { get; set; } = "fast";
     public int RateLimitDelaySeconds { get; set; } = 130;
+
+    // [AI Context] If true, ports AiStudioAutoExtractionSession's implicit prefix-cache warm-up to Vertex:
+    // a dummy-part0.tex anchor + the merging_and_scope/segment_start static preamble are sent as a Part
+    // BEFORE the video on every request (instead of only after it), and a one-time handshake primes
+    // Google's implicit prefix cache during setup. This is independent of (and can run alongside)
+    // UseContextCaching's explicit CachedContent mechanism, which still only covers the system
+    // instruction text, not this per-part preamble. Default false since this is new, untested behavior
+    // for Vertex (unlike AI Studio, where the equivalent flag defaults true to preserve existing behavior).
+    // [Human] Wenn true, wird der von AI Studio portierte implizite Prefix-Cache-Warmup auch für Vertex
+    // aktiviert (zusätzlich zum bestehenden expliziten Context-Cache).
+    public bool EnableImplicitPrefixCacheWarmup { get; set; } = false;
+
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }
