@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off), **Phase 5 (full twin unification) declined — see §6.1** · **Pick up next:** user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex when possible; otherwise incremental common-helper extraction as areas get touched (see §6.1) is the ongoing mode of work now · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phases 0–4 done, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off), **Phase 5 (full twin unification) declined — see §6.1**, **Phase 6 done**, **Phase 7 done**. This refactor is now essentially complete — everything in the original 8-phase plan is either done or explicitly declined with reasoning recorded. · **Pick up next:** (a) user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex when possible — the one piece of this session's work not verified against the real API; (b) otherwise, incremental common-helper extraction as areas get touched (see §6.1) is the ongoing mode of work, not a new phase · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
@@ -881,6 +881,28 @@ types, commit pending in this session.**
 4. `Program.Activate_Vertex` → `AppConfigOptions.IsVertexAiEnabled`, read from
    `appsettings.json` instead of a recompile-to-change static field.
 
+**Outcome (2026-07-28) — done, 1 commit.** `Program.cs`: 366 → ~34 lines
+(`Main` + exception handling only). New `MainMenu.cs` (the loop),
+`SourceFolderMenu.cs`/`ApiKeyProfileMenu.cs` (the two sub-menus, was
+`ConfigureSourceFoldersMenu`/`ConfigureApiKeysMenu`), `SessionFactory.cs`
+(the config-load/client-build/session-construct wiring). Item 2's
+`ConfigEditor<T>.Edit(…)` helper was **not** built — on inspection the
+`Load()`→mutate→`Save()` triads differ enough per call site (different
+config types, different mutation callbacks, some nested in loops) that a
+generic wrapper wouldn't actually collapse much; not worth the abstraction.
+Item 3's `ApiKeyProfileResolver.Resolve(profile, envNames)` added to
+`GoogleAi` (not `App`, to avoid `ConsoleUi` needing to depend on `App`) and
+wired into all 3 real occurrences (2 in `Program.cs`, defensively verified
+against a 3rd equivalent-but-not-identical copy in
+`ConfigurationPrompts.ConfirmOrChangeApiKeyProfile`, which was also switched
+over since it was provably equivalent). Item 4 done as
+`AppConfig.IsVertexAiEnabled`, all 10 call sites across `Program.cs`,
+`RefinementUiHelper.cs`, `VertexAutoExtractionSession.cs` updated; the
+`appsettings.json` key added explicitly for discoverability (default
+`false`, preserving current behavior). Verified: build 0/0, 85 tests green,
+UI-string diff showed exactly the 4 expected "Program.Activate_Vertex" →
+"AppConfig.IsVertexAiEnabled" message updates.
+
 ### Phase 7 — Naming pass and documentation · low risk
 
 Systematic rename of everything left. Representative table:
@@ -918,6 +940,40 @@ Systematic rename of everything left. Representative table:
 
 Then update `README.md`, `Documentation.md`, `GEMINI.md` and
 `.agents/rules/AGENTS.md` to the new structure.
+
+**Outcome (2026-07-28) — done, 3 commits.** Every rename in the table above
+applied and verified (`grep` swept for stragglers after each batch — none
+found beyond intentional historical "was X" doc-comment notes). Two
+exceptions, both already resolved before this phase started: `startAudioTask`
+→ `AudioTrackExtractor.EnsureStarted()` was done back in Phase 3;
+`FfmpegInteractiveSession`'s file was already correctly named (Phase 3
+outcome notes flagged this table item as stale even then). Generic-name
+renames (`files`/`f`, `hasErrors`, `channel`/`producerTask`, `result`) were
+scoped to their specific target methods via line-range-limited `sed` rather
+than a blind global replace, since those identifiers recur elsewhere in the
+same files with unrelated meaning. The 4 type renames
+(`ApiResilience`→`ApiRetryPolicy`, `AttachmentHandler`→`AttachmentUploader`,
+`StringHelper`→`StringExtensions`, `LatexTimestampHelper`→`LatexTimestampAdjuster`)
+included matching file and test-file renames via `git mv`. `PrintCommandsMenu`/
+`ShowCommands` → `WriteCommandHelp` is a naming-consistency pass only — each
+class keeps its own separate method body, not a functional merge (same
+category as the already-confirmed-identical `SupportsThinking` copies, but
+these four bodies are NOT identical, so they stay four separate methods
+under one shared name).
+
+`README.md` and `Documentation.md` (English + German, both files) had their
+architecture sections rewritten to the current `src/` layout, `LectureExtraction.*`
+namespaces, and post-rename type names — they still described the pre-Phase-1
+flat-namespace layout. `.agents/rules/AGENTS.md` and `gemini.md` (the
+plan's "`GEMINI.md`") were checked and found to have no stale structural
+references — coding-style rules and system-instruction content don't
+reference the C# project layout, nothing to update.
+
+Verified per batch: build 0/0, 85 tests green throughout. UI-string diff
+showed only the expected string-interpolation-expression-name changes that
+mechanically follow from renaming a field/variable used inside a `$"..."`
+literal (e.g. `{_speed}` → `{_playbackSpeedMultiplier}`) — runtime-visible
+output never changed; baseline updated deliberately after each such batch.
 
 ---
 
