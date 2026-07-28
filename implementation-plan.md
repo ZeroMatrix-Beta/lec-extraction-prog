@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phase 8 Steps 1 & 2 done** — Step 1: Verbosity flag (`VerboseConsoleOutput`) added; Step 2: Severity-tag vocabulary (`[INFO]`, `[WARNUNG]`, `[FEHLER]`, `[OK]`, `[DEBUG]`) and menu invalid choice prompts standardized across all 16 files. · **Phases 0–7 closed**. · **Next up: Phase 8 Step 3 — Correctness fixes (SelectModel freetext append & (j/n) confirm prompts)**. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phase 8 Steps 1, 2, & 3 done** — Step 1: Verbosity flag (`VerboseConsoleOutput`); Step 2: Severity tags & menu prompts; Step 3: Freetext model append/save in `SelectModel` & prompt safety via `IsAffirmativeResponse`. · **Phases 0–7 closed**. · **Next up: Phase 8 Step 4 — Model config consolidation**. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
