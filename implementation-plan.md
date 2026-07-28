@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–7 closed** — 0, 1, 2, 3, 4, 4.5, 6, 7 done; Phase 5 (full twin unification) **declined**, see §6.1. The structural refactor is complete. Vertex implicit prefix-cache warmup also ported this session (flag defaults off, **not** verified against the real API). · **Pick up next: Phase 8 — Console & UX cleanup**, the only open phase. Execution order, verification approach and exit criteria in §4; the 16-item backlog with file paths and evidence in §5. Start with Phase 8 step 1 (verbosity flag — the user's stated priority, and the only item that also saves RPM quota). · **Two things that need the user, not an agent:** (a) smoke-test `EnableImplicitPrefixCacheWarmup` on Vertex when possible; (b) decide §5 item 10 (`InlinePrecedingLecTexParts` — dead on the AI Studio path; wire up or delete, both change what reaches a paid API). · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phases 0–7 closed** — 0, 1, 2, 3, 4, 4.5, 6, 7 done; Phase 5 (full twin unification) **declined**, see "Superseding decision". The structural refactor is complete. Vertex implicit prefix-cache warmup also ported this session (flag defaults off, **not** verified against the real API). · **Pick up next: Phase 8 — Console & UX cleanup**, the only open phase. Execution order, verification approach and exit criteria in "Phased execution"; the 16-item backlog with file paths and evidence in "Phase 8 backlog". Start with Phase 8 step 1 (verbosity flag — the user's stated priority, and the only item that also saves RPM quota). · **Two things that need the user, not an agent:** (a) smoke-test `EnableImplicitPrefixCacheWarmup` on Vertex when possible; (b) decide "Phase 8 backlog" item 10 (`InlinePrecedingLecTexParts` — dead on the AI Studio path; wire up or delete, both change what reaches a paid API). · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
@@ -103,7 +103,7 @@ changes for existing Vertex users until they opt in.
 stays disabled (`Program.Activate_Vertex` stays hardcoded `false`, per the
 user — not a call this document makes unilaterally) and the user confirmed
 no further refactoring effort should go into it for now. This **supersedes**
-§6's "keep and unify behind `IAiBackend`" framing for the remainder of this
+"Decisions taken"'s "keep and unify behind `IAiBackend`" framing for the remainder of this
 session's work: `VertexAutoExtractionSession.cs` and
 `DirectAiChatSessionVertex.cs` were left exactly as Phase 3 finished them —
 not decomposed alongside their AI Studio twins in Phase 4. Whether Vertex
@@ -126,7 +126,7 @@ itself were merged.
 
 Phase 4's god-method decomposition is now done for every AI-Studio-reachable
 file (`AiStudioAutoExtractionSession.cs`, `LatexRefinementSession.cs`,
-`DirectAiChatSessionAiStudio.cs`) — see §4 Phase 4 outcome for the full list
+`DirectAiChatSessionAiStudio.cs`) — see "Phased execution" Phase 4 outcome for the full list
 of splits and commits. `VertexAutoExtractionSession.ProcessFilesAsync` /
 `GenerateTexFromUploadedPartAsync` and `DirectAiChatSessionVertex`'s
 equivalents were deliberately **not** mirrored, per the Vertex decision above.
@@ -151,7 +151,7 @@ unmerged — real per-backend/per-callsite divergence, not drift to fix):
 
 ---
 
-## 0. Baseline (measured, not guessed)
+## Baseline (measured, not guessed)
 
 | Metric | Value |
 |---|---|
@@ -166,9 +166,9 @@ This baseline matters: **the build is already at 0/0**, which is the bar rule 7 
 
 ---
 
-## 1. What is actually wrong (evidence, not opinion)
+## What is actually wrong (evidence, not opinion)
 
-### 1.1 Twin classes — the single biggest problem
+### Twin classes — the single biggest problem
 
 Four pairs of classes are structural clones that were copy-pasted and then drifted:
 
@@ -195,7 +195,7 @@ AI Studio session grew `WarmUpSystemInstructionCacheAsync` and the dummy-part0
 prefix cache; the Vertex session grew `InitializeContextCachingAsync` and
 `CleanupBucketAsync`).
 
-### 1.2 Verbatim duplicated helpers
+### Verbatim duplicated helpers
 
 * `private static bool SupportsThinking(string)` — copy-pasted **5×**
   (both extraction sessions, both chat sessions, `LatexRefinementSession`).
@@ -204,7 +204,7 @@ prefix cache; the Vertex session grew `InitializeContextCachingAsync` and
   `CleanupBucketAsync` (Vertex extraction), `CleanupGcsBucketAsync` (AI Studio
   chat), `ForcePurgeGcsBucketAsync` (Vertex chat).
 
-### 1.3 God methods
+### God methods
 
 | Method | File | Lines |
 |---|---|---|
@@ -226,7 +226,7 @@ header formatting, offset-file generation, token accounting, failure rollback,
 refinement-client construction and refinement session launch. That is at least
 **twelve** distinct responsibilities in one method body.
 
-### 1.4 Nesting
+### Nesting
 
 Lines indented ≥ 5 levels / ≥ 6 levels:
 
@@ -242,7 +242,7 @@ Lines indented ≥ 5 levels / ≥ 6 levels:
 Almost all of it is `if (x != null) { if (y) { foreach { if { … } } } }` that
 guard clauses would flatten.
 
-### 1.5 Anonymous tuples used as domain types
+### Anonymous tuples used as domain types
 
 The channel payload in `ProcessFilesAsync` is a **six-element tuple**:
 
@@ -257,7 +257,7 @@ Two more tuple-returning methods compound it:
 `(string texOutput, int inputTokens, int outputTokens, int cachedTokens)`.
 Token counts are then tracked in four parallel loose `int` locals.
 
-### 1.6 Namespaces that describe nothing
+### Namespaces that describe nothing
 
 | Type | Current namespace | Problem |
 |---|---|---|
@@ -273,7 +273,7 @@ There is no root namespace at all — nine unrelated top-level namespaces
 `DocumentUtilities`, `GoogleGenAi`, `DirectChatAiInteraction`,
 `DirectChatAiInteraction.AiStudio`, `DirectChatAiInteraction.Vertex`).
 
-### 1.7 File / type mismatches and multi-type files
+### File / type mismatches and multi-type files
 
 * `GeminiClientBuilder.cs` contains `GoogleAiClientBuilder`.
 * `FfmpegInteractiveMenu.cs` contains `FfmpegInteractiveSession`.
@@ -283,7 +283,7 @@ There is no root namespace at all — nine unrelated top-level namespaces
 * `DirectAiChatSessionAiStudioConfig.cs` contains two types.
 * `YouTubeTranscriptionTask.cs` contains two types.
 
-### 1.8 Dead files
+### Dead files
 
 | File | Content |
 |---|---|
@@ -302,13 +302,13 @@ Loose scripts and artefacts also sit in the project root: `fix_vertex.py`,
 `get_git.py`, `read_git_obj.py`, `git_show_result.txt` (94 KB),
 `chat_log.md` (**11 MB**), `build_test_bin/`.
 
-### 1.9 Telescoping constructors
+### Telescoping constructors
 
 `LatexRefinementSession` has **four** public constructors (lines 29, 39, 49, 59)
 that differ only in how much of the same state they set — the classic signal for
 an options object.
 
-### 1.10 Naming
+### Naming
 
 Representative offenders: `Program.Activate_Vertex` (snake_case public property,
 also a global mutable flag), `_speed`, `f`, `result`, `hasErrors`, `channel`,
@@ -320,12 +320,12 @@ concerns).
 
 ---
 
-## 2. Guiding constraints
+## Guiding constraints
 
 1. **Behaviour is frozen.** Every user-facing console string stays
    byte-identical, in German, in the same order. The UI is the de-facto
    specification and, with no tests, our only characterization harness.
-   UI improvements are collected in §5 and executed **later**, separately.
+   UI improvements are collected in "Phase 8 backlog" and executed **later**, separately.
 2. **`dotnet build` ends every phase at `0 Warning(s), 0 Fehler`.**
 3. **`.agents/rules/AGENTS.md` is binding** — `Count > 0` over `Any()`,
    target-typed `new()`, `[GeneratedRegex]`, no unused parameters, no silent
@@ -337,9 +337,9 @@ concerns).
 
 ---
 
-## 3. Target architecture
+## Target architecture
 
-### 3.1 Folders and namespaces
+### Folders and namespaces
 
 Root namespace `LectureExtraction`, one folder per bounded context:
 
@@ -403,7 +403,7 @@ src/
     ├─ SessionLogger.cs, StringExtensions.cs, PathHelpers.cs
 ```
 
-### 3.2 The backend abstraction (removes the twins)
+### The backend abstraction (removes the twins)
 
 ```csharp
 namespace LectureExtraction.GoogleAi;
@@ -433,7 +433,7 @@ public interface IAiBackend {
 * Vertex only: explicit context caching → `ContextCacheCoordinator`;
   GCS purge → `GcsWorkspace`.
 
-### 3.3 Domain records replacing the tuples
+### Domain records replacing the tuples
 
 ```csharp
 public readonly record struct TokenUsage(int Input, int Output, int Cached) {
@@ -461,7 +461,7 @@ The four parallel `fileTotal*Tokens` locals collapse into one accumulating
 
 ---
 
-## 4. Phased execution
+## Phased execution
 
 Ordered so that mechanical, compiler-verified changes come first and risky
 semantic changes come last, on an already-clean base.
@@ -535,9 +535,9 @@ Two findings worth recording:
 
 Purely mechanical and fully compiler-verified.
 
-1. Create the `src/` tree from §3.1; move every file into it.
+1. Create the `src/` tree from "Folders and namespaces"; move every file into it.
 2. Rewrite namespaces to the `LectureExtraction.*` scheme.
-3. Split the multi-type files (§1.7); rename files so filename == type name
+3. Split the multi-type files ("File / type mismatches and multi-type files"); rename files so filename == type name
    (`GeminiClientBuilder.cs` → `GoogleAiClientBuilder.cs`,
    `FfmpegInteractiveMenu.cs` → `FfmpegInteractiveSession.cs`).
 4. Replace the fully-qualified noise that the flat layout forced —
@@ -550,7 +550,7 @@ Purely mechanical and fully compiler-verified.
 **Outcome — done, in commits `2a2ec17` and `08eebec` (executed together with part of
 Phase 3, ahead of this plan document).**
 
-* `src/` now holds one folder per bounded context exactly as in §3.1
+* `src/` now holds one folder per bounded context exactly as in "Folders and namespaces"
   (`App`, `Configuration`, `Extraction`, `Refinement`, `Chat`, `GoogleAi`
   (+ `GoogleAi/ContextCache`), `Media`, `Latex`, `ConsoleUi`, `Infrastructure`).
 * Every file's namespace is `LectureExtraction.<Folder>` — verified by grepping
@@ -568,7 +568,7 @@ Phase 3, ahead of this plan document).**
 
 ### Phase 2 — Domain model · low risk
 
-1. Introduce the records of §3.3.
+1. Introduce the records of "Domain records replacing the tuples".
 2. Replace the 6-tuple channel, the two tuple-returning methods and the four
    loose token counters, in **both** extraction sessions.
 
@@ -600,12 +600,12 @@ both twins call. The twins still exist after this phase — they just get thin.
 
 Also split the two grab-bags:
 * `ExtractionHelpers` (611 lines) → `HistoryFileResolver`, `FileTreeRenderer`,
-  `LatexResponseCleaner` (moved to `Latex/`, matching §3.1),
-  `InteractiveDelay` (moved to `ConsoleUi/`, matching §3.1),
+  `LatexResponseCleaner` (moved to `Latex/`, matching "Folders and namespaces"),
+  `InteractiveDelay` (moved to `ConsoleUi/`, matching "Folders and namespaces"),
   `VideoBatchSelector`, `YouTubeTaskPrompt`, `ModelSyncService`. **Done.**
   `ExtractionHelpers` itself now only holds `GetUniqueTexPath` and
   `LogSystemInstructionDumpAsync` (deliberately not split further — no
-  natural home for either in the target §3.1 list). Every extracted method
+  natural home for either in the target "Folders and namespaces" list). Every extracted method
   body was diffed byte-for-byte against the original before being wired up,
   including the unicode/emoji-bearing ones (📁 tree icons, ⏳ delay marker,
   the `‐`-`―` copy-suffix regex) after a transcription slip on the
@@ -634,7 +634,7 @@ god-method decomposition is for.
 **Progress note (2026-07-27):** Items with byte-identical duplicate bodies
 (confirmed by diffing before merging) are done — those carried zero
 judgment-call risk. Everything else in this table involves code that has
-already visibly drifted between the twins (see §1.1) and needs an actual
+already visibly drifted between the twins (see "Twin classes") and needs an actual
 side-by-side read, not a mechanical move.
 
 `SystemInstructionLoader` was investigated and downgraded: the genuinely
@@ -695,7 +695,7 @@ just drift:
   two call sites, but the German console messages printed at each step
   genuinely differ (e.g. `"Nur noch {remainingMin} min verbleibend..."` vs
   `"TTL knapp ({remainingMin} min)..."`) — merging them would violate the
-  frozen-UI-strings rule (§2.1) for a ~20-line saving.
+  frozen-UI-strings rule (see "Guiding constraints") for a ~20-line saving.
 * One safe win *was* found: `ExecuteGenerativeStepAsync` itself had **two**
   near-identical inline cache-creation blocks (initial miss vs.
   expired-cache recreate) — pure same-file, same-method duplication with no
@@ -789,9 +789,9 @@ from the class, it just names the pieces. The class still does all of:
 * YouTube task handling, upload prep, system-instruction loading
 
 This is a **class-level** decomposition problem, distinct from — and doable
-independently of — the twin-merge/`IAiBackend` question in §6 and Phase 5.
+independently of — the twin-merge/`IAiBackend` question in "Decisions taken" and Phase 5.
 Extracting `PrefixCachePrimer`, `ExtractionRepl`, and `SystemInstructionLoader`
-(already named in §3.1's target architecture) out of this one file would cut
+(already named in "Folders and namespaces"'s target architecture) out of this one file would cut
 it roughly in half without touching the Vertex question at all. **Candidate
 Phase 4.5, not yet started:**
 
@@ -802,7 +802,7 @@ Phase 4.5, not yet started:**
    extraction pipeline beyond reading `_config`/`_client`.
 2. `PrefixCachePrimer` — `GetDummyPart0Content`, `WarmUpSystemInstructionCacheAsync`,
    `WarmUpWithBatchedHistoryAsync`. Same content the Phase 3 investigation
-   found has no Vertex equivalent (§ above) — extracting it now is a pure
+   found has no Vertex equivalent (see the Phase 3 progress note above) — extracting it now is a pure
    move, no merge-with-Vertex risk.
 3. Re-measure line count and nesting after 1–2; decide whether a third pass
    (e.g. pulling `PrepareAndUploadPartAsync` + upload-scheduling into its own
@@ -820,7 +820,7 @@ types, commit pending in this session.**
   `_dummyPart0Content` + `GetDummyPart0Content()`, `WarmUpWithBatchedHistoryAsync`,
   `WarmUpSystemInstructionCacheAsync`. Same verbatim-extraction method.
 * `AiStudioAutoExtractionSession.cs` itself: 1809 → 1239 lines (−31%).
-* **Deliberate deviation from §3.1's naming:** the plan's target architecture
+* **Deliberate deviation from "Folders and namespaces"'s naming:** the plan's target architecture
   names these as standalone types (`ExtractionRepl`, `PrefixCachePrimer`) that
   would take their dependencies via constructor injection. That was *not* done.
   Both extracted regions read and write a lot of the session's mutable state
@@ -854,7 +854,7 @@ types, commit pending in this session.**
   `lec-extraction-prog.exe` instance the user asked to leave running), 85
   tests green, empty UI-string diff.
 
-### Phase 5 — Unify the twins · highest risk · see §6 open decision
+### Phase 5 — Unify the twins · highest risk · see "Decisions taken" open decision
 
 1. Introduce `IAiBackend` + `AiStudioBackend` + `VertexBackend`.
 2. Merge `AiStudioAutoExtractionSession` + `VertexAutoExtractionSession` →
@@ -977,33 +977,33 @@ output never changed; baseline updated deliberately after each such batch.
 
 ### Phase 8 — Console & UX cleanup · low risk · **next up**
 
-The one phase that deliberately **breaks** the frozen-UI-strings rule of §2.1
+The one phase that deliberately **breaks** the frozen-UI-strings rule in "Guiding constraints"
 — that rule existed to make the refactor safe, and the refactor is done. Its
 job now is to change what the user sees, on purpose, on a clean base.
 
-**Backlog: the 16 items in §5**, each with file paths, line numbers, and
+**Backlog: the 16 items in "Phase 8 backlog"**, each with file paths, line numbers, and
 evidence. Not duplicated here. Suggested execution order, grouped so each
 commit is one coherent behavioural change:
 
-1. **Verbosity flag** (§5 items 9, 11, 12) — one new config flag gating the
+1. **Verbosity flag** ("Phase 8 backlog" items 9, 11, 12) — one new config flag gating the
    recursive file-tree print, the 3-per-part diagnostic `CountTokensAsync`
    calls, and the triple token report. Biggest quality-of-life win, and the
    only item that also **saves RPM quota** rather than just reducing noise.
    User's stated priority.
-2. **Severity-tag vocabulary** (§5 items 5, 8) — one canonical tag per level
+2. **Severity-tag vocabulary** ("Phase 8 backlog" items 5, 8) — one canonical tag per level
    plus a shared print helper, replacing 20+ variant spellings across 624
    strings. Mechanical but wide; do it in its own commit.
-3. **Correctness fixes** (§5 items 13, 14) — `SelectModel`'s missing append,
+3. **Correctness fixes** ("Phase 8 backlog" items 13, 14) — `SelectModel`'s missing append,
    and the `(j/n)` prompts that silently accept a typo as "no" and let a paid
    run proceed with no system instructions. Small, independent, high value.
-4. **Model config consolidation** (§5 item 16) — move the chat sessions'
+4. **Model config consolidation** ("Phase 8 backlog" item 16) — move the chat sessions'
    hardcoded `AvailableModels` into JSON, then retire `AppConfig`'s six dead
    `Default*` model params (moving sane defaults onto the config classes, not
-   deleting them outright — see the caveat in §5).
-5. **Menu plumbing** (§5 items 1, 2, 3, 4, 6, 15) — config caching, hiding the
+   deleting them outright — see the caveat in "Phase 8 backlog").
+5. **Menu plumbing** ("Phase 8 backlog" items 1, 2, 3, 4, 6, 15) — config caching, hiding the
    disabled Vertex option, one shared `MenuPrompt`, killing the `__EXIT__`
    magic string, table-driven numbering, and a `show config` command.
-6. **Decision required before any code moves:** §5 item 10
+6. **Decision required before any code moves:** "Phase 8 backlog" item 10
    (`InlinePrecedingLecTexParts` is dead on the AI Studio path — wire it up or
    delete it). Changes what reaches a paid API either way; **ask, don't pick.**
 
@@ -1013,17 +1013,17 @@ gate**: read it to confirm every change is one you meant, then update
 `docs/ui-strings.baseline.txt` as part of the same commit. A clean diff in this
 phase means you probably didn't do anything.
 
-*Exit:* build 0/0, tests green, every §5 item either done or explicitly
+*Exit:* build 0/0, tests green, every "Phase 8 backlog" item either done or explicitly
 declined with a reason recorded, baseline regenerated.
 
 ---
 
-## 5. Phase 8 backlog — console & UX changes (deferred during the refactor, now live)
+## Phase 8 backlog — console & UX changes (deferred during the refactor, now live)
 
 Collected during Phases 0–7 and deliberately deferred, because changing console
 output while refactoring would have destroyed the UI-string diff as a
 regression check. The refactor has landed, so this list is now the backlog for
-**Phase 8** (see §4 for its execution order, verification approach, and exit
+**Phase 8** (see "Phased execution" for its execution order, verification approach, and exit
 criteria). Items are numbered in discovery order, **not** priority order — the
 grouping in Phase 8 is what to follow.
 
@@ -1178,20 +1178,20 @@ grouping in Phase 8 is what to follow.
     `IsVertexAiEnabled`, Vertex project/location) are genuinely global and
     should stay.
 
-**Execution order for the above lives in Phase 8 (§4)**, which groups these 16
+**Execution order for the above lives in Phase 8 ("Phased execution")**, which groups these 16
 items into six commits, gives the phase its verification approach (the
 UI-string diff inverts from pass/fail gate to review tool) and its exit
 criteria. This section is the evidence; Phase 8 is the plan.
 
 ---
 
-## 6. Decisions taken
+## Decisions taken
 
 **Vertex AI — keep and unify behind `IAiBackend`.** `Program.Activate_Vertex` is
 hard-coded `false`, so ~2 500 lines of Vertex code are currently unreachable, but
 the capability is being preserved rather than deleted. Consequences:
 
-* `IAiBackend` (§3.2) is part of the target architecture, and Phase 5 merges both
+* `IAiBackend` ("The backend abstraction") is part of the target architecture, and Phase 5 merges both
   twin pairs onto it.
 * The Vertex path cannot be validated end-to-end (no reachable execution, paid
   API). It is therefore refactored **conservatively**: mechanical moves and
@@ -1205,7 +1205,7 @@ the capability is being preserved rather than deleted. Consequences:
 `tests/LectureExtraction.Tests` (xUnit) covering the pure logic listed in
 Phase 0 step 3.
 
-### 6.1 Superseding decision (2026-07-28): Phase 5 (full `IAiBackend` twin unification) is declined
+### Superseding decision (2026-07-28): Phase 5 (full `IAiBackend` twin unification) is declined
 
 Reverses the "keep and unify behind `IAiBackend`" framing above for the
 merge itself (the underlying "keep Vertex, don't delete it" call stands —
@@ -1238,7 +1238,7 @@ Vertex's copies were byte-identical; `GetStaticPromptBeginning` and
 `WarmUpSystemInstructionCacheAsync` were *not* merged the same way — real
 wording/signature differences, per the established discipline.
 
-`IAiBackend` (§3.2) and the rest of Phase 5's original plan (merging the
+`IAiBackend` ("The backend abstraction") and the rest of Phase 5's original plan (merging the
 session classes, chat sessions, config twins, `LatexRefinementSession`'s
 constructors into `RefinementOptions`) stay documented above as a record of
 what was considered, but are **not going to be executed** absent a real
@@ -1247,7 +1247,7 @@ validation possible).
 
 ---
 
-## 7. Risk register
+## Risk register
 
 | Risk | Mitigation |
 |---|---|
@@ -1260,7 +1260,7 @@ validation possible).
 
 ---
 
-## 8. Suggested order of work
+## Suggested order of work
 
 ```
 Phase 0    Safety net              ~small     ✅ done
@@ -1269,13 +1269,13 @@ Phase 2    Domain records          ~small     ✅ done
 Phase 3    Extract services        ~large     ✅ done  ← biggest single win
 Phase 4    Split god methods       ~large     ✅ done
 Phase 4.5  Split the god class     ~medium    ✅ done  (added mid-flight)
-Phase 5    Unify twins             ~medium    ❌ declined — see §6.1
+Phase 5    Unify twins             ~medium    ❌ declined — see "Superseding decision"
 Phase 6    Entry point + menus     ~small     ✅ done
 Phase 7    Naming + docs           ~medium    ✅ done
-Phase 8    Console & UX cleanup    ~medium    ← NEXT, backlog in §5
+Phase 8    Console & UX cleanup    ~medium    ← NEXT, backlog in "Phase 8 backlog"
 ```
 
-Phases 0–4 were worth doing regardless of how §6 was decided, and removed the
+Phases 0–4 were worth doing regardless of how "Decisions taken" was decided, and removed the
 great majority of the spaghetti. Phase 3 alone cut roughly 1 500 duplicated
 lines.
 
