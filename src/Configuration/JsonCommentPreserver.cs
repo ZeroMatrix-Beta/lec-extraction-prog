@@ -63,13 +63,13 @@ internal static partial class JsonCommentPreserver {
     /// to keep it where it was, or <c>null</c> to drop it.
     /// [Human] Führt den kompletten Vorgang aus: aktualisierte Werte, ursprüngliche Kommentare.
     /// </summary>
-    internal static string Merge(string existingJson, JObject updated, Func<AnchoredComment, AnchoredComment?>? remapAnchor = null) {
+    internal static string Merge(string existingJson, JObject updated, Func<AnchoredComment, JObject, AnchoredComment?>? remapAnchor = null) {
         var target = JObject.Parse(existingJson, new JsonLoadSettings { CommentHandling = CommentHandling.Load, LineInfoHandling = LineInfoHandling.Load });
         UpdatePropertiesPreservingComments(target, updated);
 
         var orphanObjectComments = ExtractOrphanObjectComments(existingJson);
         if (remapAnchor != null) {
-            orphanObjectComments = [.. orphanObjectComments.Select(remapAnchor).Where(a => a.HasValue).Select(a => a!.Value)];
+            orphanObjectComments = [.. orphanObjectComments.Select(a => remapAnchor(a, updated)).Where(a => a.HasValue).Select(a => a!.Value)];
         }
 
         string serialized = target.ToString(Formatting.Indented);

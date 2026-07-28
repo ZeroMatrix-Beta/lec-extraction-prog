@@ -50,9 +50,11 @@ public class SessionLogger(SessionLoggerConfig config) {
         _loadedHistory = loadedHistory;
     }
 
+    private string GetChatLogFilePath() => !string.IsNullOrWhiteSpace(_currentSessionLogPath) ? Path.Combine(_currentSessionLogPath, "chat_log.md") : "chat_log.md";
+
     public async Task LogSessionSetupAsync() {
         string setupLog = $"\n=== Neue Chat-Sitzung ({DateTime.Now}) ===\n- System Prompt geladen: {_loadedSystemInstruction}\n- History geladen: {_loadedHistory}\n---\n";
-        await File.AppendAllTextAsync("chat_log.md", setupLog);
+        await File.AppendAllTextAsync(GetChatLogFilePath(), setupLog);
     }
 
     public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName, int inputTokens = 0, int outputTokens = 0, int cachedTokens = 0) {
@@ -60,7 +62,7 @@ public class SessionLogger(SessionLoggerConfig config) {
         string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
         int freshTokens = Math.Max(0, inputTokens - cachedTokens);
         string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Total Prompt {inputTokens:N0}, Gecacht {cachedTokens:N0}, Frisch {freshTokens:N0}, Output {outputTokens:N0})*" : "";
-        await File.AppendAllTextAsync("chat_log.md", $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
+        await File.AppendAllTextAsync(GetChatLogFilePath(), $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
 
         // LaTeX Response speichern
         // [AI Context] Isolates the raw model output into dedicated .tex files.

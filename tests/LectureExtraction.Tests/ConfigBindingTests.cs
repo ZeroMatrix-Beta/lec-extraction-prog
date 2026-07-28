@@ -104,4 +104,56 @@ public class ConfigBindingTests {
                 $"'AppConfig.{property.Name}' exists in appsettings.json but has no property on AppConfigOptions.");
         }
     }
+
+    [Fact]
+    public void ConfigMigrator_MigratesLegacyFlatKeys_ToNestedSections() {
+        var legacyJson = new JObject {
+            ["Temperature"] = 0.42f,
+            ["TopP"] = 0.95f,
+            ["Model"] = new JArray("gemini-3.6-flash", "gemini-3.5-flash"),
+            ["CurrentModelIndex"] = 1,
+            ["UseContextCaching"] = true,
+            ["ContextCachingMinutes"] = 30,
+            ["ProjectId"] = "my-project",
+            ["ActiveApiProfile"] = 2,
+            ["SourceFolder"] = @"C:\lectures"
+        };
+
+        bool migrated = ConfigMigrator.Migrate(legacyJson);
+
+        Assert.True(migrated);
+        Assert.NotNull(legacyJson["Generation"]);
+        Assert.Equal(0.42f, legacyJson["Generation"]!["Temperature"]!.Value<float>());
+
+        Assert.NotNull(legacyJson["Model"]);
+        Assert.Equal(1, legacyJson["Model"]!["CurrentIndex"]!.Value<int>());
+        Assert.Equal(2, (legacyJson["Model"]!["Available"] as JArray)!.Count);
+
+        Assert.NotNull(legacyJson["ContextCaching"]);
+        Assert.True(legacyJson["ContextCaching"]!["Enabled"]!.Value<bool>());
+
+        Assert.NotNull(legacyJson["Endpoint"]);
+        Assert.Equal("my-project", legacyJson["Endpoint"]!["ProjectId"]!.Value<string>());
+
+        Assert.NotNull(legacyJson["ApiKey"]);
+        Assert.Equal(2, legacyJson["ApiKey"]!["ActiveProfile"]!.Value<int>());
+
+        Assert.NotNull(legacyJson["Paths"]);
+        Assert.Equal(@"C:\lectures", legacyJson["Paths"]!["SourceFolder"]!.Value<string>());
+    }
+
+    [Fact]
+    public void ClearCollectionsRecursively_ClearsInitializedCollections() {
+        var dummy = new AiStudioAutoExtractionConfig {
+            Model = ["a", "b"]
+        };
+        Assert.True(dummy.Model.Length > 0);
+
+        typeof(ConfigLoader<AiStudioAutoExtractionConfig>)
+            .GetMethod("ClearCollectionsRecursively", BindingFlags.NonPublic | BindingFlags.Static)!
+            .Invoke(null, [dummy]);
+
+        Assert.Empty(dummy.Model);
+    }
 }
+

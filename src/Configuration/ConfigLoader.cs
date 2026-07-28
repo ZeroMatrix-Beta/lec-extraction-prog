@@ -8,39 +8,58 @@ namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// Generic configuration loader implementing the hierarchy:
-/// corresponding .json > appconfig.json > C# static variable > C# app static
+/// corresponding .json > appsettings.json > C# default properties.
+/// Runs ConfigMigrator before binding to ensure legacy flat JSON keys are migrated seamlessly.
 /// </summary>
 public static class ConfigLoader<T> where T : class, new() {
     public static T Load(string? sectionName = null) {
         sectionName ??= typeof(T).Name;
         var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string fileName = $"{typeof(T).Name}.json";
+        string filePath = Path.Combine(basePath, fileName);
 
-        // Build a single configuration object with a clear hierarchy.
-        // The last source added wins for keys at the same path.
+        // Run JSON migrator on disk file if legacy flat keys exist
+        if (File.Exists(filePath)) {
+            try {
+                string rawText = File.ReadAllText(filePath);
+                if (!string.IsNullOrWhiteSpace(rawText)) {
+                    var jObj = JObject.Parse(rawText);
+                    if (ConfigMigrator.Migrate(jObj, typeof(T))) {
+                        string migrated = JsonCommentPreserver.Merge(rawText, jObj, ConfigMigrator.RemapAnchor);
+                        File.WriteAllText(filePath, migrated);
+                    }
+                }
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"\n[ConfigMigrator Warnung] Migration in '{fileName}' fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
+
+        // Build configuration object with clear hierarchy.
         var configuration = new ConfigurationBuilder()
             .SetBasePath(basePath)
-            .AddJsonFile("appsettings.json", optional: true) // 2. Base settings from global file.
-            .AddJsonFile($"{typeof(T).Name}.json", optional: true) // 3. Specific file overrides global.
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile(fileName, optional: true)
             .Build();
 
-        // 1. Start with a new instance, which will have the C# default values.
         var config = new T();
 
-        // Bind from the "AppConfig:TypeName" section of the combined configuration.
-        // This handles values defined within the AppConfig block in appsettings.json.
         configuration.GetSection("AppConfig").GetSection(sectionName).Bind(config);
 
         ClearCollectionsRecursively(config);
 
-        // Bind from the root of the combined configuration.
-        // This allows the specific {TypeName}.json to have settings at the root level,
-        // overriding any values that were previously bound.
         configuration.Bind(config);
 
         return config;
     }
 
-    private static void ClearCollectionsRecursively(object? obj) {
+    /// <summary>
+    /// [AI Context] Recursively clears initialized collections (arrays, lists) on the default C# instance
+    /// before binding configuration sources. This prevents binding from appending duplicate entries
+    /// to arrays or lists that have non-empty C# default initializers.
+    /// [Human] Leert enthaltene Collections rekursiv vor dem Binden von Konfigurationen, damit Standardwerte nicht doppelt angehängt werden.
+    /// </summary>
+    internal static void ClearCollectionsRecursively(object? obj) {
         if (obj == null) return;
         var type = obj.GetType();
         if (type.IsPrimitive || type == typeof(string) || type.IsValueType) return;
@@ -66,19 +85,17 @@ public static class ConfigLoader<T> where T : class, new() {
     }
 
     /// <summary>
-    /// [AI Context] Serializes the configuration object to a formatted JSON string while preserving existing JSON comments and formatting from the target file.
-    /// The comment-preservation mechanics live in <see cref="JsonCommentPreserver"/>; this method
-    /// only owns the file read and the fall-back-to-plain-serialization behaviour on failure.
+    /// [AI Context] Serializes the configuration object to a formatted JSON string while preserving existing JSON comments and formatting.
     /// [Human] Speichert die Konfiguration in die JSON-Datei und sorgt dafür, dass bestehende Kommentare nicht verloren gehen.
     /// </summary>
     private static string SerializePreservingComments(string filePath, T config) {
         if (File.Exists(filePath)) {
             try {
                 string existingJson = File.ReadAllText(filePath);
-                return JsonCommentPreserver.Merge(existingJson, JObject.FromObject(config));
+                return JsonCommentPreserver.Merge(existingJson, JObject.FromObject(config), ConfigMigrator.RemapAnchor);
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[AppConfig Warnung] Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden. Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}");
+                Console.WriteLine($"\n[AppConfig Warnung] Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden: {ex.GetType().Name} - {ex.Message}");
             }
         }
         return JsonConvert.SerializeObject(config, Formatting.Indented);

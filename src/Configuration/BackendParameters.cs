@@ -1,36 +1,30 @@
-using System;
 using System.Text.Json.Serialization;
 
 namespace LectureExtraction.Configuration;
 
+/// <summary>
+/// [AI Context] Composed container holding AI generation, model selection, and context caching parameters.
+/// [Human] KI-Parameter-Container zusammengesetzt aus Generierung, Modellauswahl und Context Caching.
+/// </summary>
 public class BackendParameters {
-    public float Temperature { get; set; } = AppConfig.DefaultTemperature;
-    public float TopP { get; set; } = 1.0f;
-    public int TopK { get; set; } = 10;
-    public int MaxOutputTokens { get; set; } = 65535;
-    public string[] Model { get; set; } = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"];
-    // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
-    public int CurrentModelIndex { get; set; } = 0;
-    [JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string CurrentModel {
-        get => Model.Length > 0 ? Model[Math.Clamp(CurrentModelIndex, 0, Model.Length - 1)] : "";
-        set {
-            int idx = Math.Clamp(CurrentModelIndex, 0, Model.Length > 0 ? Model.Length - 1 : 0);
-            if (Model.Length == 0) Model = [value];
-            else Model[idx] = value;
-        }
-    }
-    public int? ThinkingBudget { get; set; } = AppConfig.DefaultThinkingBudget;
-    public string? ThinkingLevel { get; set; } = AppConfig.DefaultThinkingLevel;
+    public GenerationParameters Generation { get; set; } = new();
+    public ModelSelection ModelSelection { get; set; } = new();
+    public ContextCacheSettings ContextCaching { get; set; } = new();
 
-    // [AI Context] If true, system instructions are cached on Google Cloud servers.
-    // [Human] Wenn aktiviert, werden System Instructions im Cache gespeichert.
-    public bool UseContextCaching { get; set; } = false;
-    public int ContextCachingMinutes { get; set; } = 15;
-    public int ContextCachingIncrementMinutes { get; set; } = 30;
+    // Delegating properties for backward compatibility
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public float Temperature { get => Generation.Temperature; set => Generation.Temperature = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public float TopP { get => Generation.TopP; set => Generation.TopP = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int TopK { get => Generation.TopK; set => Generation.TopK = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int MaxOutputTokens { get => Generation.MaxOutputTokens; set => Generation.MaxOutputTokens = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int? ThinkingBudget { get => Generation.ThinkingBudget; set => Generation.ThinkingBudget = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string? ThinkingLevel { get => Generation.ThinkingLevel; set => Generation.ThinkingLevel = value; }
 
-    // [AI Context] Minimum remaining TTL in minutes before automatic pre-step cache extension is triggered.
-    // [Human] Schwellenwert in Minuten: Wenn der Cache kürzer als dieser Wert gültig ist, wird er vor dem nächsten Schritt automatisch verlängert.
-    public int ContextCachingMinimumRemainingMinutes { get; set; } = 10;
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string[] Model { get => ModelSelection.Available; set => ModelSelection.Available = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int CurrentModelIndex { get => ModelSelection.CurrentIndex; set => ModelSelection.CurrentIndex = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string CurrentModel { get => ModelSelection.Current; set => ModelSelection.Current = value; }
+
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public bool UseContextCaching { get => ContextCaching.Enabled; set => ContextCaching.Enabled = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int ContextCachingMinutes { get => ContextCaching.Minutes; set => ContextCaching.Minutes = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int ContextCachingIncrementMinutes { get => ContextCaching.IncrementMinutes; set => ContextCaching.IncrementMinutes = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int ContextCachingMinimumRemainingMinutes { get => ContextCaching.MinimumRemainingMinutes; set => ContextCaching.MinimumRemainingMinutes = value; }
 }

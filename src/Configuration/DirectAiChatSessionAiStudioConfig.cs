@@ -5,39 +5,38 @@ namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// [AI Context] DTO for Direct AI Chat Session (AI Studio) specific configurations.
-/// Separated from VertexAI to prevent accidental contamination of free-tier and enterprise logic.
+/// Composes shared building blocks (ApiKeyProfile, WorkspacePaths, ContextSources, ModelSelection).
 /// </summary>
 public class DirectAiChatSessionAiStudioConfig {
-    // [AI Context] Selects the environment variable API key profile to use (1-3).
-    public int ActiveApiProfile { get; set; } = int.TryParse(System.Environment.GetEnvironmentVariable("ACTIVE_GEMINI_PROFILE", EnvironmentVariableTarget.User), out int val) ? val : 1;
-    public string[] AiStudioApiKeyEnvNames { get; set; } = [
-        "API_KEY-automated-content-extraction",
-        "API_KEY-ai-studio-test-project-1",
-        "API_KEY-ai-studio-test-project-2",
-        "API_KEY-ai-studio-test-project-3"
-    ];
-    public string UploadFolder { get; set; } = AppConfig.UploadFolder;
-    public string[] HistoryPreloadPaths { get; set; } = AppConfig.HistoryPreloadPaths;
-    public string LogFolder { get; set; } = AppConfig.LogFolder;
+    public ApiKeyProfile ApiKey { get; set; } = new();
+    public WorkspacePaths Paths { get; set; } = new() {
+        UploadFolder = AppConfig.UploadFolder,
+        LogFolder = AppConfig.LogFolder
+    };
+    public ContextSources Sources { get; set; } = new() {
+        HistoryPreloadPaths = AppConfig.HistoryPreloadPaths,
+        SystemInstructionPaths = string.IsNullOrEmpty(AppConfig.SystemInstructionPath) ? [] : [AppConfig.SystemInstructionPath]
+    };
+    public ModelSelection ModelSelection { get; set; } = new() {
+        Available = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"]
+    };
+
     public string GcsBucketName { get; set; } = "biran-linalg-source-material";
-    public string SystemInstructionPath { get; set; } = AppConfig.SystemInstructionPath;
     public string[] IncludePaths { get; set; } = [
         @"D:\lecture-videos\d-und-a/",
         @"D:\lecture-videos\d-und-a/new"
     ];
-    public string[] Model { get; set; } = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"];
-    // [AI Context] Zero-based index into Model[] indicating the currently chosen model. Persisted to JSON so the user's selection survives restarts.
-    public int CurrentModelIndex { get; set; } = 0;
-    [JsonIgnore]
-    [Newtonsoft.Json.JsonIgnore]
-    public string CurrentModel {
-        get => Model.Length > 0 ? Model[Math.Clamp(CurrentModelIndex, 0, Model.Length - 1)] : "";
-        set {
-            int idx = Math.Clamp(CurrentModelIndex, 0, Model.Length > 0 ? Model.Length - 1 : 0);
-            if (Model.Length == 0) Model = [value];
-            else Model[idx] = value;
-        }
-    }
     public bool UseGoogleSearch { get; set; } = false;
-    public DirectAiChatSessionAiStudioGenerationConfig AI { get; set; } = new DirectAiChatSessionAiStudioGenerationConfig();
+    public DirectAiChatSessionAiStudioGenerationConfig AI { get; set; } = new();
+
+    // Delegating properties for backward compatibility
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int ActiveApiProfile { get => ApiKey.ActiveProfile; set => ApiKey.ActiveProfile = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string[] AiStudioApiKeyEnvNames { get => ApiKey.EnvNames; set => ApiKey.EnvNames = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string UploadFolder { get => Paths.UploadFolder; set => Paths.UploadFolder = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string LogFolder { get => Paths.LogFolder; set => Paths.LogFolder = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string[] HistoryPreloadPaths { get => Sources.HistoryPreloadPaths; set => Sources.HistoryPreloadPaths = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string SystemInstructionPath { get => Sources.SystemInstructionPaths.Length > 0 ? Sources.SystemInstructionPaths[0] : ""; set => Sources.SystemInstructionPaths = string.IsNullOrEmpty(value) ? [] : [value]; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string[] Model { get => ModelSelection.Available; set => ModelSelection.Available = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int CurrentModelIndex { get => ModelSelection.CurrentIndex; set => ModelSelection.CurrentIndex = value; }
+    [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string CurrentModel { get => ModelSelection.Current; set => ModelSelection.Current = value; }
 }

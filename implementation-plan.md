@@ -1,6 +1,20 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phase 8 Steps 1, 2, & 3 done** — Step 1: Verbosity flag (`VerboseConsoleOutput`); Step 2: Severity tags & menu prompts; Step 3: Freetext model append/save in `SelectModel` & prompt safety via `IsAffirmativeResponse`. · **Phases 0–7 closed**. · **Next up: Phase 8 Step 4 — Model config consolidation**. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phases 0–9 closed.** Phase 8 (Console & UX) steps 1–3 done; steps 4–6 redistributed to Phases 9–12. Phase 8.5c (member indexes & AGENTS.md rule), Phase 8.5a (REPL deletion & mode menu streamlining), and Phase 9 (Configuration consolidation: shared building blocks, ConfigMigrator with comment preservation, AppConfig cleanup, ConfigLoader fixes, SessionLogger chat_log pathing) are **DONE**. · **Pick up next: Phase 10 — Spectre.Console UI.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Known gap:** `docs/ui-strings.baseline.txt` has not been regenerated since Phase 7 — scheduled as Phase 10 step 0. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+
+**Phase numbering note (2026-07-28).** Phase 8 originally carried a 16-item
+console backlog grouped into six steps. Steps 1–3 are done; steps 4–6 were too
+large to sit inside one phase once the config and UI work was scoped properly,
+so they became phases of their own:
+
+| Old | New home |
+|---|---|
+| Phase 8 step 4 — model config consolidation | **Phase 9** (Configuration consolidation) |
+| Phase 8 step 5 — menu plumbing | **Phase 10** (Spectre.Console UI) |
+| Phase 8 step 6 — `InlinePrecedingLecTexParts` decision | **Phase 12** (decision taken, see there) |
+
+The 16-item backlog below is kept as the evidence trail; each item now carries
+its status.
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
@@ -975,57 +989,102 @@ mechanically follow from renaming a field/variable used inside a `$"..."`
 literal (e.g. `{_speed}` → `{_playbackSpeedMultiplier}`) — runtime-visible
 output never changed; baseline updated deliberately after each such batch.
 
-### Phase 8 — Console & UX cleanup · low risk · **next up**
+### Phase 8 — Console & UX cleanup · low risk · ✅ **steps 1–3 DONE**, 4–6 redistributed
 
 The one phase that deliberately **breaks** the frozen-UI-strings rule in "Guiding constraints"
 — that rule existed to make the refactor safe, and the refactor is done. Its
 job now is to change what the user sees, on purpose, on a clean base.
 
-**Backlog: the 16 items in "Phase 8 backlog"**, each with file paths, line numbers, and
-evidence. Not duplicated here. Suggested execution order, grouped so each
-commit is one coherent behavioural change:
+**Outcome (2026-07-28), 3 feature commits + 2 review fixes:**
 
-1. **Verbosity flag** ("Phase 8 backlog" items 9, 11, 12) — one new config flag gating the
-   recursive file-tree print, the 3-per-part diagnostic `CountTokensAsync`
-   calls, and the triple token report. Biggest quality-of-life win, and the
-   only item that also **saves RPM quota** rather than just reducing noise.
-   User's stated priority.
-2. **Severity-tag vocabulary** ("Phase 8 backlog" items 5, 8) — one canonical tag per level
-   plus a shared print helper, replacing 20+ variant spellings across 624
-   strings. Mechanical but wide; do it in its own commit.
-3. **Correctness fixes** ("Phase 8 backlog" items 13, 14) — `SelectModel`'s missing append,
-   and the `(j/n)` prompts that silently accept a typo as "no" and let a paid
-   run proceed with no system instructions. Small, independent, high value.
-4. **Model config consolidation** ("Phase 8 backlog" item 16) — move the chat sessions'
-   hardcoded `AvailableModels` into JSON, then retire `AppConfig`'s six dead
-   `Default*` model params (moving sane defaults onto the config classes, not
-   deleting them outright — see the caveat in "Phase 8 backlog").
-5. **Menu plumbing** ("Phase 8 backlog" items 1, 2, 3, 4, 6, 15) — config caching, hiding the
-   disabled Vertex option, one shared `MenuPrompt`, killing the `__EXIT__`
-   magic string, table-driven numbering, and a `show config` command.
-6. **Decision required before any code moves:** "Phase 8 backlog" item 10
-   (`InlinePrecedingLecTexParts` is dead on the AI Studio path — wire it up or
-   delete it). Changes what reaches a paid API either way; **ask, don't pick.**
+1. ✅ **Verbosity flag** (backlog items 9, 11, 12) — commit `621873c`.
+   `VerboseConsoleOutput` added to both extraction configs and to
+   `IAutoExtractionConfig`, default `false`. Gates `FileTreeRenderer.PrintFileTree`
+   (now prints a one-line count summary instead of the recursive tree), the
+   per-file "System Instruction geladen" lines, and the triple token report
+   (compact one-liner instead). **`LogTokenCountsAsync` now early-returns when
+   non-verbose** — this is the RPM saving: 3 diagnostic `CountTokensAsync` calls
+   per video part, ~9 per 3-part video, no longer spent.
+2. ✅ **Severity-tag vocabulary** (items 5, 8) — commit `2ff85ba`.
+   `[ERROR]`/`[Error]`/`[Fehler]`/`[FAILED]` → `[FEHLER]`, `[Warning]` →
+   `[WARNUNG]`, `[Debug]` → `[DEBUG]`, and `"Invalid choice."` → German,
+   fixing the main-menu/sub-menu language split. 16 files.
+3. ✅ **Correctness fixes** (items 13, 14) — commit `bca5d2a`.
+   `SelectModel` now appends an unknown freetext model name to `Model[]`,
+   activates it, and persists via `ConfigLoader.Save`. New
+   `StringExtensions.IsAffirmativeResponse(defaultIfEmpty: true)` accepts
+   `j/ja/y/yes/1/true`, treats bare Enter as **yes**, and prints a loud
+   `[WARNUNG]` when the user declines — replacing
+   `if (ReadLine() != "j") return true;`, which silently returned *success* and
+   let a paid run proceed with an empty system instruction. 14 tests added.
+4. → **moved to Phase 9** (Configuration consolidation).
+5. → **moved to Phase 10** (Spectre.Console UI).
+6. → **decided, moved to Phase 12** (`InlinePrecedingLecTexParts`).
 
-*Verification for this phase differs from 0–7.* Build 0/0 and 85 tests green
-still apply, but the UI-string diff is now a **review tool, not a pass/fail
-gate**: read it to confirm every change is one you meant, then update
-`docs/ui-strings.baseline.txt` as part of the same commit. A clean diff in this
-phase means you probably didn't do anything.
+**⚠ The `docs/ui-strings.baseline.txt` regeneration required by this phase's
+verification was NOT done** in any of the three commits. The baseline still
+reflects Phase 7, so it currently shows ~27 accumulated differences and **is not
+a usable regression check**. Reviewed retrospectively — all differences are
+intentional — but regenerating it is carried forward as Phase 10 step 0.
 
-*Exit:* build 0/0, tests green, every "Phase 8 backlog" item either done or explicitly
-declined with a reason recorded, baseline regenerated.
+#### Phase 8 review fixes (2026-07-28)
+
+A review of the three commits above found two defects, both fixed:
+
+* **A stray `PrimePrefixCacheAsync` call** was added by `621873c` — a commit
+  about console verbosity — at the `else` of `shouldMergeHistory` in
+  `AiStudioAutoExtractionSession.TryLoadSystemInstructionWithHistoryAsync`.
+  Combined with the existing Phase-3 warm-up block in `EnsureSessionSetupAsync`,
+  that produced **two handshakes** when `_historyWasLoaded` stayed false, and a
+  **new** handshake (previously zero) when history loaded as a multi-turn
+  preamble.
+  **Reachability:** none on the live config —
+  `shouldMergeHistory = LoadHistoryIntoSystemInstruction && !_historyWasLoaded`,
+  and `AiStudioAutoExtractionConfig.json` sets that flag `true` with
+  `HistoryBatchCount: 3`, so the real run goes through
+  `WarmUpWithBatchedHistoryAsync` and never enters the `else`. A latent defect,
+  reachable by setting `LoadHistoryIntoSystemInstruction: false`.
+  **Resolution (user's decision): prime the base instruction first, always.**
+  The added call is kept; the **Phase-3 warm-up block in
+  `EnsureSessionSetupAsync` was deleted**. This also fixes a repeat-call
+  re-prime: `EnsureSessionSetupAsync` has two call sites, its load is guarded by
+  `if (string.IsNullOrEmpty(_systemInstructionText))`, but that block sat
+  outside the guard. `VertexAutoExtractionSession` needed no change — its
+  warm-up is already a single unconditional prime at the end of setup.
+* **`SelectModel` failed silently.** `bca5d2a` deleted the
+  `"Modell '{choice}' nicht in der Liste gefunden"` line while the new append
+  stayed gated behind `else if (choice.Contains('-'))`, so an out-of-range
+  number or any hyphen-less freetext did nothing with no output at all. Both
+  copies (`AiStudioAutoExtractionSession.Repl.cs`,
+  `VertexAutoExtractionSession.cs`) restructured into guarded early returns,
+  each rejection path now printing a `[FEHLER]` explanation. The hyphen check is
+  kept as a "does this look like a model id" guard so a stray keystroke is not
+  persisted to JSON.
+
+*Verified:* build 0/0, **99 tests green**.
+
+*Exit:* met for steps 1–3. Remaining backlog items live in Phases 9, 10 and 12.
 
 ---
 
-## Phase 8 backlog — console & UX changes (deferred during the refactor, now live)
+## Phase 8 backlog — console & UX changes (evidence trail)
 
 Collected during Phases 0–7 and deliberately deferred, because changing console
 output while refactoring would have destroyed the UI-string diff as a
-regression check. The refactor has landed, so this list is now the backlog for
-**Phase 8** (see "Phased execution" for its execution order, verification approach, and exit
-criteria). Items are numbered in discovery order, **not** priority order — the
-grouping in Phase 8 is what to follow.
+regression check. Items are numbered in discovery order, **not** priority order.
+
+**Status map (2026-07-28)** — this section is now the evidence trail; the work
+itself lives in the phases named below.
+
+| Item | Status |
+|---|---|
+| 5, 8 — tag/language consistency | ✅ done, Phase 8 step 2 (`2ff85ba`) |
+| 9, 11, 12 — file-tree spam, diagnostic `CountTokens`, token report | ✅ done, Phase 8 step 1 (`621873c`) |
+| 13, 14 — `SelectModel` append, `(j/n)` footgun | ✅ done, Phase 8 step 3 (`bca5d2a`) + review fix |
+| 16 — model config sprawl, `AppConfig` dead params | → **Phase 9** |
+| 1, 2, 3, 4, 6, 15 — menu plumbing, `show config` | → **Phase 10** (Spectre `SelectionPrompt` removes most structurally) |
+| 7 — `IProgressReporter` | → **Phase 10** (superseded: Spectre `Progress`/`Status` for non-streaming phases) |
+| 10 — `InlinePrecedingLecTexParts` | → **Phase 12**, decision taken |
 
 1. The main menu re-loads `AiStudioAutoExtractionConfig` on **every** loop
    iteration purely to render one status line — cache it, invalidate on edit.
@@ -1178,10 +1237,360 @@ grouping in Phase 8 is what to follow.
     `IsVertexAiEnabled`, Vertex project/location) are genuinely global and
     should stay.
 
-**Execution order for the above lives in Phase 8 ("Phased execution")**, which groups these 16
-items into six commits, gives the phase its verification approach (the
-UI-string diff inverts from pass/fail gate to review tool) and its exit
-criteria. This section is the evidence; Phase 8 is the plan.
+---
+
+## Phases 9–12 — the remaining work
+
+Scoped 2026-07-28 from three problems the user raised: config is scattered, the
+UI could be much better even if behaviour changes, and code quality. The
+frozen-UI-strings rule no longer applies from Phase 10 onward.
+
+### Decisions taken when scoping these
+
+| Question | Decision |
+|---|---|
+| Config scope | **Restructure the JSON files too**, not just the C# side — with an automatic migrator, so no hand-editing and no lost values |
+| UI scope | **Spectre.Console** — menus, config tables, status, and live progress for non-streaming phases; token streaming stays plain writes |
+| Vertex | **Keep and bring it along** — included in the config restructure and the UI migration |
+| `InlinePrecedingLecTexParts` | When `false`, **upload the preceding `.tex` files as attachments**, the way `.mp4` is uploaded |
+| That flag's default | **Both paths ship, defaulting to `true`** (today's behaviour); the default is set from measurement afterwards |
+| Uploaded `.tex` read-only marker | **Keep `ReferenceContextPreamble` and name the attached files** as read-only reference in the text Part |
+| Severity output | **Colour *and* the canonical bracket tag** — Spectre strips colour when piped, so colour alone loses the signal when capturing a run |
+| Disabled menu entries | **Dim and non-selectable** — visible with the reason, cursor skips them |
+
+**Cost of the Vertex decision, stated once:** `VertexAutoExtractionSession.cs`
+(1698 lines, largest file in the repo, 223 lines at ≥5 indent levels) and
+`DirectAiChatSessionVertex.cs` are unreachable at runtime
+(`AppConfig.IsVertexAiEnabled = false`) and cannot be smoke-tested. Including
+them roughly doubles the surface of Phases 9 and 10. Every Vertex-side change is
+compile-verified and diff-verified only.
+
+### Review findings behind these phases (measured 2026-07-28)
+
+**Configuration** — duplicated property blocks across the 7 config classes:
+
+| Block | Copies | Where |
+|---|---|---|
+| `Temperature`/`TopP`/`TopK`/`MaxOutputTokens`/`ThinkingBudget`/`ThinkingLevel` | **6** | `AppConfigOptions` (as `Default*`), both extraction configs, `BackendParameters`, both chat `*GenerationConfig` |
+| `Model[]` + `CurrentModelIndex` + `CurrentModel` | **5** | both extraction configs, `BackendParameters`, both chat configs |
+| `SystemInstructionPath(s)` | **6** | `AppConfigOptions`, both extraction, both chat, `RefinementStepConfig` |
+| `LogFolder` | **6** | `AppConfigOptions`, both extraction, both chat, `SessionLoggerConfig` |
+| `HistoryPreloadPaths` | **5** | `AppConfigOptions`, both extraction, both chat, `RefinementStepConfig` |
+| `UseContextCaching` + timing knobs | **4** | `BackendParameters`, `VertexAutoExtractionConfig`, both chat generation configs |
+| Vertex `ProjectId`/`Location`/`GcsBucketName` | **4** | `AppConfigOptions`, `VertexAutoExtractionConfig`, `LatexRefinementSessionConfig`, `DirectAiChatSessionVertexConfig` |
+| `ActiveApiProfile` + `AiStudioApiKeyEnvNames` | **3** | AI Studio extraction, AI Studio chat, `LatexRefinementSessionConfig` |
+
+Three mechanisms coexist: static `AppConfig` (binds `appsettings.json` once),
+`ConfigLoader<T>` (per-type JSON, writes back at runtime), and hardcoded C#
+arrays (`AvailableModels`, 4 session classes). 54 `Load()` sites, 28 `Save()`.
+
+Specific defects found:
+
+* `ConfigLoader<T>.Save` writes the file **twice** — once to
+  `AppDomain.CurrentDomain.BaseDirectory`, again to
+  `Directory.GetCurrentDirectory()` if different. This is why a running instance
+  dirties the working tree.
+* `ClearCollectionsRecursively` blanks **every** array between the two bind
+  passes, so an array absent from `{TypeName}.json` binds as **empty**, not at
+  its C# default. `AiStudioApiKeyEnvNames`'s 4-element default survives only
+  because the JSON repeats it. Load-bearing and untested.
+* `AppConfig` passes `reloadOnChange: true` but binds into `_options` once in
+  the static constructor — the flag does nothing.
+* `appsettings.json` has stub keys binding to nothing:
+  `"DirectAiChatSessionAiStudioConfig": null`, `"…VertexConfig": null`,
+  `"LatexRefinementSessionConfig": {}`, `"FfmpegSessionConfig": {}`.
+* `AppConfig` hardcodes folder **substructure** in C# (`"analysis2"`,
+  `@"d-und-a\new"`, …) — changing the layout needs a recompile.
+* `RefinementUiHelperConfig` has **no JSON in the repo**; one exists only in
+  `bin/Debug/net10.0/`, created by `Save` and invisible to version control.
+* `IAutoExtractionConfig` is now a **20**-member bag of unrelated flags (item 1
+  of Phase 8 added one), not an abstraction.
+
+**Console** — zero use of `Console.ForegroundColor` anywhere; all output is
+monochrome. `Console.Write*` is spread over 20+ files, 389 calls in the three
+session classes alone; there is no output abstraction, which is also why the
+pipeline cannot be tested without capturing stdout. `Console.ReadLine()` appears
+in 13 files with hand-rolled parsing each time. Three files
+(`DirectAiChatSessionAiStudio.cs`, `DirectAiChatSessionVertex.cs`,
+`AttachmentUploader.cs`) use `using static System.Console`, so a
+`Console.Write` grep misses every call in them.
+
+**Code quality** — largest remaining methods:
+
+| Lines | Location |
+|---|---|
+| 248 | `VertexAutoExtractionSession.ProcessPreparedVideoAsync` |
+| 246 | `RefinementUiHelper.StartInteractiveRefinementAsync` (in a 261-line file) |
+| 222 | `AttachmentUploader.UploadAndAttachFileAsync` |
+| 183 | `VertexAutoExtractionSession.ReplLoopAsync` |
+| 167 | `VertexAutoExtractionSession.SendHistoryHandshakeAsync` |
+| 159 | `DirectAiChatSessionVertex.StreamGeminiResponseAsync` |
+| 149 | `LatexRefinementSession.CompilePdfAsync` |
+| 147 | `AiStudioAutoExtractionSession.TranscribeSegmentsAsync` |
+
+`LatexRefinementSession.cs` is 1603 lines with 4 telescoping constructors but
+only **7 instance fields** — its length is method bodies, not state, which is
+why a `partial` split fits and a state-object redesign does not. Also:
+`SessionLogger` appends `chat_log.md` via a **relative** path, i.e. into the
+current working directory (the 11 MB file Phase 0 had to gitignore); and the
+repo root holds a stray `settings.json` that is a **VS Code** settings file,
+duplicating `.vscode/settings.json` and copied into every `bin/`.
+
+### Phase 8.5 — Reclaim the chat / REPL surface · **do before Phase 9**
+
+Raised by the user 2026-07-28: *"`AiStudioAutoExtractionSession.cs` is still
+1300 lines — what happened to the anti-spaghetti plans? Every time an AI works
+on this file, the tokens get burned."*
+
+**The measurement, and why the earlier phases didn't fix it:**
+
+| File | Lines | Methods |
+|---|---|---|
+| `AiStudioAutoExtractionSession.cs` | 1323 | 28 |
+| `…Session.Repl.cs` | 425 | 15 |
+| `…Session.PrefixCache.cs` | 199 | 2 |
+| **class total** | **1947** | **45** |
+
+At the Phase 0 baseline the class was **1928 lines in one file**. It is now
+*slightly larger overall*; reading it costs **~30 000 tokens**. Phase 4 split
+long methods (same class, more lines — names and signatures add text) and Phase
+4.5 moved regions into `partial` files (same class, no responsibility removed).
+Both outcomes were predicted and recorded at the time — see Phase 4's "Important
+caveat: Phase 4 fixed long methods, not the god class."
+
+**For token cost, `partial` is the worst of the options.** It cut the largest
+*file* from 1928 to 1323, but an agent reasoning about the type generally needs
+all three files, so it now pays 1947 lines instead of 1928.
+
+**What actually drives the cost** is not lines-per-file but how much must be read
+to change one thing safely — which is set by coupling to shared mutable state.
+The class has 15 private fields, and these are read *and written* across all
+three partial files: `_systemInstructionText`, `_historyWasLoaded`,
+`_historyParts`, `_sessionPreamble`, `_debugChatHistory`,
+`_sessionTotalInputTokens` / `Output` / `Cached`, `_sessionMaxFreshTokens`.
+Any method may touch any of them, so there is no safe way to read only part.
+
+#### 8.5a — Investigate deleting the in-session debug REPL
+
+**Decision: consider deletion, not extraction** (user, 2026-07-28).
+
+`AiStudioAutoExtractionSession.Repl.cs` is 425 lines / 15 methods:
+`ReplLoopAsync`, `WriteCommandHelp`, 9 `TryHandleReplX` handlers, `SelectModel`,
+`RunDiagnosticChatTurnAsync`, `StreamDebugChatResponseAsync`. It is a
+development aid reached from inside an extraction run, and it duplicates in
+miniature what the Direct chat sessions already do properly (8.5b).
+
+If it is genuinely unused, **deleting beats extracting** — 425 lines and 15
+methods gone rather than relocated, ~22 % of the class, and the
+`_debugChatHistory` field plus the diagnostic half of the token counters leave
+the shared-state set with it.
+
+Before deleting, check each command for a capability that exists nowhere else —
+`run refinement`, `youtube` and `convert all` in particular look like real
+entry points rather than debug aids, and may need to move to the main menu
+instead of being dropped. `SelectModel` is definitely still needed.
+
+#### 8.5b — Rebuild the Direct chat sessions on the extraction session's foundation
+
+User assessment (2026-07-28): the Direct chat sessions are *"very, very dated"*;
+rebuild them from scratch using `AiStudioAutoExtractionSession` as the
+reference, with its file-upload handling — **but keep Gemma support**.
+
+Current state: `DirectAiChatSessionAiStudio.cs` (792) +
+`DirectAiChatSessionVertex.cs` (638) = **1430 lines**, one of the twin pairs
+that Phase 5 declined to unify. Rebuilding rather than merging sidesteps the
+reason Phase 5 was declined: the risk there was a large un-smoke-testable
+*merge* of working code; a rewrite of a component the user considers obsolete is
+a different proposition.
+
+**Must be preserved — verify explicitly, it is easy to lose in a rewrite:**
+
+* **Gemma role handling.** `"gemma"` appears in **no** `AvailableModels` array —
+  it is reachable only by typing the model name as freetext, so the
+  `SelectModel` append path (Phase 8 step 3) and Phase 9's move of
+  `AvailableModels` into JSON both feed it. The behaviour itself lives at
+  [DirectAiChatSessionAiStudio.cs:519](src/Chat/DirectAiChatSessionAiStudio.cs:519)
+  and [DirectAiChatSessionVertex.cs:416](src/Chat/DirectAiChatSessionVertex.cs:416):
+  Gemma **pre-v4 does not support the `system` role**, so the system
+  instruction is folded into the first user turn instead. Pin this with a unit
+  test before the rewrite starts — it is a pure function of the model name.
+* The command surface: `attach`, `set temp`, `set tokens`,
+  `set thinking-budget`, `set thinking-level`, `set grounding`, `set model`,
+  `change-key`, `clear`, plus `GetInitialHistoryCommand`.
+* `CleanupGcsBucketAsync` / `ForcePurgeGcsBucketAsync` — the Phase 3 notes record
+  these two as genuinely different (free-tier guard, richer Vertex diagnostics),
+  so a unified rewrite must consciously decide what the merged behaviour is
+  rather than silently take one.
+
+**Sequencing caveat, flagged not decided:** a rewrite done before Phase 10 will
+have its console layer written twice, since Phase 10 migrates everything to
+Spectre. Doing 8.5b *after* Phase 10 avoids that, at the cost of migrating 1430
+lines that are about to be deleted. Cheapest order is probably: 8.5a now
+(deletion, no rewrite), 8.5b after Phase 10.
+
+#### 8.5c — Cheap mitigation, no refactoring required
+
+Independent of everything above and worth doing immediately:
+
+* Add a **member index** to each partial file's header comment, listing what
+  lives there.
+* Add a line to `.agents/rules/AGENTS.md` stating that
+  `AiStudioAutoExtractionSession` is a three-file partial class and which file
+  holds what.
+
+This lets an agent grep to the right file and read ~400 lines instead of 1947,
+without touching a line of logic.
+
+**Honest ceiling on all of this:** 8.5a helps because the REPL is genuinely
+independent. Splitting the *pipeline* into more types will not save tokens by
+itself — if the pieces still share `_systemInstructionText` and the token
+counters, an agent reads them all anyway and only file-navigation overhead is
+added. Any further decomposition therefore has to start with an owner for that
+shared state (`ExtractionSessionState`), for which `VideoProcessingState`
+— created in Phase 4.5 for exactly this reason — is the working precedent.
+
+### Phase 9 — Configuration consolidation · large
+
+Absorbs Phase 8 step 4 / backlog item 16. Goal: one definition per concept, JSON
+that mirrors the C# shape, no hand-editing of live config files.
+
+**9.0 — already done, commit `ead5ca1`.** `JsonCommentPreserver` extracted from
+the generic `ConfigLoader<T>` into a non-generic `internal static` class, with a
+new `Merge(existingJson, updated, remapAnchor)` entry point.
+`ConfigLoader<T>.SerializePreservingComments` still exists and delegates, so
+`ConfigCommentPreservationTests` (which reaches it by reflection) is untouched.
+This came first because the migrator must move a property's `//` comment along
+with the property when it descends into a nested section — `AnchoredComment`
+`(ContainerPath, BeforePropertyKey, CommentLines)` is exactly the right
+representation, and `remapAnchor` is the hook: rewrite `([], "Temperature")` to
+`(["Generation"], "Temperature")` and the comment follows. Without it every
+migrated key would silently lose its comment.
+
+**9.1 — shared building blocks.** New types in `src/Configuration/`, each with
+sane defaults on the property initialisers so a missing JSON key never yields
+`0.0f`:
+
+| New type | Members | Replaces |
+|---|---|---|
+| `GenerationParameters` | `Temperature`, `TopP`, `TopK`, `MaxOutputTokens`, `ThinkingBudget`, `ThinkingLevel` | 6 copies |
+| `ModelSelection` | `Available[]`, `CurrentIndex`, computed `Current` | 5 copies + the 4 hardcoded `AvailableModels` arrays |
+| `ContextCacheSettings` | `Enabled`, `Minutes`, `IncrementMinutes`, `MinimumRemainingMinutes` | 4 copies |
+| `VertexEndpoint` | `ProjectId`, `Location`, `GcsBucketName` | 4 copies |
+| `ApiKeyProfile` | `ActiveProfile`, `EnvNames[]` | 3 copies |
+| `ContextSources` | `SystemInstructionPaths[]`, `HistoryPreloadPaths[]` | 6 / 5 copies |
+| `WorkspacePaths` | `SourceFolder`, `PredefinedSourceFolders[]`, `TargetFolder`, `LogFolder`, `UploadFolder` | scattered |
+
+Lift `ModelSelection.Current`'s clamping from the existing
+`AiStudioAutoExtractionConfig.CurrentModel` rather than rewriting it.
+`BackendParameters` becomes those types composed and is deleted.
+Per-config default differences must be preserved at the composition site
+(e.g. AI Studio extraction has `TopP = 0.8`, Vertex `0.9`, `BackendParameters`
+`1.0`) — set them in the initialiser: `= new() { TopP = 0.8f }`.
+
+**9.2 — the JSON migrator, before touching any config class.**
+`ConfigLoader<T>` writes live config files at runtime, so a reshape that loses
+values is not recoverable from the file. Add `ConfigMigrator`, invoked from
+`Load` before binding: read the raw `{TypeName}.json` as a `JObject`, move any
+legacy flat key into its new nested section when that section is absent, bind as
+normal. `Save` then writes the migrated shape with comments preserved.
+Idempotent and one-directional; keep legacy handling for one release.
+
+**Before the first migrated run:** stop any running `lec-extraction-prog.exe`
+and back up the root `*.json` files — a live instance will re-save the old shape
+over the new one. This is the only step in the plan that can lose data.
+
+**9.3 — `AppConfig` cleanup.** Delete the six `Default*` params (values move onto
+`GenerationParameters` initialisers — use the `appsettings.json` values, which
+are the ones in effect: `0.35 / 0.9 / 10 / 65535 / 4096 / HIGH`); delete the four
+stub keys; drop or implement `reloadOnChange`; move the hardcoded subpaths into
+`appsettings.json`; commit `RefinementUiHelperConfig.json` to the repo root.
+Keep `BaseLectureFolder`, `UploadFolder`, `LogFolder`, `IsVertexAiEnabled` and
+the Vertex endpoint — those are genuinely global.
+
+**9.4 — `ConfigLoader` fixes.** Make the current-directory second write explicit
+or drop it; document `ClearCollectionsRecursively`'s real contract and pin it
+with a test.
+
+**9.5 — hygiene.** Delete the stray root `settings.json`; point
+`SessionLogger`'s `chat_log.md` at `_currentSessionLogPath`.
+
+*Exit:* build 0/0; tests green including migrator round-trip tests; every root
+`*.json` loads → migrates → saves → reloads to identical values with comments
+intact; UI-string diff unchanged (this phase changes no output).
+
+### Phase 10 — Spectre.Console UI · large
+
+Absorbs Phase 8 steps 5 and backlog items 1, 2, 3, 4, 6, 7, 15.
+**Full spec: `docs/deep-dive-spectre-ui.md`** — measured tag inventory, the `Ui`
+API surface, escaping boundary, file-by-file migration order.
+
+**Step 0: regenerate `docs/ui-strings.baseline.txt`** before anything else, so
+the diff becomes a working review tool again.
+
+Then: a `Ui` type wrapping `AnsiConsole` with canonical severity helpers and a
+`scope` argument (so `[LaTeX Refinement] [FEHLER]` survives); `Ui.Raw` for model
+output with **no markup parsing**, since Spectre treats `[` `]` as markup and
+this app streams LaTeX; Spectre `SelectionPrompt` for every menu (which
+structurally removes hand-numbering, the `__EXIT__` magic string, and the ~6
+divergent exit handlers); `ConfirmationPrompt` for `(j/n)`; a `show config`
+command; and `Progress`/`Status` for FFmpeg splitting, uploads, `InteractiveDelay`
+and PDF compilation — **never** while tokens are streaming.
+
+Note `dump-ui-strings.sh` greps for `Console.Write*`; it must learn `Ui.` calls
+in the same commit as the `Ui` class, or the diff silently goes empty.
+
+### Phase 11 — Code quality · medium
+
+**Full spec: `docs/deep-dive-code-quality-decomposition.md`** (member-by-member split
+map with line ranges).
+
+`LatexRefinementSession` → `RefinementOptions` replacing the 4 telescoping
+constructors, plus a `partial` split into `.Steps.cs` / `.Pdf.cs` /
+`.Streaming.cs` / `.Cache.cs`, following the Phase 4.5 discipline exactly
+(verbatim line-range moves, `[AI Context]`/`[Human]` comment counts checked).
+Then `AttachmentUploader.UploadAndAttachFileAsync` split by branch (which also
+hosts the Phase 12 change), `RefinementUiHelper` after Phase 10 has dissolved
+its prompts, and finally the Vertex catch-up.
+
+Tests to add: config migration round-trip (highest value), the new config types'
+defaults and clamping, `ClearCollectionsRecursively`'s array contract, `Ui`
+markup escaping against LaTeX, and `RefinementOptions` equivalence against all
+4 old constructor signatures.
+
+### Phase 12 — `InlinePrecedingLecTexParts` as an upload switch · small
+
+Settles backlog item 10. **Full spec: `docs/deep-dive-tex-attachment-mode.md`.**
+
+`.tex` is **already** in `AttachmentUploader.s_textExtensions`, which
+short-circuits to inline text before the mime switch is reached — so the change
+is an `uploadTextAsFile` opt-in bypassing that branch, plus a `.tex` mime entry.
+Wire the flag on the AI Studio side (where it is currently never read at all)
+and give Vertex the same `false` semantics.
+
+Known trade, from the code's own comments: a Files-API/GCS URI is an external
+reference that **breaks implicit prefix caching**, so `false` gives up the
+incremental `tex1…texN` prefix reuse and keeps only the dummy anchor. It does
+**not** reduce token cost; it reduces payload size and re-transmission across
+continuations, at the cost of one upload request per preceding file per part.
+Hence: ship defaulting to `true`, measure, then decide.
+
+Land **last and alone** — it changes what reaches a paid API.
+
+### Suggested order
+
+```
+Phase 8.5c Member index + AGENTS.md note     ~tiny    ← do first, helps immediately
+Phase 8.5a Delete the in-session debug REPL  ~small   ← biggest token win per effort
+Phase 9    Config consolidation + migrator   ~large
+Phase 10   Spectre.Console UI                ~large   ← the visible payoff
+Phase 11   Code quality + tests              ~medium
+Phase 8.5b Rebuild the Direct chat sessions  ~large   ← after 10, so the console layer isn't written twice
+Phase 12   .tex upload switch                ~small   ← last, touches a paid API
+```
+
+Config before UI, because Phase 10's verbosity handling, `show config` command
+and menu tables all consume the new config shape — the other order means
+building the UI twice. 8.5b sits after Phase 10 for the same reason.
 
 ---
 
