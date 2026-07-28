@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.GoogleAi;
 
@@ -15,7 +16,8 @@ public static class GcsWorkspace {
     public static async Task PurgeAsync(string bucketName) {
         if (string.IsNullOrWhiteSpace(bucketName)) return;
         try {
-            Console.WriteLine($"\n  [GCS] Starte Cleanup: Lösche temporäre Dateien im Bucket '{bucketName}'...");
+            Ui.Blank();
+            Ui.Detail($"Starte Cleanup: Lösche temporäre Dateien im Bucket '{bucketName}'...", "GCS");
             var storageClient = await StorageClient.CreateAsync();
             var objects = storageClient.ListObjectsAsync(bucketName);
             int count = 0;
@@ -23,12 +25,10 @@ public static class GcsWorkspace {
                 await storageClient.DeleteObjectAsync(bucketName, obj.Name);
                 count++;
             }
-            if (count > 0) Console.WriteLine($"  [GCS] {count} temporäre Datei(en) gelöscht, um Storage-Kosten zu sparen.");
+            if (count > 0) Ui.Detail($"{count} temporäre Datei(en) gelöscht, um Storage-Kosten zu sparen.", "GCS");
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-            Console.WriteLine($"  [GCS Warnung] Konnte Bucket nicht bereinigen.");
+            Ui.Warn($"Konnte Bucket nicht bereinigen. Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}", "GCS");
         }
     }
 }

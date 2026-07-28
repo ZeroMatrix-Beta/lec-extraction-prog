@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction.Model;
 using LectureExtraction.Media;
 
@@ -71,14 +72,15 @@ public static partial class VideoSegmentProducer {
                         useCache = true;
                     }
                     else {
-                        Console.WriteLine($"\n  [Cache] Ignoriere unvollständigen oder defekten Cache für '{Path.GetFileName(file)}' ({cachedParts.Count} Teil(e), valid: {allFilesValid}). FFmpeg wird neu gestartet...");
+                        Ui.Warn($"Ignoriere unvollständigen oder defekten Cache für '{Path.GetFileName(file)}' ({cachedParts.Count} Teil(e), valid: {allFilesValid}). FFmpeg wird neu gestartet...", "Cache");
                         foreach (var stalePartFile in cachedParts) { try { System.IO.File.Delete(stalePartFile); } catch { } }
                     }
                 }
             }
 
             if (useCache) {
-                Console.WriteLine($"\n[Cache] FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 48h):");
+                Ui.Blank();
+                Ui.Detail($"FFmpeg übersprungen für '{file}'. Verwende folgende gecachte Dateien (jünger als 48h):", "Cache");
                 cachedParts.Sort();
 
                 // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
@@ -98,7 +100,7 @@ public static partial class VideoSegmentProducer {
                 var cachedPartsWithTimes = new List<VideoSegment>();
                 for (int i = 0; i < cachedParts.Count; i++) {
                     double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - config.OverlapSeconds) : 0;
-                    Console.WriteLine($"  - {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
+                    Ui.Detail($"- {cachedParts[i]} (Est. Start: {startTime.ToString("F2", CultureInfo.InvariantCulture)}s)");
                     cachedPartsWithTimes.Add(new VideoSegment(cachedParts[i], startTime));
                 }
 
@@ -111,19 +113,22 @@ public static partial class VideoSegmentProducer {
 
             string? videoToSplit;
             if (isPreCompressed) {
-                Console.WriteLine($"\n[FFmpeg Producer] {Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...");
+                Ui.Blank();
+                Ui.Detail($"{Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...", "FFmpeg Producer");
                 videoToSplit = file; // Use the original file directly for splitting
             }
             else {
-                Console.WriteLine($"\n[FFmpeg Producer] Starte Vorverarbeitung für {Path.GetFileName(file)} ({speed}x Speed, 1 FPS, Mono)...");
+                Ui.Blank();
+                Ui.Detail($"Starte Vorverarbeitung für {Path.GetFileName(file)} ({speed}x Speed, 1 FPS, Mono)...", "FFmpeg Producer");
                 videoToSplit = await FfmpegToolkit.ProcessGeneralVideoAsync(file, tmpFolderForFile, speedMultiplier: speed, fps: 1, downmixToMono: true, scaleTo720p: false, overwrite: true, preset: config.FfmpegPreset);
                 if (videoToSplit == null) {
-                    Console.WriteLine($"  [FFmpeg Producer] Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.");
+                    Ui.Error($"Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.", "FFmpeg Producer");
                     continue;
                 }
             }
 
-            Console.WriteLine($"\n[FFmpeg Producer] Starte Splitting für {Path.GetFileName(videoToSplit)} in {config.NumberOfParts} Teile ({config.OverlapSeconds}s Overlap)...");
+            Ui.Blank();
+            Ui.Detail($"Starte Splitting für {Path.GetFileName(videoToSplit)} in {config.NumberOfParts} Teile ({config.OverlapSeconds}s Overlap)...", "FFmpeg Producer");
             var rawPartsWithTimes = await FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: config.NumberOfParts, overlapSeconds: config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: config.FfmpegPreset);
 
             if (rawPartsWithTimes.Count > 0) {

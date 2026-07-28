@@ -1,6 +1,7 @@
 using System;
 using Google.GenAI;
 using Google.GenAI.Types;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.GoogleAi;
 
@@ -25,10 +26,10 @@ public static class GoogleAiClientBuilder {
                       ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
                       ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
 
-        Console.WriteLine($"  [INFO] Verwende {envVarName} (Projekt {activeKeyProfile})");
+        Ui.Detail($"Verwende {envVarName} (Projekt {activeKeyProfile})");
 
         if (string.IsNullOrEmpty(apiKey)) {
-            Console.WriteLine($"Fehler: Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
+            Ui.Error($"Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
             return null;
         }
 
@@ -43,7 +44,7 @@ public static class GoogleAiClientBuilder {
         var options = new HttpOptions {
             Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
         };
-        Console.WriteLine("  [INFO] Verbinde mit Google AI Studio API...");
+        Ui.Detail("Verbinde mit Google AI Studio API...");
         return new Client(apiKey: apiKey, httpOptions: options);
     }
 
@@ -56,10 +57,10 @@ public static class GoogleAiClientBuilder {
                       ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
                       ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
 
-        Console.WriteLine($"  [INFO] Verwende {envVarName}");
+        Ui.Detail($"Verwende {envVarName}");
 
         if (string.IsNullOrEmpty(apiKey)) {
-            Console.WriteLine($"Fehler: Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
+            Ui.Error($"Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
             return null;
         }
 
@@ -74,7 +75,7 @@ public static class GoogleAiClientBuilder {
         var options = new HttpOptions {
             Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
         };
-        Console.WriteLine($"  [INFO] Verbinde mit Google Cloud Vertex AI (Projekt: {projectId})...");
+        Ui.Detail($"Verbinde mit Google Cloud Vertex AI (Projekt: {projectId})...");
         return new Client(
             vertexAI: true,
             project: projectId,

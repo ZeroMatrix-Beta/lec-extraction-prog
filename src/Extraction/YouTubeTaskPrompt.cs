@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.Extraction;
 
@@ -16,7 +17,7 @@ public static class YouTubeTaskPrompt {
         Console.Write("\nBitte gib die YouTube-URL ein: ");
         string url = Console.ReadLine()?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(url)) {
-            Console.WriteLine("[Abbruch] Keine URL eingegeben.");
+            Ui.Warn("Keine URL eingegeben.", "Abbruch");
             return null;
         }
 
@@ -44,7 +45,7 @@ public static class YouTubeTaskPrompt {
         }
 
         if (totalSeconds <= 0) {
-            Console.WriteLine("[FEHLER] Ungültige Zeitangabe. Abbruch.");
+            Ui.Error("Ungültige Zeitangabe. Abbruch.");
             return null;
         }
 
@@ -89,9 +90,10 @@ public static class YouTubeTaskPrompt {
             }
         }
 
-        Console.WriteLine($"\n[INFO] Konstruierte {fragList.Count} Fragment(e) für die YouTube-Transkription:");
+        Ui.Blank();
+        Ui.Info($"Konstruierte {fragList.Count} Fragment(e) für die YouTube-Transkription:");
         for (int i = 0; i < fragList.Count; i++) {
-            Console.WriteLine($"   - {fragList[i].PartTitle}: {fragList[i].StartTime} bis {fragList[i].EndTime}");
+            Ui.Detail($"- {fragList[i].PartTitle}: {fragList[i].StartTime} bis {fragList[i].EndTime}");
         }
 
         return new() {

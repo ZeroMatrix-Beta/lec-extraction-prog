@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
+using LectureExtraction.ConsoleUi;
 using File = System.IO.File;
 using Environment = System.Environment;
 
@@ -44,7 +45,7 @@ public static class ContextCacheStateManager {
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"[ContextCacheStateManager] Error loading state '{stateFileName}': {ex.GetType().Name} - {ex.Message}");
+            Ui.Error($"Fehler beim Laden von State '{stateFileName}': {ex.GetType().Name} - {ex.Message}", "ContextCache");
         }
         return new ContextCacheState();
     }
@@ -64,7 +65,7 @@ public static class ContextCacheStateManager {
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"[ContextCacheStateManager] Error saving state '{stateFileName}': {ex.GetType().Name} - {ex.Message}");
+            Ui.Error($"Fehler beim Speichern von State '{stateFileName}': {ex.GetType().Name} - {ex.Message}", "ContextCache");
         }
     }
 
@@ -80,7 +81,7 @@ public static class ContextCacheStateManager {
             if (File.Exists(baseDirPath)) File.Delete(baseDirPath);
         }
         catch (Exception ex) {
-            Console.WriteLine($"[ContextCacheStateManager] Error clearing state '{stateFileName}': {ex.GetType().Name} - {ex.Message}");
+            Ui.Error($"Fehler beim Löschen von State '{stateFileName}': {ex.GetType().Name} - {ex.Message}", "ContextCache");
         }
     }
 
@@ -143,7 +144,7 @@ public static class ContextCacheStateManager {
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [INFO] Remote Cache '{cacheName}' nicht mehr aktiv ({ex.GetType().Name}: {ex.Message}).");
+            Ui.Detail($"Remote Cache '{cacheName}' nicht mehr aktiv ({ex.GetType().Name}: {ex.Message}).", "Cache");
         }
         return false;
     }
@@ -155,10 +156,10 @@ public static class ContextCacheStateManager {
         if (string.IsNullOrEmpty(cacheName)) return;
         try {
             await client.Caches.DeleteAsync(cacheName, config: null);
-            Console.WriteLine($"  [INFO] Cache '{cacheName}' bei Google gelöscht.");
+            Ui.Detail($"Cache '{cacheName}' bei Google gelöscht.", "Cache");
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [INFO] Konnte Cache '{cacheName}' bei Google nicht löschen ({ex.GetType().Name}: {ex.Message}).");
+            Ui.Detail($"Konnte Cache '{cacheName}' bei Google nicht löschen ({ex.GetType().Name}: {ex.Message}).", "Cache");
         }
     }
 
@@ -180,7 +181,7 @@ public static class ContextCacheStateManager {
             return state;
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [FEHLER] Verlängern des Caches fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+            Ui.Error($"Verlängern des Caches fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "Cache");
             return null;
         }
     }

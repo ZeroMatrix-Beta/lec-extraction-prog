@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.Latex;
 
@@ -27,13 +28,14 @@ public class LatexToolkit {
         string workDir = Path.GetDirectoryName(texFilePath) ?? string.Empty;
         string fileName = Path.GetFileName(texFilePath);
 
-        Console.WriteLine($"\n  [LatexToolkit] Starte PDF-Kompilierung für {fileName}...");
+        Ui.Blank();
+        Ui.Detail($"Starte PDF-Kompilierung für {fileName}...", "LatexToolkit");
 
         int maxRuns = 3;
         string finalOutput = "";
 
         for (int run = 1; run <= maxRuns; run++) {
-            Console.WriteLine($"  [LatexToolkit] Durchlauf {run} von {maxRuns}...");
+            Ui.Detail($"Durchlauf {run} von {maxRuns}...", "LatexToolkit");
 
             // [AI Context] -interaction=nonstopmode, -halt-on-error, and -disable-installer are critical to prevent pdflatex from hanging on syntax errors or MiKTeX package installation prompts.
             // [Human] -interaction=nonstopmode und -disable-installer verhindern, dass pdflatex bei Syntaxfehlern oder fehlenden MiKTeX-Paketen hängen bleibt.
@@ -60,13 +62,12 @@ public class LatexToolkit {
                     await process.WaitForExitAsync(cts.Token);
                 }
                 catch (OperationCanceledException) {
-                    Console.WriteLine($"  [TIMEOUT] pdflatex hat das Zeitlimit von {timeoutSeconds}s überschritten und wurde beendet.");
+                    Ui.Error($"pdflatex hat das Zeitlimit von {timeoutSeconds}s überschritten und wurde beendet.", "LatexToolkit");
                     try {
                         process.Kill(entireProcessTree: true);
                     }
                     catch (Exception killEx) {
-                        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {killEx.GetType().Name}");
-                        Console.WriteLine($"Originaler Fehlertext: {killEx.Message}");
+                        Ui.Warn($"Prozess konnte nicht beendet werden. Art der Exception: {killEx.GetType().Name}, Fehler: {killEx.Message}", "LatexToolkit");
                     }
                     string partialOutput = await outputTask;
                     return (false, $"Compilation timed out after {timeoutSeconds} seconds.\nPartial Output:\n{partialOutput}");
@@ -77,7 +78,7 @@ public class LatexToolkit {
                 finalOutput = output + "\n" + error;
 
                 if (process.ExitCode != 0) {
-                    Console.WriteLine($"  [FAILED] pdflatex hat Fehler gemeldet (ExitCode {process.ExitCode}) in Durchlauf {run}.");
+                    Ui.Error($"pdflatex hat Fehler gemeldet (ExitCode {process.ExitCode}) in Durchlauf {run}.", "LatexToolkit");
                     return (false, finalOutput);
                 }
 
@@ -87,21 +88,19 @@ public class LatexToolkit {
                         !output.Contains("Rerun LaTeX") &&
                         !output.Contains("Rerun to get")) 
                     {
-                        Console.WriteLine($"  [INFO] Keine weiteren Durchläufe nötig.");
+                        Ui.Detail("Keine weiteren Durchläufe nötig.", "LatexToolkit");
                         break;
                     }
-                    Console.WriteLine($"  [INFO] Referenzen benötigen einen weiteren Durchlauf.");
+                    Ui.Detail("Referenzen benötigen einen weiteren Durchlauf.", "LatexToolkit");
                 }
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                Console.WriteLine($"  [FEHLER] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
+                Ui.Error($"pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert? Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}", "LatexToolkit");
                 return (false, ex.Message);
             }
         }
 
-        Console.WriteLine($"  [OK] PDF erfolgreich generiert!");
+        Ui.Success("PDF erfolgreich generiert!", "LatexToolkit");
         return (true, finalOutput);
     }
 }

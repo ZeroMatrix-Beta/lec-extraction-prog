@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.GoogleAi;
 
@@ -25,11 +26,11 @@ public static class PrefixCacheAnchor {
         foreach (string path in candidates) {
             if (System.IO.File.Exists(path)) {
                 _dummyPart0Content = System.IO.File.ReadAllText(path);
-                Console.WriteLine($"  [Cache-Prefix] dummy-part0.tex geladen ({_dummyPart0Content.Length:N0} Bytes) aus: {path}");
+                Ui.Detail($"dummy-part0.tex geladen ({_dummyPart0Content.Length:N0} Bytes) aus: {path}", "Cache-Prefix");
                 return _dummyPart0Content;
             }
         }
-        Console.WriteLine("  [WARNUNG] dummy-part0.tex nicht gefunden – Dummy-Prefix ist leer. Cache-Hit für User-Part möglicherweise nicht möglich.");
+        Ui.Warn("dummy-part0.tex nicht gefunden – Dummy-Prefix ist leer. Cache-Hit für User-Part möglicherweise nicht möglich.");
         _dummyPart0Content = "% dummy-part0.tex not found";
         return _dummyPart0Content;
     }

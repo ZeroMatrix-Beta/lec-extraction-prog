@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.Media;
 
@@ -116,7 +117,7 @@ public static partial class VideoDateParser {
         }
 
         if (!dateFound) {
-            Console.WriteLine($"[WARNUNG] Date format mismatch or missing date in file '{fileNameWithoutExtension}'.");
+            Ui.Warn($"Date format mismatch or missing date in file '{fileNameWithoutExtension}'.");
             return new() {
                 Date = DateTime.MinValue,
                 Weekday = weekday,
@@ -132,9 +133,7 @@ public static partial class VideoDateParser {
             parsedDate = new DateTime(year, month, day);
         }
         catch (ArgumentOutOfRangeException ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-            Console.WriteLine($"[WARNUNG] Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'.");
+            Ui.Warn($"Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'. Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}");
             return new() {
                 Date = DateTime.MinValue,
                 Weekday = weekday,
