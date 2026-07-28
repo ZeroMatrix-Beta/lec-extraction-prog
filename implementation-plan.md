@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3) · **Pick up next:** Phase 5 (twin unification — highest risk, needs a manual smoke test against the paid API that only the user can run) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off) · **Pick up next:** either (a) user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex, or (b) Phase 5 (twin unification — highest risk, needs a manual smoke test against the paid API that only the user can run) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
