@@ -125,9 +125,13 @@ public class ConfigBindingTests {
         Assert.NotNull(legacyJson["Generation"]);
         Assert.Equal(0.42f, legacyJson["Generation"]!["Temperature"]!.Value<float>());
 
-        Assert.NotNull(legacyJson["Model"]);
-        Assert.Equal(1, legacyJson["Model"]!["CurrentIndex"]!.Value<int>());
-        Assert.Equal(2, (legacyJson["Model"]!["Available"] as JArray)!.Count);
+        // The nested section is named after the config class's PROPERTY (ModelSelection), not the
+        // legacy JSON key (Model) - the binder matches by property name, and `Model` survives on
+        // the class only as a [JsonIgnore] delegating string[]. Asserting "Model" here previously
+        // passed while the migrated value bound to nothing.
+        Assert.NotNull(legacyJson["ModelSelection"]);
+        Assert.Equal(1, legacyJson["ModelSelection"]!["CurrentIndex"]!.Value<int>());
+        Assert.Equal(2, (legacyJson["ModelSelection"]!["Available"] as JArray)!.Count);
 
         Assert.NotNull(legacyJson["ContextCaching"]);
         Assert.True(legacyJson["ContextCaching"]!["Enabled"]!.Value<bool>());

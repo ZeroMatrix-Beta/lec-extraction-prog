@@ -46,8 +46,14 @@ public static class ConfigMigrator {
         }
 
         // 2. Model Selection (for AutoExtraction and DirectChat configs)
+        // [AI Context] The target key must match the config class's PROPERTY name (ModelSelection),
+        // not the legacy JSON key (Model). Microsoft.Extensions.Configuration binds by property
+        // name and silently ignores what it cannot match, and `Model` still exists on the class as
+        // a [JsonIgnore] string[] delegating property - so writing the nested object back under
+        // "Model" bound nothing, leaving the user's model list at its C# default. Covered by
+        // ConfigMigratorTests.LegacyModelArrayAndIndex_SurviveMigrationAndBinding.
         if (configType == null || isExtraction || isDirectChat) {
-            if (root["Model"] != null && root["Model"] is JArray legacyModelArray) {
+            if (root["ModelSelection"] == null && root["Model"] is JArray legacyModelArray) {
                 var modelObj = new JObject {
                     ["Available"] = legacyModelArray.DeepClone()
                 };
@@ -55,7 +61,8 @@ public static class ConfigMigrator {
                     modelObj["CurrentIndex"] = root["CurrentModelIndex"]!.DeepClone();
                     root.Remove("CurrentModelIndex");
                 }
-                root["Model"] = modelObj;
+                root.Remove("Model");
+                root["ModelSelection"] = modelObj;
                 migratedAny = true;
             }
         }
@@ -160,13 +167,13 @@ public static class ConfigMigrator {
         }
 
         if (key is "Model") {
-            if (updated["Model"] != null && updated["Model"] is JObject)
-                return new JsonCommentPreserver.AnchoredComment(new[] { "Model" }, "Available", anchor.CommentLines);
+            if (updated["ModelSelection"] is JObject)
+                return new JsonCommentPreserver.AnchoredComment(new[] { "ModelSelection" }, "Available", anchor.CommentLines);
         }
 
         if (key is "CurrentModelIndex") {
-            if (updated["Model"] != null && updated["Model"] is JObject)
-                return new JsonCommentPreserver.AnchoredComment(new[] { "Model" }, "CurrentIndex", anchor.CommentLines);
+            if (updated["ModelSelection"] is JObject)
+                return new JsonCommentPreserver.AnchoredComment(new[] { "ModelSelection" }, "CurrentIndex", anchor.CommentLines);
         }
 
         if (key is "UseContextCaching") {
