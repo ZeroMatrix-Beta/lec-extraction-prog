@@ -36,7 +36,6 @@ public static class ConfigurationPrompts {
                     .AddChoices(choices));
 
             if (selection == optKeep) {
-                DirectoryTreeRenderer.DisplayDirectoryPreview(currentFolder);
                 return currentFolder;
             }
 
@@ -44,7 +43,6 @@ public static class ConfigurationPrompts {
                 if (selection.StartsWith($"{i + 1})")) {
                     currentFolder = predefinedFolders[i];
                     Ui.Info($"Quellordner ausgewählt: {currentFolder}");
-                    DirectoryTreeRenderer.DisplayDirectoryPreview(currentFolder);
                     onFolderChanged?.Invoke(currentFolder);
                     return currentFolder;
                 }
@@ -53,7 +51,6 @@ public static class ConfigurationPrompts {
             if (selection == optExplorer) {
                 currentFolder = FileSelectionPrompt.NavigateDirectory(currentFolder);
                 Ui.Info($"Quellordner ausgewählt: {currentFolder}");
-                DirectoryTreeRenderer.DisplayDirectoryPreview(currentFolder);
                 onFolderChanged?.Invoke(currentFolder);
                 return currentFolder;
             }
@@ -71,12 +68,10 @@ public static class ConfigurationPrompts {
             if (selection == optExplorer) {
                 currentFolder = FileSelectionPrompt.NavigateDirectory(currentFolder);
                 Ui.Info($"Quellordner ausgewählt: {currentFolder}");
-                DirectoryTreeRenderer.DisplayDirectoryPreview(currentFolder);
                 onFolderChanged?.Invoke(currentFolder);
                 return currentFolder;
             }
             else if (selection == optKeep) {
-                DirectoryTreeRenderer.DisplayDirectoryPreview(currentFolder);
                 return currentFolder;
             }
         }
@@ -86,7 +81,7 @@ public static class ConfigurationPrompts {
             newPath = newPath.Trim('\"', '\'');
 
             if (!Directory.Exists(newPath)) {
-                if (AnsiConsole.Confirm($"Der Ordner '{newPath}' existiert nicht. Möchten Sie ihn erstellen?", defaultValue: true)) {
+                if (Ui.Confirm($"Der Ordner '{newPath}' existiert nicht. Möchten Sie ihn erstellen?", true)) {
                     try {
                         Directory.CreateDirectory(newPath);
                         Ui.Success($"Ordner erstellt: {newPath}");
@@ -104,10 +99,9 @@ public static class ConfigurationPrompts {
 
             currentFolder = newPath;
             Ui.Info($"Neuer Quellordner ausgewählt: {currentFolder}");
-            DirectoryTreeRenderer.DisplayDirectoryPreview(currentFolder);
 
             if (onFolderChanged != null) {
-                if (AnsiConsole.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", defaultValue: true)) {
+                if (Ui.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", true)) {
                     onFolderChanged.Invoke(currentFolder);
                     Ui.Info("Der neue Pfad wurde in der Konfiguration (JSON) gespeichert.");
                 } else {
@@ -126,7 +120,7 @@ public static class ConfigurationPrompts {
     public static string ConfirmOrChangeModel(string currentModel, string apiType, string[] availableModels, Action<string>? onModelChanged = null) {
         Ui.Step($"Voreingestelltes Modell ({apiType}): {currentModel}");
 
-        if (!AnsiConsole.Confirm($"Möchten Sie dieses voreingestellte Modell ({currentModel}) verwenden?", defaultValue: true)) {
+        if (!Ui.Confirm($"Möchten Sie dieses voreingestellte Modell ({currentModel}) verwenden?", true)) {
             var choices = new System.Collections.Generic.List<string>();
             for (int i = 0; i < availableModels.Length; i++) {
                 choices.Add($"{i + 1}) {availableModels[i]}");
@@ -152,7 +146,7 @@ public static class ConfigurationPrompts {
             Ui.Info($"Neues Modell ausgewählt: {newModel}");
 
             if (onModelChanged != null) {
-                if (AnsiConsole.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", defaultValue: true)) {
+                if (Ui.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", true)) {
                     onModelChanged.Invoke(newModel);
                     Ui.Info("Das neue Modell wurde in der Konfiguration (JSON) gespeichert.");
                 } else {
@@ -194,7 +188,7 @@ public static class ConfigurationPrompts {
         Ui.Step($"API-Key Profil ({sessionName})");
         Ui.Detail($"Aktuelles Profil: {profileLabel} ({currentEnvName}) {keyStatus}");
 
-        if (!AnsiConsole.Confirm("Möchten Sie dieses API-Key Profil verwenden?", defaultValue: true)) {
+        if (!Ui.Confirm("Möchten Sie dieses API-Key Profil verwenden?", true)) {
             var choices = new System.Collections.Generic.List<string>();
             for (int i = 0; i < envNames.Length; i++) {
                 string name = envNames[i];
@@ -226,7 +220,7 @@ public static class ConfigurationPrompts {
             Ui.Info($"Neues API-Key Profil ausgewählt: {newLabel} ({newEnvName})");
 
             if (onProfileChanged != null) {
-                if (AnsiConsole.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", defaultValue: true)) {
+                if (Ui.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", true)) {
                     onProfileChanged.Invoke(newProfile);
                     Ui.Info("Das neue API-Key Profil wurde in der Konfiguration (JSON) gespeichert.");
                 } else {

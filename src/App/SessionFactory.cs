@@ -97,6 +97,7 @@ public static class SessionFactory {
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
             ModelSyncService.SyncModelToRefinementConfig(selectedModel, isVertex: true);
+            DirectoryTreeRenderer.DisplayFolderSummary(config.SourceFolder);
 
             Client client = GoogleAiClientBuilder.BuildVertexClient(config.ProjectId, config.Location);
             var attachmentHandler = new AttachmentUploader(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
@@ -122,6 +123,7 @@ public static class SessionFactory {
             config.CurrentModel = selectedModel;
             config.CurrentModelIndex = Math.Max(0, Array.IndexOf(config.Model, selectedModel));
             ModelSyncService.SyncModelToRefinementConfig(selectedModel, isVertex: false);
+            DirectoryTreeRenderer.DisplayFolderSummary(config.SourceFolder);
 
             int selectedProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                 config.ActiveApiProfile,

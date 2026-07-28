@@ -108,7 +108,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         }
 
         Ui.Info($"Aktueller Zielordner (Destination): [bold]{destFolder}[/]");
-        bool keepDest = AnsiConsole.Confirm("Möchten Sie diesen Zielordner beibehalten?", true);
+        bool keepDest = Ui.Confirm("Möchten Sie diesen Zielordner beibehalten?", true);
         if (!keepDest) {
             destFolder = AnsiConsole.Ask<string>("Neuen Zielordner eingeben:").Trim('\"', '\'');
         }

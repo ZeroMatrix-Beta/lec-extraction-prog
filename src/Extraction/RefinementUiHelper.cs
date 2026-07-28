@@ -199,7 +199,7 @@ public static class RefinementUiHelper {
         }
 
         if (stepChoice == "1" || stepChoice == "2" || stepChoice == "3") {
-            bool runToEnd = AnsiConsole.Confirm("Möchtest du ab diesem Schritt die restliche Pipeline bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausführen?", false);
+            bool runToEnd = Ui.Confirm("Möchtest du ab diesem Schritt die restliche Pipeline bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausführen?", false);
             if (runToEnd) {
                 if (stepChoice == "1") {
                     refinementConfig.Step2SpeechRefinement.Enabled = true;

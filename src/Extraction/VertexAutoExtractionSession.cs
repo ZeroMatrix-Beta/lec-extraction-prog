@@ -169,7 +169,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         ? "System Instructions und History laden?"
                         : "System Instructions laden?";
 
-                    if (Spectre.Console.AnsiConsole.Confirm(promptText, defaultValue: true)) {
+                    if (Ui.Confirm(promptText, true)) {
                         var allPathsForIndex = new List<string>(resolvedInstructionFiles);
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                             allPathsForIndex.AddRange(distinctHistoryFiles);
@@ -231,7 +231,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     ? "Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true)"
                     : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden?";
 
-                if (Spectre.Console.AnsiConsole.Confirm(promptText, defaultValue: true)) {
+                if (Ui.Confirm(promptText, true)) {
                     if (_config.LoadHistoryIntoSystemInstruction) {
                         Ui.Info("Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
                     }
@@ -289,7 +289,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         if (_config.YouTubeTasks != null && _config.YouTubeTasks.Length > 0) {
             Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
-            if (!AnsiConsole.Confirm("Möchtest du diese Aufgaben ausführen?", defaultValue: true)) {
+            if (!Ui.Confirm("Möchtest du diese Aufgaben ausführen?", true)) {
                 var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
                 if (interactiveTask != null) {
                     tasksToProcess.Add(interactiveTask);
@@ -481,7 +481,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         Ui.Detail($"ContextCachingMinutes: {_config.ContextCachingMinutes} min");
         Ui.Detail($"ContextCachingIncrementMinutes: {_config.ContextCachingIncrementMinutes} min");
 
-        _config.UseContextCaching = AnsiConsole.Confirm("Context Caching aktivieren?", defaultValue: _config.UseContextCaching);
+        _config.UseContextCaching = Ui.Confirm("Context Caching aktivieren?", _config.UseContextCaching);
         _config.ContextCachingMinutes = AnsiConsole.Ask("Neue Standarddauer in Minuten:", _config.ContextCachingMinutes);
         _config.ContextCachingIncrementMinutes = AnsiConsole.Ask("Neues Verlängerungsintervall in Minuten:", _config.ContextCachingIncrementMinutes);
 

@@ -87,6 +87,28 @@ public static class Ui {
         AnsiConsole.Write(new Text(text + "\n"));
     }
 
+    // Input
+    /// <summary>
+    /// [AI Context] Yes/no as an arrow-key toggle rather than a typed character.
+    /// <c>AnsiConsole.Confirm</c> renders "[y/n]" and waits for a keystroke, which inherits the
+    /// exact footgun Phase 8 step 3 removed: an unexpected key is silently read as "no", and on a
+    /// German keyboard "j" - the obvious answer to a German question - is not the accepted key at
+    /// all. A two-choice <see cref="SelectionPrompt{T}"/> makes the current answer visible, moves
+    /// with the arrow keys, and cannot be answered by accident.
+    /// [Human] Ja/Nein zum Durchschalten mit den Pfeiltasten statt Tastendruck - die aktuelle
+    /// Auswahl ist sichtbar und eine falsche Taste kann nichts auslösen.
+    /// </summary>
+    public static bool Confirm(string question, bool defaultYes = true) {
+        const string yes = "Ja";
+        const string no = "Nein";
+
+        var prompt = new SelectionPrompt<string>()
+            .Title($"[bold]{Markup.Escape(question)}[/]")
+            .AddChoices(defaultYes ? [yes, no] : [no, yes]);
+
+        return AnsiConsole.Prompt(prompt) == yes;
+    }
+
     // Data
     public static void Table(string title, IEnumerable<(string Key, string Value)> rows) {
         var table = new Table().Border(TableBorder.Rounded);

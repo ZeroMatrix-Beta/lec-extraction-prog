@@ -237,7 +237,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string confirmPrompt = shouldMergeHistory && historyFilesForSystemInstruction.Count > 0
             ? "System Instructions und History laden?"
             : "System Instructions laden?";
-        if (!AnsiConsole.Confirm(confirmPrompt, defaultValue: true)) {
+        if (!Ui.Confirm(confirmPrompt, true)) {
             Ui.Warn("System Instructions wurden vom Benutzer nicht geladen.");
             return true;
         }
@@ -295,7 +295,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string confirmPrompt = _config.LoadHistoryIntoSystemInstruction
             ? "Sollen diese Dateien als System Instructions hochgeladen werden?"
             : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden?";
-        if (!AnsiConsole.Confirm(confirmPrompt, defaultValue: true)) {
+        if (!Ui.Confirm(confirmPrompt, true)) {
             Ui.Warn("History-Dateien wurden vom Benutzer nicht geladen.");
             return;
         }

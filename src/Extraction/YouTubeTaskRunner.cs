@@ -55,7 +55,7 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
 
         if (_config.YouTubeTasks != null && _config.YouTubeTasks.Length > 0) {
             Ui.Info($"Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.", "YouTube Mode");
-            if (AnsiConsole.Confirm("Möchtest du diese Aufgaben ausführen?", defaultValue: true)) {
+            if (Ui.Confirm("Möchtest du diese Aufgaben ausführen?", true)) {
                 tasks.AddRange(_config.YouTubeTasks);
                 return tasks;
             }
