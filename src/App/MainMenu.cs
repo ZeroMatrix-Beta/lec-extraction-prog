@@ -70,7 +70,7 @@ public static class MainMenu {
                     ApiKeyProfileMenu.Show();
                     break;
                 default:
-                    Console.WriteLine("Invalid choice.");
+                    Console.WriteLine("  [FEHLER] Ungültige Auswahl.");
                     break;
             }
         }

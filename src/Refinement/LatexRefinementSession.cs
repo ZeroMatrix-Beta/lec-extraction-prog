@@ -777,14 +777,14 @@ public partial class LatexRefinementSession {
                                 $"% ==========================================\n\n";
 
             await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
-            Console.WriteLine($"\n\n[Erfolg] Ergebnis gespeichert unter: {outPath}");
+            Console.WriteLine($"\n\n[OK] Ergebnis gespeichert unter: {outPath}");
 
             InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             return outPath;
         }
         else {
-            Console.WriteLine($"\n[Fehler] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
+            Console.WriteLine($"\n[FEHLER] Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.");
             return null;
         }
     }

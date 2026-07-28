@@ -332,7 +332,7 @@ public partial class DirectAiChatSessionAiStudio {
             WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
         }
         else {
-            WriteLine($"[Fehler] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
+            WriteLine($"[FEHLER] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
         }
         return true;
     }
@@ -345,7 +345,7 @@ public partial class DirectAiChatSessionAiStudio {
             WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
         }
         else {
-            WriteLine($"[Fehler] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
+            WriteLine($"[FEHLER] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
         }
         return true;
     }
@@ -358,7 +358,7 @@ public partial class DirectAiChatSessionAiStudio {
             WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
         }
         else {
-            WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
+            WriteLine($"[FEHLER] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
         }
         return true;
     }
@@ -372,7 +372,7 @@ public partial class DirectAiChatSessionAiStudio {
             WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
         }
         else {
-            WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
+            WriteLine($"[FEHLER] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
         }
         return true;
     }
@@ -395,7 +395,7 @@ public partial class DirectAiChatSessionAiStudio {
             WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
         }
         else {
-            WriteLine("[Fehler] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
+            WriteLine("[FEHLER] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
         }
         return true;
     }
@@ -740,11 +740,11 @@ public partial class DirectAiChatSessionAiStudio {
                 WriteLine($"  [INFO] API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
             }
             else {
-                WriteLine($"[Fehler] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
+                WriteLine($"[FEHLER] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
             }
         }
         else {
-            WriteLine("[Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
+            WriteLine("[FEHLER] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
         }
     }
 

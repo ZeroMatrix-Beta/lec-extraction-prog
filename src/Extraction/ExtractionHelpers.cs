@@ -30,7 +30,7 @@ public static class ExtractionHelpers {
             copyIndex++;
         } while (File.Exists(newPath));
 
-        Console.WriteLine($"  [Info] Neue Datei wird erstellt: '{Path.GetFileName(newPath)}'");
+        Console.WriteLine($"  [INFO] Neue Datei wird erstellt: '{Path.GetFileName(newPath)}'");
         return newPath;
     }
 

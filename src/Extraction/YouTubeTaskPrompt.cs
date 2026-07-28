@@ -44,7 +44,7 @@ public static class YouTubeTaskPrompt {
         }
 
         if (totalSeconds <= 0) {
-            Console.WriteLine("[Fehler] Ungültige Zeitangabe. Abbruch.");
+            Console.WriteLine("[FEHLER] Ungültige Zeitangabe. Abbruch.");
             return null;
         }
 

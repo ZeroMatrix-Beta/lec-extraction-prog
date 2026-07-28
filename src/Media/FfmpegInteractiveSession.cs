@@ -218,7 +218,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
             Console.WriteLine($"  [OK] Geschwindigkeit auf {_speedMultiplier}x gesetzt.");
         }
         else if (!string.IsNullOrEmpty(input)) {
-            Console.WriteLine("  [ERROR] Ungültiger Wert.");
+            Console.WriteLine("  [FEHLER] Ungültiger Wert.");
         }
     }
 
@@ -231,7 +231,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
             Console.WriteLine($"  [OK] FPS auf {_fps} gesetzt.");
         }
         else if (!string.IsNullOrEmpty(input)) {
-            Console.WriteLine("  [ERROR] Ungültiger Wert.");
+            Console.WriteLine("  [FEHLER] Ungültiger Wert.");
         }
     }
 

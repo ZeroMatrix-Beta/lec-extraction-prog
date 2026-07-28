@@ -62,7 +62,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// </summary>
     public async Task StartAsync() {
         if (!Directory.Exists(_config.SourceFolder)) {
-            Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
+            Console.WriteLine($"[FEHLER] Quellordner nicht gefunden: {_config.SourceFolder}");
             return;
         }
 
@@ -1176,7 +1176,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 SegmentUpload upload = await uploadTask;
                 (uploadSuccess, parsedPrompt, attachmentParts) = (upload.Succeeded, upload.Prompt, upload.Attachments);
                 if (!uploadSuccess) {
-                    Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+                    Console.WriteLine($"  [FEHLER] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                     fileProcessingSuccess = false;
                     break;
                 }

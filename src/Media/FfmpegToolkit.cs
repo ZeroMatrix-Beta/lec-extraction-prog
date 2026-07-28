@@ -65,10 +65,10 @@ public static class FfmpegToolkit {
 
             Console.WriteLine($"\n  [FFmpegToolkit] Part {i + 1}/{parts}: Start={start:F2}s, End={end:F2}s");
             if (!await RunFfmpegAsync(ffmpegArgs)) {
-                Console.WriteLine($"  [FAILED] Error processing Part {i + 1}.");
+                Console.WriteLine($"  [FEHLER] Error processing Part {i + 1}.");
             }
             else {
-                Console.WriteLine($"  [SUCCESS] Part {i + 1} completed => {outputFile}");
+                Console.WriteLine($"  [OK] Part {i + 1} completed => {outputFile}");
                 generatedFiles.Add(new VideoSegment(outputFile, start));
             }
         }
@@ -164,7 +164,7 @@ public static class FfmpegToolkit {
         }
         
         if (await RunFfmpegAsync(ffmpegArgs)) {
-            Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
+            Console.WriteLine($"  [OK] => TO: {outputFile}");
             return outputFile;
         }
         return null;
@@ -189,7 +189,7 @@ public static class FfmpegToolkit {
         Console.WriteLine($"\n  [FFmpegToolkit] Processing (Fast 720p): {Path.GetFileName(inputFile)}...");
 
         if (await RunFfmpegAsync(ffmpegArgs)) {
-            Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
+            Console.WriteLine($"  [OK] => TO: {outputFile}");
             return true;
         }
         return false;
@@ -212,7 +212,7 @@ public static class FfmpegToolkit {
         Console.WriteLine($"\n  [FFmpegToolkit] Processing (Custom): {Path.GetFileName(inputFile)}...");
 
         if (await RunFfmpegAsync(ffmpegArgs)) {
-            Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
+            Console.WriteLine($"  [OK] => TO: {outputFile}");
             return true;
         }
         return false;
@@ -236,9 +236,10 @@ public static class FfmpegToolkit {
         Console.WriteLine($"\n  [FFmpegToolkit] Extracting AAC: {Path.GetFileName(inputFile)}...");
 
         if (await RunFfmpegAsync(arguments)) {
-            Console.WriteLine($"  [SUCCESS] => TO: {outputFile}");
+            Console.WriteLine($"  [OK] => TO: {outputFile}");
             return true;
         }
+
         return false;
     }
 

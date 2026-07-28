@@ -96,12 +96,12 @@ public class LatexToolkit {
             catch (Exception ex) {
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                Console.WriteLine($"  [Error] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
+                Console.WriteLine($"  [FEHLER] pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert?");
                 return (false, ex.Message);
             }
         }
 
-        Console.WriteLine($"  [SUCCESS] PDF erfolgreich generiert!");
+        Console.WriteLine($"  [OK] PDF erfolgreich generiert!");
         return (true, finalOutput);
     }
 }

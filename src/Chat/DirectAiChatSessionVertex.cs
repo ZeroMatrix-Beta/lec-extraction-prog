@@ -277,7 +277,7 @@ public class DirectAiChatSessionVertex {
                 WriteLine($"[INFO] ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
             }
             else {
-                WriteLine($"[Fehler] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
+                WriteLine($"[FEHLER] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
             }
             return true;
         }
@@ -290,7 +290,7 @@ public class DirectAiChatSessionVertex {
                 WriteLine($"[INFO] ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
             }
             else {
-                WriteLine($"[Fehler] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
+                WriteLine($"[FEHLER] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
             }
             return true;
         }
@@ -306,7 +306,7 @@ public class DirectAiChatSessionVertex {
                 WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
             }
             else {
-                WriteLine("[Fehler] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
+                WriteLine("[FEHLER] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
             }
             return true;
         }

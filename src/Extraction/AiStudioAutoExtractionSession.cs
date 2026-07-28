@@ -74,7 +74,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// </summary>
     public async Task StartAsync() {
         if (!Directory.Exists(_config.SourceFolder)) {
-            Console.WriteLine($"[Fehler] Quellordner nicht gefunden: {_config.SourceFolder}");
+            Console.WriteLine($"[FEHLER] Quellordner nicht gefunden: {_config.SourceFolder}");
             return;
         }
 
@@ -532,7 +532,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Reiner Debug-Roundtrip, um zu testen ob die API antwortet.
     /// </summary>
     private async Task<bool> DebugHelloRoundtripAsync() {
-        Console.WriteLine("\n  [Debug] Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
+        Console.WriteLine("\n  [DEBUG] Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -583,7 +583,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
                 Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
                 if (attempt < maxRetries - 1) {
-                    Console.WriteLine($"[Debug] Retry in {backoff}s...");
+                    Console.WriteLine($"[DEBUG] Retry in {backoff}s...");
                     await Task.Delay(backoff * 1000);
                     backoff += 10;
                 }
@@ -596,6 +596,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 60;
             Console.WriteLine($"  [Rate-Limit] Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
+            Console.WriteLine("  [OK] 'Hello' Roundtrip erfolgreich.");
             return true;
         }
         else {
@@ -805,7 +806,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             SegmentUpload upload = await uploadTask;
             (uploadSuccess, parsedPrompt, attachmentParts) = (upload.Succeeded, upload.Prompt, upload.Attachments);
             if (!uploadSuccess) {
-                Console.WriteLine($"  [Fehler] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+                Console.WriteLine($"  [FEHLER] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                 state.FileProcessingSuccess = false;
                 break;
             }

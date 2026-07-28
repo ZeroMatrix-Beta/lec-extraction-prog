@@ -80,7 +80,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 }
             }
             else {
-                WriteLine($"\n[Fehler] Die Datei '{rawName}' wurde absolut nirgends gefunden.");
+                WriteLine($"\n[FEHLER] Die Datei '{rawName}' wurde absolut nirgends gefunden.");
                 WriteLine("  Ich habe exakt hier gesucht:");
                 foreach (var loc in searchedLocations) {
                     WriteLine($"   - {loc}");
@@ -179,7 +179,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
         };
 
         if (mimeType == null) {
-            WriteLine($"[Fehler] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
+            WriteLine($"[FEHLER] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
             return false;
         }
 
@@ -227,7 +227,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 );
 
                 if (uploadedFile?.Name == null) {
-                    WriteLine($"  [Fehler] Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null oder Upload nach mehreren Versuchen fehlgeschlagen.");
+                    WriteLine($"  [FEHLER] Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null oder Upload nach mehreren Versuchen fehlgeschlagen.");
                     return false;
                 }
 
@@ -261,7 +261,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 WriteLine();
 
                 if (fileInfo == null || string.Equals(fileInfo?.State?.ToString(), "FAILED", StringComparison.OrdinalIgnoreCase)) {
-                    WriteLine($"  [Fehler] Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
+                    WriteLine($"  [FEHLER] Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
                     return false;
                 }
 
@@ -306,7 +306,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                     WriteLine("  Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
                 }
 
-                WriteLine($"  [Fehler] Upload über File API endgültig fehlgeschlagen.");
+                WriteLine($"  [FEHLER] Upload über File API endgültig fehlgeschlagen.");
                 return false;
             }
         }
@@ -326,7 +326,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 }, maxRetries: 10, retryContext: $"GCS Upload: {Path.GetFileName(filePath)}");
 
                 if (uploadResult == null) {
-                    WriteLine($"  [Fehler] Upload in GCS nach mehreren Versuchen fehlgeschlagen.");
+                    WriteLine($"  [FEHLER] Upload in GCS nach mehreren Versuchen fehlgeschlagen.");
                     return false;
                 }
 
@@ -361,7 +361,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                     WriteLine("  Bitte prüfe deine Internetverbindung.");
                 }
 
-                WriteLine($"  [Fehler] Upload in GCS endgültig fehlgeschlagen.");
+                WriteLine($"  [FEHLER] Upload in GCS endgültig fehlgeschlagen.");
                 return false;
             }
         }

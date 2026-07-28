@@ -116,7 +116,7 @@ public static partial class VideoDateParser {
         }
 
         if (!dateFound) {
-            Console.WriteLine($"[Warning] Date format mismatch or missing date in file '{fileNameWithoutExtension}'.");
+            Console.WriteLine($"[WARNUNG] Date format mismatch or missing date in file '{fileNameWithoutExtension}'.");
             return new() {
                 Date = DateTime.MinValue,
                 Weekday = weekday,
@@ -134,7 +134,7 @@ public static partial class VideoDateParser {
         catch (ArgumentOutOfRangeException ex) {
             Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
             Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-            Console.WriteLine($"[Warning] Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'.");
+            Console.WriteLine($"[WARNUNG] Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'.");
             return new() {
                 Date = DateTime.MinValue,
                 Weekday = weekday,

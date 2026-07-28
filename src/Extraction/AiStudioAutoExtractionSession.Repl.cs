@@ -185,7 +185,7 @@ public partial class AiStudioAutoExtractionSession {
             }
         }
         else {
-            Console.WriteLine("  [Fehler] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
+            Console.WriteLine("  [FEHLER] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
         }
         return true;
     }

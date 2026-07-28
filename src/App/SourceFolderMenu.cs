@@ -58,7 +58,7 @@ public static class SourceFolderMenu {
                     });
                     break;
                 default:
-                    Console.WriteLine("Ungültige Auswahl.");
+                    Console.WriteLine("  [FEHLER] Ungültige Auswahl.");
                     break;
             }
         }
