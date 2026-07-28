@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phases 0–4 done, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off), **Phase 5 (full twin unification) declined — see §6.1**, **Phase 6 done**, **Phase 7 done**. This refactor is now essentially complete — everything in the original 8-phase plan is either done or explicitly declined with reasoning recorded. · **Pick up next:** §5 (console/UX cleanup) is now the live work list — item 9 (file-tree console spam) is the user's stated priority. Also: (a) user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex when possible — the one piece of this session's work not verified against the real API; (b) otherwise, incremental common-helper extraction as areas get touched (see §6.1) is the ongoing mode of work, not a new phase · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phases 0–7 closed** — 0, 1, 2, 3, 4, 4.5, 6, 7 done; Phase 5 (full twin unification) **declined**, see §6.1. The structural refactor is complete. Vertex implicit prefix-cache warmup also ported this session (flag defaults off, **not** verified against the real API). · **Pick up next: Phase 8 — Console & UX cleanup**, the only open phase. Execution order, verification approach and exit criteria in §4; the 16-item backlog with file paths and evidence in §5. Start with Phase 8 step 1 (verbosity flag — the user's stated priority, and the only item that also saves RPM quota). · **Two things that need the user, not an agent:** (a) smoke-test `EnableImplicitPrefixCacheWarmup` on Vertex when possible; (b) decide §5 item 10 (`InlinePrecedingLecTexParts` — dead on the AI Studio path; wire up or delete, both change what reaches a paid API). · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
@@ -975,12 +975,57 @@ mechanically follow from renaming a field/variable used inside a `$"..."`
 literal (e.g. `{_speed}` → `{_playbackSpeedMultiplier}`) — runtime-visible
 output never changed; baseline updated deliberately after each such batch.
 
+### Phase 8 — Console & UX cleanup · low risk · **next up**
+
+The one phase that deliberately **breaks** the frozen-UI-strings rule of §2.1
+— that rule existed to make the refactor safe, and the refactor is done. Its
+job now is to change what the user sees, on purpose, on a clean base.
+
+**Backlog: the 16 items in §5**, each with file paths, line numbers, and
+evidence. Not duplicated here. Suggested execution order, grouped so each
+commit is one coherent behavioural change:
+
+1. **Verbosity flag** (§5 items 9, 11, 12) — one new config flag gating the
+   recursive file-tree print, the 3-per-part diagnostic `CountTokensAsync`
+   calls, and the triple token report. Biggest quality-of-life win, and the
+   only item that also **saves RPM quota** rather than just reducing noise.
+   User's stated priority.
+2. **Severity-tag vocabulary** (§5 items 5, 8) — one canonical tag per level
+   plus a shared print helper, replacing 20+ variant spellings across 624
+   strings. Mechanical but wide; do it in its own commit.
+3. **Correctness fixes** (§5 items 13, 14) — `SelectModel`'s missing append,
+   and the `(j/n)` prompts that silently accept a typo as "no" and let a paid
+   run proceed with no system instructions. Small, independent, high value.
+4. **Model config consolidation** (§5 item 16) — move the chat sessions'
+   hardcoded `AvailableModels` into JSON, then retire `AppConfig`'s six dead
+   `Default*` model params (moving sane defaults onto the config classes, not
+   deleting them outright — see the caveat in §5).
+5. **Menu plumbing** (§5 items 1, 2, 3, 4, 6, 15) — config caching, hiding the
+   disabled Vertex option, one shared `MenuPrompt`, killing the `__EXIT__`
+   magic string, table-driven numbering, and a `show config` command.
+6. **Decision required before any code moves:** §5 item 10
+   (`InlinePrecedingLecTexParts` is dead on the AI Studio path — wire it up or
+   delete it). Changes what reaches a paid API either way; **ask, don't pick.**
+
+*Verification for this phase differs from 0–7.* Build 0/0 and 85 tests green
+still apply, but the UI-string diff is now a **review tool, not a pass/fail
+gate**: read it to confirm every change is one you meant, then update
+`docs/ui-strings.baseline.txt` as part of the same commit. A clean diff in this
+phase means you probably didn't do anything.
+
+*Exit:* build 0/0, tests green, every §5 item either done or explicitly
+declined with a reason recorded, baseline regenerated.
+
 ---
 
-## 5. UI changes — collected, deliberately **not** executed now
+## 5. Phase 8 backlog — console & UX changes (deferred during the refactor, now live)
 
-Recorded here so they are not lost; to be done after the refactor lands, as its
-own change, per your instruction.
+Collected during Phases 0–7 and deliberately deferred, because changing console
+output while refactoring would have destroyed the UI-string diff as a
+regression check. The refactor has landed, so this list is now the backlog for
+**Phase 8** (see §4 for its execution order, verification approach, and exit
+criteria). Items are numbered in discovery order, **not** priority order — the
+grouping in Phase 8 is what to follow.
 
 1. The main menu re-loads `AiStudioAutoExtractionConfig` on **every** loop
    iteration purely to render one status line — cache it, invalidate on edit.
@@ -1133,18 +1178,10 @@ own change, per your instruction.
     `IsVertexAiEnabled`, Vertex project/location) are genuinely global and
     should stay.
 
-**Note (2026-07-28):** the "deliberately not executed now" framing above was
-written when the refactor was still in flight. The refactor has now landed
-(Phases 0–7 done or explicitly declined), so **this section is the actual
-next body of work**, not a parking lot. Item 9 is the user's stated priority.
-
-**Suggested grouping for execution** — items 9, 11, 12 are one coherent
-change (a single `Verbosity`/`VerboseDiagnostics` config flag gating the
-file tree, the token-analysis API calls, and the triple token report), and
-together they'd cut the console noise dramatically while also saving RPM
-quota. Items 5, 8 are a second coherent change (one canonical severity-tag
-vocabulary + a shared print helper). Items 13, 14 are small independent
-correctness fixes. Item 10 needs a user decision before any code moves.
+**Execution order for the above lives in Phase 8 (§4)**, which groups these 16
+items into six commits, gives the phase its verification approach (the
+UI-string diff inverts from pass/fail gate to review tool) and its exit
+criteria. This section is the evidence; Phase 8 is the plan.
 
 ---
 
@@ -1226,16 +1263,25 @@ validation possible).
 ## 8. Suggested order of work
 
 ```
-Phase 0  Safety net              ~small     independent
-Phase 1  Layout + namespaces     ~large     mechanical
-Phase 2  Domain records          ~small
-Phase 3  Extract services        ~large     ← biggest single win
-Phase 4  Split god methods       ~large
-Phase 5  Unify twins             ~medium    ← blocked on §6
-Phase 6  Entry point + menus     ~small
-Phase 7  Naming + docs           ~medium
+Phase 0    Safety net              ~small     ✅ done
+Phase 1    Layout + namespaces     ~large     ✅ done  (mechanical)
+Phase 2    Domain records          ~small     ✅ done
+Phase 3    Extract services        ~large     ✅ done  ← biggest single win
+Phase 4    Split god methods       ~large     ✅ done
+Phase 4.5  Split the god class     ~medium    ✅ done  (added mid-flight)
+Phase 5    Unify twins             ~medium    ❌ declined — see §6.1
+Phase 6    Entry point + menus     ~small     ✅ done
+Phase 7    Naming + docs           ~medium    ✅ done
+Phase 8    Console & UX cleanup    ~medium    ← NEXT, backlog in §5
 ```
 
-Phases 0–4 are worth doing regardless of how §6 is decided, and already remove
-the great majority of the spaghetti. Phase 3 alone should cut roughly 1 500
-duplicated lines.
+Phases 0–4 were worth doing regardless of how §6 was decided, and removed the
+great majority of the spaghetti. Phase 3 alone cut roughly 1 500 duplicated
+lines.
+
+**Phases 0–7 are closed.** Phase 8 is the only open work, and it is
+deliberately different in kind from everything above it: Phases 0–7 were
+*structural* changes that held observable behaviour frozen, verified by an
+empty UI-string diff. Phase 8 is a *behavioural* change whose entire point is
+to alter what the user sees — so it inverts that check (see Phase 8's
+verification note). Don't carry the frozen-strings habit into it.
