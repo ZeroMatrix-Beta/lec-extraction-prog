@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done, Phase 4 done for AI Studio (Vertex intentionally untouched, see below) · **Pick up next:** candidate Phase 4.5 (class-level split of `AiStudioAutoExtractionSession.cs`, see its section under Phase 4) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 items 1–2 done (see below) · **Pick up next:** Phase 4.5 item 3 (re-measure and decide on a further split) or Phase 5 (twin unification, blocked on nothing but risk appetite) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Decision (2026-07-28): Vertex is out of scope for Phase 4+.** Vertex AI
 stays disabled (`Program.Activate_Vertex` stays hardcoded `false`, per the
@@ -710,6 +710,40 @@ Phase 4.5, not yet started:**
 3. Re-measure line count and nesting after 1–2; decide whether a third pass
    (e.g. pulling `PrepareAndUploadPartAsync` + upload-scheduling into its own
    type) is still warranted.
+
+**Outcome (2026-07-28) — items 1–2 done, as `partial class` splits, not standalone
+types, commit pending in this session.**
+
+* `AiStudioAutoExtractionSession.Repl.cs` (new file, 410 lines) — `PrintCommandsMenu`,
+  `ReplLoopAsync`, all 9 `TryHandleReplX(Async)` methods, `SelectModel`,
+  `DebugChatAsync`, `StreamDebugChatResponseAsync`, `MyRegex()`. Moved verbatim
+  via `sed` line-range extraction (not retyped) to rule out transcription slips,
+  the same discipline Phase 3 used for `ExtractionHelpers`/`ConsoleUiHelper`.
+* `AiStudioAutoExtractionSession.PrefixCache.cs` (new file, 224 lines) —
+  `_dummyPart0Content` + `GetDummyPart0Content()`, `WarmUpWithBatchedHistoryAsync`,
+  `WarmUpSystemInstructionCacheAsync`. Same verbatim-extraction method.
+* `AiStudioAutoExtractionSession.cs` itself: 1809 → 1239 lines (−31%).
+* **Deliberate deviation from §3.1's naming:** the plan's target architecture
+  names these as standalone types (`ExtractionRepl`, `PrefixCachePrimer`) that
+  would take their dependencies via constructor injection. That was *not* done.
+  Both extracted regions read and write a lot of the session's mutable state
+  directly — `WarmUpWithBatchedHistoryAsync` mutates `_systemInstructionText`
+  in a loop and calls back into `AppendHistoryFilesToInstructionAsync`;
+  `StreamDebugChatResponseAsync` mutates the four `_sessionTotal*Tokens`
+  counters and `_debugChatHistory`. Turning that into clean constructor-injected
+  types would mean designing a shared mutable-state object first (the same
+  prerequisite already flagged for splitting `ProcessPreparedVideoAsync`
+  further) — real design risk for code with zero automated coverage and a paid
+  API on the other end, for a readability win only. A `partial class` split
+  gets the same file-size reduction with **zero behavioral risk**: no field
+  access changes, no new coupling, same verification (build 0/0, 85 tests
+  green, UI-string diff empty, `[AI Context]`/`[Human]` comment count checked
+  before/after — 64 → 68, all +4 accounted for by the two new file-header
+  doc comments, nothing lost). If Phase 5's `IAiBackend` unification later
+  needs these as real standalone types, that redesign should happen *there*,
+  where the mutable-state question has to be answered for the twin-merge
+  anyway — not duplicated here first.
+* Item 3 (re-measure/decide on a further pass) — not done this session.
 
 ### Phase 5 — Unify the twins · highest risk · see §6 open decision
 
