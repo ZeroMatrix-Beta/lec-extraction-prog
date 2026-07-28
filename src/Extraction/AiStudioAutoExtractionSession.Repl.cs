@@ -224,10 +224,16 @@ public partial class AiStudioAutoExtractionSession {
                 _config.CurrentModelIndex = found;
             }
             else {
-                Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
+                var newList = models.ToList();
+                newList.Add(choice);
+                _config.Model = [.. newList];
+                _config.CurrentModelIndex = newList.Count - 1;
+                ConfigLoader<AiStudioAutoExtractionConfig>.Save(_config);
+                Console.WriteLine($"  [OK] Modell '{choice}' zur Konfiguration hinzugefügt und aktiviert.");
             }
             ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: false, _latexRefinementConfig);
         }
+
     }
 
     /// <summary>

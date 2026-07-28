@@ -59,4 +59,24 @@ public class StringHelperTests {
 
         Assert.Equal(noEndTag, noEndTag.FixMalformedEndTags());
     }
+
+    [Theory]
+    [InlineData("j", true, true)]
+    [InlineData("ja", true, true)]
+    [InlineData("y", true, true)]
+    [InlineData("yes", true, true)]
+    [InlineData("1", true, true)]
+    [InlineData("true", true, true)]
+    [InlineData("  J  ", true, true)]
+    [InlineData("", true, true)]
+    [InlineData(null, true, true)]
+    [InlineData("", false, false)]
+    [InlineData(null, false, false)]
+    [InlineData("n", true, false)]
+    [InlineData("no", true, false)]
+    [InlineData("nein", true, false)]
+    public void IsAffirmativeResponse_CorrectlyIdentifiesAffirmativeAnswers(string? input, bool defaultIfEmpty, bool expected) {
+        Assert.Equal(expected, input.IsAffirmativeResponse(defaultIfEmpty));
+    }
 }
+

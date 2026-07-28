@@ -195,7 +195,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             ? "System Instructions und History laden? (j/n): "
             : "System Instructions laden? (j/n): ";
         Console.Write(confirmPrompt);
-        if (Console.ReadLine()?.Trim().ToLower() != "j") return true;
+        string? sysResp = Console.ReadLine();
+        if (!sysResp.IsAffirmativeResponse(defaultIfEmpty: true)) {
+            Console.WriteLine("  [WARNUNG] System Instructions wurden vom Benutzer nicht geladen.");
+            return true;
+        }
 
         // Determine common base for relative path display
         var allPathsForBaseResolution = new List<string>(resolvedInstructionFiles);
@@ -327,7 +331,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             ? "Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): "
             : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ";
         Console.Write(confirmPrompt);
-        if (Console.ReadLine()?.Trim().ToLower() != "j") return;
+        string? histResp = Console.ReadLine();
+        if (!histResp.IsAffirmativeResponse(defaultIfEmpty: true)) {
+            Console.WriteLine("  [WARNUNG] History-Dateien wurden vom Benutzer nicht geladen.");
+            return;
+        }
 
         if (_config.LoadHistoryIntoSystemInstruction) {
             Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");

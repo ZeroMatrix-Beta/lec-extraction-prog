@@ -21,6 +21,16 @@ public static partial class StringExtensions {
     }
 
     /// <summary>
+    /// Checks if user response is an affirmative answer ("j", "ja", "y", "yes", "1", "true").
+    /// If empty/whitespace, returns <paramref name="defaultIfEmpty"/>.
+    /// </summary>
+    public static bool IsAffirmativeResponse(this string? input, bool defaultIfEmpty = true) {
+        if (string.IsNullOrWhiteSpace(input)) return defaultIfEmpty;
+        string trimmed = input.Trim().ToLowerInvariant();
+        return trimmed is "j" or "ja" or "y" or "yes" or "1" or "true";
+    }
+
+    /// <summary>
     /// Checks if a string contains another string, ignoring case.
     /// </summary>
     public static bool ContainsIgnoreCase(this string source, string toCheck) {

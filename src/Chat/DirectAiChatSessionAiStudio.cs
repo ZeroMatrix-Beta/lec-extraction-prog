@@ -124,7 +124,7 @@ public partial class DirectAiChatSessionAiStudio {
             if (sysPromptChoice == "__EXIT__") return;
             if (sysPromptChoice == "__CHANGED_KEY__") continue;
 
-            if (sysPromptChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase)) {
+            if (sysPromptChoice.IsAffirmativeResponse(defaultIfEmpty: true)) {
                 if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
                     _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
                     WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
@@ -707,7 +707,7 @@ public partial class DirectAiChatSessionAiStudio {
         string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
         if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;
 
-        bool loadHistory = historyChoice.Trim().Equals("j", StringComparison.CurrentCultureIgnoreCase);
+        bool loadHistory = historyChoice.IsAffirmativeResponse(defaultIfEmpty: true);
 
         if (!loadHistory) return null;
 

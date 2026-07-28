@@ -141,7 +141,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         : "System Instructions laden? (j/n): ";
                     Console.Write(promptText);
 
-                    if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                    string? sysResp = Console.ReadLine();
+                    if (sysResp.IsAffirmativeResponse(defaultIfEmpty: true)) {
                         var allPathsForIndex = new List<string>(resolvedInstructionFiles);
                         if (_config.LoadHistoryIntoSystemInstruction && distinctHistoryFiles.Count > 0) {
                             allPathsForIndex.AddRange(distinctHistoryFiles);
@@ -206,7 +207,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     Console.Write("Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ");
                 }
 
-                if (Console.ReadLine()?.Trim().ToLower() == "j") {
+                string? histResp = Console.ReadLine();
+                if (histResp.IsAffirmativeResponse(defaultIfEmpty: true)) {
                     if (_config.LoadHistoryIntoSystemInstruction) {
                         Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
                     }
@@ -717,10 +719,16 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 _config.CurrentModelIndex = found;
             }
             else {
-                Console.WriteLine($"  [INFO] Modell '{choice}' nicht in der Liste gefunden. Auswahl unverändert.");
+                var newList = models.ToList();
+                newList.Add(choice);
+                _config.Model = [.. newList];
+                _config.CurrentModelIndex = newList.Count - 1;
+                ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
+                Console.WriteLine($"  [OK] Modell '{choice}' zur Konfiguration hinzugefügt und aktiviert.");
             }
             ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
         }
+
     }
 
     /// <summary>
