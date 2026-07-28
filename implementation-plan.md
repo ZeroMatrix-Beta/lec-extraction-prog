@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 items 1–2 done (see below) · **Pick up next:** Phase 4.5 item 3 (re-measure and decide on a further split) or Phase 5 (twin unification, blocked on nothing but risk appetite) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3) · **Pick up next:** Phase 5 (twin unification — highest risk, needs a manual smoke test against the paid API that only the user can run) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Decision (2026-07-28): Vertex is out of scope for Phase 4+.** Vertex AI
 stays disabled (`Program.Activate_Vertex` stays hardcoded `false`, per the
@@ -743,7 +743,19 @@ types, commit pending in this session.**
   needs these as real standalone types, that redesign should happen *there*,
   where the mutable-state question has to be answered for the twin-merge
   anyway — not duplicated here first.
-* Item 3 (re-measure/decide on a further pass) — not done this session.
+* **Item 3, done (2026-07-28):** re-measured after 1–2 — main file was 1239
+  lines, 23 methods, with `ProcessPreparedVideoAsync` still 279 lines (the
+  clear remaining offender). Split it into `ProcessPreparedVideoAsync`
+  (orchestrator) + `ComputeBaseName` + `ResolveRefinementClientAndConfigureParams`
+  + `TranscribeSegmentsAsync` (the per-part loop) + `FinalizeVideoOutputAsync`,
+  sharing cross-iteration mutable state via a new private `VideoProcessingState`
+  class instead of a 6+ parameter/ref-parameter list — the exact prerequisite
+  this section originally flagged as missing. Main file now 1292 lines (net
+  +53 vs. the 1239 low, since this pass adds real structure — 2 new methods +
+  1 state class — rather than just moving text to another file). Verified via
+  `dotnet build -o <alt-dir>` (0 errors; default output was locked by a
+  `lec-extraction-prog.exe` instance the user asked to leave running), 85
+  tests green, empty UI-string diff.
 
 ### Phase 5 — Unify the twins · highest risk · see §6 open decision
 
