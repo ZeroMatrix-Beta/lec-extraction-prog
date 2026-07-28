@@ -17,4 +17,10 @@
    Before finishing any task or handing over to the user, you MUST run `dotnet build`. Ensure the output is exactly `0 Warning(s)` and `0 Error(s)`. Any warnings (e.g. `CA1860`, `SYSLIB1045`, `IDE0028`, `IDE0060`) must be fixed immediately.
 8. **No Access to External Prompt Directory**:
    You do not need read or write access to the external directory `C:\Users\miche\latex\prompt-engineering` or its subdirectories. The prompt engineering files there are managed outside the scope of this project. Do not request permissions for this directory path.
-
+9. **Extraction Session Structure**:
+   - `AiStudioAutoExtractionSession` is split into:
+     - `AiStudioAutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
+     - `AiStudioAutoExtractionSession.PrefixCache.cs`: Prefix cache initialization and warm-up logic (`TryLoadSystemInstructionWithHistoryAsync`, `WarmUpWithBatchedHistoryAsync`).
+   - `VertexAutoExtractionSession` is split into:
+     - `VertexAutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
+     - `VertexAutoExtractionSession.PrefixCache.cs`: Prefix cache initialization and warm-up logic.

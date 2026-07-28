@@ -12,11 +12,11 @@ using LectureExtraction.GoogleAi;
 namespace LectureExtraction.Extraction;
 
 /// <summary>
-/// [AI Context] Implicit prefix-cache warm-up for Vertex, ported from AiStudioAutoExtractionSession
-/// (2026-07-28) since Google's implicit prefix caching also applies on Vertex, independent of Vertex's
-/// existing explicit CachedContent mechanism (which only covers the system-instruction text, not the
-/// static per-part preamble this warms up). Gated behind config.EnableImplicitPrefixCacheWarmup, default
-/// false since this is new, untested behavior for Vertex.
+/// [AI Context] Implicit prefix-cache warm-up for Vertex, ported from AiStudioAutoExtractionSession.
+/// Member Index:
+/// - GetStaticPromptBeginning: Returns the static per-part prompt preamble.
+/// - WarmUpSystemInstructionCacheAsync: Sends warm-up handshake using dummy-part0.tex.
+/// - TryLoadSystemInstructionWithHistoryAsync: Loads system instruction text & triggers warmup if enabled.
 /// [Human] Der von AI Studio portierte Cache-Warmup-Teil der Vertex-Session.
 /// </summary>
 public partial class VertexAutoExtractionSession {

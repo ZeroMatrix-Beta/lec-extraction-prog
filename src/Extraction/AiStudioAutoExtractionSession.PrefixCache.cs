@@ -22,9 +22,10 @@ namespace LectureExtraction.Extraction;
 /// <summary>
 /// [AI Context] AI-Studio-only implicit prefix-cache priming: loads the dummy-part0.tex anchor and sends
 /// warm-up handshakes (single-shot or staged/batched) to pre-fill Google's implicit prefix cache before
-/// real video processing begins. Has no Vertex equivalent (Vertex uses the real CachedContent API via
-/// ContextCacheCoordinator instead). Split out of AiStudioAutoExtractionSession.cs (Phase 4.5) — a pure
-/// organizational move, not deduplication, per the Phase 3 investigation of this code.
+/// real video processing begins. Split out of AiStudioAutoExtractionSession.cs (Phase 4.5).
+/// Member Index:
+/// - WarmUpWithBatchedHistoryAsync: Staged cache warming by grouping history files into batches.
+/// - TryLoadSystemInstructionWithHistoryAsync: Loads system instruction text & preloads history.
 /// [Human] Der Cache-Warmup-Teil der Session: dummy-part0.tex laden und Warmup-Handshakes senden.
 /// </summary>
 public partial class AiStudioAutoExtractionSession {

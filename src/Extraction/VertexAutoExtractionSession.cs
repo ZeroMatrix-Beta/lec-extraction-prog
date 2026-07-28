@@ -20,15 +20,18 @@ using LectureExtraction.Refinement;
 namespace LectureExtraction.Extraction;
 
 /// <summary>
-/// [AI Context] Orchestrates the fully automated transcription pipeline. 
+/// [AI Context] Orchestrates the fully automated transcription pipeline for Vertex AI.
 /// Combines local FFmpeg preprocessing (producer) with Gemini API sequential extraction (consumer).
-/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos. 
-/// Schau bitte auch das entsprechende .json-File an!
+/// Split into partial classes:
+/// - VertexAutoExtractionSession.cs (core pipeline, file batching, YouTube transcription)
+/// - VertexAutoExtractionSession.PrefixCache.cs (implicit prefix cache warming & history loading)
+/// Member Index:
+/// - StartAsync: Validates folders, prompts mode selection (batch, single, youtube), and begins execution.
+/// - SetupContextAndProcessAsync: Ensures system instructions/preamble are loaded then processes files.
+/// - ProcessPreparedVideoAsync: Producer/consumer loop for MP4 video segment extraction.
+/// - ProcessYouTubeTasksAsync: YouTube video download and transcription pipeline.
+/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos.
 /// </summary>
-/// <remarks>
-/// Note: This class is 'partial' because it uses the [GeneratedRegex] attribute 
-/// at the bottom of the file for compile-time regex generation (SYSLIB1045).
-/// </remarks>
 public partial class VertexAutoExtractionSession(Client client, VertexAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
         "gemini-3.6-flash",
@@ -48,8 +51,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
     private readonly List<Content> _sessionPreamble = [];
     private bool _historyWasLoaded = false;
-    // [AI Context] Stateful history exclusively for the REPL loop's debug chat.
-    private readonly List<Content> _debugChatHistory = [];
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
     private int _sessionTotalCachedTokens = 0;
@@ -91,7 +92,33 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
         }
 
-        await ReplLoopAsync();
+        Console.WriteLine("\n📋 Automatisierte Extraktion (Vertex AI) — Modus auswählen:");
+        Console.WriteLine("  1) 🚀 Alle Videos im Quellordner konvertieren (Standard)");
+        Console.WriteLine("  2) 🎬 Einzelnes Video auswählen und konvertieren");
+        Console.WriteLine("  3) 📺 YouTube-Video transkribieren");
+        Console.WriteLine("  4) 🚪 Abbrechen / Zurück");
+        Console.Write("\nAuswahl (1-4) [Standard: 1]: ");
+
+        string choice = Console.ReadLine()?.Trim() ?? "";
+        if (choice == "4" || choice.Equals("exit", StringComparison.OrdinalIgnoreCase) || choice.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
+            return;
+        }
+
+        if (choice == "2") {
+            var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
+            if (files.Length > 0) {
+                await SetupContextAndProcessAsync(files);
+            }
+        }
+        else if (choice == "3") {
+            await ProcessYouTubeTasksAsync();
+        }
+        else {
+            var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
+            if (files.Length > 0) {
+                await SetupContextAndProcessAsync(files);
+            }
+        }
     }
 
     /// <summary>
@@ -480,419 +507,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         Console.WriteLine("  [INFO] Einstellungen in VertexAutoExtractionConfig.json gespeichert.");
     }
 
-    /// <summary>
-    /// [AI Context] Interactive control loop for the AutoExtraction mode. 
-    /// Allows developers to dynamically adjust FFmpeg speeds, trigger specific files, or chat directly with the configured model for prompt debugging before launching a massive batch job.
-    /// [Human] Eine interaktive Konsole, um vor dem großen Batch-Start Parameter (wie Video-Speed) zu testen oder den Prompt zu debuggen.
-    /// </summary>
-    private void WriteCommandHelp() {
-        Console.WriteLine("\n📋 Befehle:");
-        Console.WriteLine("  1) 📜 Befehle anzeigen");
-        Console.WriteLine("  2) ⚡ Video-Geschwindigkeit setzen (z.B. 'set speed 1.5' oder nur '2'). Standard: 1.2");
-        Console.WriteLine("  3) 🎬 Einzelnes Video interaktiv auswählen und konvertieren");
-        Console.WriteLine("  4) 🚀 Alle Videos im Quellordner konvertieren");
-        Console.WriteLine("  5) 🚪 Beenden (exit/quit)");
-        Console.WriteLine("  6) 📺 YouTube-Video transkribieren (per URL oder Config)");
-        Console.WriteLine("  7) 🤖 Modell auswählen (aktuell: " + _config.CurrentModel + ")");
-        Console.WriteLine("  8) 🔧 Latex Refinement interaktiv starten (Debugging)");
-        Console.WriteLine($"  9) ⏳ Context Caching verlängern (+{_config.ContextCachingIncrementMinutes} min Standard)");
-        Console.WriteLine("  10) 🐷 Context Caching beenden (Save Money! Geld sparen)");
-        Console.WriteLine("  11) ⚙️ Standardwerte für Context Caching ändern");
-        Console.WriteLine("  (Alles andere wird als normaler Chat-Prompt zum Debuggen an Gemini gesendet)");
-        Console.WriteLine("\n💡 Hinweis: Um System Instruction und History dauerhaft zu ändern, müssen die Dateien auf der Festplatte angepasst und das Programm neu gestartet werden.");
-    }
 
-    private async Task ReplLoopAsync() {
-        WriteCommandHelp();
-
-        while (true) {
-            if (!Console.IsInputRedirected) {
-                while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-            }
-            Console.Write("\nAutoExt> ");
-            string input = Console.ReadLine()?.Trim() ?? "";
-            if (string.IsNullOrWhiteSpace(input)) continue;
-
-            string normalizedInput = input.TrimStart('/');
-            if (normalizedInput == "5" || normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) break;
-
-            if (normalizedInput == "1" || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-                WriteCommandHelp();
-            }
-            else if (normalizedInput == "2" || normalizedInput.StartsWith("2 ") || normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) {
-                string val = "";
-                if (normalizedInput.StartsWith("set speed", StringComparison.OrdinalIgnoreCase)) val = normalizedInput[9..].Trim();
-                else if (normalizedInput.StartsWith("2 ")) val = normalizedInput[2..].Trim();
-                else if (normalizedInput == "2") {
-                    Console.Write("Neuer Speed-Wert (z.B. 1.5): ");
-                    val = Console.ReadLine()?.Trim() ?? "";
-                }
-
-                if (double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double s)) {
-                    _playbackSpeedMultiplier = s;
-                    Console.WriteLine($"Speed gesetzt auf {_playbackSpeedMultiplier}x");
-                }
-                else {
-                    Console.WriteLine("Ungültiger Wert für speed.");
-                }
-            }
-            else if (normalizedInput == "3" || normalizedInput.Equals("convert chosen video", StringComparison.OrdinalIgnoreCase)) {
-                var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
-                if (files.Length > 0) {
-                    await SetupContextAndProcessAsync(files);
-                }
-            }
-            else if (normalizedInput == "4" || normalizedInput.Equals("convert all videos", StringComparison.OrdinalIgnoreCase)) {
-                var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
-                if (files.Length > 0) {
-                    await SetupContextAndProcessAsync(files);
-                }
-            }
-            else if (normalizedInput == "6" || normalizedInput.Equals("youtube", StringComparison.OrdinalIgnoreCase)) {
-                await ProcessYouTubeTasksAsync();
-            }
-            else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
-                _debugChatHistory.Clear();
-                Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
-            }
-            else if (normalizedInput == "7" || normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
-                SelectModel();
-                ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
-                ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
-                Console.WriteLine($"  [INFO] Modell für diese Session auf '{_config.CurrentModel}' gesetzt und für die gesamte Pipeline (AutoExtraction & LatexRefinement) in beiden JSON-Konfigurationen gespeichert.");
-            }
-            else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
-                if (_latexRefinementConfig != null) {
-                    _latexRefinementConfig.UseVertex = AppConfig.IsVertexAiEnabled;
-                }
-                await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig!, _config);
-            }
-            else if (normalizedInput == "9" || normalizedInput.Equals("prolong cache", StringComparison.OrdinalIgnoreCase)) {
-                bool extendedAny = false;
-
-                // 1) Vertex Main Extraction Cache
-                string? mainCacheName = _cachedContentName;
-                if (string.IsNullOrEmpty(mainCacheName)) {
-                    var mainState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
-                    mainCacheName = mainState.CacheName;
-                }
-
-                if (!string.IsNullOrEmpty(mainCacheName)) {
-                    var savedState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
-                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, savedState, _config.ContextCachingIncrementMinutes, ContextCacheStateManager.StateFileVertex);
-                    if (updated != null) {
-                        Console.WriteLine($"  [INFO] Video-Extraktions Kontext-Cache '{mainCacheName}' verlängert um {_config.ContextCachingIncrementMinutes} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
-                        _cachedContentName = mainCacheName;
-                        extendedAny = true;
-                    }
-                }
-
-                // 2) LaTeX Schritt 1 Cache
-                var step1State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep1);
-                if (!string.IsNullOrEmpty(step1State.CacheName)) {
-                    int incMin = _latexRefinementConfig?.Step1MergeAndTimestamp?.Vertex?.ContextCachingIncrementMinutes ?? 30;
-                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, step1State, incMin, ContextCacheStateManager.StateFileLatexStep1);
-                    if (updated != null) {
-                        Console.WriteLine($"  [INFO] LaTeX Schritt 1 Kontext-Cache '{step1State.CacheName}' verlängert um {incMin} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
-                        extendedAny = true;
-                    }
-                }
-
-                // 3) LaTeX Schritt 2 Cache
-                var step2State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep2);
-                if (!string.IsNullOrEmpty(step2State.CacheName)) {
-                    int incMin = _latexRefinementConfig?.Step2SpeechRefinement?.Vertex?.ContextCachingIncrementMinutes ?? 30;
-                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, step2State, incMin, ContextCacheStateManager.StateFileLatexStep2);
-                    if (updated != null) {
-                        Console.WriteLine($"  [INFO] LaTeX Schritt 2 Kontext-Cache '{step2State.CacheName}' verlängert um {incMin} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
-                        extendedAny = true;
-                    }
-                }
-
-                // 4) LaTeX Schritt 3 Cache
-                var step3State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep3);
-                if (!string.IsNullOrEmpty(step3State.CacheName)) {
-                    int incMin = _latexRefinementConfig?.Step3LastRefinement?.Vertex?.ContextCachingIncrementMinutes ?? 30;
-                    var updated = await ContextCacheStateManager.ExtendCacheAsync(_client, step3State, incMin, ContextCacheStateManager.StateFileLatexStep3);
-                    if (updated != null) {
-                        Console.WriteLine($"  [INFO] LaTeX Schritt 3 Kontext-Cache '{step3State.CacheName}' verlängert um {incMin} Minuten (Neu gültig bis {updated.ExpireTimeUtc.ToLocalTime():t}).");
-                        extendedAny = true;
-                    }
-                }
-
-                if (!extendedAny) {
-                    Console.WriteLine("  [WARNUNG] Es sind aktuell keine aktiven Google Kontext-Caches vorhanden, die verlängert werden können.");
-                }
-            }
-            else if (normalizedInput == "10" || normalizedInput.Equals("stop cache", StringComparison.OrdinalIgnoreCase)) {
-                bool clearedAny = false;
-
-                // 1) Vertex Main Extraction Cache
-                string? mainCacheName = _cachedContentName;
-                if (string.IsNullOrEmpty(mainCacheName)) {
-                    var mainState = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileVertex);
-                    mainCacheName = mainState.CacheName;
-                }
-
-                if (!string.IsNullOrEmpty(mainCacheName)) {
-                    await ContextCacheStateManager.DeleteRemoteAsync(_client, mainCacheName);
-                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileVertex);
-                    _cachedContentName = null;
-                    Console.WriteLine("  [INFO] 🐷 Video-Extraktions Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
-                    clearedAny = true;
-                }
-
-                // 2) LaTeX Schritt 1 Cache
-                var step1State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep1);
-                if (!string.IsNullOrEmpty(step1State.CacheName)) {
-                    await ContextCacheStateManager.DeleteRemoteAsync(_client, step1State.CacheName);
-                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileLatexStep1);
-                    Console.WriteLine("  [INFO] 🐷 LaTeX Schritt 1 Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
-                    clearedAny = true;
-                }
-
-                // 3) LaTeX Schritt 2 Cache
-                var step2State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep2);
-                if (!string.IsNullOrEmpty(step2State.CacheName)) {
-                    await ContextCacheStateManager.DeleteRemoteAsync(_client, step2State.CacheName);
-                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileLatexStep2);
-                    Console.WriteLine("  [INFO] 🐷 LaTeX Schritt 2 Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
-                    clearedAny = true;
-                }
-
-                // 4) LaTeX Schritt 3 Cache
-                var step3State = ContextCacheStateManager.LoadState(ContextCacheStateManager.StateFileLatexStep3);
-                if (!string.IsNullOrEmpty(step3State.CacheName)) {
-                    await ContextCacheStateManager.DeleteRemoteAsync(_client, step3State.CacheName);
-                    ContextCacheStateManager.ClearState(ContextCacheStateManager.StateFileLatexStep3);
-                    Console.WriteLine("  [INFO] 🐷 LaTeX Schritt 3 Kontext-Cache vorzeitig beendet und bei Google gelöscht.");
-                    clearedAny = true;
-                }
-
-                if (!clearedAny) {
-                    Console.WriteLine("  [WARNUNG] Es sind aktuell keine aktiven Google Kontext-Caches vorhanden, die gelöscht werden können.");
-                }
-            }
-            else if (normalizedInput == "11" || normalizedInput.Equals("config cache", StringComparison.OrdinalIgnoreCase)) {
-                ConfigureCachingSettings();
-            }
-            else if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase)) {
-                _debugChatHistory.Clear();
-                Console.WriteLine("  [INFO] Debug-Chat Verlauf gelöscht.");
-            }
-            else {
-                await RunDiagnosticChatTurnAsync(input); // Chat erhält den originalen Input
-            }
-        }
-    }
-
-    /// <summary>
-    /// [AI Context] Interactive model picker that reads models from _config.Model[] array in the configured order.
-    /// The user's selection is persisted via CurrentModelIndex so it survives restarts.
-    /// [Human] Das Startmenü in der Konsole. Modelle werden aus der JSON-Config gelesen – einfach dort die Liste anpassen.
-    /// </summary>
-    private void SelectModel() {
-        string[] models = _config.Model;
-        if (models.Length == 0) {
-            Console.WriteLine("  [WARNUNG] Keine Modelle in der Konfiguration vorhanden.");
-            return;
-        }
-
-        Console.WriteLine($"\n=== Model Selection (Vertex AI) ===");
-        Console.WriteLine("Wähle ein Modell:");
-        for (int i = 0; i < models.Length; i++) {
-            string marker = (i == _config.CurrentModelIndex) ? " [aktiv]" : "";
-            Console.WriteLine($" {i + 1}) {models[i]}{marker}");
-        }
-        Console.Write($"Auswahl (1-{models.Length}) [Aktuell: {_config.CurrentModel}]: ");
-
-        string choice = Console.ReadLine()?.Trim() ?? "";
-        if (string.IsNullOrEmpty(choice)) return;
-
-        if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= models.Length) {
-            _config.CurrentModelIndex = idx - 1;
-            ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
-        }
-        else if (choice.Contains('-')) {
-            int found = Array.IndexOf(models, choice);
-            if (found >= 0) {
-                _config.CurrentModelIndex = found;
-            }
-            else {
-                var newList = models.ToList();
-                newList.Add(choice);
-                _config.Model = [.. newList];
-                _config.CurrentModelIndex = newList.Count - 1;
-                ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
-                Console.WriteLine($"  [OK] Modell '{choice}' zur Konfiguration hinzugefügt und aktiviert.");
-            }
-            ModelSyncService.SyncModelToRefinementConfig(_config.CurrentModel, isVertex: true, _latexRefinementConfig);
-        }
-
-    }
-
-    /// <summary>
-    /// [AI Context] A dedicated REPL chat for testing prompts against the model without initializing the full FFmpeg pipeline.
-    /// Contains identical retry/backoff logic to the main extraction loop to accurately simulate API conditions.
-    /// [Human] Der Debug-Chat. Hier kannst du mit der KI schreiben und testen, wie sie auf Prompts reagiert, bevor du hunderte Videos durchjagst.
-    /// </summary>
-    private async Task RunDiagnosticChatTurnAsync(string input) {
-        _debugChatHistory.Add(new Content { Role = "user", Parts = [new() { Text = input }] });
-
-        var requestConfig = new GenerateContentConfig {
-            Temperature = _config.Temperature,
-            TopP = _config.TopP,
-            TopK = _config.TopK,
-            MaxOutputTokens = _config.MaxOutputTokens
-        };
-
-        if (_config.UseGoogleSearch) {
-            requestConfig.Tools = [new Tool { GoogleSearch = new GoogleSearch() }];
-        }
-
-        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
-            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-            }
-            else if (_config.ThinkingBudget.HasValue) {
-                int budget = _config.ThinkingBudget.Value;
-                if (budget > 32768) budget = 32768;
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-            }
-        }
-
-        Console.Write($"\n[Debug Chat] {_config.CurrentModel} (Strg+C zum Abbrechen): ");
-
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
-        Console.CancelKeyPress += cancelHandler;
-
-        int maxRetries = 8;
-        int backoff = 45;
-        string fullResponse = "";
-        bool exceptionCaught = false;
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            fullResponse = "";
-            bool isGenerating = true;
-            var inputInterceptorTask = Task.Run(async () => {
-                while (isGenerating) {
-                    if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
-                        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                        Console.WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
-                    }
-                    await Task.Delay(100);
-                }
-            });
-
-            try {
-                if (attempt > 1) Console.Write($"\n[Versuch {attempt}/{maxRetries}] Sende Anfrage... ");
-                int requestInputTokens = 0;
-                int requestOutputTokens = 0;
-                int requestCachedTokens = 0;
-
-                var responseStream = _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _debugChatHistory, requestConfig);
-                await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
-                    if (cts.IsCancellationRequested) break;
-                    string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    Console.Write(txt);
-                    fullResponse += txt;
-                    if (chunk.UsageMetadata != null) {
-                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) requestCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                    }
-                }
-
-                _sessionTotalInputTokens += requestInputTokens;
-                _sessionTotalOutputTokens += requestOutputTokens;
-                _sessionTotalCachedTokens += requestCachedTokens;
-                Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {Math.Max(0, requestInputTokens - requestCachedTokens):N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
-                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens):N0} | Output: {_sessionTotalOutputTokens:N0}");
-
-                Console.WriteLine();
-                isGenerating = false;
-                await inputInterceptorTask;
-                break; // Erfolg
-            }
-            catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
-                isGenerating = false;
-                await inputInterceptorTask;
-                exceptionCaught = true;
-                break;
-            }
-            catch (Exception ex) {
-                isGenerating = false;
-                await inputInterceptorTask;
-
-                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-                bool isOverloaded = ApiRetryPolicy.IsTransientError(ex);
-                if (isOverloaded && attempt < maxRetries) {
-                    // [AI Context] Implementiert eine spezifische, lineare Backoff-Strategie.
-                    // Beim ersten Fehler (attempt == 1) wird eine eventuell vom Server vorgeschlagene Wartezeit ausgelesen und ein Puffer von 20s addiert.
-                    // Bei allen nachfolgenden Fehlern wird die vorherige Wartezeit linear um 30 Sekunden erhöht.
-                    // Dies vermeidet exponentielles Backoff, das zu exzessiv langen Wartezeiten führen kann.
-                    int waitTime;
-                    string contextMsg = " [Debug Chat]";
-                    string delayMessage = "Still waiting for the acknowledgment / processing...";
-
-                    if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
-                        waitTime = 300; // 5 Minuten
-                        Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
-                        Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
-                        Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
-                        delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
-                    }
-                    else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
-                        waitTime = 180; // 3 Minuten
-                        Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
-                        backoff = waitTime;
-                    }
-                    else if (attempt == 1) {
-                        var retryMatch = MyRegex().Match(ex.Message);
-                        if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-                            waitTime = serverSuggestedDelay + 20;
-                            Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
-                        }
-                        else {
-                            waitTime = backoff;
-                            Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
-                        }
-                        backoff = waitTime;
-                    }
-                    else {
-                        backoff += 30;
-                        waitTime = backoff;
-                        Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
-                    }
-                    if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { exceptionCaught = true; break; }
-                }
-                else {
-                    Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
-                    // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
-                    _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
-                    break;
-                }
-            }
-        }
-
-        Console.CancelKeyPress -= cancelHandler;
-
-        if (exceptionCaught || cts.IsCancellationRequested) {
-            Console.WriteLine("\n\n[INFO] Debug-Chat durch Benutzer abgebrochen.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            _debugChatHistory.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
-        }
-        else if (_debugChatHistory.Count > 0 && _debugChatHistory.Last().Role == "user") {
-            // Falls abgebrochen wurde, bevor die KI etwas gesagt hat, die User-Nachricht entfernen.
-            _debugChatHistory.RemoveAt(_debugChatHistory.Count - 1);
-        }
-    }
 
     /// <summary>
     /// [AI Context] Forces a real API call to explicitly acknowledge the history payload. 

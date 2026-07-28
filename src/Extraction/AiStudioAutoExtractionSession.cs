@@ -22,8 +22,15 @@ namespace LectureExtraction.Extraction;
 /// <summary>
 /// [AI Context] Orchestrates the fully automated transcription pipeline. 
 /// Combines local FFmpeg preprocessing (producer) with Gemini API sequential extraction (consumer).
-/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos. 
-/// Schau bitte auch das entsprechende .json-File an!
+/// Split into partial classes:
+/// - AiStudioAutoExtractionSession.cs (core pipeline, file batching, YouTube transcription)
+/// - AiStudioAutoExtractionSession.PrefixCache.cs (implicit prefix cache warming & history loading)
+/// Member Index:
+/// - StartAsync: Validates folders, prompts mode selection (batch, single, youtube), and begins execution.
+/// - SetupContextAndProcessAsync: Ensures system instructions/preamble are loaded then processes files.
+/// - ProcessFilesAsync: Producer/consumer loop for MP4 video segment extraction.
+/// - ProcessYouTubeTasksAsync: YouTube video download and transcription pipeline.
+/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos.
 /// </summary>
 public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
     public static readonly string[] AvailableModels = [
@@ -46,8 +53,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
     private readonly List<Content> _sessionPreamble = [];
     private bool _historyWasLoaded = false;
-    // [AI Context] Stateful history exclusively for the REPL loop's debug chat.
-    private readonly List<Content> _debugChatHistory = [];
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
     private int _sessionTotalCachedTokens = 0;
@@ -106,7 +111,33 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        await ReplLoopAsync();
+        Console.WriteLine("\n📋 Automatisierte Extraktion — Modus auswählen:");
+        Console.WriteLine("  1) 🚀 Alle Videos im Quellordner konvertieren (Standard)");
+        Console.WriteLine("  2) 🎬 Einzelnes Video auswählen und konvertieren");
+        Console.WriteLine("  3) 📺 YouTube-Video transkribieren");
+        Console.WriteLine("  4) 🚪 Abbrechen / Zurück");
+        Console.Write("\nAuswahl (1-4) [Standard: 1]: ");
+
+        string choice = Console.ReadLine()?.Trim() ?? "";
+        if (choice == "4" || choice.Equals("exit", StringComparison.OrdinalIgnoreCase) || choice.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
+            return;
+        }
+
+        if (choice == "2") {
+            var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
+            if (files.Length > 0) {
+                await SetupContextAndProcessAsync(files);
+            }
+        }
+        else if (choice == "3") {
+            await ProcessYouTubeTasksAsync();
+        }
+        else {
+            var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
+            if (files.Length > 0) {
+                await SetupContextAndProcessAsync(files);
+            }
+        }
     }
 
     /// <summary>
@@ -134,12 +165,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             await LoadHistoryAsMultiTurnPreambleAsync();
         }
 
-        // --- Phase 3: Warm-up handshake for System Instruction without history ---
-        if (_config.EnableImplicitPrefixCacheWarmup && !_historyWasLoaded && !string.IsNullOrWhiteSpace(_systemInstructionText)) {
-            if (!await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
-        }
-
-        // --- Phase 4: Finalize session setup (logging, debug roundtrip) ---
+        // --- Phase 3: Finalize session setup (logging, debug roundtrip) ---
+        // [AI Context] The base System Instruction is primed inside TryLoadSystemInstructionWithHistoryAsync
+        // (batched-history path: WarmUpWithBatchedHistoryAsync; otherwise the single PrimePrefixCacheAsync
+        // in its else branch), so there is deliberately no warm-up here. A second handshake at this point
+        // would double-prime whenever _historyWasLoaded stayed false, and would re-prime on every repeat
+        // call of this method -- the load itself is guarded by the _systemInstructionText check above,
+        // but a block here would not be. See "Phase 8.0.1" in the implementation plan.
         InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();

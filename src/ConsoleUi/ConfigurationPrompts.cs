@@ -161,6 +161,9 @@ public static class ConfigurationPrompts {
             if (int.TryParse(modelChoice, out int index) && index >= 1 && index <= availableModels.Length) {
                 newModel = availableModels[index - 1];
             }
+            else if (!string.IsNullOrEmpty(modelChoice) && modelChoice.Contains('-')) {
+                newModel = modelChoice;
+            }
             else {
                 newModel = currentModel;
             }
