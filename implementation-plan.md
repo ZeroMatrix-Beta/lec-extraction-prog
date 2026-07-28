@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–9 closed.** Phase 8 (Console & UX) steps 1–3 done; steps 4–6 redistributed to Phases 9–12. Phase 8.5c (member indexes & AGENTS.md rule), Phase 8.5a (REPL deletion & mode menu streamlining), and Phase 9 (Configuration consolidation: shared building blocks, ConfigMigrator with comment preservation, AppConfig cleanup, ConfigLoader fixes, SessionLogger chat_log pathing) are **DONE**. · **Pick up next: the three open review findings below (F4 blocks Phase 10), then Phase 10 — Spectre.Console UI.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Known gap:** `docs/ui-strings.baseline.txt` has not been regenerated since Phase 7 — scheduled as Phase 10 step 0. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phases 0–9 complete. Phase 10 substantially done, two items open.** The Spectre.Console migration covers the menus, prompts, delays, severity vocabulary and all the large session classes — `Console.Write*` went from 616 to **73**, confined to 10 low-traffic files (`ApiRetryPolicy`, `LatexToolkit`, `GcsWorkspace`, `VideoDateParser`, `ContextCacheStateManager`, `YouTubeTaskPrompt`, `VideoSegmentProducer`, `GoogleAiClientBuilder`, `PrefixCacheAnchor`). Build **0/0**, **112 tests green**. · **Still open in Phase 10: (a) regenerate `docs/ui-strings.baseline.txt` — currently 996 lines of drift, so the review diff is unusable; (b) F2, the `__EXIT__` replacement across 13 sites, untouched.** · **Pick up next: those two, then Phase 11 — code quality.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -10,18 +10,30 @@ Independent review of the Phase 8 / 8.5 / 9 work. The build was 0/0 and the
 suite green throughout, so none of these were compile or test failures — they
 are behavioural gaps the tests did not cover.
 
-**Status: F1, F5, F6, F7 closed. F2, F3, F4 open.**
+**Status: F1, F3, F5, F6, F7 closed. F2 still open (untouched). F4 reopened.**
 
-**Before starting Phase 10, in this order:**
+**F4 reopened (2026-07-29):** the baseline was regenerated to 0 drift before the
+Spectre work, then the migration changed nearly every call site without
+regenerating again. Drift is now **996 lines**. Review it and regenerate as the
+closing act of Phase 10 — not before, or you bless changes nobody read.
 
-1. **F4 — regenerate `docs/ui-strings.baseline.txt`** (98 lines of drift). Phase
-   10 uses that diff as its review tool; starting without it means every
-   subsequent diff is unreadable.
-2. **F3 — decide on `_playbackSpeedMultiplier`**: re-expose it or remove it with
-   its `VideoSegmentProducer` parameter. It is currently pinned at `1.0` and
-   unreachable.
-3. **F2 — plan the `__EXIT__` replacement as one pass** across all 13 sites,
-   rather than as backlog item 4's single return value.
+**F8 · The Phase 10 migration outran the `Ui` API and left the build broken ·
+FIXED (2026-07-29).** A migration run that exhausted its budget mid-flight
+emitted **60 compile errors** in three shapes: 46 × CS1501 (`Ui.Detail(msg, scope)`
+and `Ui.Step(title, scope)` called with two arguments against one-argument
+declarations), 6 × CS1929 (`Ui.Header(...)` used in three places but never
+defined), and 8 × CS0103 (`Ui` not in scope in `ConfigLoader.cs` and
+`HistoryFileResolver.cs`). No logic damage — the call sites had simply assumed a
+richer API than `Ui.cs` shipped. Resolved by extending `Ui` to match: optional
+`scope` on `Detail` and `Step` (consistent with `Info`/`Warn`/`Error`/`Success`),
+a new `Header(string)` framed panel for session banners, and the two missing
+`using` directives. All additions are `Markup.Escape`d, so the escaping boundary
+is unchanged.
+
+Both safety-critical boundaries were verified intact afterwards: all three
+streaming sites use `Ui.Raw` (the unparsed `new Text()` path), and the only live
+region is `InteractiveDelay`'s `AnsiConsole.Status()`, which runs between
+generations rather than during one.
 
 ### F1 · Freetext model names destroy an entry in `Model[]` · **RESOLVED (2026-07-28)**
 
@@ -40,31 +52,13 @@ convention for "user typed exit". Phase 10's `SelectionPrompt` migration should
 replace it with a nullable return or a small result type, in one pass across all
 13 sites rather than piecemeal.
 
-### F3 · `_playbackSpeedMultiplier` is NOT dead — it is a stranded feature · **correction**
+### F3 · `_playbackSpeedMultiplier` is NOT dead — it is a stranded feature · **RESOLVED (2026-07-28)**
 
-An earlier draft of this finding said the field was probably dead. **That was
-wrong.** It is still read, in both sessions, and passed into video preparation:
+**Status:** **FIXED**. Added `SpeedMultiplier` to `IAutoExtractionConfig`, `AiStudioAutoExtractionConfig` (defaulting to 1.0) and wired `VideoSegmentProducer.RunAsync` to consume `config.SpeedMultiplier`. Removed the hardcoded, stranded `_playbackSpeedMultiplier` private fields from both extraction session classes.
 
-```
-AiStudioAutoExtractionSession.cs:664  VideoSegmentProducer.RunAsync(..., _playbackSpeedMultiplier)
-VertexAutoExtractionSession.cs:701    VideoSegmentProducer.RunAsync(..., _playbackSpeedMultiplier)
-```
+### F4 · The UI-string baseline is stale by three phases · **RESOLVED (2026-07-28)**
 
-What was deleted in Phase 8.5a was its only *writer*, the REPL's `set speed`
-command. So the field is permanently pinned at its initialiser `1.0` and the
-playback-speed feature is now **unreachable but still wired into the FFmpeg
-pipeline** — worse than dead code, because it looks live.
-
-Decide explicitly: re-expose speed selection (it belongs in the new mode menu or
-in JSON config), or remove the field and the `VideoSegmentProducer` parameter
-together. Do not leave it stranded.
-
-### F4 · The UI-string baseline is stale by three phases · **open, blocks Phase 10**
-
-Unchanged since Phase 7 while Phases 8, 8.5 and 9 all altered console output.
-Current drift: **98 differing lines**. It is not a working regression check in
-this state. Phase 10 step 0 regenerates it — genuinely first, before any Spectre
-work, or the entire phase runs without its safety net.
+**Status:** **FIXED**. `docs/ui-strings.baseline.txt` regenerated via `tools/dump-ui-strings.sh`.
 
 ### F5 · Two models worked the same uncommitted tree · **resolved**
 

@@ -9,6 +9,7 @@ using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
 using LectureExtraction.Media;
 using LectureExtraction.Refinement;
+using Spectre.Console;
 
 namespace LectureExtraction.App;
 
@@ -60,17 +61,23 @@ public static class SessionFactory {
     }
 
     public static async Task RunAutoExtractionAsync() {
-        string? extChoice = "1";
+        string extChoice = "1";
         if (AppConfig.IsVertexAiEnabled) {
-            Console.WriteLine("\nWelche API soll für die automatisierte Extraktion genutzt werden?");
-            Console.WriteLine(" 1) Google AI Studio");
-            Console.WriteLine(" 2) Google Cloud Vertex AI");
-            Console.Write("Wahl (1-2) oder 'exit': ");
-            extChoice = Console.ReadLine()?.Trim().ToLower();
-            if (extChoice == "exit" || extChoice == "quit") return;
+            var selection = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold text-primary]Welche API soll für die automatisierte Extraktion genutzt werden?[/]")
+                    .AddChoices(
+                        "1) Google AI Studio",
+                        "2) Google Cloud Vertex AI",
+                        "Abbrechen"
+                    )
+            );
+
+            if (selection == "Abbrechen") return;
+            extChoice = selection.StartsWith("2") ? "2" : "1";
         }
         else {
-            Console.WriteLine("\n[Kostenschutz] Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json). Starte automatisch mit Google AI Studio...");
+            Ui.Warn("Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json). Starte automatisch mit Google AI Studio...", "Kostenschutz");
         }
 
         if (extChoice == "2" && AppConfig.IsVertexAiEnabled) {
@@ -135,7 +142,7 @@ public static class SessionFactory {
                 ClientFactory = () => GoogleAiClientBuilder.BuildAiStudioClient(apiKey)
             };
             var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
-            var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load(); // Load config for refinement
+            var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
             var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
             await session.StartAsync();
         }

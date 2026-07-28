@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using LectureExtraction.ConsoleUi;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -31,7 +32,7 @@ public static class ConfigLoader<T> where T : class, new() {
                 }
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[ConfigMigrator Warnung] Migration in '{fileName}' fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+                Ui.Warn($"Migration in '{fileName}' fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "ConfigMigrator");
             }
         }
 
@@ -95,7 +96,7 @@ public static class ConfigLoader<T> where T : class, new() {
                 return JsonCommentPreserver.Merge(existingJson, JObject.FromObject(config), ConfigMigrator.RemapAnchor);
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[AppConfig Warnung] Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden: {ex.GetType().Name} - {ex.Message}");
+                Ui.Warn($"Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden: {ex.GetType().Name} - {ex.Message}", "AppConfig");
             }
         }
         return JsonConvert.SerializeObject(config, Formatting.Indented);
@@ -118,8 +119,7 @@ public static class ConfigLoader<T> where T : class, new() {
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using Spectre.Console;
 
 namespace LectureExtraction.App;
 
@@ -21,56 +22,52 @@ public static class ApiKeyProfileMenu {
             string chatProfileLabel = chatConfig.ActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {chatConfig.ActiveApiProfile}";
             string latexProfileLabel = latexConfig.AiStudioActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {latexConfig.AiStudioActiveApiProfile}";
 
-            Console.WriteLine("\n==================================================");
-            Console.WriteLine("    🔑 API-Key Profil Konfiguration (JSON)        ");
-            Console.WriteLine("==================================================");
-            Console.WriteLine($" 1) Google AI Studio Auto-Extraktion: {autoExtProfileLabel}");
-            Console.WriteLine($" 2) Direct AI Studio Chat:          {chatProfileLabel}");
-            Console.WriteLine($" 3) LaTeX Refinement Session:       {latexProfileLabel}");
-            Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine(" 4) Zurück zum Hauptmenü");
-            Console.Write("\nWelches API-Key Profil möchten Sie ansehen / ändern? (1-4): ");
+            Ui.Step("API-Key Profil Konfiguration (JSON)");
 
-            string? choice = Console.ReadLine()?.Trim();
-            if (choice == "4" || choice == "exit" || choice == "quit") break;
+            string choice1 = $"1) Google AI Studio Auto-Extraktion: {autoExtProfileLabel}";
+            string choice2 = $"2) Direct AI Studio Chat:          {chatProfileLabel}";
+            string choice3 = $"3) LaTeX Refinement Session:       {latexProfileLabel}";
+            string choiceExit = "4) 🚪 Zurück zum Hauptmenü";
 
-            switch (choice) {
-                case "1":
-                    aiStudioConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
-                        aiStudioConfig.ActiveApiProfile,
-                        "AI Studio Auto-Extraktion",
-                        newProfile => {
-                            aiStudioConfig.ActiveApiProfile = newProfile;
-                            ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
-                        },
-                        aiStudioConfig.AiStudioApiKeyEnvNames
-                    );
-                    break;
-                case "2":
-                    chatConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
-                        chatConfig.ActiveApiProfile,
-                        "Direct AI Studio Chat",
-                        newProfile => {
-                            chatConfig.ActiveApiProfile = newProfile;
-                            ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(chatConfig);
-                        },
-                        chatConfig.AiStudioApiKeyEnvNames
-                    );
-                    break;
-                case "3":
-                    latexConfig.AiStudioActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
-                        latexConfig.AiStudioActiveApiProfile,
-                        "LaTeX Refinement Session",
-                        newProfile => {
-                            latexConfig.AiStudioActiveApiProfile = newProfile;
-                            ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
-                        },
-                        latexConfig.AiStudioApiKeyEnvNames
-                    );
-                    break;
-                default:
-                    Console.WriteLine("  [FEHLER] Ungültige Auswahl.");
-                    break;
+            var selection = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold]Welches API-Key Profil möchten Sie ansehen / ändern?[/]")
+                    .AddChoices(choice1, choice2, choice3, choiceExit));
+
+            if (selection == choiceExit) break;
+
+            if (selection == choice1) {
+                aiStudioConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
+                    aiStudioConfig.ActiveApiProfile,
+                    "AI Studio Auto-Extraktion",
+                    newProfile => {
+                        aiStudioConfig.ActiveApiProfile = newProfile;
+                        ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
+                    },
+                    aiStudioConfig.AiStudioApiKeyEnvNames
+                );
+            }
+            else if (selection == choice2) {
+                chatConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
+                    chatConfig.ActiveApiProfile,
+                    "Direct AI Studio Chat",
+                    newProfile => {
+                        chatConfig.ActiveApiProfile = newProfile;
+                        ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(chatConfig);
+                    },
+                    chatConfig.AiStudioApiKeyEnvNames
+                );
+            }
+            else if (selection == choice3) {
+                latexConfig.AiStudioActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
+                    latexConfig.AiStudioActiveApiProfile,
+                    "LaTeX Refinement Session",
+                    newProfile => {
+                        latexConfig.AiStudioActiveApiProfile = newProfile;
+                        ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
+                    },
+                    latexConfig.AiStudioApiKeyEnvNames
+                );
             }
         }
     }

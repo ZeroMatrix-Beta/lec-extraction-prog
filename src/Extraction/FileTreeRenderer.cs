@@ -20,15 +20,15 @@ public static partial class FileTreeRenderer {
         string? baseDir = FindCommonBaseDirectory(filePaths);
         if (!verbose) {
             string dirInfo = !string.IsNullOrEmpty(baseDir) ? $" in {baseDir}" : "";
-            Console.WriteLine($"  [INFO] {filePaths.Count} Datei(en){dirInfo} geladen.");
+            Ui.Info($"{filePaths.Count} Datei(en){dirInfo} geladen.");
             return;
         }
 
         var root = BuildVirtualTree(filePaths, baseDir);
         if (!string.IsNullOrEmpty(baseDir)) {
-            Console.WriteLine($"  📁 {baseDir}");
+            Ui.Info($"📁 {baseDir}");
         }
-        RenderVirtualTreeNode(root, "      ", showRelativePath: false, Console.WriteLine);
+        RenderVirtualTreeNode(root, "      ", showRelativePath: false, line => Ui.Detail(line));
     }
 
     public static string? FindCommonBaseDirectory(List<string> allPaths) {
@@ -44,8 +44,7 @@ public static partial class FileTreeRenderer {
             return string.IsNullOrEmpty(baseDir) ? null : baseDir;
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
             return null;
         }
     }

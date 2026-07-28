@@ -48,6 +48,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int CurrentModelIndex { get => ModelSelection.CurrentIndex; set => ModelSelection.CurrentIndex = value; }
     [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public string CurrentModel { get => ModelSelection.Current; set => ModelSelection.Current = value; }
 
+    public double SpeedMultiplier { get; set; } = 1.0;
     public bool GenerateOffsetFiles { get; set; } = true;
     public bool LoadHistoryIntoSystemInstruction { get; set; } = false;
     public bool InlineHistoryImages { get; set; } = true;

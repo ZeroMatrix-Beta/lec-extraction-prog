@@ -16,6 +16,7 @@ using LectureExtraction.Infrastructure;
 using LectureExtraction.Latex;
 using LectureExtraction.Media;
 using LectureExtraction.Refinement;
+using Spectre.Console;
 
 namespace LectureExtraction.Extraction;
 
@@ -46,7 +47,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private readonly AttachmentUploader _attachmentHandler = attachmentHandler;
     private readonly SessionLogger _sessionLogger = sessionLogger;
     private readonly LatexRefinementSessionConfig _latexRefinementConfig = latexRefinementConfig;
-    private double _playbackSpeedMultiplier = 1.0;
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
     private readonly List<Part> _historyParts = [];
@@ -79,7 +79,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// </summary>
     public async Task StartAsync() {
         if (!Directory.Exists(_config.SourceFolder)) {
-            Console.WriteLine($"[FEHLER] Quellordner nicht gefunden: {_config.SourceFolder}");
+            Ui.Error($"Quellordner nicht gefunden: {_config.SourceFolder}");
             return;
         }
 
@@ -92,44 +92,46 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Directory.CreateDirectory(_config.TargetFolder);
         }
 
-        Console.WriteLine("\n🚀 [AutoExtraction] Starte AI Studio Extraction Session...");
-        Console.WriteLine($"  📁 Quelle (Source): {_config.SourceFolder}");
-        Console.WriteLine($"  📁 Ziel (Target):   {_config.TargetFolder}");
+        Ui.Step("Automatisierte Extraktion (AI Studio)");
+        Ui.Detail($"Quelle (Source): {_config.SourceFolder}");
+        Ui.Detail($"Ziel (Target):   {_config.TargetFolder}");
         if (_config.ActiveApiProfile == 0) {
-            Console.WriteLine("  🔑 API-Key:         Dedizierter Key für automatisierte Extraktion");
+            Ui.Detail("API-Key:         Dedizierter Key für automatisierte Extraktion");
         }
         else {
-            Console.WriteLine($"  🔑 API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
+            Ui.Detail($"API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
         }
 
         string[] videoFilesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
         foreach (var videoFile in videoFilesToProcess) {
             var dateInfo = VideoDateParser.Parse(videoFile);
             if (!dateInfo.IsValid) {
-                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(videoFile)}");
-                Console.WriteLine("Erwartetes Format z.B.: 02-16-2026-monday-week1-Analysis_II.mp4 oder week1-02-16-2026-montag.mp4");
+                Ui.Warn($"Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(videoFile)}", "AutoExtraction");
+                Ui.Detail("Erwartetes Format z.B.: 02-16-2026-monday-week1-Analysis_II.mp4 oder week1-02-16-2026-montag.mp4");
             }
         }
 
-        Console.WriteLine("\n📋 Automatisierte Extraktion — Modus auswählen:");
-        Console.WriteLine("  1) 🚀 Alle Videos im Quellordner konvertieren (Standard)");
-        Console.WriteLine("  2) 🎬 Einzelnes Video auswählen und konvertieren");
-        Console.WriteLine("  3) 📺 YouTube-Video transkribieren");
-        Console.WriteLine("  4) 🚪 Abbrechen / Zurück");
-        Console.Write("\nAuswahl (1-4) [Standard: 1]: ");
+        string choice = Spectre.Console.AnsiConsole.Prompt(
+            new Spectre.Console.SelectionPrompt<string> {
+                Title = "[bold]Modus auswählen:[/]"
+            }.AddChoices(
+                "1) 🚀 Alle Videos im Quellordner konvertieren (Standard)",
+                "2) 🎬 Einzelnes Video auswählen und konvertieren",
+                "3) 📺 YouTube-Video transkribieren",
+                "4) 🚪 Abbrechen / Zurück"
+            ));
 
-        string choice = Console.ReadLine()?.Trim() ?? "";
-        if (choice == "4" || choice.Equals("exit", StringComparison.OrdinalIgnoreCase) || choice.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
+        if (choice.StartsWith("4") || choice.Equals("exit", StringComparison.OrdinalIgnoreCase) || choice.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
             return;
         }
 
-        if (choice == "2") {
+        if (choice.StartsWith("2")) {
             var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
             if (files.Length > 0) {
                 await SetupContextAndProcessAsync(files);
             }
         }
-        else if (choice == "3") {
+        else if (choice.StartsWith("3")) {
             await ProcessYouTubeTasksAsync();
         }
         else {
@@ -146,7 +148,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// </summary>
     private async Task SetupContextAndProcessAsync(string[] files) {
         if (files == null || files.Length == 0) {
-            Console.WriteLine("Keine Dateien ausgewählt.");
+            Ui.Info("Keine Dateien ausgewählt.");
             return;
         }
 
@@ -166,12 +168,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         // --- Phase 3: Finalize session setup (logging, debug roundtrip) ---
-        // [AI Context] The base System Instruction is primed inside TryLoadSystemInstructionWithHistoryAsync
-        // (batched-history path: WarmUpWithBatchedHistoryAsync; otherwise the single PrimePrefixCacheAsync
-        // in its else branch), so there is deliberately no warm-up here. A second handshake at this point
-        // would double-prime whenever _historyWasLoaded stayed false, and would re-prime on every repeat
-        // call of this method -- the load itself is guarded by the _systemInstructionText check above,
-        // but a block here would not be. See "Phase 8.0.1" in the implementation plan.
         InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
         _sessionLogger.SetSessionMetadata(!string.IsNullOrEmpty(_systemInstructionText), _historyWasLoaded);
         _sessionLogger.InitializeSession();
@@ -201,11 +197,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private async Task<bool> TryLoadSystemInstructionWithHistoryAsync() {
         if (_config.SystemInstructionPaths == null || _config.SystemInstructionPaths.Length == 0) return true;
 
-        Console.WriteLine("\nFolgende System Instruction-Dateien sind konfiguriert:");
+        Ui.Info("Folgende System Instruction-Dateien sind konfiguriert:");
         var resolvedInstructionFiles = HistoryFileResolver.ResolveHistoryFiles(_config.SystemInstructionPaths);
 
         if (resolvedInstructionFiles.Count == 0) {
-            Console.WriteLine("  [WARNUNG] Keine System Instruction-Dateien gefunden oder konfiguriert.");
+            Ui.Warn("Keine System Instruction-Dateien gefunden oder konfiguriert.");
             return true;
         }
 
@@ -217,19 +213,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (shouldMergeHistory) {
             historyFilesForSystemInstruction = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (historyFilesForSystemInstruction.Count > 0) {
-                Console.WriteLine("\nFolgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
+                Ui.Info("Folgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
                 FileTreeRenderer.PrintFileTree(historyFilesForSystemInstruction, _config.VerboseConsoleOutput);
             }
         }
 
         // Ask user for confirmation
         string confirmPrompt = shouldMergeHistory && historyFilesForSystemInstruction.Count > 0
-            ? "System Instructions und History laden? (j/n): "
-            : "System Instructions laden? (j/n): ";
-        Console.Write(confirmPrompt);
-        string? sysResp = Console.ReadLine();
-        if (!sysResp.IsAffirmativeResponse(defaultIfEmpty: true)) {
-            Console.WriteLine("  [WARNUNG] System Instructions wurden vom Benutzer nicht geladen.");
+            ? "System Instructions und History laden?"
+            : "System Instructions laden?";
+        if (!AnsiConsole.Confirm(confirmPrompt, defaultValue: true)) {
+            Ui.Warn("System Instructions wurden vom Benutzer nicht geladen.");
             return true;
         }
 
@@ -251,7 +245,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (_config.EnableImplicitPrefixCacheWarmup && !await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
             } else {
                 // Load all history files into the system instruction at once (non-batched)
-                Console.WriteLine("\n  [INFO] Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
+                Ui.Info("Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
                 var instructionBuilder = new System.Text.StringBuilder(instructionText);
                 await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase, _config.VerboseConsoleOutput);
                 _systemInstructionText = instructionBuilder.ToString();
@@ -264,7 +258,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
         }
 
-        Console.WriteLine("\n  [OK] System Instructions erfolgreich geladen.");
+        Ui.Success("System Instructions erfolgreich geladen.");
         return true;
     }
 
@@ -296,11 +290,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             builder.AppendLine($"\n******\n------\n******\nHere is the file `{relativePath}`:\n");
             builder.AppendLine(await System.IO.File.ReadAllTextAsync(instructionFilePath));
             if (verboseConsoleOutput) {
-                Console.WriteLine($"  [INFO] System Instruction geladen: {relativePath}");
+                Ui.Info($"System Instruction geladen: {relativePath}");
             }
         }
         if (!verboseConsoleOutput && instructionFiles.Count > 0) {
-            Console.WriteLine($"  [INFO] {instructionFiles.Count} System-Instruction-Datei(en) geladen.");
+            Ui.Info($"{instructionFiles.Count} System-Instruction-Datei(en) geladen.");
         }
 
         return builder.ToString();
@@ -326,14 +320,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 targetBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(historyFilePath));
                 textFileCount++;
                 if (verboseConsoleOutput) {
-                    Console.WriteLine($"  [INFO] History-Textdatei in System Instruction eingebunden: {relativePath}");
+                    Ui.Info($"History-Textdatei in System Instruction eingebunden: {relativePath}");
                 }
             } else {
                 nonTextFiles.Add(historyFilePath);
             }
         }
         if (!verboseConsoleOutput && textFileCount > 0) {
-            Console.WriteLine($"  [INFO] {textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
+            Ui.Info($"{textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
         }
 
         if (nonTextFiles.Count > 0) {
@@ -356,32 +350,30 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var resolvedHistoryFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
         if (resolvedHistoryFiles.Count == 0) return;
 
-        Console.WriteLine("\nFolgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+        Ui.Info("Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
         FileTreeRenderer.PrintFileTree(resolvedHistoryFiles, _config.VerboseConsoleOutput);
 
         string confirmPrompt = _config.LoadHistoryIntoSystemInstruction
-            ? "Sollen diese Dateien als System Instructions hochgeladen werden? (LoadHistoryIntoSystemInstruction = true) (j/n): "
-            : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden? (j/n): ";
-        Console.Write(confirmPrompt);
-        string? histResp = Console.ReadLine();
-        if (!histResp.IsAffirmativeResponse(defaultIfEmpty: true)) {
-            Console.WriteLine("  [WARNUNG] History-Dateien wurden vom Benutzer nicht geladen.");
+            ? "Sollen diese Dateien als System Instructions hochgeladen werden?"
+            : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden?";
+        if (!AnsiConsole.Confirm(confirmPrompt, defaultValue: true)) {
+            Ui.Warn("History-Dateien wurden vom Benutzer nicht geladen.");
             return;
         }
 
         if (_config.LoadHistoryIntoSystemInstruction) {
-            Console.WriteLine("\n  [INFO] Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
+            Ui.Info("Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
             string quotedFileList = string.Join(", ", resolvedHistoryFiles.Select(p => $"\"{p}\""));
-            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedFileList}", _config.LoadHistoryIntoSystemInstruction);
+            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{quotedFileList}\"", _config.LoadHistoryIntoSystemInstruction);
             if (uploadSuccess && uploadedParts.Count > 0) {
                 _historyParts.AddRange(uploadedParts);
                 _historyWasLoaded = true;
-                Console.WriteLine("  [INFO] Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
+                Ui.Info("Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
                 if (_config.EnableImplicitPrefixCacheWarmup) {
                     await PrimePrefixCacheAsync(includeDummyPart0: true);
                 }
             } else {
-                Console.WriteLine("  [FEHLER] Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
+                Ui.Error("Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
             }
             return;
         }
@@ -392,7 +384,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             : [("(alle)", resolvedHistoryFiles)];
 
         if (_config.HistoryBatchCount > 1) {
-            Console.WriteLine($"\n  [History-Batching] Aufgeteilt in {historyBatches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
+            Ui.Detail($"History-Batching: Aufgeteilt in {historyBatches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
         }
 
         bool allBatchesSucceeded = true;
@@ -400,7 +392,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             var (batchLabel, batchFiles) = historyBatches[batchIndex];
             bool isLastBatch = batchIndex == historyBatches.Count - 1;
 
-            Console.WriteLine($"\n  [INFO] History-Batch {batchIndex + 1}/{historyBatches.Count}: '{batchLabel}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
+            Ui.Info($"History-Batch {batchIndex + 1}/{historyBatches.Count}: '{batchLabel}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
 
             string quotedBatchFiles = string.Join(", ", batchFiles.Select(p => $"\"{p}\""));
             var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedBatchFiles}", false);
@@ -408,15 +400,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (uploadSuccess && uploadedParts.Count > 0) {
                 _historyParts.AddRange(uploadedParts);
                 _historyWasLoaded = true;
-                Console.WriteLine($"  [INFO] History-Batch {batchIndex + 1}/{historyBatches.Count} erfolgreich geladen ({uploadedParts.Count} Part(s)).");
+                Ui.Info($"History-Batch {batchIndex + 1}/{historyBatches.Count} erfolgreich geladen ({uploadedParts.Count} Part(s)).");
 
                 if (!isLastBatch) {
                     int interBatchDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 120;
-                    Console.WriteLine($"  [Rate-Limit] Inter-Batch-Pause: {interBatchDelay}s vor nächstem Batch...");
+                    Ui.Detail($"Inter-Batch-Pause: {interBatchDelay}s vor nächstem Batch...");
                     await InteractiveDelay.SmartDelayAsync(interBatchDelay, $"Warte zwischen Batch {batchIndex + 1} und {batchIndex + 2}...");
                 }
             } else {
-                Console.WriteLine($"  [FEHLER] Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgeladen werden.");
+                Ui.Error($"Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgeladen werden.");
                 allBatchesSucceeded = false;
                 break;
             }
@@ -424,7 +416,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         if (allBatchesSucceeded && _historyWasLoaded) {
             int tokenRefillDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-            Console.WriteLine($"  [Rate-Limit] Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
+            Ui.Detail($"Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
             await InteractiveDelay.SmartDelayAsync(tokenRefillDelay, "Warte auf Token-Refill nach History-Acknowledgment...");
         }
     }
@@ -444,10 +436,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         List<YouTubeTranscriptionTask> tasksToProcess = [];
 
         if (_config.YouTubeTasks != null && _config.YouTubeTasks.Length > 0) {
-            Console.WriteLine($"\n[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
-            Console.Write("Möchtest du diese ausführen (j/y) oder interaktiv eine neue YouTube-URL eingeben (u/url)? [Standard: j]: ");
-            string choice = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
-            if (choice == "u" || choice == "url" || choice == "n") {
+            Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
+            if (!AnsiConsole.Confirm("Möchtest du diese Aufgaben ausführen?", defaultValue: true)) {
                 var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
                 if (interactiveTask != null) {
                     tasksToProcess.Add(interactiveTask);
@@ -458,7 +448,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
         else {
-            Console.WriteLine("\n[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration gefunden.");
+            Ui.Info("[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration gefunden.");
             var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
             if (interactiveTask != null) {
                 tasksToProcess.Add(interactiveTask);
@@ -466,11 +456,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         if (tasksToProcess.Count == 0) {
-            Console.WriteLine("[INFO] Keine YouTube-Aufgaben zum Verarbeiten.");
+            Ui.Info("Keine YouTube-Aufgaben zum Verarbeiten.");
             return;
         }
 
-        Console.WriteLine($"\n[YouTube Mode] Starte Transkription für {tasksToProcess.Count} YouTube-Video(s)...");
+        Ui.Step($"[YouTube Mode] Starte Transkription für {tasksToProcess.Count} YouTube-Video(s)...");
 
         if (!await EnsureSessionSetupAsync()) return;
 
@@ -487,14 +477,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Directory.CreateDirectory(fileSpecificOutputFolder);
             }
 
-            Console.WriteLine($"\n[YouTube Consumer] === Starte API-Extraktion für URL: {task.VideoUrl} ({baseName}) ===");
+            Ui.Step($"[YouTube Consumer] Starte API-Extraktion für URL: {task.VideoUrl} ({baseName})");
             List<string> generatedTexFiles = [];
             string fullOutputTextRaw = "";
 
             for (int i = 0; i < task.Fragments.Count; i++) {
                 var frag = task.Fragments[i];
                 int partNum = i + 1;
-                Console.WriteLine($"\n--- Verarbeite Fragment {partNum}/{task.Fragments.Count}: {frag.StartTime} bis {frag.EndTime} ({frag.PartTitle}) ---");
+                Ui.Step($"Verarbeite Fragment {partNum}/{task.Fragments.Count}: {frag.StartTime} bis {frag.EndTime} ({frag.PartTitle})");
 
                 string dateNotice = (partNum == 1)
                     ? "Please note that since this is part 1 of the lecture, the date of the transcription is important."
@@ -521,14 +511,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     }
                     await System.IO.File.WriteAllTextAsync(targetPartPath, partContent);
                     generatedTexFiles.Add(targetPartPath);
-                    Console.WriteLine($"  [Erfolg] Teildatei gespeichert unter: {targetPartPath}");
+                    Ui.Success($"Teildatei gespeichert unter: {targetPartPath}");
                 }
             }
 
             if (!string.IsNullOrWhiteSpace(fullOutputTextRaw)) {
                 string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
                 await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
-                Console.WriteLine($"\n🎉 Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
+                Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
             }
         }
     }
@@ -572,7 +562,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [Human] Reiner Debug-Roundtrip, um zu testen ob die API antwortet.
     /// </summary>
     private async Task<bool> DebugHelloRoundtripAsync() {
-        Console.WriteLine("\n  [DEBUG] Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
+        Ui.Detail("Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -614,16 +604,15 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
                 }
 
-                Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {Math.Max(0, inputTokens - cachedTokens):N0} | Output: {outputTokens:N0}");
-                Console.WriteLine($"  [Gemini Antwort] {fullResponse.Trim()}");
+                Ui.Detail($"[Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {Math.Max(0, inputTokens - cachedTokens):N0} | Output: {outputTokens:N0}");
+                Ui.Detail($"[Gemini Antwort] {fullResponse.Trim()}");
                 success = true;
                 break;
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
                 if (attempt < maxRetries - 1) {
-                    Console.WriteLine($"[DEBUG] Retry in {backoff}s...");
+                    Ui.Detail($"Retry in {backoff}s...");
                     await Task.Delay(backoff * 1000);
                     backoff += 10;
                 }
@@ -634,13 +623,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             _sessionPreamble.Add(debugContent[0]);
             _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
             int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 60;
-            Console.WriteLine($"  [Rate-Limit] Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
+            Ui.Detail($"Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
-            Console.WriteLine("  [OK] 'Hello' Roundtrip erfolgreich.");
+            Ui.Success("'Hello' Roundtrip erfolgreich.");
             return true;
         }
         else {
-            Console.WriteLine("[FEHLER] Debug Roundtrip fehlgeschlagen.");
+            Ui.Error("Debug Roundtrip fehlgeschlagen.");
             return false;
         }
     }
@@ -661,7 +650,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var preparedVideoQueue = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
         // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
-        var videoPreparationTask = Task.Run(() => VideoSegmentProducer.RunAsync(videoFilesToProcess, preparedVideoQueue.Writer, _config, _playbackSpeedMultiplier));
+        var videoPreparationTask = Task.Run(() => VideoSegmentProducer.RunAsync(videoFilesToProcess, preparedVideoQueue.Writer, _config));
 
         // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
@@ -676,10 +665,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         await videoPreparationTask;
 
         if (anyVideoFailed) {
-            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
+            Ui.Warn("Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).", "AutoExtraction");
         }
         else {
-            Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!");
+            Ui.Success("Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!", "AutoExtraction");
         }
     }
 
@@ -701,7 +690,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Directory.CreateDirectory(fileSpecificOutputFolder);
         }
 
-        Console.WriteLine($"\n[Gemini Consumer] === Starte API-Extraktion für {Path.GetFileName(file)} ===");
+        Ui.Step($"[Gemini Consumer] Starte API-Extraktion für {Path.GetFileName(file)}");
 
         // Handle Audio File Generation
         var state = new VideoProcessingState(ComputeBaseName(file), new AudioTrackExtractor(file, fileSpecificOutputFolder)) {
@@ -746,11 +735,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (_latexRefinementConfig != null) {
             _latexRefinementConfig.UseVertex = false;
             if (_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
-                Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
+                Ui.Info($"NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.", "AutoExtraction");
                 _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
             }
             if (_config.UseChosenModelForRestOfPipeline) {
-                Console.WriteLine($"\n[AutoExtraction] UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...");
+                Ui.Info($"UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...", "AutoExtraction");
                 void ApplyModelParametersTo(BackendParameters target) {
                     target.CurrentModel = _config.CurrentModel;
                     target.Temperature = _config.Temperature;
@@ -788,8 +777,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         public readonly AudioTrackExtractor AudioTrackExtractor = audioTrackExtractor;
         public readonly TimeSpan CacheDuration = TimeSpan.FromHours(2);
         public readonly List<string> GeneratedTexFiles = [];
-        // [AI Context] The dummy-part0.tex reference block is now prepended directly from disk in
-        // TranscribeSegmentToLatexAsync. No part0 file needs to be written or tracked here.
         public string FullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
         public string FullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
         public TokenUsage FileTotalTokens;
@@ -813,10 +800,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             double partStartTimeSeconds = partsWithTimes[i].StartTimeSeconds;
             string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}.tex");
 
-            Console.WriteLine($"\nVerarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
+            Ui.Step($"Verarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
             // Check if the .tex file already exists and is not older than 2 hours
             if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= state.CacheDuration) {
-                Console.WriteLine($"  [Resume] Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.");
+                Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.", "Resume");
                 string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
                 state.GeneratedTexFiles.Add(targetPartPath);
                 state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
@@ -836,7 +823,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Task<SegmentUpload> uploadTask;
 
             if (_config.EnableParallelFileUploads && state.PendingVideoUploadTask != null) {
-                Console.WriteLine($"  [Pre-Upload] Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...");
+                Ui.Info($"Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...", "Pre-Upload");
                 uploadTask = state.PendingVideoUploadTask;
             }
             else {
@@ -846,7 +833,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             SegmentUpload upload = await uploadTask;
             (uploadSuccess, parsedPrompt, attachmentParts) = (upload.Succeeded, upload.Prompt, upload.Attachments);
             if (!uploadSuccess) {
-                Console.WriteLine($"  [FEHLER] Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
+                Ui.Error($"Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
                 state.FileProcessingSuccess = false;
                 break;
             }
@@ -854,7 +841,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
 
             if (state.RateLimitDelayTask != null) {
-                Console.WriteLine("  [Rate-Limit] Warte auf Freigabe des vorherigen Timers...");
+                Ui.Detail("Warte auf Freigabe des vorherigen Timers...", "Rate-Limit");
                 await state.RateLimitDelayTask;
                 state.RateLimitDelayTask = null;
             }
@@ -864,7 +851,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 if (i + 1 < partsWithTimes.Count) {
                     string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 2}.tex");
                     if (!System.IO.File.Exists(nextTexPath)) {
-                        Console.WriteLine($"  [Pre-Upload] Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...");
+                        Ui.Info($"Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...", "Pre-Upload");
                         state.PendingVideoUploadTask = UploadSegmentAndBuildPromptAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
                     }
                     else {
@@ -880,7 +867,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         string audioPath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
                                            ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                         if (System.IO.File.Exists(audioPath)) {
-                            Console.WriteLine($"\n  [Pre-Upload] Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...");
+                            Ui.Info($"Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...", "Pre-Upload");
                             var handler = new AttachmentUploader(state.RefinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
                             var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
                             if (audioUploadOk) return attached;
@@ -890,21 +877,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
             }
 
-            /************************************************************************************************************************
-             * [Human Context] Here is where all the magic happens. We call the function   TranscribeSegmentToLatexAsync to generate the LaTeX code for the current part.
-             * This function is the core of the program and is responsible for generating the LaTeX code for the current part.
-             ************************************************************************************************************************/
-
-            segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles); // generated TexFiles could contain part0 for instance.
+            segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles);
 
             state.FileTotalTokens += segmentTranscript.Usage;
 
             if (i + 1 < partsWithTimes.Count) {
                 state.RateLimitDelayTask = Task.Run(async () => {
                     int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-                    // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
-                    // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-                    Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+                    Ui.Detail($"Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...", "Timer");
                     await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
                 });
             }
@@ -913,13 +893,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (!string.IsNullOrWhiteSpace(segmentTranscript.LatexBody)) {
                 string cleanTex = LatexResponseCleaner.CleanLatexResponse(segmentTranscript.LatexBody);
 
-                // Store the raw output for the combined file without offset
                 state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + cleanTex;
                 if (_config.GenerateOffsetFiles) {
-                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                 }
 
-                // Prepend the start time to the individual part .tex file
                 string partHeader = TexDocumentWriter.BuildPartHeader(
                     sourcePartFileName: Path.GetFileName(safePartPath),
                     partStartTimeSeconds: partStartTimeSeconds,
@@ -930,23 +908,20 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
 
                 if (_config.GenerateOffsetFiles) {
-                    // NEW: Save the offsetted version of this individual part
                     string offsettedPartContent = LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                     string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}-offset.tex");
                     string uniqueTargetPartPathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPathOffset);
                     await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
-                    Console.WriteLine($"  [Erfolg] Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
+                    Ui.Success($"Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
                 }
                 state.GeneratedTexFiles.Add(uniqueTargetPartPath);
             }
             else {
-                Console.WriteLine($"\n[FEHLER] Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
+                Ui.Error($"Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                 state.FileProcessingSuccess = false;
-                // Clean up individual part files if processing failed mid-way
                 foreach (var failedTexFile in state.GeneratedTexFiles) {
                     try { System.IO.File.Delete(failedTexFile); } catch { /* Ignore */ }
                 }
-                // Try to delete the file-specific output folder if it's empty or contains only temporary stuff
                 if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
                     Directory.Delete(fileSpecificOutputFolder);
                 }
@@ -955,12 +930,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
     }
 
-    /// <summary>
-    /// [AI Context] Writes the combined (and, if enabled, offset-corrected) document for one video, then
-    /// launches LatexRefinementSession once any pending parallel audio work has finished. Only called when
-    /// TranscribeSegmentsAsync succeeded for every part.
-    /// [Human] Schreibt das Gesamtdokument und startet das Refinement.
-    /// </summary>
     private async Task FinalizeVideoOutputAsync(VideoProcessingState state, string file, string fileSpecificOutputFolder, int totalParts) {
         string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all.tex");
         string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all-offset.tex");
@@ -973,45 +942,33 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
             maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
         await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + state.FullOutputTextRaw);
-        Console.WriteLine($"\n[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}");
+        Ui.Success($"Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}", "AutoExtraction");
 
         string refinementTargetFile = uniqueTargetFilePath;
 
         if (_config.GenerateOffsetFiles) {
-            // New: Generate the offset version
-            // Note: The last part's StartTime is used as a reference point, but the overall offset should be partStartTimeSeconds from the respective part.
-            // We already accumulated the correctly offsetted text in fullOutputTextOffsetted within the loop.
             string uniqueTargetFilePathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePathOffset);
             await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + state.FullOutputTextOffsetted);
-            Console.WriteLine($"[AutoExtraction] Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}");
+            Ui.Success($"Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}", "AutoExtraction");
             refinementTargetFile = uniqueTargetFilePathOffset;
         }
 
-        // Trigger LatexRefinementSession immediately for the generated offset file, if enabled.
-        // Warten, bis das Audio fertig ist, bevor das Refinement startet,
-        // da das Refinement die Audiodatei für die API benötigt!
         if (state.AudioTrackExtractor.PendingTask != null) {
-            Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...");
+            Ui.Info($"Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...", "AutoExtraction");
             await state.AudioTrackExtractor.PendingTask;
         }
 
-        // LatexRefinementSession uses its own dedicated API key (resolved at the start of the processing loop)
-        // refinementClient is already initialized and the audio file was uploaded using it.
-
         List<Part>? preUploadedAudioParts = null;
         if (_config.EnableParallelFileUploads && state.PendingAudioUploadTask != null) {
-            Console.WriteLine($"\n[AutoExtraction] Warte auf Abschluss des parallelen Audio-Uploads...");
+            Ui.Info("Warte auf Abschluss des parallelen Audio-Uploads...", "AutoExtraction");
             preUploadedAudioParts = await state.PendingAudioUploadTask;
         }
 
-        // Check for the most recent audio file by looking at modified times, or simply look for the exact name.
-        // Since ExtractAudioAsAacAsync might create -copy-1 if it exists, let's just grab the newest .aac file in the folder.
         var aacFiles = Directory.GetFiles(fileSpecificOutputFolder, "*.aac");
         string audioFilePath = aacFiles.OrderByDescending(aacFile => System.IO.File.GetLastWriteTime(aacFile)).FirstOrDefault()
                                ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
 
-        Console.WriteLine($"\n[AutoExtraction] Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
-        // Pass the AI Studio client for refinement, as VertexAutoExtractionSession requires an AI Studio client for this
+        Ui.Step($"Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
         var refinementSession = new LatexRefinementSession(
             state.RefinementClient ?? _client,
             _latexRefinementConfig!,
@@ -1034,8 +991,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         TimeSpan fullVideoTime = TimeSpan.FromSeconds(fullOriginalVideoDuration);
         string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
 
-        // Dynamic parameters only – the static prompt beginning (GetStaticPromptBeginning) is
-        // prepended as a separate Part BEFORE the video in TranscribeSegmentToLatexAsync.
         string weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown";
         string weekInfo = dateInfo.WeekInfo ?? "N/A";
         string dateMetadata = partNumber == 1
@@ -1055,14 +1010,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return new SegmentUpload(true, parsedPrompt, attachmentParts);
     }
 
-    /// <summary>
-    /// [AI Context] Executes the Gemini API generation call for a single video segment.
-    /// To guarantee optimal implicit prefix cache hits across multi-part extractions, prompt parts are assembled in strict prefix-stable order:
-    /// 1. Read-only reference context (previousTexFiles) inlined first BEFORE the video to form a growing shared prefix across parts.
-    /// 2. Primary payload (attachmentParts / video) second.
-    /// 3. Segment-specific parameters third.
-    /// [Human] Generiert den LaTeX-Code für ein bestimmtes Videosegment. Hält die Prompt-Reihenfolge strikt ein, damit Googles impliziter Cache optimal greift.
-    /// </summary>
     private async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
@@ -1077,12 +1024,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext);
     }
 
-    /// <summary>
-    /// [AI Context] Assembles the GenerateContentConfig (system instruction, thinking, Google Search)
-    /// and the request history (prefix-cache-stable prompt beginning + optional reference context +
-    /// video payload + dynamic prompt parameters) for one part's generation call.
-    /// [Human] Baut die Anfrage-Konfiguration und den History-Kontext für einen Teil auf.
-    /// </summary>
     private async Task<(GenerateContentConfig RequestConfig, List<Content> History)> BuildGenerationRequestAsync(int partNumber, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -1091,7 +1032,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-        // Create System Instruction at the very beginning of the request setup
         var sysParts = GetValidSystemInstructionParts();
         if (sysParts.Count > 0) {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
@@ -1115,26 +1055,18 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         var userPromptParts = new List<Part>();
 
-        // 1. Pre-video Part: static prompt beginning, optionally prefixed by reference context files.
-        //    This Part is bit-identical between the warm-up dummy turn and the real Part-1 turn, enabling
-        //    Google's implicit prefix cache to recognise the full prefix up to the start of the video.
         string staticBeginning = GetStaticPromptBeginning(partNumber);
         if (_config.DebugSendReferenceFile) {
-            // [AI Context] Always prepend dummy-part0.tex first. This creates a constant, large (~4500 token)
-            // anchor that is bit-identical between the warm-up Part 0 and Part 1's Part 0, enabling Google's
-            // implicit prefix cache to hit on the preamble + dummyBlock + staticBeginning for Part 1.
-            // For Part 2+, the dummy block is still the first reference, followed by the previously
-            // generated .tex parts – these grow with each part but the prefix still benefits from caching.
             string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
 
             var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
             referenceContextBuilder.Append(dummyReferenceBlock);
 
             if (previousTexFiles.Count > 0) {
-                Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");
+                Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
                 foreach (var previousTexFile in previousTexFiles) {
                     string previousTexFileName = Path.GetFileName(previousTexFile);
-                    Console.WriteLine($"    - {previousTexFileName}");
+                    Ui.Detail($"- {previousTexFileName}");
                     string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
                     referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
                 }
@@ -1145,10 +1077,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             userPromptParts.Add(new Part { Text = staticBeginning });
         }
 
-        // 2. Primary payload (video attachment) – the dynamic video bytes break the prefix here.
         userPromptParts.AddRange(attachmentParts);
 
-        // 3. Dynamic parameters only AFTER the video.
         if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
             userPromptParts.Add(new Part { Text = parsedPrompt });
         }
@@ -1160,19 +1090,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return (requestConfig, history);
     }
 
-    /// <summary>
-    /// [AI Context] Logs a token-count breakdown (video / inlined reference context / total history)
-    /// before sending the request. Purely diagnostic console output — failures here are swallowed so
-    /// they never abort the actual generation call.
-    /// [Human] Protokolliert eine Token-Analyse vor dem Senden der Anfrage (nur Diagnose-Ausgabe).
-    /// </summary>
     private async Task LogTokenCountsAsync(List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles) {
         if (!_config.VerboseConsoleOutput) return;
         try {
-            Console.WriteLine("\n  [Token-Analyse] Berechne Token-Anzahl für die einzelnen Bestandteile...");
+            Ui.Detail("Berechne Token-Anzahl für die einzelnen Bestandteile...", "Token-Analyse");
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
             var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
-            Console.WriteLine($"    - Video-Token: {videoCount.TotalTokens}");
+            Ui.Detail($"- Video-Token: {videoCount.TotalTokens}");
 
             var userPromptParts = history[^1].Parts;
             if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
@@ -1181,22 +1105,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 string fileInfo = previousTexFiles.Count > 0
                     ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
                     : "dummy-part0.tex";
-                Console.WriteLine($"    - Inlined Kontext ({fileInfo}) Token: {texCount.TotalTokens}");
+                Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texCount.TotalTokens}");
             }
 
             var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, history);
-            Console.WriteLine($"    -> Gesamt-Token in History (Video + Kontext + Prompt): {totalCount.TotalTokens}\n");
+            Ui.Detail($"-> Gesamt-Token in History (Video + Kontext + Prompt): {totalCount.TotalTokens}");
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [Token-Analyse] Fehler beim Zählen der Token: {ex.Message}\n");
+            Ui.Warn($"Fehler beim Zählen der Token: {ex.Message}", "Token-Analyse");
         }
     }
 
-    /// <summary>
-    /// [AI Context] Sends the request, streaming the response and handling the "Continue" retry loop
-    /// (segment/video completion markers, max-request cap, rate-limit pacing between continuations).
-    /// [Human] Sendet die Anfrage, streamt die Antwort und behandelt die "Continue"-Fortsetzungslogik.
-    /// </summary>
     private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext) {
         string fullResponse = "";
         int currentRequest = 1;
@@ -1211,7 +1130,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
-            Console.WriteLine($"  [API] Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {currentRequest}/{maxRequestsPerPart})...");
+            Ui.Step($"Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {currentRequest}/{maxRequestsPerPart})...");
             GroundingMetadata? accumulatedGrounding = null;
             string chunkResp = "";
             int requestInputTokens = 0;
@@ -1224,7 +1143,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
                     onChunkReceived: async (chunk) => {
                         string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                        Console.Write(txt);
+                        Ui.Raw(txt);
                         chunkResp += txt;
 
                         var metadata = chunk.Candidates?[0]?.GroundingMetadata;
@@ -1251,21 +1170,20 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 );
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort.");
-                Console.WriteLine($"Finaler Fehler: {ex.Message}");
+                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Message}", "Abbruch");
                 break;
             }
 
             if (accumulatedGrounding != null) {
-                Console.WriteLine("\n\n  🔍 [Google Search Grounding] Quellen:");
+                Ui.Info("Quellen (Google Search Grounding):");
                 if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
-                    Console.WriteLine($"    Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+                    Ui.Detail($"Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
                 }
                 if (accumulatedGrounding.GroundingChunks != null) {
                     int refIdx = 1;
                     foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
                         if (chunkRef.Web != null) {
-                            Console.WriteLine($"     [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri}");
+                            Ui.Detail($"[{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri}");
                             refIdx++;
                         }
                     }
@@ -1273,7 +1191,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
 
             if (!callSuccess) {
-                Console.WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
+                Ui.Info("Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
                 break;
             }
 
@@ -1289,11 +1207,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
             if (_config.VerboseConsoleOutput) {
-                Console.WriteLine($"\n  [Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0} (inkl. Thinking Tokens)");
-                Console.WriteLine($"  [Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0} (inkl. Thinking Tokens)");
-                Console.WriteLine($"  [Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+                Ui.Detail($"[Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0}");
+                Ui.Detail($"[Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0}");
+                Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
             } else {
-                Console.WriteLine($"  [Tokens] Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out");
+                Ui.Detail($"[Tokens] Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out");
             }
 
             fullResponse += chunkResp;
@@ -1305,7 +1223,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (videoComplete) break;
 
             if (currentRequest >= maxRequestsPerPart) {
-                Console.WriteLine($"\n\n[WARNUNG] Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht. Breche ab.\n  Teil: {partFile}");
+                Ui.Warn($"Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht ({partFile}). Breche ab.");
                 break;
             }
 
@@ -1314,21 +1232,19 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
                 "Please \"continue\" exactly where you left off. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
 
-            if (segmentComplete) Console.WriteLine("\n  [AutoExtraction] Segment-Limit erreicht. Sende 'Continue'...");
-            else Console.WriteLine("\n  [AutoExtraction] Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...");
+            if (segmentComplete) Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");
+            else Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "AutoExtraction");
 
-            Console.WriteLine($"\n  [Sende folgenden Continue-Prompt:]\n{continuePrompt}\n");
+            Ui.Detail($"[Sende folgenden Continue-Prompt:]\n{continuePrompt}");
 
             history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
             history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
             currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
 
             int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-            // [AI Context] A delay is enforced here to accommodate strictly-enforced tokens-per-minute (TPM) and requests-per-minute (RPM) quotas by the API provider.
-            // [Human] Wir warten hier, da wir ein hartes Limit von Tokens pro Minute haben. Das stellt sicher, dass das Limit vor dem nächsten Aufruf wieder zurückgesetzt ist.
-            Console.WriteLine($"\n  [Timer] Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen... (Oder drücke Enter für sofortigen Skip)");
+            Ui.Detail($"Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen...", "Timer");
             if (!await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
-                Console.WriteLine("\n\n[INFO] Warten durch Benutzer abgebrochen.");
+                Ui.Info("Warten durch Benutzer abgebrochen.");
                 break;
             }
 

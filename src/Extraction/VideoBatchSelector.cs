@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using LectureExtraction.ConsoleUi;
 using LectureExtraction.Media;
+using Spectre.Console;
 
 namespace LectureExtraction.Extraction;
 
@@ -13,7 +15,7 @@ namespace LectureExtraction.Extraction;
 public static class VideoBatchSelector {
     public static string[] SelectAndFilterVideosForBatch(string sourceFolder) {
         if (!Directory.Exists(sourceFolder)) {
-            Console.WriteLine($"[FEHLER] Der Ordner '{sourceFolder}' existiert nicht.");
+            Ui.Error($"Der Ordner '{sourceFolder}' existiert nicht.");
             return [];
         }
 
@@ -24,28 +26,28 @@ public static class VideoBatchSelector {
                              .ToArray();
 
         if (files.Length == 0) {
-            Console.WriteLine($"[INFO] Keine MP4-Videos im Ordner '{sourceFolder}' gefunden.");
+            Ui.Info($"Keine MP4-Videos im Ordner '{sourceFolder}' gefunden.");
             return [];
         }
 
-        Console.WriteLine($"\nEs wurden {files.Length} MP4-Video(s) im Quellordner gefunden.");
-        Console.WriteLine($"Erstes Video: {files[0]}");
-        Console.Write("Möchten Sie bei Video 1 beginnen? (j/n, Standard: j): ");
+        Ui.Info($"Es wurden {files.Length} MP4-Video(s) im Quellordner gefunden.");
+        Ui.Detail($"Erstes Video: {files[0]}");
 
-        string input = Console.ReadLine()?.Trim().ToLower() ?? "";
-        if (input == "n" || input == "nein") {
-            Console.WriteLine("\nBitte wählen Sie das Video aus, bei dem gestartet werden soll:");
-            for (int i = 0; i < files.Length; i++) {
-                Console.WriteLine($"  {i + 1}) {Path.GetFileName(files[i])}");
-            }
-            Console.Write($"Start-Nummer (1-{files.Length}): ");
-            if (int.TryParse(Console.ReadLine()?.Trim(), out int startNum) && startNum >= 1 && startNum <= files.Length) {
+        bool startAtFirst = AnsiConsole.Confirm("Möchten Sie bei Video 1 beginnen?", true);
+        if (!startAtFirst) {
+            var videoChoices = files.Select((f, idx) => $"{idx + 1}) {Path.GetFileName(f)}").ToArray();
+            string selected = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold text-primary]Bitte wählen Sie das Video aus, bei dem gestartet werden soll:[/]")
+                    .PageSize(15)
+                    .AddChoices(videoChoices)
+            );
+
+            int startNum = Array.IndexOf(videoChoices, selected) + 1;
+            if (startNum >= 1 && startNum <= files.Length) {
                 int startIndex = startNum - 1;
-                Console.WriteLine($"\nStarte Batch-Verarbeitung ab Video {startNum}: {Path.GetFileName(files[startIndex])}");
+                Ui.Info($"Starte Batch-Verarbeitung ab Video {startNum}: {Path.GetFileName(files[startIndex])}");
                 return [.. files.Skip(startIndex)];
-            }
-            else {
-                Console.WriteLine("[WARNUNG] Ungültige Eingabe. Starte bei Video 1.");
             }
         }
 

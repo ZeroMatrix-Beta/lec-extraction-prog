@@ -43,14 +43,14 @@ public partial class AiStudioAutoExtractionSession {
         int systemInstructionDelay = _config.SystemInstructionDelaySeconds > 0 ? _config.SystemInstructionDelaySeconds : 65;
         int historyBatchDelay = _config.HistoryRateLimitDelaySeconds > 0 ? _config.HistoryRateLimitDelaySeconds : 65;
 
-        Console.WriteLine($"\n  [SystemInstruction-Warmup] Starte gestaffeltes Cache-Warming für System Instruction + History in {batches.Count} Batch(es) (BaseDelay: {systemInstructionDelay}s, HistoryDelay: {historyBatchDelay}s)...");
+        Ui.Info($"Starte gestaffeltes Cache-Warming für System Instruction + History in {batches.Count} Batch(es) (BaseDelay: {systemInstructionDelay}s, HistoryDelay: {historyBatchDelay}s)...", "SystemInstruction-Warmup");
 
         // Step 0: Optionally warm up base system instruction before adding history
         if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
-            Console.WriteLine("\n  [Cache-Warming Step 0] Warmup für Basis System Instruction...");
+            Ui.Step("Cache-Warming Step 0: Warmup für Basis System Instruction");
             if (!await PrimePrefixCacheAsync(systemInstructionDelay, includeDummyPart0: false)) return false;
         } else {
-            Console.WriteLine($"\n  [Cache-Warming] Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...");
+            Ui.Info($"Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...", "Cache-Warming");
         }
 
         // Process each history batch: append files, then warm up
@@ -58,19 +58,13 @@ public partial class AiStudioAutoExtractionSession {
             var (batchLabel, batchFiles) = batches[batchIndex];
             bool isLastBatch = batchIndex == batches.Count - 1;
 
-            Console.WriteLine($"\n  [Cache-Warming Step {batchIndex + 1}/{batches.Count}] Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in System Instruction...");
+            Ui.Step($"Cache-Warming Step {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in System Instruction");
 
             // Append this batch's files to the growing system instruction text
             var batchBuilder = new System.Text.StringBuilder();
             await AppendHistoryFilesToInstructionAsync(batchFiles, batchBuilder, commonBase);
             _systemInstructionText += batchBuilder.ToString();
 
-            // Decide whether to send a handshake for this batch.
-            // If MergeSystemInstructionAndFirstHistoryBatch is true, batch 0 is sent immediately together
-            // with the system instruction (its own handshake IS that merge, kept small and early on purpose
-            // to start Google's prefix-cache warming ASAP without a large fresh-token spike) — it is not a
-            // pairing candidate. Pairing among the remaining batches then starts fresh from there:
-            // pairs are (0,1),(2,3),... normally, or (1,2),(3,4),... when batch 0 is excluded.
             bool shouldSendHandshake = true;
             if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch) {
                 int pairingStart = _config.MergeSystemInstructionAndFirstHistoryBatch ? 1 : 0;
@@ -82,11 +76,11 @@ public partial class AiStudioAutoExtractionSession {
             if (shouldSendHandshake) {
                 if (!await PrimePrefixCacheAsync(historyBatchDelay, includeDummyPart0: isLastBatch)) return false;
             } else {
-                Console.WriteLine($"  [Cache-Warming] Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...");
+                Ui.Info($"Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...", "Cache-Warming");
             }
         }
 
-        Console.WriteLine($"\n  [Tokens] History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}");
+        Ui.Detail($"History-Warming abgeschlossen. Max-Frisch-Tokens in einem Schritt: {_sessionMaxFreshTokens:N0}", "Tokens");
         return true;
     }
 
@@ -97,7 +91,7 @@ public partial class AiStudioAutoExtractionSession {
     /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
     /// </summary>
     private async Task<bool> PrimePrefixCacheAsync(int? customDelay = null, bool includeDummyPart0 = false) {
-        Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...");
+        Ui.Info("Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...", "Cache-Warming");
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -113,25 +107,11 @@ public partial class AiStudioAutoExtractionSession {
 
         string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
 
-        // [AI Context] When DebugSendReferenceFile is enabled, the warm-up user-turn is split into TWO Parts:
-        //   Part 0: contextText + dummyPart0 + GetStaticPromptBeginning(1)  ← IDENTICAL to Part 1's pre-video text Part
-        //   Part 1: handshake instruction (throwaway, the response doesn't matter)
-        // This Part boundary after Part 0 mirrors the boundary that exists in the real Part-1 request (between
-        // the pre-video text and the video attachment), so Google's implicit prefix cache can match the full
-        // SysInstruction + Part-0-text sequence and cache it before the first real video request arrives.
-        // When SendDummyFileWithEachWarmUpRound is true, the dummy block is included in EVERY warm-up round
-        // (regardless of includeDummyPart0 and DebugSendReferenceFile) to give Google a consistent user-turn
-        // structure across all warm-up rounds, improving cache association.
         bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
         List<Part> warmupParts;
         if (shouldIncludeDummy) {
-            // [AI Context] dummy-part0.tex is ~4500 tokens of Lorem Ipsum – large enough to anchor Google's
-            // implicit prefix cache on the user-turn portion even without relying solely on the system instruction.
-            // This Part 0 is bit-identical to Part 1's pre-video text Part, ensuring maximum cache hits.
             string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
 
-            // Part 0: pre-video prefix – token-identical to Part 1's first text Part.
-            // Part 1: throwaway handshake – the response is irrelevant; only the cache priming matters.
             warmupParts = [
                 new Part { Text = ReferenceContextPreamble + dummyReferenceBlock + GetStaticPromptBeginning(1) },
                 new Part { Text = handshakeText }
@@ -175,24 +155,24 @@ public partial class AiStudioAutoExtractionSession {
                 _sessionTotalCachedTokens += cachedTokens;
                 _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
 
-                Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich.");
+                Ui.Success("Handshake erfolgreich.", "Cache-Warming");
                 if (!string.IsNullOrWhiteSpace(responseText)) {
-                    Console.WriteLine($"  [Gemini Antwort] {responseText.Trim()}");
+                    Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
                 if (inputTokens > 0) {
-                    Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
+                    Ui.Detail($"[Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
                 }
 
                 int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
-                Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill)...");
+                Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");
                 await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
                 return true;
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [WARNUNG] Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.");
+            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.", "Cache-Warming");
             int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
-            Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill nach Handshake)...");
+            Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
         }
         return true;

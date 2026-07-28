@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using Spectre.Console;
 
 namespace LectureExtraction.Media;
 
@@ -37,71 +38,57 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     private double _overlapSeconds = 180;
 
     public async Task StartAsync() {
-        Console.WriteLine("\n==================================================");
-        Console.WriteLine(" 🎬 FFmpeg Console Video Preprocessor Dashboard");
-        Console.WriteLine("==================================================");
+        Ui.Header("🎬 FFmpeg Console Video Preprocessor Dashboard");
 
-        // Phase 1: Setup and Validation
         if (!SetupDirectories(out string sourceFolder, out string destFolder)) return;
 
-        // Phase 2: Select conversion target mode (Single File vs. Folder Batch)
         string[] filesToProcess = SelectTargetFiles(sourceFolder);
         if (filesToProcess == null || filesToProcess.Length == 0) {
-            Console.WriteLine("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
+            Ui.Warn("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
             return;
         }
 
-        // Phase 3: Dashboard loop
         while (true) {
-            RenderDashboard(sourceFolder, destFolder, filesToProcess);
-            
-            Console.Write("\nWahl (1-10) [Standard: 9 (Start)]: ");
-            string choice = Console.ReadLine()?.Trim() ?? "";
-            if (string.IsNullOrEmpty(choice)) choice = "9";
+            string choice = RenderDashboardAndPromptChoice(sourceFolder, destFolder, filesToProcess);
 
-            if (choice == "10" || choice.Equals("exit", StringComparison.OrdinalIgnoreCase)) {
-                Console.WriteLine("Breche ab und kehre zum Hauptmenü zurück.");
+            if (choice == "exit") {
+                Ui.Info("Breche ab und kehre zum Hauptmenü zurück.");
                 return;
             }
 
             switch (choice) {
-                case "1":
+                case "speed":
                     ConfigureSpeed();
                     break;
-                case "2":
+                case "fps":
                     ConfigureFps();
                     break;
-                case "3":
+                case "audio":
                     _downmixToMono = !_downmixToMono;
-                    _useCustomTemplate = false; // reset custom mode if standard settings are modified
-                    Console.WriteLine($"\n  [OK] Downmix to Mono: {(_downmixToMono ? "AKTIVIERT (Mono 96k)" : "DEAKTIVIERT (Original Stereo Copy)")}");
+                    _useCustomTemplate = false;
+                    Ui.Success($"Downmix to Mono: {(_downmixToMono ? "AKTIVIERT (Mono 96k)" : "DEAKTIVIERT (Original Stereo Copy)")}");
                     break;
-                case "4":
+                case "resolution":
                     _scaleTo720p = !_scaleTo720p;
                     _useCustomTemplate = false;
-                    Console.WriteLine($"\n  [OK] Auf 720p skalieren: {(_scaleTo720p ? "AKTIVIERT" : "DEAKTIVIERT (Original-Auflösung)")}");
+                    Ui.Success($"Auf 720p skalieren: {(_scaleTo720p ? "AKTIVIERT" : "DEAKTIVIERT (Original-Auflösung)")}");
                     break;
-                case "5":
+                case "preset":
                     ConfigurePreset();
                     break;
-                case "6":
+                case "range":
                     ConfigureTimeRange();
                     break;
-                case "7":
+                case "split":
                     ConfigureSplitting();
                     break;
-                case "8":
+                case "custom":
                     ConfigureCustomCommand();
                     break;
-                case "9":
-                    // Run the actual conversion process
+                case "start":
                     await RunConversionProcessAsync(filesToProcess, destFolder);
-                    Console.WriteLine("\nDrücke ENTER um fortzufahren...");
-                    Console.ReadLine();
+                    Ui.Info("Konvertierung abgeschlossen.");
                     return;
-                default:
-                    Console.WriteLine("Ungültige Auswahl.");
-                    break;
             }
         }
     }
@@ -110,7 +97,6 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
         string currentSource = string.IsNullOrEmpty(DefaultSourceFolder) ? ffmpegConfig.SourceFolder : DefaultSourceFolder;
 
-        // Use our nice folder selector (which now supports predefined folders and explorer!)
         sourceFolder = ConfigurationPrompts.PromptForSourceFolder(currentSource, newFolder => {
             ffmpegConfig.SourceFolder = newFolder;
             ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
@@ -121,28 +107,24 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
             destFolder = Path.Combine(sourceFolder, "extracted_output");
         }
 
-        Console.Write($"\nAktueller Zielordner (Destination): {destFolder}\nMöchten Sie diesen Zielordner beibehalten? (j/n, Standard: j): ");
-        string? destChoice = Console.ReadLine()?.Trim().ToLowerInvariant();
-        if (destChoice == "n" || destChoice == "nein" || destChoice == "no") {
-            Console.Write("Neuen Zielordner eingeben: ");
-            string newDest = Console.ReadLine()?.Trim() ?? "";
-            if (!string.IsNullOrEmpty(newDest)) {
-                destFolder = newDest.Trim('\"', '\'');
-            }
+        Ui.Info($"Aktueller Zielordner (Destination): [bold]{destFolder}[/]");
+        bool keepDest = AnsiConsole.Confirm("Möchten Sie diesen Zielordner beibehalten?", true);
+        if (!keepDest) {
+            destFolder = AnsiConsole.Ask<string>("Neuen Zielordner eingeben:").Trim('\"', '\'');
         }
 
         if (!Directory.Exists(sourceFolder)) {
-            Console.WriteLine($"Error: Quellordner '{sourceFolder}' existiert nicht.");
+            Ui.Error($"Quellordner '{sourceFolder}' existiert nicht.");
             return false;
         }
 
         if (!Directory.Exists(destFolder)) {
             try {
-                Console.WriteLine($"Erstelle Zielordner '{destFolder}'...");
+                Ui.Info($"Erstelle Zielordner '{destFolder}'...");
                 Directory.CreateDirectory(destFolder);
             }
             catch (Exception ex) {
-                Console.WriteLine($"Fehler beim Erstellen des Zielordners: {ex.Message}");
+                Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.Message}");
                 return false;
             }
         }
@@ -151,13 +133,16 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     }
 
     private static string[] SelectTargetFiles(string sourceFolder) {
-        Console.WriteLine("\nDateiauswahl-Modus:");
-        Console.WriteLine("  1) Einzelne Videodatei auswählen");
-        Console.WriteLine("  2) Alle Videodateien im Quellordner verarbeiten (Batch-Modus)");
-        Console.Write("Auswahl (1-2) [Standard: 1]: ");
-        
-        string choice = Console.ReadLine()?.Trim() ?? "";
-        if (choice == "2") {
+        var selection = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold text-primary]Dateiauswahl-Modus:[/]")
+                .AddChoices(
+                    "Einzelne Videodatei auswählen",
+                    "Alle Videodateien im Quellordner verarbeiten (Batch-Modus)"
+                )
+        );
+
+        if (selection.Contains("Batch-Modus")) {
             return FileSelectionPrompt.SelectBatchFiles(sourceFolder);
         }
         else {
@@ -165,26 +150,21 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         }
     }
 
-    private void RenderDashboard(string sourceFolder, string destFolder, string[] filesToProcess) {
-        Console.WriteLine("\n==================================================");
-        Console.WriteLine("        🛠️ FFmpeg Konvertierungs-Dashboard");
-        Console.WriteLine("==================================================");
-        Console.WriteLine($" 📁 Quellordner: {sourceFolder}");
-        Console.WriteLine($" 📁 Zielordner:  {destFolder}");
-        Console.WriteLine($" 🎬 Zu verarbeiten ({filesToProcess.Length} Datei(en)):");
+    private string RenderDashboardAndPromptChoice(string sourceFolder, string destFolder, string[] filesToProcess) {
+        Ui.Detail($"Quellordner: {sourceFolder}");
+        Ui.Detail($"Zielordner:  {destFolder}");
+        Ui.Detail($"Zu verarbeiten ({filesToProcess.Length} Datei(en)):");
         for (int i = 0; i < Math.Min(filesToProcess.Length, 5); i++) {
-            Console.WriteLine($"    - {Path.GetFileName(filesToProcess[i])}");
+            Ui.Detail($"   - {Path.GetFileName(filesToProcess[i])}");
         }
         if (filesToProcess.Length > 5) {
-            Console.WriteLine($"    ... und {filesToProcess.Length - 5} weitere.");
+            Ui.Detail($"   ... und {filesToProcess.Length - 5} weitere.");
         }
-        Console.WriteLine("--------------------------------------------------");
-        
+
+        var choices = new Dictionary<string, string>();
+
         if (_useCustomTemplate) {
-            Console.WriteLine(" ⚙️ MODUS: KUNDENSPEZIFISCHE FFmpeg Parameter (Custom Mode)");
-            Console.WriteLine($"    Befehls-Template: {_customCommandTemplate}");
-            Console.WriteLine($"    Ausgabe-Erweiterung: {_customOutputExtension}");
-            Console.WriteLine("--------------------------------------------------");
+            Ui.Warn($"Custom Mode aktiv - Command Template: {_customCommandTemplate}");
         }
         else {
             string rangeText = (_startTimeSeconds.HasValue || _durationSeconds.HasValue)
@@ -195,66 +175,69 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
                 ? $"{_splitParts} Teile (Überlappung: {_overlapSeconds}s)"
                 : "Deaktiviert (Einzelne Datei)";
 
-            Console.WriteLine($" 1) ⚡ Geschwindigkeit (Speed):    {_speedMultiplier:F1}x");
-            Console.WriteLine($" 2) 🎞️ Bilder pro Sekunde (FPS):   {_fps} FPS");
-            Console.WriteLine($" 3) 🔊 Tonspur-Format (Audio):     {(_downmixToMono ? "Mono (96k AAC, empfohlen)" : "Stereo (Kopie)")}");
-            Console.WriteLine($" 4) 📺 Auflösung (Resolution):     {(_scaleTo720p ? "720p (Skaliert, empfohlen)" : "Originalgröße")}");
-            Console.WriteLine($" 5) 🗜️ Kompression (Preset):      {_preset}");
-            Console.WriteLine($" 6) ⏳ Zeitbereich (Range):        {rangeText}");
-            Console.WriteLine($" 7) ✂️ Splitting / Aufteilen:      {splitText}");
-            Console.WriteLine(" 8) ⚙️ Benutzerdefinierten FFmpeg-Befehl eingeben...");
-            Console.WriteLine("--------------------------------------------------");
+            choices[$"⚡ Geschwindigkeit (Speed):    {_speedMultiplier:F1}x"] = "speed";
+            choices[$"🎞️ Bilder pro Sekunde (FPS):   {_fps} FPS"] = "fps";
+            choices[$"🔊 Tonspur-Format (Audio):     {(_downmixToMono ? "Mono (96k AAC, empfohlen)" : "Stereo (Kopie)")}"] = "audio";
+            choices[$"📺 Auflösung (Resolution):     {(_scaleTo720p ? "720p (Skaliert, empfohlen)" : "Originalgröße")}"] = "resolution";
+            choices[$"🗜️ Kompression (Preset):      {_preset}"] = "preset";
+            choices[$"⏳ Zeitbereich (Range):        {rangeText}"] = "range";
+            choices[$"✂️ Splitting / Aufteilen:      {splitText}"] = "split";
+            choices["⚙️ Benutzerdefinierten FFmpeg-Befehl eingeben..."] = "custom";
         }
-        Console.WriteLine(" 9) 🚀 KONVERTIERUNG STARTEN");
-        Console.WriteLine(" 10) 🚪 Zurück zum Hauptmenü");
+
+        choices["🚀 KONVERTIERUNG STARTEN"] = "start";
+        choices["🚪 Kehre zum Hauptmenü zurück"] = "exit";
+
+        var selectedKey = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold text-primary]FFmpeg Konvertierungs-Dashboard:[/]")
+                .PageSize(12)
+                .AddChoices(choices.Keys)
+        );
+
+        return choices[selectedKey];
     }
 
     private void ConfigureSpeed() {
-        Console.Write($"\nNeue Geschwindigkeit eingeben (z. B. 1.0, 1.2, 1.3, 1.5) [aktuell: {_speedMultiplier}x]: ");
-        string input = Console.ReadLine()?.Trim() ?? "";
-        if (double.TryParse(input, CultureInfo.InvariantCulture, out double val) && val >= 0.1 && val <= 10.0) {
+        double val = AnsiConsole.Ask<double>($"Neue Geschwindigkeit eingeben (z. B. 1.0, 1.2, 1.3, 1.5) [aktuell: {_speedMultiplier}x]:", _speedMultiplier);
+        if (val >= 0.1 && val <= 10.0) {
             _speedMultiplier = val;
             _useCustomTemplate = false;
-            Console.WriteLine($"  [OK] Geschwindigkeit auf {_speedMultiplier}x gesetzt.");
+            Ui.Success($"Geschwindigkeit auf {_speedMultiplier}x gesetzt.");
         }
-        else if (!string.IsNullOrEmpty(input)) {
-            Console.WriteLine("  [FEHLER] Ungültiger Wert.");
+        else {
+            Ui.Warn("Ungültiger Wert.");
         }
     }
 
     private void ConfigureFps() {
-        Console.Write($"\nBilder pro Sekunde (FPS) eingeben (z. B. 1, 2, 5, 10) [aktuell: {_fps}]: ");
-        string input = Console.ReadLine()?.Trim() ?? "";
-        if (int.TryParse(input, out int val) && val >= 1 && val <= 60) {
+        int val = AnsiConsole.Ask<int>($"Bilder pro Sekunde (FPS) eingeben (z. B. 1, 2, 5, 10) [aktuell: {_fps}]:", _fps);
+        if (val >= 1 && val <= 60) {
             _fps = val;
             _useCustomTemplate = false;
-            Console.WriteLine($"  [OK] FPS auf {_fps} gesetzt.");
+            Ui.Success($"FPS auf {_fps} gesetzt.");
         }
-        else if (!string.IsNullOrEmpty(input)) {
-            Console.WriteLine("  [FEHLER] Ungültiger Wert.");
+        else {
+            Ui.Warn("Ungültiger Wert.");
         }
     }
 
     private void ConfigurePreset() {
         string[] presets = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"];
-        Console.WriteLine("\nWähle Kompressions-Voreinstellung (Preset):");
-        for (int i = 0; i < presets.Length; i++) {
-            string activeMark = presets[i] == _preset ? " *" : "";
-            Console.WriteLine($"  {i + 1}) {presets[i]}{activeMark}");
-        }
-        Console.Write($"Auswahl (1-{presets.Length}) [aktuell: {_preset}]: ");
-        string input = Console.ReadLine()?.Trim() ?? "";
-        if (int.TryParse(input, out int choice) && choice >= 1 && choice <= presets.Length) {
-            _preset = presets[choice - 1];
-            _useCustomTemplate = false;
-            Console.WriteLine($"  [OK] Kompression Preset auf '{_preset}' gesetzt.");
-        }
+        string choice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold text-primary]Wähle Kompressions-Voreinstellung (Preset):[/]")
+                .AddChoices(presets)
+        );
+
+        _preset = choice;
+        _useCustomTemplate = false;
+        Ui.Success($"Kompression Preset auf '{_preset}' gesetzt.");
     }
 
     private void ConfigureTimeRange() {
-        Console.WriteLine("\n--- Zeitbereichs-Auswahl (z. B. 00:10:00, 5:30 oder Sekunden) ---");
-        Console.Write($"Startzeit eingeben [aktuell: {(_startTimeSeconds.HasValue ? _startTimeSeconds.Value.ToString() : "Anfang")}]: ");
-        string startInput = Console.ReadLine()?.Trim() ?? "";
+        Ui.Info("Zeitbereichs-Auswahl (z. B. 00:10:00, 5:30 oder Sekunden)", "Zeitbereich");
+        string startInput = AnsiConsole.Ask<string>($"Startzeit eingeben [aktuell: {(_startTimeSeconds.HasValue ? _startTimeSeconds.Value.ToString() : "Anfang")}]:", "");
         
         double? startSec = ParseTimeInput(startInput);
         if (startSec.HasValue) {
@@ -264,8 +247,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
             _startTimeSeconds = null;
         }
 
-        Console.Write($"Dauer eingeben [aktuell: {(_durationSeconds.HasValue ? _durationSeconds.Value.ToString() : "Gesamtes restliches Video")}]: ");
-        string durInput = Console.ReadLine()?.Trim() ?? "";
+        string durInput = AnsiConsole.Ask<string>($"Dauer eingeben [aktuell: {(_durationSeconds.HasValue ? _durationSeconds.Value.ToString() : "Gesamtes restliches Video")}]:", "");
 
         double? durSec = ParseTimeInput(durInput);
         if (durSec.HasValue) {
@@ -276,48 +258,43 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         }
 
         _useCustomTemplate = false;
-        Console.WriteLine("  [OK] Zeitbereich konfiguriert.");
+        Ui.Success("Zeitbereich konfiguriert.");
     }
 
     private void ConfigureSplitting() {
-        Console.Write("\nIn wie viele Teile soll das Video aufgeteilt werden? (1 = kein Splitting) [aktuell: " + _splitParts + "]: ");
-        string input = Console.ReadLine()?.Trim() ?? "";
-        if (int.TryParse(input, out int parts) && parts >= 1) {
+        int parts = AnsiConsole.Ask<int>($"In wie viele Teile soll das Video aufgeteilt werden? (1 = kein Splitting) [aktuell: {_splitParts}]:", _splitParts);
+        if (parts >= 1) {
             _splitParts = parts;
             if (_splitParts > 1) {
-                Console.Write($"Überlappungszeit in Sekunden eingeben [aktuell: {_overlapSeconds}s]: ");
-                string overlapInput = Console.ReadLine()?.Trim() ?? "";
-                if (double.TryParse(overlapInput, CultureInfo.InvariantCulture, out double overlap) && overlap >= 0) {
+                double overlap = AnsiConsole.Ask<double>($"Überlappungszeit in Sekunden eingeben [aktuell: {_overlapSeconds}s]:", _overlapSeconds);
+                if (overlap >= 0) {
                     _overlapSeconds = overlap;
                 }
             }
             _useCustomTemplate = false;
-            Console.WriteLine($"  [OK] Splitting konfiguriert: {_splitParts} Teile.");
+            Ui.Success($"Splitting konfiguriert: {_splitParts} Teile.");
         }
     }
 
     private void ConfigureCustomCommand() {
-        Console.WriteLine("\n--- Freier FFmpeg-Befehlsmodus ---");
-        Console.WriteLine("Tipp: Verwende {0} als Platzhalter für die Input-Datei und {1} für die Output-Datei.");
-        Console.WriteLine("Beispiel: -i \"{0}\" -vcodec libx264 -preset fast -crf 28 \"{1}\"");
-        Console.Write("Eigenen Befehl eingeben: ");
-        string template = Console.ReadLine() ?? "";
+        Ui.Info("Freier FFmpeg-Befehlsmodus", "Custom Mode");
+        Ui.Detail("Tipp: Verwende {0} als Platzhalter für die Input-Datei und {1} für die Output-Datei.");
+        Ui.Detail("Beispiel: -i \"{0}\" -vcodec libx264 -preset fast -crf 28 \"{1}\"");
+        
+        string template = AnsiConsole.Ask<string>("Eigenen Befehl eingeben:");
         if (!string.IsNullOrWhiteSpace(template)) {
             _customCommandTemplate = template;
-            Console.Write("Ausgabe-Dateiendung eingeben (Standard: .mp4): ");
-            string ext = Console.ReadLine()?.Trim() ?? ".mp4";
+            string ext = AnsiConsole.Ask<string>("Ausgabe-Dateiendung eingeben [Standard: .mp4]:", ".mp4");
             if (!ext.StartsWith(".")) ext = "." + ext;
             _customOutputExtension = ext;
             
             _useCustomTemplate = true;
-            Console.WriteLine("  [OK] Custom Mode aktiviert.");
+            Ui.Success("Custom Mode aktiviert.");
         }
     }
 
     private async Task RunConversionProcessAsync(string[] filesToProcess, string destFolder) {
-        Console.WriteLine("\n==================================================");
-        Console.WriteLine(" 🚀 Starte FFmpeg Konvertierungsprozess...");
-        Console.WriteLine("==================================================");
+        Ui.Header("🚀 Starte FFmpeg Konvertierungsprozess...");
 
         foreach (string inputFile in filesToProcess) {
             if (_useCustomTemplate) {

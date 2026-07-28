@@ -1,6 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
+using LectureExtraction.ConsoleUi;
+using Spectre.Console;
 
 namespace LectureExtraction.App;
 
@@ -20,58 +22,66 @@ public static class MainMenu {
                 ? "Dedizierter Key (automated-content-extraction)"
                 : $"Profil {autoExtConfig.ActiveApiProfile}";
 
-            Console.WriteLine("\n==================================================");
-            Console.WriteLine("     Welcome to AI Extraction & Processing        ");
-            Console.WriteLine($" (Aktives AI Studio Profil für Auto-Extraktion: {autoExtProfileDisplay})");
-            Console.WriteLine("==================================================");
-            Console.WriteLine("Bitte gewünschten Modus auswählen:");
-            Console.WriteLine("  1) 🌐 Google AI Studio (API Key / Developer Endpoints)");
-            string vertexDisplay = AppConfig.IsVertexAiEnabled ? "2) ☁️ Google Cloud Vertex AI (Enterprise)" : "2) ☁️ Google Cloud Vertex AI [DEAKTIVIERT - Kostenschutz]";
-            Console.WriteLine($"  {vertexDisplay}");
-            Console.WriteLine("  3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)");
-            Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine("  4) 🚀 Automatisierte Content-Extraktion & Verarbeitung");
-            Console.WriteLine("  5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)");
-            Console.WriteLine("  6) ⚙️ Quellordner (Source Folders) verwalten & ändern");
-            Console.WriteLine("  7) 🔑 API-Key Profile (AI Studio & Refinement) verwalten & ändern");
-            Console.Write("\nChoice (1-7) or 'exit': ");
+            Ui.Step("Welcome to AI Extraction & Processing");
+            Ui.Detail($"Aktives AI Studio Profil für Auto-Extraktion: {autoExtProfileDisplay}");
+            Ui.Blank();
 
-            string? mainChoice = Console.ReadLine()?.Trim().ToLower();
+            string choice1 = "1) 🌐 Google AI Studio (API Key / Developer Endpoints)";
+            string choice2 = AppConfig.IsVertexAiEnabled
+                ? "2) ☁️ Google Cloud Vertex AI (Enterprise)"
+                : "2) ☁️ Google Cloud Vertex AI [DEAKTIVIERT - Kostenschutz]";
+            string choice3 = "3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)";
+            string choice4 = "4) 🚀 Automatisierte Content-Extraktion & Verarbeitung";
+            string choice5 = "5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)";
+            string choice6 = "6) ⚙️ Quellordner (Source Folders) verwalten & ändern";
+            string choice7 = "7) 🔑 API-Key Profile (AI Studio & Refinement) verwalten & ändern";
+            string choiceExit = "8) 🚪 Beenden";
 
-            // [AI Context] Handle null (EOF) as an exit signal to prevent infinite loops in non-interactive terminals.
-            if (mainChoice == null || mainChoice == "exit" || mainChoice == "quit") {
+            var prompt = new SelectionPrompt<string>()
+                .Title("[bold]Bitte gewünschten Modus auswählen:[/]")
+                .PageSize(10);
+
+            prompt.AddChoice(choice1);
+            if (AppConfig.IsVertexAiEnabled) {
+                prompt.AddChoice(choice2);
+            }
+            prompt.AddChoice(choice3);
+            prompt.AddChoice(choice4);
+            prompt.AddChoice(choice5);
+            prompt.AddChoice(choice6);
+            prompt.AddChoice(choice7);
+            prompt.AddChoice(choiceExit);
+
+            if (!AppConfig.IsVertexAiEnabled) {
+                Ui.Detail("  " + choice2);
+            }
+
+            var selection = AnsiConsole.Prompt(prompt);
+
+            if (selection == choiceExit) {
                 break;
             }
 
-            switch (mainChoice) {
-                case "1":
-                    await SessionFactory.RunDirectAiStudioChatAsync();
-                    break;
-                case "2":
-                    if (!AppConfig.IsVertexAiEnabled) {
-                        Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json). Bitte nutze Google AI Studio (Option 1).");
-                        break;
-                    }
-                    await SessionFactory.RunDirectVertexChatAsync();
-                    break;
-                case "3":
-                    await SessionFactory.RunFfmpegSessionAsync();
-                    break;
-                case "4":
-                    await SessionFactory.RunAutoExtractionAsync();
-                    break;
-                case "5":
-                    await SessionFactory.RunLatexRefinementAsync();
-                    break;
-                case "6":
-                    SourceFolderMenu.Show();
-                    break;
-                case "7":
-                    ApiKeyProfileMenu.Show();
-                    break;
-                default:
-                    Console.WriteLine("  [FEHLER] Ungültige Auswahl.");
-                    break;
+            if (selection == choice1) {
+                await SessionFactory.RunDirectAiStudioChatAsync();
+            }
+            else if (selection == choice2 && AppConfig.IsVertexAiEnabled) {
+                await SessionFactory.RunDirectVertexChatAsync();
+            }
+            else if (selection == choice3) {
+                await SessionFactory.RunFfmpegSessionAsync();
+            }
+            else if (selection == choice4) {
+                await SessionFactory.RunAutoExtractionAsync();
+            }
+            else if (selection == choice5) {
+                await SessionFactory.RunLatexRefinementAsync();
+            }
+            else if (selection == choice6) {
+                SourceFolderMenu.Show();
+            }
+            else if (selection == choice7) {
+                ApiKeyProfileMenu.Show();
             }
         }
     }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using LectureExtraction.ConsoleUi;
 using LectureExtraction.Media;
 
 namespace LectureExtraction.Extraction;
@@ -23,14 +24,14 @@ public sealed class AudioTrackExtractor(string sourceVideoPath, string fileSpeci
         string expectedAudioPath = Path.Combine(fileSpecificOutputFolder, $"{Path.GetFileNameWithoutExtension(sourceVideoPath)}_audio.aac");
         bool useCachedAudio = File.Exists(expectedAudioPath) && new FileInfo(expectedAudioPath).Length >= 1024;
         if (useCachedAudio) {
-            Console.WriteLine($"\n[Cache] Vorhandene Audio-Datei gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.");
+            Ui.Info($"Vorhandene Audio-Datei gefunden: {Path.GetFileName(expectedAudioPath)}. Überspringe Audio-Extraktion.", "Cache");
             return;
         }
 
         _audioExtractionTask = Task.Run(async () => {
-            Console.WriteLine($"\n[FFmpeg] Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(sourceVideoPath)}...");
+            Ui.Info($"Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(sourceVideoPath)}...", "FFmpeg");
             await FfmpegToolkit.ExtractAudioAsAacAsync(sourceVideoPath, fileSpecificOutputFolder);
-            Console.WriteLine($"\n[FFmpeg] Audio-Extraktion für {Path.GetFileName(sourceVideoPath)} abgeschlossen.");
+            Ui.Success($"Audio-Extraktion für {Path.GetFileName(sourceVideoPath)} abgeschlossen.", "FFmpeg");
         });
     }
 

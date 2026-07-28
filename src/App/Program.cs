@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.App;
 
@@ -14,21 +15,16 @@ public class Program {
             await MainMenu.RunAsync();
         }
         catch (OperationCanceledException) {
-            Console.WriteLine("\n[System] Execution cancelled by user. Exiting cleanly.");
+            Ui.Warn("Execution cancelled by user. Exiting cleanly.", "System");
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[FATAL ERROR] The application encountered an unhandled exception and must close.");
-            Console.WriteLine($"Type: {ex.GetType().Name}");
-            Console.WriteLine($"Message: {ex.Message}");
-            Console.WriteLine($"Stack Trace:\n{ex.StackTrace}");
+            Ui.Error($"The application encountered an unhandled exception and must close.\nType: {ex.GetType().Name}\nMessage: {ex.Message}\nStack Trace:\n{ex.StackTrace}", "FATAL ERROR");
 
-            // Keep the console open so the user can actually read the fatal error
-            Console.WriteLine("\nPress any key to exit...");
+            Ui.Info("Press any key to exit...");
             if (!Console.IsInputRedirected) Console.ReadKey(true);
         }
         finally {
-            Console.WriteLine("\n[System] Session ended.");
+            Ui.Info("Session ended.", "System");
         }
     }
 }
-

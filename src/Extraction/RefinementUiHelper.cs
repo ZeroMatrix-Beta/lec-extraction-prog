@@ -8,17 +8,17 @@ using LectureExtraction.ConsoleUi;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
 using LectureExtraction.Refinement;
+using Spectre.Console;
 
 namespace LectureExtraction.Extraction;
 
 public static class RefinementUiHelper {
     public static async Task StartInteractiveRefinementAsync(LatexRefinementSessionConfig refinementConfig, IAutoExtractionConfig extractionConfig) {
-        Console.WriteLine("\n=== Interaktiver LaTeX Refinement Modus ===");
+        Ui.Header("Interaktiver LaTeX Refinement Modus");
 
-        // Hot-reload the config from disk so manual edits to the .json file are picked up immediately
         refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
         if (!AppConfig.IsVertexAiEnabled && refinementConfig.UseVertex) {
-            Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json)! Wechsle für LaTeX Refinement automatisch auf AI Studio.");
+            Ui.Warn("Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false)! Wechsle für LaTeX Refinement automatisch auf AI Studio.", "Kostenschutz");
             refinementConfig.UseVertex = false;
             ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
         }
@@ -31,39 +31,42 @@ public static class RefinementUiHelper {
                 ? refinementConfig.Step1MergeAndTimestamp.Vertex.CurrentModel
                 : refinementConfig.Step1MergeAndTimestamp.AiStudio.CurrentModel;
 
-            Console.WriteLine($"\n[Refinement Config]");
-            Console.WriteLine($"Backend:    {backendDisplay}");
+            Ui.Detail($"Backend:    {backendDisplay}");
             if (!refinementConfig.UseVertex) {
-                Console.WriteLine($"API-Profil: {profileDisplay}");
+                Ui.Detail($"API-Profil: {profileDisplay}");
             }
             else {
-                Console.WriteLine($"Project ID: {refinementConfig.VertexProjectId}");
+                Ui.Detail($"Project ID: {refinementConfig.VertexProjectId}");
             }
-            Console.WriteLine($"Modell:     {currentModel}");
-            Console.WriteLine("\nOptionen:");
-            Console.WriteLine(" 1) Refinement fortsetzen (Dateien wählen)");
-            Console.WriteLine($" 2) Backend wechseln (Aktuell: {backendDisplay})");
-            Console.WriteLine(" 3) API Key Profil ändern (Nur für AI Studio)");
-            Console.WriteLine(" 4) Modell ändern (Für aktuelles Backend)");
-            Console.WriteLine(" 5) Abbrechen");
-            Console.Write("Auswahl (1-5, Standard: 1): ");
+            Ui.Detail($"Modell:     {currentModel}");
 
-            string menuChoice = Console.ReadLine()?.Trim() ?? "1";
-            if (string.IsNullOrEmpty(menuChoice)) menuChoice = "1";
+            var choices = new[] {
+                "1) Refinement fortsetzen (Dateien wählen)",
+                $"2) Backend wechseln (Aktuell: {backendDisplay})",
+                "3) API Key Profil ändern (Nur für AI Studio)",
+                "4) Modell ändern (Für aktuelles Backend)",
+                "5) Abbrechen"
+            };
 
-            if (menuChoice == "2") {
+            var menuChoice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[bold text-primary]Optionen:[/]")
+                    .AddChoices(choices)
+            );
+
+            if (menuChoice.StartsWith("2")) {
                 if (!AppConfig.IsVertexAiEnabled && !refinementConfig.UseVertex) {
-                    Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json). Wechsel auf Vertex nicht möglich.");
+                    Ui.Warn("Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false). Wechsel auf Vertex nicht möglich.", "Kostenschutz");
                     continue;
                 }
                 refinementConfig.UseVertex = !refinementConfig.UseVertex;
                 ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
-                Console.WriteLine($"  [INFO] Backend gewechselt auf: {(refinementConfig.UseVertex ? "Vertex AI" : "AI Studio")}");
+                Ui.Info($"Backend gewechselt auf: {(refinementConfig.UseVertex ? "Vertex AI" : "AI Studio")}");
                 continue;
             }
-            else if (menuChoice == "3") {
+            else if (menuChoice.StartsWith("3")) {
                 if (refinementConfig.UseVertex) {
-                    Console.WriteLine("API Profile sind nur für AI Studio relevant.");
+                    Ui.Warn("API Profile sind nur für AI Studio relevant.");
                     continue;
                 }
                 refinementConfig.AiStudioActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
@@ -77,19 +80,14 @@ public static class RefinementUiHelper {
                 );
                 continue;
             }
-            else if (menuChoice == "4") {
-                Console.WriteLine("\nWähle ein Modell:");
-                Console.WriteLine(" 1) gemini-3.6-flash");
-                Console.WriteLine(" 2) gemini-3.5-flash");
-                Console.WriteLine(" 3) gemini-3-flash-preview");
-                Console.Write("Wahl (1-3): ");
-                string mChoice = Console.ReadLine()?.Trim() ?? "";
-                string newModel = mChoice switch {
-                    "1" => "gemini-3.6-flash",
-                    "2" => "gemini-3.5-flash",
-                    "3" => "gemini-3-flash-preview",
-                    _ => ""
-                };
+            else if (menuChoice.StartsWith("4")) {
+                var models = new[] { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview" };
+                string newModel = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[bold text-primary]Wähle ein Modell:[/]")
+                        .AddChoices(models)
+                );
+
                 if (!string.IsNullOrEmpty(newModel)) {
                     if (refinementConfig.UseVertex) {
                         refinementConfig.Step1MergeAndTimestamp.Vertex.CurrentModel = newModel;
@@ -102,14 +100,15 @@ public static class RefinementUiHelper {
                         refinementConfig.Step3LastRefinement.AiStudio.CurrentModel = newModel;
                     }
                     ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
+                    Ui.Success($"Modell auf '{newModel}' aktualisiert.");
                 }
                 continue;
             }
-            else if (menuChoice == "5") {
+            else if (menuChoice.StartsWith("5")) {
                 return;
             }
 
-            break; // proceed with option 1
+            break;
         }
 
         var uiConfig = ConfigLoader<RefinementUiHelperConfig>.Load();
@@ -120,17 +119,24 @@ public static class RefinementUiHelper {
         });
 
         if (!Directory.Exists(searchFolder)) {
-            Console.WriteLine($"[FEHLER] Verzeichnis {searchFolder} nicht gefunden.");
+            Ui.Error($"Verzeichnis {searchFolder} nicht gefunden.");
             return;
         }
 
-        Console.WriteLine("\nWelchen Schritt möchtest du ausführen?");
-        Console.WriteLine(" 1) Offset Correction / Merge (Schritt 1)");
-        Console.WriteLine(" 2) Speech Refinement (Schritt 2)");
-        Console.WriteLine(" 3) Last Refinement (Schritt 3)");
-        Console.WriteLine(" 4) Komplette Pipeline (Alle 3 Schritte)");
-        Console.Write("Auswahl (1-4, Standard: 4): ");
-        string stepChoice = Console.ReadLine()?.Trim() ?? "4";
+        var stepOptions = new[] {
+            "4) Komplette Pipeline (Alle 3 Schritte)",
+            "1) Offset Correction / Merge (Schritt 1)",
+            "2) Speech Refinement (Schritt 2)",
+            "3) Last Refinement (Schritt 3)"
+        };
+
+        string selectedStepChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold text-primary]Welchen Schritt möchtest du ausführen?[/]")
+                .AddChoices(stepOptions)
+        );
+
+        string stepChoice = selectedStepChoice[..1];
 
         refinementConfig.Step1MergeAndTimestamp.Enabled = false;
         refinementConfig.Step2SpeechRefinement.Enabled = false;
@@ -148,61 +154,53 @@ public static class RefinementUiHelper {
         var texFiles = Directory.GetFiles(searchFolder, "*.tex", SearchOption.AllDirectories).ToArray();
 
         if (texFiles.Length == 0) {
-            Console.WriteLine($"Keine passenden .tex Dateien in {searchFolder} oder den Unterordnern gefunden.");
+            Ui.Warn($"Keine passenden .tex Dateien in {searchFolder} oder den Unterordnern gefunden.");
             return;
         }
 
         texFiles = [.. texFiles.OrderBy(f => Path.GetDirectoryName(f)).ThenBy(f => Path.GetFileName(f))];
 
-        Console.WriteLine("\nVerfügbare .tex Dateien:");
-        string? lastDir = null;
-        for (int i = 0; i < texFiles.Length; i++) {
-            string currentDir = Path.GetDirectoryName(texFiles[i]) ?? "";
-            if (lastDir != null && currentDir != lastDir) {
-                Console.WriteLine("==========");
-            }
-            lastDir = currentDir;
+        var fileChoices = texFiles.Select(f => Path.GetRelativePath(searchFolder, f)).ToArray();
+        string selectedRelativeTex = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("[bold text-primary]Wähle die .tex Datei für das Refinement:[/]")
+                .PageSize(15)
+                .AddChoices(fileChoices)
+        );
 
-            string relativePath = Path.GetRelativePath(searchFolder, texFiles[i]);
-            Console.WriteLine($"{i + 1}) {relativePath}");
-        }
-        Console.Write("\nWähle die Datei für das Refinement (Nummer): ");
-        if (!int.TryParse(Console.ReadLine(), out int fileIndex) || fileIndex < 1 || fileIndex > texFiles.Length) {
-            Console.WriteLine("Ungültige Auswahl.");
-            return;
-        }
-
-        string selectedTex = texFiles[fileIndex - 1];
-        Console.WriteLine($"\n  🎯 Ausgewählte Datei [{fileIndex}]: {Path.GetRelativePath(searchFolder, selectedTex)}");
+        string selectedTex = Path.Combine(searchFolder, selectedRelativeTex);
+        Ui.Success($"Ausgewählte Datei: {selectedRelativeTex}");
         string selectedDir = Path.GetDirectoryName(selectedTex) ?? searchFolder;
 
         var audioFiles = Directory.GetFiles(selectedDir, "*.aac");
         string? selectedAudio = null;
         if (stepChoice != "3") {
             if (audioFiles.Length > 0) {
-                Console.WriteLine("\nVerfügbare Audio-Dateien:");
-                for (int i = 0; i < audioFiles.Length; i++) {
-                    Console.WriteLine($"{i + 1}) {Path.GetFileName(audioFiles[i])}");
-                }
-                Console.Write("\nWähle die Audio-Datei (Nummer, oder Enter für Überspringen): ");
-                string audioInput = Console.ReadLine()?.Trim() ?? "";
-                if (int.TryParse(audioInput, out int audioIdx) && audioIdx >= 1 && audioIdx <= audioFiles.Length) {
-                    selectedAudio = audioFiles[audioIdx - 1];
-                    Console.WriteLine($"  🎯 Ausgewählte Audio-Datei [{audioIdx}]: {Path.GetFileName(selectedAudio)}");
+                var audioChoices = new List<string> { "(Ohne Audio fortfahren)" };
+                audioChoices.AddRange(audioFiles.Select(f => Path.GetFileName(f)));
+
+                string audioChoice = AnsiConsole.Prompt(
+                    new SelectionPrompt<string>()
+                        .Title("[bold text-primary]Wähle die Audio-Datei:[/]")
+                        .AddChoices(audioChoices)
+                );
+
+                if (audioChoice != "(Ohne Audio fortfahren)") {
+                    selectedAudio = audioFiles.FirstOrDefault(f => Path.GetFileName(f) == audioChoice);
+                    Ui.Success($"Ausgewählte Audio-Datei: {audioChoice}");
                 }
             }
             else {
-                Console.WriteLine("\nKeine Audio-Dateien in diesem Ordner gefunden. (Audio ist null)");
+                Ui.Info("Keine Audio-Dateien in diesem Ordner gefunden.");
             }
         }
         else {
-            Console.WriteLine("\n[INFO] Überspringe Audio-Auswahl für 'Last Refinement' (Schritt 3 (oder Schritt 4)) benötigt kein Audio).");
+            Ui.Info("Überspringe Audio-Auswahl für 'Last Refinement' (Schritt 3 benötigt kein Audio).");
         }
 
         if (stepChoice == "1" || stepChoice == "2" || stepChoice == "3") {
-            Console.Write("\nMöchtest du ab diesem Schritt die restliche Pipeline bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausführen? (y/n, Standard: n): ");
-            string runToEndInput = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "n";
-            if (runToEndInput == "y" || runToEndInput == "j" || runToEndInput == "yes" || runToEndInput == "ja") {
+            bool runToEnd = AnsiConsole.Confirm("Möchtest du ab diesem Schritt die restliche Pipeline bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausführen?", false);
+            if (runToEnd) {
                 if (stepChoice == "1") {
                     refinementConfig.Step2SpeechRefinement.Enabled = true;
                     refinementConfig.Step3LastRefinement.Enabled = true;
@@ -213,13 +211,13 @@ public static class RefinementUiHelper {
                 if (refinementConfig.PdfCompilation != null) {
                     refinementConfig.PdfCompilation.Enabled = true;
                 }
-                Console.WriteLine("  [INFO] Pipeline wird ab dem gewählten Schritt bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausgeführt.");
+                Ui.Info("Pipeline wird ab dem gewählten Schritt bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausgeführt.");
             }
             else {
                 if (refinementConfig.PdfCompilation != null) {
                     refinementConfig.PdfCompilation.Enabled = false;
                 }
-                Console.WriteLine($"  [INFO] Es wird ausschließlich Schritt {stepChoice} ausgeführt (ohne nachfolgende PDF-Kompilierung).");
+                Ui.Info($"Es wird ausschließlich Schritt {stepChoice} ausgeführt (ohne nachfolgende PDF-Kompilierung).");
             }
         }
         else {
@@ -228,7 +226,7 @@ public static class RefinementUiHelper {
             }
         }
 
-        Console.WriteLine($"\n[INFO] Starte Refinement für: {Path.GetFileName(selectedTex)}");
+        Ui.Info($"Starte Refinement für: {Path.GetFileName(selectedTex)}");
 
         Client refinementClient;
         if (refinementConfig.UseVertex && AppConfig.IsVertexAiEnabled) {
@@ -252,7 +250,7 @@ public static class RefinementUiHelper {
             refinementClient,
             refinementConfig,
             selectedTex,
-            extractionConfig, // using AiStudioAutoExtractionConfig here for the target folder etc. 
+            extractionConfig,
             selectedAudio
         );
 

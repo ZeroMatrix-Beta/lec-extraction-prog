@@ -24,6 +24,6 @@ find . -name '*.cs' \
     -not -path './build_test_bin/*' \
     -not -path './tests/*' \
     -print0 \
-  | xargs -0 grep -hoE 'Console\.(Error\.)?(Write|WriteLine)\(.*' \
+  | xargs -0 grep -hoE '(Console\.(Error\.)?(Write|WriteLine)|Ui\.(Info|Warn|Error|Success|Step|Detail|Raw|RawLine))\(.*' \
   | sed -e 's/[[:space:]]\+$//' \
   | sort -u

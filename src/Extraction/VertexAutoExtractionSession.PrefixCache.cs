@@ -57,7 +57,7 @@ public partial class VertexAutoExtractionSession {
     /// Handshake ohne History-Batching).
     /// </summary>
     private async Task<bool> PrimePrefixCacheAsync() {
-        Console.WriteLine("\n  [Cache-Warming] Starte initialen Handshake-Roundtrip, um den stabilen Prompt-Anfang bei Google im impliziten Cache zu aktivieren...");
+        Ui.Info("Starte initialen Handshake-Roundtrip, um den stabilen Prompt-Anfang bei Google im impliziten Cache zu aktivieren...", "Cache-Warming");
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -77,9 +77,6 @@ public partial class VertexAutoExtractionSession {
 
         string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
 
-        // [AI Context] Part 0: dummy-part0.tex anchor + static preamble, bit-identical to the real Part 1
-        // request's pre-video Part (see BuildGenerationRequestAsync). Part 1: throwaway handshake — the
-        // response is irrelevant, only the cache priming matters.
         string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
         var warmupParts = new List<Part> {
             new() { Text = dummyReferenceBlock + GetStaticPromptBeginning(1) },
@@ -116,24 +113,24 @@ public partial class VertexAutoExtractionSession {
                 _sessionTotalOutputTokens += outputTokens;
                 _sessionTotalCachedTokens += cachedTokens;
 
-                Console.WriteLine($"  [Cache-Warming] Handshake erfolgreich.");
+                Ui.Success("Handshake erfolgreich.", "Cache-Warming");
                 if (!string.IsNullOrWhiteSpace(responseText)) {
-                    Console.WriteLine($"  [Gemini Antwort] {responseText.Trim()}");
+                    Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
                 if (inputTokens > 0) {
-                    Console.WriteLine($"  [Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
+                    Ui.Detail($"[Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
                 }
 
                 int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
-                Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill)...");
+                Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");
                 await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
                 return true;
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"  [WARNUNG] Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.");
+            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.", "Cache-Warming");
             int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
-            Console.WriteLine($"  [Rate-Limit] Warte {delay} Sekunden (Token Refill nach Handshake)...");
+            Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
         }
         return true;

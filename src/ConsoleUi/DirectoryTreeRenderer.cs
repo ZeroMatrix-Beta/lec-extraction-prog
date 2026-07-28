@@ -9,7 +9,6 @@ namespace LectureExtraction.ConsoleUi;
 /// [AI Context] Renders visual directory tree previews and maps file extensions to semantic icons.
 /// </summary>
 public static class DirectoryTreeRenderer {
-    // [AI Context] Maps file extensions to semantic emoji icons for intuitive visual UI scanning.
     public static string GetFileIcon(string ext) => ext switch {
         ".mp4" or ".mkv" or ".avi" or ".mov" or ".webm" => "🎬",
         ".mp3" or ".wav" or ".m4a" or ".flac" or ".aac" => "🎵",
@@ -21,15 +20,10 @@ public static class DirectoryTreeRenderer {
         _ => "📎"
     };
 
-    /// <summary>
-    /// [AI Context] Renders a visual directory tree or outline depending on folder density.
-    /// Small directories display all contents; large directories render a structured summary.
-    /// [Human] Zeigt eine übersichtliche Vorschau des Quellordners mit Ordner- und Datei-Icons an.
-    /// </summary>
     public static void DisplayDirectoryPreview(string folderPath, int maxSmallLimit = 20) {
         try {
             if (!Directory.Exists(folderPath)) {
-                Console.WriteLine($"  ⚠️ [WARNUNG] Ordner existiert nicht: {folderPath}");
+                Ui.Warn($"Ordner existiert nicht: {folderPath}");
                 return;
             }
 
@@ -38,28 +32,24 @@ public static class DirectoryTreeRenderer {
             int totalItems = subDirs.Length + files.Length;
 
             if (totalItems == 0) {
-                Console.WriteLine($"\n  📁 Verzeichnis-Vorschau: {folderPath} [Leerer Ordner]");
+                Ui.Info($"Verzeichnis-Vorschau: {folderPath} [Leerer Ordner]");
                 return;
             }
 
             if (totalItems <= maxSmallLimit) {
-                Console.WriteLine($"\n  📁 Verzeichnis-Vorschau: {folderPath} ({files.Length} Datei(en), {subDirs.Length} Ordner)");
+                Ui.Info($"Verzeichnis-Vorschau: {folderPath} ({files.Length} Datei(en), {subDirs.Length} Ordner)");
             }
             else {
-                Console.WriteLine($"\n  📁 Verzeichnis-Übersicht: {folderPath} (Insgesamt {files.Length} Datei(en), {subDirs.Length} Ordner)");
+                Ui.Info($"Verzeichnis-Übersicht: {folderPath} (Insgesamt {files.Length} Datei(en), {subDirs.Length} Ordner)");
             }
 
             RenderDirectoryTree(folderPath, folderPath, "    ", 0, maxDepth: 4, maxSmallLimit);
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// [AI Context] Internal representation of a directory tree item for rendering previews.
-    /// </summary>
     private readonly struct TreePreviewItem {
         public bool IsDir { get; init; }
         public bool IsMsg { get; init; }
@@ -67,10 +57,6 @@ public static class DirectoryTreeRenderer {
         public string Path { get; init; }
     }
 
-    /// <summary>
-    /// [AI Context] Recursively renders files and folders in a clean hierarchical tree view.
-    /// Limits depth and item counts dynamically based on current folder density and depth level.
-    /// </summary>
     private static void RenderDirectoryTree(string rootFolder, string currentDir, string indent, int currentDepth, int maxDepth, int maxSmallLimit) {
         string[] files;
         string[] subDirs;
@@ -79,8 +65,7 @@ public static class DirectoryTreeRenderer {
             subDirs = Directory.GetDirectories(currentDir);
         }
         catch (Exception ex) {
-            Console.WriteLine($"{indent}⚠️ [Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"{indent}Originaler Fehlertext: {ex.Message}");
+            Ui.Warn($"{indent}[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
             return;
         }
 
@@ -104,7 +89,6 @@ public static class DirectoryTreeRenderer {
 
         List<TreePreviewItem> items = [];
 
-        // 1. Files first
         for (int i = 0; i < shownFiles; i++) {
             string fileName = Path.GetFileName(files[i]);
             string cleanedFileName = FileTreeRenderer.CleanCopySuffix(fileName);
@@ -114,7 +98,6 @@ public static class DirectoryTreeRenderer {
             items.Add(new() { IsDir = false, IsMsg = true, Name = $"... und {files.Length - shownFiles} weitere Datei(en)", Path = "" });
         }
 
-        // 2. Folders next
         if (currentDepth < maxDepth) {
             for (int i = 0; i < shownDirs; i++) {
                 string dirName = Path.GetFileName(subDirs[i]);
@@ -136,14 +119,14 @@ public static class DirectoryTreeRenderer {
 
             if (item.IsMsg) {
                 if (item.IsDir) {
-                    Console.WriteLine($"{indent}{branch}📁 {item.Name}");
+                    Ui.Detail($"{indent}{branch}📁 {item.Name}");
                 }
                 else {
-                    Console.WriteLine($"{indent}{branch}💬 {item.Name}");
+                    Ui.Detail($"{indent}{branch}💬 {item.Name}");
                 }
             }
             else if (item.IsDir) {
-                Console.WriteLine($"{indent}{branch}📁 {item.Name}/");
+                Ui.Detail($"{indent}{branch}📁 {item.Name}/");
                 string childIndent = indent + (isLast ? "    " : "│   ");
                 RenderDirectoryTree(rootFolder, item.Path, childIndent, currentDepth + 1, maxDepth, maxSmallLimit);
             }
@@ -155,7 +138,7 @@ public static class DirectoryTreeRenderer {
                 string label = (!string.IsNullOrEmpty(relPath) && !string.Equals(relPath, item.Name, StringComparison.OrdinalIgnoreCase))
                     ? $"{item.Name} ({relPath})"
                     : item.Name;
-                Console.WriteLine($"{indent}{branch}{icon} {label}");
+                Ui.Detail($"{indent}{branch}{icon} {label}");
             }
         }
     }

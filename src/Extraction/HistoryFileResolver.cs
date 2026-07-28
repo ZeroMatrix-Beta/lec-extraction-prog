@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.Extraction;
 
@@ -23,7 +24,7 @@ public static class HistoryFileResolver {
             else if (Directory.Exists(path))
                 allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
             else
-                Console.WriteLine($"  [WARNUNG] HistoryPreloadPath nicht gefunden (weder Datei noch Ordner): {path}");
+                Ui.Warn($"HistoryPreloadPath nicht gefunden (weder Datei noch Ordner): {path}");
         }
         return [.. allHistoryFiles.Distinct(StringComparer.OrdinalIgnoreCase)];
     }

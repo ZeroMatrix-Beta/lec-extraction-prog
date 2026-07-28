@@ -1,6 +1,7 @@
 namespace LectureExtraction.Configuration;
 
 public interface IAutoExtractionConfig {
+    double SpeedMultiplier { get; }
     bool GoIntoLatexRefinement { get; }
     bool UseChosenModelForRestOfPipeline { get; }
     bool GenerateOffsetFiles { get; }
