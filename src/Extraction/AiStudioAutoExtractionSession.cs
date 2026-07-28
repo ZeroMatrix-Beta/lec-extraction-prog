@@ -33,7 +33,7 @@ namespace LectureExtraction.Extraction;
 /// - ProcessYouTubeTasksAsync: YouTube video download and transcription pipeline.
 /// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos.
 /// </summary>
-public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) {
+public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) : IYouTubeTranscriptionHost {
     public static readonly string[] AvailableModels = [
         "gemini-3.6-flash",
         "gemini-3.5-flash",
@@ -132,7 +132,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
         else if (choice.StartsWith("3")) {
-            await ProcessYouTubeTasksAsync();
+            await new YouTubeTaskRunner(_config, this).RunAsync();
         }
         else {
             var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
@@ -156,7 +156,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         await ProcessFilesAsync(files);
     }
 
-    private async Task<bool> EnsureSessionSetupAsync() {
+    public async Task<bool> EnsureSessionSetupAsync() {
         // --- Phase 1: Load System Instruction text from disk (if not already loaded) ---
         if (string.IsNullOrEmpty(_systemInstructionText)) {
             if (!await TryLoadSystemInstructionWithHistoryAsync()) return false;
@@ -182,7 +182,22 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         await _sessionLogger.LogSessionSetupAsync();
 
         if (_config.DebugHelloRoundtrip) {
-            if (!await DebugHelloRoundtripAsync()) return false;
+            var roundtrip = await DebugRoundtripRunner.RunAsync(_client, _config, GetValidSystemInstructionParts());
+            if (!roundtrip.Succeeded) return false;
+
+            // The runner reports usage rather than mutating these itself, so the session stays the
+            // single writer of its own counters and preamble.
+            _sessionTotalInputTokens += roundtrip.Usage.Input;
+            _sessionTotalOutputTokens += roundtrip.Usage.Output;
+            _sessionTotalCachedTokens += roundtrip.Usage.Cached;
+            _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, roundtrip.Usage.Fresh);
+            _sessionPreamble.Add(roundtrip.UserTurn!);
+            _sessionPreamble.Add(roundtrip.ModelTurn!);
+
+            int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 60;
+            Ui.Detail($"Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
+            await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
+            Ui.Success("'Hello' Roundtrip erfolgreich.");
         }
 
         return true;
@@ -432,96 +447,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return FileTreeRenderer.NormalizeRelativePath(rawRelPath);
     }
 
-    private async Task ProcessYouTubeTasksAsync() {
-        List<YouTubeTranscriptionTask> tasksToProcess = [];
-
-        if (_config.YouTubeTasks != null && _config.YouTubeTasks.Length > 0) {
-            Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
-            if (!AnsiConsole.Confirm("Möchtest du diese Aufgaben ausführen?", defaultValue: true)) {
-                var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
-                if (interactiveTask != null) {
-                    tasksToProcess.Add(interactiveTask);
-                }
-            }
-            else {
-                tasksToProcess.AddRange(_config.YouTubeTasks);
-            }
-        }
-        else {
-            Ui.Info("[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration gefunden.");
-            var interactiveTask = YouTubeTaskPrompt.CreateInteractiveYouTubeTask(_config.OverlapSeconds);
-            if (interactiveTask != null) {
-                tasksToProcess.Add(interactiveTask);
-            }
-        }
-
-        if (tasksToProcess.Count == 0) {
-            Ui.Info("Keine YouTube-Aufgaben zum Verarbeiten.");
-            return;
-        }
-
-        Ui.Step($"[YouTube Mode] Starte Transkription für {tasksToProcess.Count} YouTube-Video(s)...");
-
-        if (!await EnsureSessionSetupAsync()) return;
-
-        foreach (var task in tasksToProcess) {
-            if (string.IsNullOrWhiteSpace(task.VideoUrl)) continue;
-
-            string baseName = string.IsNullOrWhiteSpace(task.OutputName) ? "youtube-lecture" : task.OutputName;
-            if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
-                baseName = "step1-" + baseName;
-            }
-
-            string fileSpecificOutputFolder = Path.Combine(_config.TargetFolder, baseName);
-            if (!Directory.Exists(fileSpecificOutputFolder)) {
-                Directory.CreateDirectory(fileSpecificOutputFolder);
-            }
-
-            Ui.Step($"[YouTube Consumer] Starte API-Extraktion für URL: {task.VideoUrl} ({baseName})");
-            List<string> generatedTexFiles = [];
-            string fullOutputTextRaw = "";
-
-            for (int i = 0; i < task.Fragments.Count; i++) {
-                var frag = task.Fragments[i];
-                int partNum = i + 1;
-                Ui.Step($"Verarbeite Fragment {partNum}/{task.Fragments.Count}: {frag.StartTime} bis {frag.EndTime} ({frag.PartTitle})");
-
-                string dateNotice = (partNum == 1)
-                    ? "Please note that since this is part 1 of the lecture, the date of the transcription is important."
-                    : $"The lecture took place... Please note that since this is part {partNum} of the lecture, the date is not so important (but tell it anyway).";
-
-                string parsedPrompt = $"Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}";
-
-                var attachmentParts = new List<Part> {
-                    Part.FromUri(task.VideoUrl, "video/mp4")
-                };
-
-                string texOutput = (await TranscribeSegmentToLatexAsync(
-                    task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
-                )).LatexBody;
-
-                if (!string.IsNullOrWhiteSpace(texOutput)) {
-                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(texOutput);
-                    fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
-
-                    string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
-                    string partContent = cleanTex;
-                    if (!partContent.StartsWith("% Startzeit:") && !partContent.StartsWith("% Zeitstempel:")) {
-                        partContent = $"% Startzeit: {frag.StartTime} | Ende: {frag.EndTime}\n\n" + partContent;
-                    }
-                    await System.IO.File.WriteAllTextAsync(targetPartPath, partContent);
-                    generatedTexFiles.Add(targetPartPath);
-                    Ui.Success($"Teildatei gespeichert unter: {targetPartPath}");
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(fullOutputTextRaw)) {
-                string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
-                await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
-                Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
-            }
-        }
-    }
 
 
     private List<Part> GetValidSystemInstructionParts() {
@@ -556,83 +481,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return s;
     }
 
-
-    /// <summary>
-    /// [AI Context] Sends a simple "Hello" debug roundtrip if enabled in config.
-    /// [Human] Reiner Debug-Roundtrip, um zu testen ob die API antwortet.
-    /// </summary>
-    private async Task<bool> DebugHelloRoundtripAsync() {
-        Ui.Detail("Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
-
-        var requestConfig = new GenerateContentConfig {
-            Temperature = _config.Temperature,
-            TopP = _config.TopP,
-            TopK = _config.TopK,
-            MaxOutputTokens = 200
-        };
-
-        var sysParts = GetValidSystemInstructionParts();
-        if (sysParts.Count > 0) {
-            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
-        }
-
-        var debugContent = new List<Content> {
-            new() {
-                Role = "user",
-                Parts = [new() { Text = "Hi, this is a debug roundtrip. Please reply with a short 'Hello' or 'Hi'." }]
-            }
-        };
-
-        bool success = false;
-        string fullResponse = "";
-        int maxRetries = 3;
-        int backoff = 10;
-        int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
-
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                var response = await _client.Models.GenerateContentAsync(_config.CurrentModel, debugContent, requestConfig);
-                fullResponse = response.Text ?? "";
-                if (response.UsageMetadata != null) {
-                    inputTokens = response.UsageMetadata.PromptTokenCount ?? 0;
-                    outputTokens = response.UsageMetadata.CandidatesTokenCount ?? 0;
-                    cachedTokens = response.UsageMetadata.CachedContentTokenCount ?? 0;
-                    int freshTokens = Math.Max(0, inputTokens - cachedTokens);
-                    _sessionTotalInputTokens += inputTokens;
-                    _sessionTotalOutputTokens += outputTokens;
-                    _sessionTotalCachedTokens += cachedTokens;
-                    _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
-                }
-
-                Ui.Detail($"[Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {Math.Max(0, inputTokens - cachedTokens):N0} | Output: {outputTokens:N0}");
-                Ui.Detail($"[Gemini Antwort] {fullResponse.Trim()}");
-                success = true;
-                break;
-            }
-            catch (Exception ex) {
-                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
-                if (attempt < maxRetries - 1) {
-                    Ui.Detail($"Retry in {backoff}s...");
-                    await Task.Delay(backoff * 1000);
-                    backoff += 10;
-                }
-            }
-        }
-
-        if (success) {
-            _sessionPreamble.Add(debugContent[0]);
-            _sessionPreamble.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
-            int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 60;
-            Ui.Detail($"Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
-            await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
-            Ui.Success("'Hello' Roundtrip erfolgreich.");
-            return true;
-        }
-        else {
-            Ui.Error("Debug Roundtrip fehlgeschlagen.");
-            return false;
-        }
-    }
 
     /// <summary>
     /// [AI Context] Executes the batch processing workflow.
@@ -1010,7 +858,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         return new SegmentUpload(true, parsedPrompt, attachmentParts);
     }
 
-    private async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+    public async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
         await LogTokenCountsAsync(attachmentParts, history, previousTexFiles);
