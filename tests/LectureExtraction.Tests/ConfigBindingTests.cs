@@ -155,5 +155,30 @@ public class ConfigBindingTests {
 
         Assert.Empty(dummy.Model);
     }
+
+    [Fact]
+    public void ModelSelection_SelectOrAdd_AppendsNewModel_WithoutOverwritingExisting() {
+        var selection = new ModelSelection {
+            Available = ["gemini-3.6-flash", "gemini-3.5-flash"],
+            CurrentIndex = 0
+        };
+
+        // 1. Setting an existing model selects its index without mutating array
+        selection.Current = "gemini-3.5-flash";
+        Assert.Equal(1, selection.CurrentIndex);
+        Assert.Equal(2, selection.Available.Length);
+        Assert.Equal("gemini-3.6-flash", selection.Available[0]);
+        Assert.Equal("gemini-3.5-flash", selection.Available[1]);
+
+        // 2. Setting a new freetext model appends it and updates CurrentIndex
+        selection.Current = "gemma-2-9b";
+        Assert.Equal(2, selection.CurrentIndex);
+        Assert.Equal(3, selection.Available.Length);
+        Assert.Equal("gemini-3.6-flash", selection.Available[0]);
+        Assert.Equal("gemini-3.5-flash", selection.Available[1]);
+        Assert.Equal("gemma-2-9b", selection.Available[2]);
+        Assert.Equal("gemma-2-9b", selection.Current);
+    }
 }
+
 

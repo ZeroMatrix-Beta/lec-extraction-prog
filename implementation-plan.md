@@ -1,6 +1,48 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–9 closed.** Phase 8 (Console & UX) steps 1–3 done; steps 4–6 redistributed to Phases 9–12. Phase 8.5c (member indexes & AGENTS.md rule), Phase 8.5a (REPL deletion & mode menu streamlining), and Phase 9 (Configuration consolidation: shared building blocks, ConfigMigrator with comment preservation, AppConfig cleanup, ConfigLoader fixes, SessionLogger chat_log pathing) are **DONE**. · **Pick up next: Phase 10 — Spectre.Console UI.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Known gap:** `docs/ui-strings.baseline.txt` has not been regenerated since Phase 7 — scheduled as Phase 10 step 0. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phases 0–9 closed.** Phase 8 (Console & UX) steps 1–3 done; steps 4–6 redistributed to Phases 9–12. Phase 8.5c (member indexes & AGENTS.md rule), Phase 8.5a (REPL deletion & mode menu streamlining), and Phase 9 (Configuration consolidation: shared building blocks, ConfigMigrator with comment preservation, AppConfig cleanup, ConfigLoader fixes, SessionLogger chat_log pathing) are **DONE**. · **Pick up next: the open review findings below (F1 is user-facing data loss), then Phase 10 — Spectre.Console UI.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Known gap:** `docs/ui-strings.baseline.txt` has not been regenerated since Phase 7 — scheduled as Phase 10 step 0. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+
+---
+
+## ⚠ Open review findings (2026-07-28) — read before Phase 10
+
+Independent review of the Phase 8 / 8.5 / 9 work. Build 0/0 and **101 tests
+green** at the time of writing, so none of these are compile or test failures —
+they are behavioural gaps that the current tests do not cover.
+
+### F1 · Freetext model names destroy an entry in `Model[]` · **RESOLVED (2026-07-28)**
+
+**Status:** **FIXED**. `ModelSelection.SelectOrAdd(name)` implemented in [ModelSelection.cs](src/Configuration/ModelSelection.cs), and `Current` property setter delegates to `SelectOrAdd`. New model names are appended to `Available[]` without overwriting existing entries. Covered by unit test `ModelSelection_SelectOrAdd_AppendsNewModel_WithoutOverwritingExisting` in [ConfigBindingTests.cs](tests/LectureExtraction.Tests/ConfigBindingTests.cs).
+
+### F2 · `__EXIT__` is now on the only model path
+
+Backlog item 4 (the `__EXIT__` magic string) was to be removed in Phase 10. With
+`SelectModel` gone it is no longer a secondary path — every model change flows
+through [ConfigurationPrompts.cs:158](src/ConsoleUi/ConfigurationPrompts.cs:158)
+and its stringly-typed sentinel. Raises the priority of that item.
+
+### F3 · `_playbackSpeedMultiplier` is probably dead
+
+The field survives in both extraction sessions, but its only writer was the
+REPL's `set speed` command, deleted in Phase 8.5a. Confirm whether anything
+still reads it meaningfully; if not, remove it (and the Phase 7 rename that
+introduced the name).
+
+### F4 · The UI-string baseline is now ~3 phases stale
+
+Unchanged since Phase 7, while Phases 8, 8.5 and 9 all altered console output.
+It is **not a working regression check** in its current state. Phase 10 step 0
+regenerates it — do that genuinely first, before any Spectre work, or the whole
+phase runs without its safety net.
+
+### F5 · Two models worked the same uncommitted tree
+
+Phases 8.5 and 9 were produced by a different assistant concurrently with this
+review, with ~30 files unstaged and no intermediate commits. Nothing appears to
+have been lost, but there is no checkpoint between "Phase 8 done" (`02fa82c`)
+and the current state. **Commit before continuing.**
+
+---
 
 **Phase numbering note (2026-07-28).** Phase 8 originally carried a 16-item
 console backlog grouped into six steps. Steps 1–3 are done; steps 4–6 were too

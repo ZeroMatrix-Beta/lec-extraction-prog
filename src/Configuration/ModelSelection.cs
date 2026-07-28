@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace LectureExtraction.Configuration;
@@ -15,10 +16,23 @@ public class ModelSelection {
     [Newtonsoft.Json.JsonIgnore]
     public string Current {
         get => Available.Length > 0 ? Available[Math.Clamp(CurrentIndex, 0, Available.Length - 1)] : "";
-        set {
-            int idx = Math.Clamp(CurrentIndex, 0, Available.Length > 0 ? Available.Length - 1 : 0);
-            if (Available.Length == 0) Available = [value];
-            else Available[idx] = value;
+        set => SelectOrAdd(value);
+    }
+
+    /// <summary>
+    /// [AI Context] Selects an existing model by name or appends it to Available[] if absent, setting CurrentIndex accordingly.
+    /// [Human] Wählt ein vorhandenes Modell aus oder fügt ein neues Modell zur Liste hinzu und setzt CurrentIndex.
+    /// </summary>
+    public void SelectOrAdd(string name) {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        int existingIndex = Array.IndexOf(Available, name);
+        if (existingIndex >= 0) {
+            CurrentIndex = existingIndex;
+        } else {
+            var list = new List<string>(Available) { name };
+            Available = [.. list];
+            CurrentIndex = Available.Length - 1;
         }
     }
 }
