@@ -42,6 +42,29 @@ changes in the near future, so this needs unusually careful design-first
 confirmation rather than build-and-see, given zero automated coverage and a
 paid API on the other end.
 
+**User steer (2026-07-28, same session):** confirmed "exact-match" over
+"simple handshake" when asked, and separately confirmed Vertex's code is
+"very old" / it's fine to port more from AI Studio rather than keep the
+port minimal — i.e. lean toward bringing Vertex's Part-1 prompt structure up
+to parity with AI Studio (adding the missing static preamble + the warmup
+that depends on it), not toward a narrow bolt-on. Not started — ran out of
+session budget right after this was confirmed. Pick up fresh next session:
+1. Design the new static Part-1 preamble text for Vertex (mirrors
+   `GetStaticPromptBeginning` — needs user sign-off on wording since it's
+   new model-facing content, not a mechanical port).
+2. Wire it into `BuildGenerationRequestAsync` for the real Part-1 request.
+3. Port `GetDummyPart0Content` + a `WarmUpSystemInstructionCacheAsync`
+   equivalent using that same preamble, gated by the new config flag
+   (default `false`), called once from `EnsureSessionSetupAsync` before the
+   first `InitializeContextCachingAsync`.
+4. Add the matching `bool` flag to `AiStudioAutoExtractionConfig` (default
+   `true`, gating the existing calls — no behavior change there) and to
+   `VertexAutoExtractionConfig` (default `false`).
+5. Verify: build 0/0, tests green — but UI-string diff will **not** be empty
+   this time (new Vertex console strings are the point), so update
+   `docs/ui-strings.baseline.txt` deliberately as part of this change, not
+   as a regression.
+
 **Decision (2026-07-28): Vertex is out of scope for Phase 4+.** Vertex AI
 stays disabled (`Program.Activate_Vertex` stays hardcoded `false`, per the
 user — not a call this document makes unilaterally) and the user confirmed
