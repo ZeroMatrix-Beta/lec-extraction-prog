@@ -1047,10 +1047,104 @@ own change, per your instruction.
     change) or delete it from that config and its JSON. **Decide which —
     don't silently pick one**, since it changes what gets sent to a paid API.
 
+11. **The per-part token analysis spends 3 extra API requests purely on
+    console output.** `AiStudioAutoExtractionSession.LogTokenCountsAsync`
+    (called once per video part from `TranscribeSegmentToLatexAsync`) issues
+    up to three `CountTokensAsync` calls — video-only, inlined-context-only,
+    and full-history — solely to print the `[Token-Analyse]` breakdown. All
+    three are at `AiStudioAutoExtractionSession.cs:1118/1124/1131`, and there
+    are no other `CountTokensAsync` call sites in the codebase (AI-Studio-only;
+    Vertex has no equivalent). `CountTokens` is cheap or free in *token* terms,
+    but it consumes **requests-per-minute quota** — and RPM is precisely this
+    app's binding constraint (hence `VideoPartDelaySeconds` defaulting to 130s
+    and the whole rate-limit-pacing architecture). A 3-part video therefore
+    spends ~9 extra requests on diagnostics. Suggested: gate the whole method
+    behind a config flag (default `false`), or derive the numbers from the
+    `UsageMetadata` the real request already returns.
+12. **Token reporting is three long lines per request.** `[Request Tokens]`,
+    `[Part Total Tokens]`, `[Session Total Tokens]` all print in full on every
+    single request *and* every "Continue" continuation (up to 6 per part).
+    Fine when debugging one part, noisy across a batch. Could collapse to one
+    compact line, with the full breakdown behind the same verbosity flag as
+    items 9 and 11.
+13. **`SelectModel`'s freetext branch says "find or append" but never
+    appends.** `AiStudioAutoExtractionSession.Repl.cs` — the comment reads
+    `// Freetext model name – find or append`, but the `else` branch only
+    prints `"Modell '{choice}' nicht in der Liste gefunden. Auswahl
+    unverändert."` and moves on. So you cannot actually add a new model
+    interactively; you must edit the JSON and restart. Either implement the
+    append (and persist it to `Model[]`) or fix the comment to match reality.
+    Worth doing properly — new Gemini model IDs appear often enough that
+    "edit JSON, restart" is real friction.
+14. **The `(j/n)` confirm prompts are a silent footgun.** Every one is
+    `if (Console.ReadLine()?.Trim().ToLower() != "j") return true;` — so
+    Enter, `y`, `yes`, `ja`, or any typo all mean "no", the method returns
+    *success*, and the session proceeds with an empty
+    `_systemInstructionText`. You then run a whole paid extraction with no
+    system instructions and only find out from the output quality. At minimum
+    accept `y`/`yes`/`ja` and treat bare Enter as yes; better, print a loud
+    warning when instructions end up empty before the first API call.
+15. **No way to inspect the effective config from the REPL.** To check what's
+    actually loaded (model, thinking budget, delays, which flags are on) you
+    have to read the JSON on disk — and since `ConfigLoader` writes back at
+    runtime, the file and the in-memory state can diverge mid-session. A
+    `show config` REPL command dumping the live values would remove a lot of
+    guesswork.
+
+16. **Model configuration lives in two different mechanisms, and `AppConfig`'s
+    share of it is dead weight.** User-raised (2026-07-28: "I don't like that
+    we have the model set in AppConfig"). Investigated — the situation is not
+    quite what that describes, and the worse half is elsewhere:
+    * **The model *name* is already out of `AppConfig`.** `DefaultModel` /
+      `RefinementModel` were found unused and deleted back in Phase 3 (see
+      that section's closing note). Nothing to do here.
+    * **What remains in `AppConfig` is the six model *parameters*** —
+      `DefaultTemperature`, `DefaultTopP`, `DefaultTopK`,
+      `DefaultMaxOutputTokens`, `DefaultThinkingBudget`, `DefaultThinkingLevel`
+      — and these *are* effectively dead. Every session JSON specifies all six
+      explicitly (`AiStudioAutoExtractionConfig.json` and
+      `VertexAutoExtractionConfig.json`: 6 hits each;
+      `LatexRefinementSessionConfig.json`: 36, i.e. all six across every
+      step/backend block), so the `AppConfig` values only ever apply if a JSON
+      key goes *missing*. Proof they're unmaintained: the C# fallbacks and
+      `appsettings.json` have silently drifted apart — C# says `DefaultTopK =
+      40` / `DefaultThinkingBudget = 24576`, `appsettings.json` says `10` /
+      `4096`. Nobody noticed because effectively nothing reads them.
+    * **The genuinely bad one: `AvailableModels` is hardcoded in C#**, in four
+      separate session classes (`AiStudioAutoExtractionSession`,
+      `VertexAutoExtractionSession`, `DirectAiChatSessionAiStudio`,
+      `DirectAiChatSessionVertex`). Adding a new Gemini model to the *chat*
+      sessions requires editing C# and recompiling — exactly the smell Phase 6
+      just removed from `Program.Activate_Vertex`. Worse, it's inconsistent:
+      the **extraction** sessions read the JSON `Model[]` array while the
+      **chat** sessions read the hardcoded C# array, so "where do I add a
+      model?" has two different answers depending on which session you're in.
+
+    Suggested fix, in order: (a) move the chat sessions' `AvailableModels`
+    into their JSON configs, matching how extraction already works — this also
+    fixes item 13 at the root, since a JSON-backed list can actually be
+    appended to; (b) delete the six `Default*` model params from `AppConfig`,
+    `AppConfigOptions`, and `appsettings.json`. **Caveat on (b):** don't just
+    delete the indirection, or a session JSON missing a key would fall back to
+    C# type defaults (`0.0f` temperature!) instead of a sane value. Move the
+    sane default onto the config class property itself
+    (`public float Temperature { get; set; } = 0.35f;`) so each config class
+    is its own single source of truth. Non-model `AppConfig` members (paths,
+    `IsVertexAiEnabled`, Vertex project/location) are genuinely global and
+    should stay.
+
 **Note (2026-07-28):** the "deliberately not executed now" framing above was
 written when the refactor was still in flight. The refactor has now landed
 (Phases 0–7 done or explicitly declined), so **this section is the actual
 next body of work**, not a parking lot. Item 9 is the user's stated priority.
+
+**Suggested grouping for execution** — items 9, 11, 12 are one coherent
+change (a single `Verbosity`/`VerboseDiagnostics` config flag gating the
+file tree, the token-analysis API calls, and the triple token report), and
+together they'd cut the console noise dramatically while also saving RPM
+quota. Items 5, 8 are a second coherent change (one canonical severity-tag
+vocabulary + a shared print helper). Items 13, 14 are small independent
+correctness fixes. Item 10 needs a user decision before any code moves.
 
 ---
 
