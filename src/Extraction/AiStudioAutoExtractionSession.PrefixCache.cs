@@ -62,7 +62,8 @@ public partial class AiStudioAutoExtractionSession {
 
             // Append this batch's files to the growing system instruction text
             var batchBuilder = new System.Text.StringBuilder();
-            await AppendHistoryFilesToInstructionAsync(batchFiles, batchBuilder, commonBase);
+            _historyParts.AddRange(await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
+                batchFiles, batchBuilder, commonBase, _attachmentHandler));
             _systemInstructionText += batchBuilder.ToString();
 
             bool shouldSendHandshake = true;

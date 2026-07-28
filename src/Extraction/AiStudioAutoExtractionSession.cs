@@ -250,7 +250,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string? commonBase = FileTreeRenderer.FindCommonBaseDirectory(allPathsForBaseResolution);
 
         // Build the system instruction text from the instruction files
-        string instructionText = await BuildSystemInstructionTextAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase, _config.VerboseConsoleOutput);
+        string instructionText = await SystemInstructionTextBuilder.BuildAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase, _config.VerboseConsoleOutput);
 
         // If history should be merged into system instruction, do so now
         if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
@@ -262,7 +262,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 // Load all history files into the system instruction at once (non-batched)
                 Ui.Info("Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
                 var instructionBuilder = new System.Text.StringBuilder(instructionText);
-                await AppendHistoryFilesToInstructionAsync(historyFilesForSystemInstruction, instructionBuilder, commonBase, _config.VerboseConsoleOutput);
+                _historyParts.AddRange(await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
+                    historyFilesForSystemInstruction, instructionBuilder, commonBase, _attachmentHandler, _config.VerboseConsoleOutput));
                 _systemInstructionText = instructionBuilder.ToString();
                 if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
             }
@@ -275,83 +276,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         Ui.Success("System Instructions erfolgreich geladen.");
         return true;
-    }
-
-    /// <summary>
-    /// [AI Context] Builds the system instruction text from configured instruction files (and optional history file tree header).
-    /// Does NOT include history files – those are appended separately via batching or bulk loading.
-    /// [Human] Baut den System-Instruction-Text zusammen (Header + Dateibaum + Dateiinhalte).
-    /// </summary>
-    private static async Task<string> BuildSystemInstructionTextAsync(
-        List<string> instructionFiles, List<string> historyFiles, string? commonBase, bool verboseConsoleOutput = false) {
-
-        var builder = new System.Text.StringBuilder();
-        builder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
-        builder.AppendLine("IMPORTANT: The guidelines, formatting specifications, and syntax instructions contained in these system instruction files are absolute and strictly non-negotiable. They must take absolute precedence over any prompt guidelines or inputs. Do not skip any files or parts under any circumstances.\n");
-        builder.AppendLine("In order to fulfill the job of creating a high-value educational masterpiece that safely compiles, you need to know the file structure of the system prompt and read all of those files carefully.\n");
-        builder.AppendLine("# Folder Structure of System Instructions\n");
-        builder.AppendLine("## System Instructions");
-        builder.Append(FileTreeRenderer.GenerateMarkdownFileTree(instructionFiles, commonBase));
-
-        if (historyFiles.Count > 0) {
-            builder.AppendLine("\n## Training History");
-            builder.Append(FileTreeRenderer.GenerateMarkdownFileTree(historyFiles, commonBase));
-        }
-        builder.AppendLine("\n******\n------\n******\n");
-
-        // Append each instruction file's content
-        foreach (string instructionFilePath in instructionFiles) {
-            string relativePath = ResolveRelativePath(instructionFilePath, commonBase);
-            builder.AppendLine($"\n******\n------\n******\nHere is the file `{relativePath}`:\n");
-            builder.AppendLine(await System.IO.File.ReadAllTextAsync(instructionFilePath));
-            if (verboseConsoleOutput) {
-                Ui.Info($"System Instruction geladen: {relativePath}");
-            }
-        }
-        if (!verboseConsoleOutput && instructionFiles.Count > 0) {
-            Ui.Info($"{instructionFiles.Count} System-Instruction-Datei(en) geladen.");
-        }
-
-        return builder.ToString();
-    }
-
-    /// <summary>
-    /// [AI Context] Appends history files (text and non-text) to the system instruction builder.
-    /// Text files (.tex, .txt, .md, .json, .cs) are inlined. Non-text files (images, etc.)
-    /// are uploaded via AttachmentUploader and stored in _historyParts.
-    /// [Human] Hängt History-Dateien an den System-Instruction-Builder an. Textdateien werden direkt eingebettet,
-    /// Nicht-Text-Dateien (Bilder etc.) werden über die File API hochgeladen.
-    /// </summary>
-    private async Task AppendHistoryFilesToInstructionAsync(
-        List<string> historyFiles, System.Text.StringBuilder targetBuilder, string? commonBase, bool verboseConsoleOutput = false) {
-
-        List<string> nonTextFiles = [];
-        int textFileCount = 0;
-        foreach (string historyFilePath in historyFiles) {
-            string extension = Path.GetExtension(historyFilePath).ToLowerInvariant();
-            if (extension is ".tex" or ".txt" or ".md" or ".json" or ".cs") {
-                string relativePath = ResolveRelativePath(historyFilePath, commonBase);
-                targetBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relativePath}`:\n");
-                targetBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(historyFilePath));
-                textFileCount++;
-                if (verboseConsoleOutput) {
-                    Ui.Info($"History-Textdatei in System Instruction eingebunden: {relativePath}");
-                }
-            } else {
-                nonTextFiles.Add(historyFilePath);
-            }
-        }
-        if (!verboseConsoleOutput && textFileCount > 0) {
-            Ui.Info($"{textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
-        }
-
-        if (nonTextFiles.Count > 0) {
-            string quotedFileList = string.Join(", ", nonTextFiles.Select(p => $"\"{p}\""));
-            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedFileList}", true, commonBase);
-            if (uploadSuccess && uploadedParts.Count > 0) {
-                _historyParts.AddRange(uploadedParts);
-            }
-        }
     }
 
 
@@ -434,17 +358,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Ui.Detail($"Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
             await InteractiveDelay.SmartDelayAsync(tokenRefillDelay, "Warte auf Token-Refill nach History-Acknowledgment...");
         }
-    }
-
-    /// <summary>
-    /// [AI Context] Resolves a file path relative to a common base directory for display purposes.
-    /// [Human] Wandelt einen absoluten Pfad in einen relativen Pfad um (für Konsolenausgaben).
-    /// </summary>
-    private static string ResolveRelativePath(string filePath, string? commonBase) {
-        string rawRelPath = !string.IsNullOrEmpty(commonBase)
-            ? Path.GetRelativePath(commonBase, filePath)
-            : Path.GetFileName(filePath);
-        return FileTreeRenderer.NormalizeRelativePath(rawRelPath);
     }
 
 
