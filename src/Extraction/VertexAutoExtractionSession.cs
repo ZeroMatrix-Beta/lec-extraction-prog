@@ -82,11 +82,11 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             Console.WriteLine($"  ☁️  API-Projekt:     {_config.ProjectId} ({_config.Location})");
         }
 
-        string[] filesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
-        foreach (var f in filesToProcess) {
-            var dateInfo = VideoDateParser.Parse(f);
+        string[] videoFilesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+        foreach (var videoFile in videoFilesToProcess) {
+            var dateInfo = VideoDateParser.Parse(videoFile);
             if (!dateInfo.IsValid) {
-                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(f)}");
+                Console.WriteLine($"\n[WARNUNG] Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(videoFile)}");
                 Console.WriteLine("Erwartetes Format z.B.: 02-16-2026-monday-week1-Analysis_II.mp4 oder week1-02-16-2026-montag.mp4");
             }
         }
@@ -1064,25 +1064,25 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// Uses System.Threading.Channels to run FFmpeg processing in the background (Producer) while Gemini processes chunks sequentially (Consumer), maximizing hardware and API throughput.
     /// [Human] Das asynchrone Fließband: FFmpeg bereitet Videos im Hintergrund vor, während Gemini sie der Reihe nach abarbeitet.
     /// </summary>
-    private async Task ProcessFilesAsync(string[] files) {
+    private async Task ProcessFilesAsync(string[] videoFilesToProcess) {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
-        files = [.. files.OrderBy(f => VideoDateParser.Parse(f).Date).ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue).ThenBy(f => f)];
+        videoFilesToProcess = [.. videoFilesToProcess.OrderBy(videoFile => VideoDateParser.Parse(videoFile).Date).ThenBy(videoFile => VideoDateParser.Parse(videoFile).WeekNumber ?? int.MaxValue).ThenBy(videoFile => videoFile)];
 
         // [AI Context] We use a bounded channel (capacity 1) to synchronize the FFmpeg Producer task and the Gemini Consumer task.
         // This allows FFmpeg to prepare the *next* video while Gemini is waiting for the API to process the *current* video, maximizing throughput.
         // [Human] Wir nutzen einen 'Kanal' (Channel), um FFmpeg (Videobearbeitung) und Gemini (KI-Analyse) parallel laufen zu lassen.
         // Während die KI das erste Video analysiert, schneidet FFmpeg im Hintergrund schon das zweite. Das spart enorm Zeit!
-        var channel = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
+        var preparedVideoQueue = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
 
         // 1. PRODUCER: FFmpeg läuft unsichtbar in einem eigenen Hintergrund-Task
-        var producerTask = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, _config, _playbackSpeedMultiplier));
+        var videoPreparationTask = Task.Run(() => VideoSegmentProducer.RunAsync(videoFilesToProcess, preparedVideoQueue.Writer, _config, _playbackSpeedMultiplier));
 
         // 2. CONSUMER: Unser Haupt-Thread schnappt sich die Videos vom Fließband, sobald sie da sind
         // [AI Context] Awaits tasks from the bounded channel. This guarantees Gemini processes chunks strictly sequentially while FFmpeg works ahead.
-        bool hasErrors = false;
+        bool anyVideoFailed = false;
         bool isFirstVideo = true;
 
-        await foreach (var (file, fileSpecificOutputFolder, _, partsWithTimes, _, fullOriginalVideoDuration) in channel.Reader.ReadAllAsync()) {
+        await foreach (var (file, fileSpecificOutputFolder, _, partsWithTimes, _, fullOriginalVideoDuration) in preparedVideoQueue.Reader.ReadAllAsync()) {
             if (isFirstVideo) {
                 isFirstVideo = false;
                 Console.WriteLine("\n[Optimierung] Erstes Video wurde gesplittet. Erstelle jetzt Google Cloud Context Cache...");
@@ -1090,13 +1090,13 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
 
             bool success = await ProcessPreparedVideoAsync(file, fileSpecificOutputFolder, partsWithTimes, fullOriginalVideoDuration);
-            if (!success) hasErrors = true;
+            if (!success) anyVideoFailed = true;
         }
 
         // Warten, bis der Producer-Task sauber beendet wurde (fängt Fehler ab)
-        await producerTask;
+        await videoPreparationTask;
 
-        if (hasErrors) {
+        if (anyVideoFailed) {
             Console.WriteLine("\n[AutoExtraction] Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).");
         }
         else {
@@ -1158,7 +1158,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     continue;
                 }
 
-                SegmentTranscript result;
+                SegmentTranscript segmentTranscript;
                 bool uploadSuccess;
                 string? parsedPrompt;
                 List<Part> attachmentParts;
@@ -1242,25 +1242,25 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     }
                 }
 
-                result = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+                segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
-                fileTotalTokens += result.Usage;
-                int partFreshTokens = result.Usage.Fresh;
+                fileTotalTokens += segmentTranscript.Usage;
+                int partFreshTokens = segmentTranscript.Usage.Fresh;
 
-                if (!string.IsNullOrWhiteSpace(result.LatexBody)) {
-                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(result.LatexBody);
+                if (!string.IsNullOrWhiteSpace(segmentTranscript.LatexBody)) {
+                    string cleanTex = LatexResponseCleaner.CleanLatexResponse(segmentTranscript.LatexBody);
 
                     // Store the raw output for the combined file without offset
-                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + cleanTex;
+                    fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + cleanTex;
                     if (_config.GenerateOffsetFiles) {
-                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {result.Usage.Input:N0}, Gecacht {result.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {result.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
+                        fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds); // Accumulate offsetted text for new parts
                     }
 
                     // Prepend the start time to the individual part .tex file
                     string partHeader = TexDocumentWriter.BuildPartHeader(
                         sourcePartFileName: Path.GetFileName(safePartPath),
                         partStartTimeSeconds: partStartTimeSeconds,
-                        usage: result.Usage,
+                        usage: segmentTranscript.Usage,
                         model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
                         maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
                     string uniqueTargetPartPath = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPath);
