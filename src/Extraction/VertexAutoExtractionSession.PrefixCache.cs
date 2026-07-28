@@ -21,32 +21,6 @@ namespace LectureExtraction.Extraction;
 /// </summary>
 public partial class VertexAutoExtractionSession {
     /// <summary>
-    /// [AI Context] Cached content of dummy-part0.tex – a large (~4500 token) Lorem-Ipsum placeholder used
-    /// as the first reference_context block in every request. Being big and constant, it anchors
-    /// Google's implicit prefix cache on a stable, bit-identical prefix before the video payload.
-    /// Byte-identical port of AiStudioAutoExtractionSession's field/method of the same name.
-    /// [Human] Inhalt von dummy-part0.tex: grosses Platzhalterdokument für konsistentes Prefix-Caching.
-    /// </summary>
-    private string? _dummyPart0Content;
-    private string GetDummyPart0Content() {
-        if (_dummyPart0Content != null) return _dummyPart0Content;
-        string[] candidates = [
-            Path.Combine(Directory.GetCurrentDirectory(), "dummy-part0.tex"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dummy-part0.tex")
-        ];
-        foreach (string path in candidates) {
-            if (System.IO.File.Exists(path)) {
-                _dummyPart0Content = System.IO.File.ReadAllText(path);
-                Console.WriteLine($"  [Cache-Prefix] dummy-part0.tex geladen ({_dummyPart0Content.Length:N0} Bytes) aus: {path}");
-                return _dummyPart0Content;
-            }
-        }
-        Console.WriteLine("  [WARNUNG] dummy-part0.tex nicht gefunden – Dummy-Prefix ist leer. Cache-Hit für User-Part möglicherweise nicht möglich.");
-        _dummyPart0Content = "% dummy-part0.tex not found";
-        return _dummyPart0Content;
-    }
-
-    /// <summary>
     /// [AI Context] Returns the static, per-partNumber prefix of the user-turn prompt. This text is
     /// deterministic and placed BEFORE the video payload in every request, forming a stable, growing cache
     /// prefix that the warm-up can pre-activate in the same token order. Ported (2026-07-28) from the
@@ -106,7 +80,7 @@ public partial class VertexAutoExtractionSession {
         // [AI Context] Part 0: dummy-part0.tex anchor + static preamble, bit-identical to the real Part 1
         // request's pre-video Part (see BuildGenerationRequestAsync). Part 1: throwaway handshake — the
         // response is irrelevant, only the cache priming matters.
-        string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
+        string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n";
         var warmupParts = new List<Part> {
             new() { Text = dummyReferenceBlock + GetStaticPromptBeginning(1) },
             new() { Text = handshakeText }

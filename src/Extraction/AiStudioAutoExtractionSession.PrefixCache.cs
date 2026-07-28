@@ -29,31 +29,6 @@ namespace LectureExtraction.Extraction;
 /// </summary>
 public partial class AiStudioAutoExtractionSession {
     /// <summary>
-    /// [AI Context] Cached content of dummy-part0.tex – a large (~4500 token) Lorem-Ipsum placeholder used
-    /// as the first reference_context block in every request. Being big and constant, it anchors
-    /// Google's implicit prefix cache on a stable, bit-identical prefix before the video payload.
-    /// [Human] Inhalt von dummy-part0.tex: grosses Platzhalterdokument für konsistentes Prefix-Caching.
-    /// </summary>
-    private string? _dummyPart0Content;
-    private string GetDummyPart0Content() {
-        if (_dummyPart0Content != null) return _dummyPart0Content;
-        string[] candidates = [
-            Path.Combine(Directory.GetCurrentDirectory(), "dummy-part0.tex"),
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dummy-part0.tex")
-        ];
-        foreach (string path in candidates) {
-            if (System.IO.File.Exists(path)) {
-                _dummyPart0Content = System.IO.File.ReadAllText(path);
-                Console.WriteLine($"  [Cache-Prefix] dummy-part0.tex geladen ({_dummyPart0Content.Length:N0} Bytes) aus: {path}");
-                return _dummyPart0Content;
-            }
-        }
-        Console.WriteLine("  [WARNUNG] dummy-part0.tex nicht gefunden – Dummy-Prefix ist leer. Cache-Hit für User-Part möglicherweise nicht möglich.");
-        _dummyPart0Content = "% dummy-part0.tex not found";
-        return _dummyPart0Content;
-    }
-
-    /// <summary>
     /// [AI Context] Performs staged cache warming: splits history files into batches and sends
     /// incremental warm-up handshakes between each batch to pre-fill Google's implicit prefix cache.
     /// Each batch appends its text files to _systemInstructionText and uploads non-text files.
@@ -152,7 +127,7 @@ public partial class AiStudioAutoExtractionSession {
             // [AI Context] dummy-part0.tex is ~4500 tokens of Lorem Ipsum – large enough to anchor Google's
             // implicit prefix cache on the user-turn portion even without relying solely on the system instruction.
             // This Part 0 is bit-identical to Part 1's pre-video text Part, ensuring maximum cache hits.
-            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n";
 
             // Part 0: pre-video prefix – token-identical to Part 1's first text Part.
             // Part 1: throwaway handshake – the response is irrelevant; only the cache priming matters.

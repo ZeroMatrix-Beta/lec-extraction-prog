@@ -1435,7 +1435,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         //    it — Phase 4.5 port (2026-07-28) of AI Studio's equivalent BuildGenerationRequestAsync step.
         var preVideoBuilder = new System.Text.StringBuilder();
         if (_config.EnableImplicitPrefixCacheWarmup) {
-            preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n");
+            preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n");
         }
         if (_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
             Console.WriteLine("  [Kontext] Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:");

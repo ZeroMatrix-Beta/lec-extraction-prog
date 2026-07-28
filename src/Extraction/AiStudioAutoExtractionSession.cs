@@ -1070,7 +1070,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             // implicit prefix cache to hit on the preamble + dummyBlock + staticBeginning for Part 1.
             // For Part 2+, the dummy block is still the first reference, followed by the previously
             // generated .tex parts – these grow with each part but the prefix still benefits from caching.
-            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{GetDummyPart0Content()}\n</reference_context>\n\n";
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.GetDummyPart0Content()}\n</reference_context>\n\n";
 
             var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
             referenceContextBuilder.Append(dummyReferenceBlock);

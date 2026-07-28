@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off) · **Pick up next:** either (a) user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex, or (b) Phase 5 (twin unification — highest risk, needs a manual smoke test against the paid API that only the user can run) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3), Vertex implicit prefix-cache warmup ported (untested against real API, flag defaults off), **Phase 5 (full twin unification) declined — see §6.1** · **Pick up next:** user smoke-tests `EnableImplicitPrefixCacheWarmup` on Vertex when possible; otherwise incremental common-helper extraction as areas get touched (see §6.1) is the ongoing mode of work now · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 **Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
 warmup to Vertex, behind a new config flag.** User wants a
@@ -974,6 +974,46 @@ the capability is being preserved rather than deleted. Consequences:
 **Test project — yes.** Phase 0 adds `lec-extraction-prog.sln` and
 `tests/LectureExtraction.Tests` (xUnit) covering the pure logic listed in
 Phase 0 step 3.
+
+### 6.1 Superseding decision (2026-07-28): Phase 5 (full `IAiBackend` twin unification) is declined
+
+Reverses the "keep and unify behind `IAiBackend`" framing above for the
+merge itself (the underlying "keep Vertex, don't delete it" call stands —
+only the *unification* part is off the table). Reasoning, from the same
+session that did the Vertex prefix-cache-warmup port:
+
+* Phase 3's investigation already found several genuinely non-mergeable
+  pairs (`SystemInstructionLoader`, `RefinementLauncher`,
+  `GenerationConfigBuilder`, `ContextCacheCoordinator`, the GCS-cleanup
+  trio) — real per-backend divergence, not laziness. Today's Vertex port
+  reinforced this: upload mechanism (GCS bucket vs. Files API), auth (ADC
+  vs. API key), and caching strategy are structurally different, not
+  cosmetic.
+* Vertex is disabled (`Program.Activate_Vertex = false`) and the user
+  cannot test it in the near future. A full merge is a large,
+  un-smoke-testable rewrite of the pipeline the user *does* actively use
+  (AI Studio), undertaken in service of unifying with a backend that isn't
+  currently running. Any subtle merge mistake would sit latent — possibly
+  for a long time — until Vertex is re-enabled.
+* User agreed after this was laid out: **don't do the full merge.**
+
+**New standing mode of work, replacing Phase 5:** keep extracting genuinely
+shared code into common helpers opportunistically, whenever a phase or task
+already has you touching that area — same standard as Phase 3
+(byte-identical or provably-safe pieces only, real per-backend differences
+stay separate) — rather than a single big-bang unification. First instance:
+`PrefixCacheAnchor.GetDummyPart0Content` (`src/GoogleAi/PrefixCacheAnchor.cs`)
+extracted the same day it was duplicated into Vertex, since AI Studio's and
+Vertex's copies were byte-identical; `GetStaticPromptBeginning` and
+`WarmUpSystemInstructionCacheAsync` were *not* merged the same way — real
+wording/signature differences, per the established discipline.
+
+`IAiBackend` (§3.2) and the rest of Phase 5's original plan (merging the
+session classes, chat sessions, config twins, `LatexRefinementSession`'s
+constructors into `RefinementOptions`) stay documented above as a record of
+what was considered, but are **not going to be executed** absent a real
+need (e.g. Vertex becoming actively used again, making end-to-end
+validation possible).
 
 ---
 
