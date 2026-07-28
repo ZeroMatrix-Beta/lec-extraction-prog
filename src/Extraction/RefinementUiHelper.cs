@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Google.GenAI;
-using LectureExtraction.App;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.GoogleAi;
@@ -18,8 +17,8 @@ public static class RefinementUiHelper {
 
         // Hot-reload the config from disk so manual edits to the .json file are picked up immediately
         refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
-        if (!Program.Activate_Vertex && refinementConfig.UseVertex) {
-            Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false)! Wechsle für LaTeX Refinement automatisch auf AI Studio.");
+        if (!AppConfig.IsVertexAiEnabled && refinementConfig.UseVertex) {
+            Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json)! Wechsle für LaTeX Refinement automatisch auf AI Studio.");
             refinementConfig.UseVertex = false;
             ConfigLoader<LatexRefinementSessionConfig>.Save(refinementConfig);
         }
@@ -53,8 +52,8 @@ public static class RefinementUiHelper {
             if (string.IsNullOrEmpty(menuChoice)) menuChoice = "1";
 
             if (menuChoice == "2") {
-                if (!Program.Activate_Vertex && !refinementConfig.UseVertex) {
-                    Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (Program.Activate_Vertex = false). Wechsel auf Vertex nicht möglich.");
+                if (!AppConfig.IsVertexAiEnabled && !refinementConfig.UseVertex) {
+                    Console.WriteLine("\n[Kostenschutz] Google Cloud Vertex AI ist deaktiviert (AppConfig.IsVertexAiEnabled = false in appsettings.json). Wechsel auf Vertex nicht möglich.");
                     continue;
                 }
                 refinementConfig.UseVertex = !refinementConfig.UseVertex;
@@ -232,7 +231,7 @@ public static class RefinementUiHelper {
         Console.WriteLine($"\n[INFO] Starte Refinement für: {Path.GetFileName(selectedTex)}");
 
         Client refinementClient;
-        if (refinementConfig.UseVertex && Program.Activate_Vertex) {
+        if (refinementConfig.UseVertex && AppConfig.IsVertexAiEnabled) {
             refinementClient = GoogleAiClientBuilder.BuildVertexClient(
                 refinementConfig.VertexProjectId,
                 refinementConfig.VertexLocation

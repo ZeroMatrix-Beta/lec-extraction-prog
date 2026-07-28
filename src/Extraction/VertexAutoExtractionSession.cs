@@ -8,7 +8,6 @@ using System.Globalization;
 using System.Threading.Tasks;
 using Google.GenAI;
 using Google.GenAI.Types;
-using LectureExtraction.App;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction.Model;
@@ -562,7 +561,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
             else if (normalizedInput == "8" || normalizedInput.Equals("run refinement", StringComparison.OrdinalIgnoreCase)) {
                 if (_latexRefinementConfig != null) {
-                    _latexRefinementConfig.UseVertex = Program.Activate_Vertex;
+                    _latexRefinementConfig.UseVertex = AppConfig.IsVertexAiEnabled;
                 }
                 await RefinementUiHelper.StartInteractiveRefinementAsync(_latexRefinementConfig!, _config);
             }
@@ -1328,7 +1327,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
                 // LatexRefinementSession uses its own dedicated API key, so we need to resolve it.
                 if (_latexRefinementConfig != null) {
-                    _latexRefinementConfig.UseVertex = Program.Activate_Vertex;
+                    _latexRefinementConfig.UseVertex = AppConfig.IsVertexAiEnabled;
                     if (_config.NumberOfParts <= 1) {
                         Console.WriteLine($"\n[AutoExtraction] NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.");
                         _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;

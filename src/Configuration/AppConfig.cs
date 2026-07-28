@@ -56,4 +56,7 @@ public static class AppConfig {
     public static int DefaultMaxOutputTokens => _options.DefaultMaxOutputTokens;
     public static int? DefaultThinkingBudget => _options.DefaultThinkingBudget;
     public static string? DefaultThinkingLevel => _options.DefaultThinkingLevel;
+
+    // --- Feature-Schalter (Feature Flags) ---
+    public static bool IsVertexAiEnabled => _options.IsVertexAiEnabled;
 }

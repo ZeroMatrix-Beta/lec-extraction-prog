@@ -17,4 +17,11 @@ public class AppConfigOptions {
     public int DefaultMaxOutputTokens { get; set; } = 65535;
     public int? DefaultThinkingBudget { get; set; } = 24576;
     public string? DefaultThinkingLevel { get; set; } = "HIGH";
+
+    // [AI Context] Master kill switch for Google Cloud Vertex AI to prevent accidental billing/costs.
+    // Was Program.Activate_Vertex (a hardcoded static field requiring a recompile to change) until
+    // Phase 6 moved it here so it's editable via appsettings.json instead.
+    // [Human] Wenn auf false gesetzt, sind sämtliche Vertex AI Funktionen in der App (Chat, Extraktion,
+    // Refinement) strikt deaktiviert.
+    public bool IsVertexAiEnabled { get; set; } = false;
 }

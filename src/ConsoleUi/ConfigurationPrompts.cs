@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using LectureExtraction.GoogleAi;
 
 namespace LectureExtraction.ConsoleUi;
 
@@ -203,9 +204,7 @@ public static class ConfigurationPrompts {
             return !string.IsNullOrEmpty(key);
         }
 
-        string currentEnvName = (currentProfile >= 0 && currentProfile < envNames.Length)
-            ? envNames[currentProfile]
-            : (currentProfile == 0 ? "API_KEY-automated-content-extraction" : $"API_KEY-ai-studio-test-project-{currentProfile}");
+        string currentEnvName = ApiKeyProfileResolver.Resolve(currentProfile, envNames);
 
         string profileLabel = currentProfile == 0 ? "Dedizierter Key (0)" : $"Profil {currentProfile}";
         bool hasCurrentKey = CheckEnvKey(currentEnvName);
