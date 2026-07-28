@@ -1,46 +1,119 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–9 closed.** Phase 8 (Console & UX) steps 1–3 done; steps 4–6 redistributed to Phases 9–12. Phase 8.5c (member indexes & AGENTS.md rule), Phase 8.5a (REPL deletion & mode menu streamlining), and Phase 9 (Configuration consolidation: shared building blocks, ConfigMigrator with comment preservation, AppConfig cleanup, ConfigLoader fixes, SessionLogger chat_log pathing) are **DONE**. · **Pick up next: the open review findings below (F1 is user-facing data loss), then Phase 10 — Spectre.Console UI.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Known gap:** `docs/ui-strings.baseline.txt` has not been regenerated since Phase 7 — scheduled as Phase 10 step 0. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
+**Status:** **Phases 0–9 closed.** Phase 8 (Console & UX) steps 1–3 done; steps 4–6 redistributed to Phases 9–12. Phase 8.5c (member indexes & AGENTS.md rule), Phase 8.5a (REPL deletion & mode menu streamlining), and Phase 9 (Configuration consolidation: shared building blocks, ConfigMigrator with comment preservation, AppConfig cleanup, ConfigLoader fixes, SessionLogger chat_log pathing) are **DONE**. · **Pick up next: the three open review findings below (F4 blocks Phase 10), then Phase 10 — Spectre.Console UI.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Known gap:** `docs/ui-strings.baseline.txt` has not been regenerated since Phase 7 — scheduled as Phase 10 step 0. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
 ---
 
-## ⚠ Open review findings (2026-07-28) — read before Phase 10
+## ⚠ Review findings (2026-07-28) — read before Phase 10
 
-Independent review of the Phase 8 / 8.5 / 9 work. Build 0/0 and **101 tests
-green** at the time of writing, so none of these are compile or test failures —
-they are behavioural gaps that the current tests do not cover.
+Independent review of the Phase 8 / 8.5 / 9 work. The build was 0/0 and the
+suite green throughout, so none of these were compile or test failures — they
+are behavioural gaps the tests did not cover.
+
+**Status: F1, F5, F6, F7 closed. F2, F3, F4 open.**
+
+**Before starting Phase 10, in this order:**
+
+1. **F4 — regenerate `docs/ui-strings.baseline.txt`** (98 lines of drift). Phase
+   10 uses that diff as its review tool; starting without it means every
+   subsequent diff is unreadable.
+2. **F3 — decide on `_playbackSpeedMultiplier`**: re-expose it or remove it with
+   its `VideoSegmentProducer` parameter. It is currently pinned at `1.0` and
+   unreachable.
+3. **F2 — plan the `__EXIT__` replacement as one pass** across all 13 sites,
+   rather than as backlog item 4's single return value.
 
 ### F1 · Freetext model names destroy an entry in `Model[]` · **RESOLVED (2026-07-28)**
 
 **Status:** **FIXED**. `ModelSelection.SelectOrAdd(name)` implemented in [ModelSelection.cs](src/Configuration/ModelSelection.cs), and `Current` property setter delegates to `SelectOrAdd`. New model names are appended to `Available[]` without overwriting existing entries. Covered by unit test `ModelSelection_SelectOrAdd_AppendsNewModel_WithoutOverwritingExisting` in [ConfigBindingTests.cs](tests/LectureExtraction.Tests/ConfigBindingTests.cs).
 
-### F2 · `__EXIT__` is now on the only model path
+### F2 · `__EXIT__` is more entrenched than backlog item 4 assumed · **open**
 
-Backlog item 4 (the `__EXIT__` magic string) was to be removed in Phase 10. With
-`SelectModel` gone it is no longer a secondary path — every model change flows
-through [ConfigurationPrompts.cs:158](src/ConsoleUi/ConfigurationPrompts.cs:158)
-and its stringly-typed sentinel. Raises the priority of that item.
+Measured: **13 occurrences across 4 files**, plus a second sentinel
+`__CHANGED_KEY__` ([DirectAiChatSessionAiStudio.cs:708](src/Chat/DirectAiChatSessionAiStudio.cs:708)).
+It is not only the model prompt — it is also the system-prompt choice, the
+initial input, and the history choice in both chat sessions, and it is returned
+from [ConfigurationPrompts.cs:158](src/ConsoleUi/ConfigurationPrompts.cs:158) and
+[:261](src/ConsoleUi/ConfigurationPrompts.cs:261). Backlog item 4 described it as
+one return value from `ConfirmOrChangeModel`; it is really a project-wide
+convention for "user typed exit". Phase 10's `SelectionPrompt` migration should
+replace it with a nullable return or a small result type, in one pass across all
+13 sites rather than piecemeal.
 
-### F3 · `_playbackSpeedMultiplier` is probably dead
+### F3 · `_playbackSpeedMultiplier` is NOT dead — it is a stranded feature · **correction**
 
-The field survives in both extraction sessions, but its only writer was the
-REPL's `set speed` command, deleted in Phase 8.5a. Confirm whether anything
-still reads it meaningfully; if not, remove it (and the Phase 7 rename that
-introduced the name).
+An earlier draft of this finding said the field was probably dead. **That was
+wrong.** It is still read, in both sessions, and passed into video preparation:
 
-### F4 · The UI-string baseline is now ~3 phases stale
+```
+AiStudioAutoExtractionSession.cs:664  VideoSegmentProducer.RunAsync(..., _playbackSpeedMultiplier)
+VertexAutoExtractionSession.cs:701    VideoSegmentProducer.RunAsync(..., _playbackSpeedMultiplier)
+```
 
-Unchanged since Phase 7, while Phases 8, 8.5 and 9 all altered console output.
-It is **not a working regression check** in its current state. Phase 10 step 0
-regenerates it — do that genuinely first, before any Spectre work, or the whole
-phase runs without its safety net.
+What was deleted in Phase 8.5a was its only *writer*, the REPL's `set speed`
+command. So the field is permanently pinned at its initialiser `1.0` and the
+playback-speed feature is now **unreachable but still wired into the FFmpeg
+pipeline** — worse than dead code, because it looks live.
 
-### F5 · Two models worked the same uncommitted tree
+Decide explicitly: re-expose speed selection (it belongs in the new mode menu or
+in JSON config), or remove the field and the `VideoSegmentProducer` parameter
+together. Do not leave it stranded.
+
+### F4 · The UI-string baseline is stale by three phases · **open, blocks Phase 10**
+
+Unchanged since Phase 7 while Phases 8, 8.5 and 9 all altered console output.
+Current drift: **98 differing lines**. It is not a working regression check in
+this state. Phase 10 step 0 regenerates it — genuinely first, before any Spectre
+work, or the entire phase runs without its safety net.
+
+### F5 · Two models worked the same uncommitted tree · **resolved**
 
 Phases 8.5 and 9 were produced by a different assistant concurrently with this
-review, with ~30 files unstaged and no intermediate commits. Nothing appears to
-have been lost, but there is no checkpoint between "Phase 8 done" (`02fa82c`)
-and the current state. **Commit before continuing.**
+review, ~30 files unstaged. Now committed as `93827bb`, `5ccdfd3`, `444511f`.
+Checkpoint exists; nothing appears to have been lost.
+
+### F6 · The migrator silently discarded the user's model list · **FIXED (2026-07-28)**
+
+`ConfigMigrator` wrote the migrated section under the **legacy JSON key**
+(`"Model"`) while the config class exposes it as the **property**
+`ModelSelection`. `Microsoft.Extensions.Configuration` binds by property name and
+silently ignores what it cannot match — and `Model` still exists on the class as
+a `[JsonIgnore]` delegating `string[]` — so the migrated object bound to nothing.
+
+Measured against the live config, which carries 5 models: after
+migrate-and-bind, `Model.Length` came back as **1**, and `CurrentModelIndex` was
+lost. The damage had not yet happened only because the migration had not yet
+run — the root `*.json` files were still flat (Phase 9 changed only
+`appsettings.json`), and `ConfigLoader.Load` rewrites them in place on first
+launch. It was queued, not realised.
+
+**Fix:** write the section as `ModelSelection`, remove the legacy `Model` key,
+and point `RemapAnchor` at the new path so the property's `//` comments follow.
+
+**Why 102 green tests missed it:** `ConfigBindingTests.ConfigMigrator_MigratesLegacyFlatKeys_ToNestedSections`
+asserted `legacyJson["Model"]` — it pinned the *shape of the emitted JSON* rather
+than *whether the value survives binding*, so it passed with the defect and
+failed the moment the defect was fixed. Assertion corrected, with a comment
+explaining the distinction. **Lesson for the rest of this plan: assert on bound
+values, not on JSON structure.**
+
+### F7 · Phase 9's migrator-test exit criterion was skipped · **CLOSED (2026-07-28)**
+
+Phase 9 required "tests green **including migrator round-trip tests**"; no such
+tests existed. Added `tests/LectureExtraction.Tests/ConfigMigratorTests.cs` — 7
+tests covering generation parameters, model selection, paths/sources, API-key
+profile, Vertex endpoint + context caching, idempotency (the migrator runs on
+every `Load()`), and cross-config-type leakage. Every category except model
+selection passed on first run, which is the evidence that the rest of the
+migrator is sound.
+
+One suspicion raised and **cleared** by that work: `ConfigLoader` was thought to
+call `Migrate` without the `configType` argument, which would have moved
+`SourceFolder`/`TargetFolder` in `LatexRefinementSessionConfig` and
+`FfmpegSessionConfig` into a `Paths` section neither class exposes, blanking both
+folders. It does pass `typeof(T)`; there is now a test pinning that.
+
+*State after F6/F7:* build 0/0, **109 tests green**.
 
 ---
 
