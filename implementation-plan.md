@@ -2,6 +2,46 @@
 
 **Status:** Phase 3 done, Phase 4 done for AI Studio, Phase 4.5 fully done (items 1–3) · **Pick up next:** Phase 5 (twin unification — highest risk, needs a manual smoke test against the paid API that only the user can run) · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-28
 
+**Open task (2026-07-28, not started): port AI Studio's implicit prefix-cache
+warmup to Vertex, behind a new config flag.** User wants a
+`bool` flag in both `AiStudioAutoExtractionConfig` (default `true`, gates the
+existing always-on warmup calls — no behavior change) and
+`VertexAutoExtractionConfig` (default `false`, new opt-in behavior) using
+AI Studio's tested warmup code as the reference implementation. Scoped to a
+**minimal single-shot handshake** (just `GetDummyPart0Content` +
+`WarmUpSystemInstructionCacheAsync`-equivalent), not the full batched-history
+machinery (`HistoryBatchCount`/`MergeSystemInstructionAndFirstHistoryBatch`/
+etc. — those config knobs don't exist on Vertex and porting them too was
+explicitly declined).
+
+**Blocking finding, needs a decision before implementing:** AI Studio's warmup
+only helps because the warmup Part is token-identical to Part 1's real
+pre-video text (`ReferenceContextPreamble` + dummy-part0 +
+`GetStaticPromptBeginning(1)`). Vertex's `BuildGenerationRequestAsync` has
+**no equivalent static pre-video text for Part 1 today** — for Part 1
+(`previousTexFiles.Count == 0`), the prompt is just
+`[video attachment] + [parsedPrompt]`, nothing before the video. User chose
+"exact-match handshake" (matching AI Studio's cache-correctness bar) over
+"simple handshake" (weaker/unclear cache benefit) when asked — but exact-match
+means **inventing a new static text block that must also be prepended to every
+real Vertex Part-1 request**, not just the warmup, which is a genuine change
+to what gets sent to Gemini on every Vertex extraction, not an internal
+refactor. Also: Vertex already has its own (tested, per the user) explicit
+`CachedContent` mechanism (`InitializeContextCachingAsync`/`_cachedContentName`)
+which serves the same "don't re-pay for the system instruction" goal via a
+different, official API — `BuildGenerationRequestAsync` currently sends
+**either** `CachedContent` **or** raw system-instruction Parts, never both, so
+this new warmup would need to coexist with that (run once at setup, before
+the first `InitializeContextCachingAsync` call) without disturbing it.
+
+**Before implementing:** get an explicit answer on (a) what the new static
+Part-1 preamble text should say for Vertex (a real content/behavior decision,
+not mechanical), and (b) confirm the interaction with `UseContextCaching`
+(both mechanisms active simultaneously, by design). The user can't test Vertex
+changes in the near future, so this needs unusually careful design-first
+confirmation rather than build-and-see, given zero automated coverage and a
+paid API on the other end.
+
 **Decision (2026-07-28): Vertex is out of scope for Phase 4+.** Vertex AI
 stays disabled (`Program.Activate_Vertex` stays hardcoded `false`, per the
 user — not a call this document makes unilaterally) and the user confirmed
