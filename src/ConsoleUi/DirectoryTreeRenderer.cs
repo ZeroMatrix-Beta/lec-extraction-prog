@@ -75,11 +75,17 @@ public static class DirectoryTreeRenderer {
         int total = files.Length + subDirs.Length;
         if (total == 0) return;
 
+        // [AI Context] This preview runs every time a folder menu is opened, so it is a glance, not
+        // an inventory - the "... und N weitere" line below carries the real count. A lecture
+        // source folder holds 50+ videos with long names; printing them all buried the menu it was
+        // meant to introduce.
+        // [Human] Die Vorschau soll einen schnellen Eindruck geben, keine vollständige Liste - die
+        // Gesamtzahl steht in der Kopfzeile und in "... und N weitere".
         int maxFilesToShow = (currentDepth == 0)
-            ? (total <= maxSmallLimit ? 50 : 15)
-            : 10;
+            ? (total <= maxSmallLimit ? 12 : 8)
+            : 5;
         int maxDirsToShow = (currentDepth == 0)
-            ? (total <= maxSmallLimit ? 50 : 10)
+            ? (total <= maxSmallLimit ? 12 : 8)
             : 5;
 
         int shownFiles = Math.Min(files.Length, maxFilesToShow);
@@ -134,9 +140,16 @@ public static class DirectoryTreeRenderer {
                 string ext = Path.GetExtension(item.Path).ToLowerInvariant();
                 string icon = GetFileIcon(ext);
                 string rawRelPath = Path.GetRelativePath(rootFolder, item.Path);
-                string relPath = FileTreeRenderer.NormalizeRelativePath(rawRelPath);
-                string label = (!string.IsNullOrEmpty(relPath) && !string.Equals(relPath, item.Name, StringComparison.OrdinalIgnoreCase))
-                    ? $"{item.Name} ({relPath})"
+
+                // [AI Context] The relative path only carries information when the file sits in a
+                // subfolder - for a file directly in the root it just repeats the name. The old
+                // guard compared against the normalized path, which is prefixed with "./", so it
+                // never matched and every top-level file printed as "name.mp4 (./name.mp4)".
+                // [Human] Der relative Pfad wird nur angezeigt, wenn die Datei in einem Unterordner
+                // liegt - sonst wiederholt er nur den Dateinamen.
+                bool isInSubfolder = rawRelPath.Contains(Path.DirectorySeparatorChar) || rawRelPath.Contains(Path.AltDirectorySeparatorChar);
+                string label = isInSubfolder
+                    ? $"{item.Name} ({FileTreeRenderer.NormalizeRelativePath(rawRelPath)})"
                     : item.Name;
                 Ui.Detail($"{indent}{branch}{icon} {label}");
             }
