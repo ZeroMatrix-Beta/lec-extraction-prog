@@ -14,9 +14,38 @@ public static class ConfigMigrator {
     /// [AI Context] Inspects the raw JObject read from disk and moves legacy top-level keys into nested objects for the target config type.
     /// [Human] Prüft das rohe JSON-Objekt und verschiebt alte flache Schlüssel in die neuen Unter-Objekte des Zieltyps.
     /// </summary>
+    /// <summary>
+    /// [AI Context] Legacy flat keys and the nested property they were migrated into. Used to strip
+    /// leftovers when the nested section already exists — see <see cref="RemoveMigratedLegacyKeys"/>.
+    /// [Human] Alte flache Schlüssel und ihr neues Unter-Objekt.
+    /// </summary>
+    private static readonly (string Section, string[] LegacyKeys)[] MigratedSections = [
+        ("Generation", ["Temperature", "TopP", "TopK", "MaxOutputTokens", "ThinkingBudget", "ThinkingLevel"]),
+        ("ModelSelection", ["Model", "CurrentModelIndex"]),
+        ("ContextCache", ["UseContextCaching", "ContextCachingMinutes", "ContextCachingIncrementMinutes", "ContextCachingMinimumRemainingMinutes"]),
+        ("Endpoint", ["ProjectId", "Location", "GcsBucketName"]),
+        ("ApiKey", ["ActiveApiProfile", "AiStudioApiKeyEnvNames"]),
+        ("Sources", ["SystemInstructionPaths", "SystemInstructionPath", "HistoryPreloadPaths"]),
+        ("Paths", ["SourceFolder", "PredefinedSourceFolders", "TargetFolder", "LogFolder", "UploadFolder"])
+    ];
+
     public static bool Migrate(JObject root, Type? configType = null) {
         if (root == null) return false;
         bool migratedAny = false;
+
+        // [AI Context] Runs FIRST and unconditionally. Every migration block below is guarded by
+        // "if (root[Section] == null)", so once a section exists the block is skipped entirely — and
+        // a legacy flat key sitting next to it is then never cleaned up. That is not cosmetic: the
+        // config binder IGNORES [JsonIgnore] and binds the delegating compatibility properties by
+        // name, and it APPENDS to arrays rather than replacing them. So a leftover flat
+        // "PredefinedSourceFolders" was bound on top of "Paths:PredefinedSourceFolders" on every
+        // single Load, and ConfigLoader.Save wrote the longer list straight back to disk. The list
+        // grew by four entries per launch, without bound, and JsonCommentPreserver faithfully
+        // preserved the flat key forever because it preserves unknown keys along with comments.
+        // [Human] Entfernt übrig gebliebene alte Schlüssel, auch wenn die Migration selbst schon
+        // gelaufen ist — sonst wächst die Liste bei jedem Start weiter an.
+        migratedAny |= RemoveMigratedLegacyKeys(root);
+        migratedAny |= DeduplicateSetLikeArrays(root);
 
         bool isAiStudioAuto = configType == typeof(AiStudioAutoExtractionConfig);
         bool isVertexAuto = configType == typeof(VertexAutoExtractionConfig);
@@ -140,6 +169,66 @@ public static class ConfigMigrator {
         }
 
         return migratedAny;
+    }
+
+    /// <summary>
+    /// [AI Context] Drops legacy flat keys whose nested section already exists. The nested section is
+    /// the single source of truth once migration has run; a flat key beside it is a duplicate that
+    /// the binder would fold back in.
+    ///
+    /// <para>Deliberately does NOT touch a legacy key whose section is absent — that one still holds
+    /// the user's only copy of the value, and the migration blocks below are what move it.</para>
+    /// [Human] Entfernt alte flache Schlüssel, sobald ihr Unter-Objekt existiert. Fehlt das
+    /// Unter-Objekt, bleibt der Schlüssel unangetastet — dort steht der einzige Wert.
+    /// </summary>
+    private static bool RemoveMigratedLegacyKeys(JObject root) {
+        bool removedAny = false;
+
+        foreach (var (section, legacyKeys) in MigratedSections) {
+            if (root[section] is not JObject) continue;
+
+            foreach (string key in legacyKeys) {
+                if (root.Property(key) != null) {
+                    root.Remove(key);
+                    removedAny = true;
+                }
+            }
+        }
+
+        return removedAny;
+    }
+
+    /// <summary>
+    /// [AI Context] Repairs arrays that the append-on-bind defect already grew. Restricted to the two
+    /// that are semantically sets — a folder shortlist and a list of environment variable names —
+    /// where a repeated entry has no meaning and is certainly damage. First occurrence wins, so the
+    /// user's ordering survives.
+    ///
+    /// <para>Other arrays are left alone on purpose: <c>SystemInstructionPaths</c> is an ordered
+    /// document assembly where a deliberate repeat cannot be ruled out, and silently rewriting it
+    /// would be exactly the kind of unasked-for data change this file must not make.</para>
+    /// [Human] Entfernt Duplikate aus den beiden Listen, bei denen Wiederholungen nachweislich
+    /// Schaden und nicht Absicht sind. Reihenfolge bleibt erhalten.
+    /// </summary>
+    private static bool DeduplicateSetLikeArrays(JObject root) {
+        return Deduplicate(root["Paths"] as JObject, "PredefinedSourceFolders")
+             | Deduplicate(root["ApiKey"] as JObject, "EnvNames");
+
+        static bool Deduplicate(JObject? section, string key) {
+            if (section?[key] is not JArray array || array.Count == 0) return false;
+
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var unique = new JArray();
+            foreach (var item in array) {
+                if (item.Type == JTokenType.String && !seen.Add(item.Value<string>() ?? "")) continue;
+                unique.Add(item.DeepClone());
+            }
+
+            if (unique.Count == array.Count) return false;
+
+            section[key] = unique;
+            return true;
+        }
     }
 
     private static bool MovePropertyIfExists(JObject source, string sourceKey, JObject target, string targetKey) {
