@@ -1,6 +1,24 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–10 complete.** The Spectre.Console migration is finished — `Console.Write` in `src/` went from 624 call sites to **4** (input prompts in `YouTubeTaskPrompt` that pair with `ReadLine`, which belong with F2). `docs/ui-strings.baseline.txt` regenerated, drift **0**. **Phase 11 substantially advanced:** `LatexRefinementSession.cs` 1603 → 520 (+ `.Pdf.cs` 617, `.Generation.cs` 383) and `AiStudioAutoExtractionSession.cs` 1323 → 755 (+ `.Generation.cs` 305, `.PrefixCache.cs` 181), plus `YouTubeTaskRunner`, `DebugRoundtripRunner` and `SystemInstructionTextBuilder` extracted as real types. Nothing on the AI Studio path exceeds 760 lines. **F2 + F11 done (2026-07-29): both sentinels retired, `PromptResult<T>` introduced, "Zurück" available in every menu; 128 tests green, UI-string baseline regenerated to 483 entries with prompts now tracked.** · **Pick up next: `RefinementOptions` for the 4 telescoping constructors, then `VertexAutoExtractionSession` (~1250 lines, untouched).** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
+**Status:** **Phases 0–10 complete.** The Spectre.Console migration is finished — `Console.Write` in `src/` went from 624 call sites to **4** (input prompts in `YouTubeTaskPrompt` that pair with `ReadLine`, which belong with F2). `docs/ui-strings.baseline.txt` regenerated, drift **0**. **Phase 11 substantially advanced:** `LatexRefinementSession.cs` 1603 → 520 (+ `.Pdf.cs` 617, `.Generation.cs` 383) and `AiStudioAutoExtractionSession.cs` 1323 → 755 (+ `.Generation.cs` 305, `.PrefixCache.cs` 181), plus `YouTubeTaskRunner`, `DebugRoundtripRunner` and `SystemInstructionTextBuilder` extracted as real types. Nothing on the AI Studio path exceeds 760 lines.
+
+**2026-07-29 — Phases 0–11 are closed. Every review finding F1–F12 is resolved.**
+This session landed, in order: F2 + F11 (both sentinels retired, `PromptResult<T>`,
+"Zurück" in every menu), F12 (nine `AnsiConsole.Ask` sites crashing on unescaped
+`[...]`), `RefinementOptions` (the 4 telescoping constructors — 3 of which turned
+out to be dead), F10 (`SessionCostLedger`: requests and wall-clock, the currency
+that actually limits this app), F9 (`UsageReport`: "not reported" no longer
+renders as free, and `ThoughtsTokenCount` surfaced — nothing read it before), the
+`VertexAutoExtractionSession` split (1227 → 852 + 300 + 128), and the Gemma
+system-role rule extracted and pinned ahead of 8.5b.
+
+**Build 0/0 · 164 tests green · UI-string drift 0 · baseline 484 entries.**
+
+**Pick up next: Phase 8.5b** (rebuild the Direct chat sessions) — its prerequisite
+is done. **Phase 12 is deferred by the user.** **Two things need a real run, not
+more code: (a) walk the new back-navigation once, nobody has launched the app;
+(b) read the handshake's new `Denk-Tokens` figure, then decide
+`DisableThinkingDuringWarmUp`.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -10,7 +28,7 @@ Independent review of the Phase 8 / 8.5 / 9 work. The build was 0/0 and the
 suite green throughout, so none of these were compile or test failures — they
 are behavioural gaps the tests did not cover.
 
-**Status: F1–F8 and F11, F12 closed. F9 and F10 remain open (both are reporting/measurement questions on the paid path, not code defects).**
+**Status: F1–F12 all closed (2026-07-29).**
 
 **F4 reopened (2026-07-29):** the baseline was regenerated to 0 drift before the
 Spectre work, then the migration changed nearly every call site without
@@ -154,7 +172,32 @@ sites in `ConfigurationPrompts`, `SessionFactory`, `RefinementUiHelper`,
 `FfmpegInteractiveSession` and `VideoBatchSelector`. Not large, but it is
 control flow, so it wants a full session rather than a leftover budget.
 
-### F9 · The warm-up's token report is silent when usage metadata is missing · **open**
+### F9 · The warm-up's token report is silent when usage metadata is missing · **RESOLVED (2026-07-29)**
+
+Fixed via `src/GoogleAi/UsageReport.cs`, applied to all four reporting sites
+(both warm-ups, both generation paths).
+
+* **The reporting gap is closed.** The token line is unconditional and states
+  "Keine Nutzungsdaten vom Server erhalten - die Anfrage war trotzdem
+  kostenpflichtig" when usage never arrived. Silence and zero can no longer
+  render identically.
+* **The bigger find:** the SDK exposes `ThoughtsTokenCount` and **nothing in
+  this app read it** — not the warm-up, not the main generation path, on either
+  backend. Reasoning tokens are billed but are *not* part of
+  `CandidatesTokenCount`, so a thinking model's real output cost was invisible
+  everywhere. That is the direct answer to "output was only 2 tokens": the 2 was
+  accurate and also not the whole bill. `Denk-Tokens` and the server's own
+  `TotalTokenCount` are now reported, which settles empirically whether the
+  "(inkl. Thinking Tokens)" labels elsewhere in this codebase were ever true.
+* **The thinking decision is deferred to data, not guessed.**
+  `DisableThinkingDuringWarmUp` added to both configs, **default `false` — no
+  behaviour change**. It is a live paid request, and "Thinking level is not
+  supported" is a real error mode `ApiRetryPolicy` already filters for, so it
+  stays opt-in until one real run reports its `Denk-Tokens`. The flag is ignored
+  for models without thinking support. **Next action is the user's:** run one
+  extraction, read the new `Denk-Tokens` figure on the handshake, then decide.
+
+### F9 (original text, for the record)
 
 Raised by the user (2026-07-29): *"the warm-up didn't seem to cause round-trip
 costs, and output was only 2 tokens."*
@@ -178,7 +221,28 @@ Cheap diagnostic before changing anything: log whether `chunk.UsageMetadata` was
 ever non-null for one run. That distinguishes "not reported" from "genuinely
 zero" definitively. It touches the paid path, so decide before implementing.
 
-### F10 · Cost is reported in the wrong currency · **idea, not yet scoped**
+### F10 · Cost is reported in the wrong currency · **RESOLVED (2026-07-29)**
+
+`src/Infrastructure/SessionCostLedger.cs`. `MainMenu` resets it per menu entry
+and prints a table afterwards, so extraction, refinement, chat and FFmpeg are all
+covered without touching any of them — and a refinement launched from inside an
+extraction is billed to the same run, which is correct.
+
+Two things fell out of where the instrumentation had to go:
+
+* **Requests are counted per attempt, not per logical call**, because that is
+  what the quota counts. A generation that succeeds on its third attempt spent
+  three requests; reporting one would rebuild the same blind spot.
+* **`ApiRetryPolicy`'s streaming/non-streaming split already separates
+  generation from uploads, file-status polls and token counts**, so the two
+  categories cost nothing to distinguish. Uploads route through the same policy,
+  so they are counted rather than missed.
+
+All 18 `SmartDelayAsync` call sites are captured by measuring inside the method
+itself, including the retry policy's backoff — the wait users are least aware of
+paying.
+
+### F10 (original text, for the record)
 
 Every report in this app counts tokens. Tokens are not what limits it — **requests
 per minute** are, which is why `VideoPartDelaySeconds` is 130 and
@@ -1679,9 +1743,15 @@ three partial files: `_systemInstructionText`, `_historyWasLoaded`,
 `_sessionTotalInputTokens` / `Output` / `Cached`, `_sessionMaxFreshTokens`.
 Any method may touch any of them, so there is no safe way to read only part.
 
-#### 8.5a — Investigate deleting the in-session debug REPL
+#### 8.5a — Investigate deleting the in-session debug REPL · **DONE (2026-07-28, commit `93827bb`)**
 
-**Decision: consider deletion, not extraction** (user, 2026-07-28).
+**This section was stale until 2026-07-29** — the "Suggested order" below still
+listed it as pending, and a later session re-derived it from scratch before
+finding the commit. `AiStudioAutoExtractionSession.Repl.cs` (416 lines) is gone;
+`YouTubeTaskRunner` and `DebugRoundtripRunner` are the surviving real entry
+points, extracted rather than dropped. Nothing below this line is outstanding.
+
+**Original decision: consider deletion, not extraction** (user, 2026-07-28).
 
 `AiStudioAutoExtractionSession.Repl.cs` is 425 lines / 15 methods:
 `ReplLoopAsync`, `WriteCommandHelp`, 9 `TryHandleReplX` handlers, `SelectModel`,
@@ -1888,14 +1958,29 @@ Land **last and alone** — it changes what reaches a paid API.
 ### Suggested order
 
 ```
-Phase 8.5c Member index + AGENTS.md note     ~tiny    ← do first, helps immediately
-Phase 8.5a Delete the in-session debug REPL  ~small   ← biggest token win per effort
-Phase 9    Config consolidation + migrator   ~large
-Phase 10   Spectre.Console UI                ~large   ← the visible payoff
-Phase 11   Code quality + tests              ~medium
-Phase 8.5b Rebuild the Direct chat sessions  ~large   ← after 10, so the console layer isn't written twice
-Phase 12   .tex upload switch                ~small   ← last, touches a paid API
+Phase 8.5c Member index + AGENTS.md note     ~tiny    ✅ done
+Phase 8.5a Delete the in-session debug REPL  ~small   ✅ done  (93827bb)
+Phase 9    Config consolidation + migrator   ~large   ✅ done
+Phase 10   Spectre.Console UI                ~large   ✅ done
+Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
+Phase 8.5b Rebuild the Direct chat sessions  ~large   ← THE ONLY REMAINING ITEM (except Phase 12)
+Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
 ```
+
+**State as of 2026-07-29:** everything above 8.5b is closed. Findings F1–F12 are
+all resolved. 164 tests green, build 0/0, UI-string drift 0.
+
+**8.5b prerequisite is done**, so the rewrite can start cold:
+`ModelCapabilities.RequiresSystemInstructionInFirstUserTurn` extracts the Gemma
+pre-v4 system-role rule out of both chat sessions and pins it with tests that
+survive the rewrite. That was the plan's own stated precondition — the capability
+is freetext-only, so no menu exercises it and no smoke test would catch its loss.
+
+**Still to decide inside 8.5b, do not let it be decided by accident:** the
+`CleanupGcsBucketAsync` (AI Studio chat) / `ForcePurgeGcsBucketAsync` (Vertex
+chat) pair are genuinely different — free-tier guard, richer Vertex diagnostics
+including a billing-account branch, mixed EN/DE strings. A unified rewrite must
+consciously choose the merged behaviour rather than silently take one.
 
 Config before UI, because Phase 10's verbosity handling, `show config` command
 and menu tables all consume the new config shape — the other order means
