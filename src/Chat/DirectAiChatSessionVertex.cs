@@ -423,7 +423,7 @@ public class DirectAiChatSessionVertex {
             config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };
             // Gemma models (pre-v4) don't support the 'system' role.
             // We prepend the instruction to the first user message instead.
-            if (selectedModel.StartsWith("gemma", StringComparison.OrdinalIgnoreCase) && !selectedModel.Contains("gemma-4")) {
+            if (ModelCapabilities.RequiresSystemInstructionInFirstUserTurn(selectedModel)) {
                 bool isFirstTurn = !history.Any(c => c.Role == "model");
                 if (isFirstTurn) {
                     var modifiedHistory = new List<Content>();
