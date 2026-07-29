@@ -12,13 +12,20 @@ renders as free, and `ThoughtsTokenCount` surfaced — nothing read it before), 
 `VertexAutoExtractionSession` split (1227 → 852 + 300 + 128), and the Gemma
 system-role rule extracted and pinned ahead of 8.5b.
 
-**Build 0/0 · 228 tests green · UI-string drift 0 · baseline 599 entries.**
+**2026-07-29, later — Phase 8.5b is closed too, in five verified increments.**
+The Gemma system-role rule pinned, `ChatCommandParser` extracted and wired into
+both sessions (fixing two commands that had never worked, in both copies),
+`ResponseStreamPrinter` extracted, and the two GCS purges merged on an explicit
+user decision. The chat twins went 792 + 638 → **654 + 530**.
 
-**Pick up next: Phase 8.5b** (rebuild the Direct chat sessions) — its prerequisite
-is done. **Phase 12 is deferred by the user.** **Two things need a real run, not
-more code: (a) walk the new back-navigation once, nobody has launched the app;
-(b) read the handshake's new `Denk-Tokens` figure, then decide
-`DisableThinkingDuringWarmUp`.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
+**Build 0/0 · 228 tests green · UI-string drift 0 · baseline 597 entries.**
+
+**Every phase is now closed except Phase 12, which the user deferred.** **What
+is left is not code: (a) walk the new back-navigation once, nobody has launched
+the app; (b) read the handshake's new `Denk-Tokens` figure, then decide
+`DisableThinkingDuringWarmUp`.** The one piece of code work the plan still
+points at is optional: the chat sessions are the last files in `src/` on
+`using static System.Console` rather than `Ui`, so they never got Phase 10. · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -1963,24 +1970,30 @@ Phase 8.5a Delete the in-session debug REPL  ~small   ✅ done  (93827bb)
 Phase 9    Config consolidation + migrator   ~large   ✅ done
 Phase 10   Spectre.Console UI                ~large   ✅ done
 Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
-Phase 8.5b Rebuild the Direct chat sessions  ~large   ← IN PROGRESS, 4 of 5 increments done
+Phase 8.5b Rebuild the Direct chat sessions  ~large   ✅ done  (5 increments)
 Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
 ```
 
-**State as of 2026-07-29:** everything above 8.5b is closed. Findings F1–F12 are
-all resolved. 164 tests green, build 0/0, UI-string drift 0.
+**State as of 2026-07-29:** every phase is closed except Phase 12, which the user
+deferred. Findings F1–F12 are all resolved. 228 tests green, build 0/0,
+UI-string drift 0.
 
-**8.5b prerequisite is done**, so the rewrite can start cold:
+**The two things that still need a real run, not more code:** walk the new
+back-navigation once (nobody has launched the app since it landed), and read the
+handshake's `Denk-Tokens` figure before deciding `DisableThinkingDuringWarmUp`.
+
+**8.5b prerequisite was done first**, so the work could start cold:
 `ModelCapabilities.RequiresSystemInstructionInFirstUserTurn` extracts the Gemma
 pre-v4 system-role rule out of both chat sessions and pins it with tests that
 survive the rewrite. That was the plan's own stated precondition — the capability
 is freetext-only, so no menu exercises it and no smoke test would catch its loss.
 
-**Still to decide inside 8.5b, do not let it be decided by accident:** the
+**The one thing 8.5b was not allowed to decide by accident — and did not.** The
 `CleanupGcsBucketAsync` (AI Studio chat) / `ForcePurgeGcsBucketAsync` (Vertex
-chat) pair are genuinely different — free-tier guard, richer Vertex diagnostics
-including a billing-account branch, mixed EN/DE strings. A unified rewrite must
-consciously choose the merged behaviour rather than silently take one.
+chat) pair were genuinely different: free-tier guard, richer Vertex diagnostics
+including a billing-account branch, mixed EN/DE strings. Both were put to the
+user with the differences enumerated; the answer was **the union, in German**.
+See increment 5 below.
 
 #### 8.5b progress (2026-07-29) — done in increments, deliberately
 
@@ -2047,13 +2060,35 @@ grounding cases are `if/else` again in both sessions so the strings stay literal
 arguments of a `WriteLine`, and `dump-ui-strings.sh` now collects
 `ChatCommand.Error`. Inventory 597 → 599.
 
-**Remaining increment:**
+5. **The GCS-cleanup merge** (`8f93162`) — the decision this phase carried from
+   the start, **taken deliberately: the union, in German** (user's call,
+   2026-07-29). `GcsWorkspace.PurgeChatWorkspaceAsync` keeps AI Studio's
+   placeholder-name guard, Vertex's billing-account branch and empty-bucket
+   line, and Vertex's exception dump — the last behind a new
+   `VerboseConsoleOutput` on both chat configs, matching the extraction configs'
+   flag. Vertex's English strings are translated and the divergent
+   `[GCS Warnung]` / `[GCS ERROR]` tags collapse to `[GCS FEHLER]`. The
+   free-tier guard stays at the AI Studio call site: whether a session has a
+   bucket is the session's knowledge, not the purge's.
 
-5. Decide the GCS-cleanup merge above, then collapse what is left of the two
-   sessions. After increments 3 and 4 the twins are down to **680 + 572 lines**
-   from 792 + 638, and what is left of the divergence is setup, history preload
-   and bucket cleanup — the last of which is the decision this phase must take
-   consciously rather than by accident.
+   `GcsWorkspace` now has two entry points — `PurgeAsync` (extraction and
+   refinement, writes through `Ui`) and this one (chat, writes through
+   `Console`, deeper diagnostics). **They should become one when the chat
+   sessions join the Spectre layer**; that is the only remaining copy of this
+   logic, down from three.
+
+**Phase 8.5b is complete.** The twins finished at **654 + 530 lines**, from
+792 + 638. Not the from-scratch rewrite the section originally imagined — but
+the reason for the rewrite was that the sessions were dated and duplicated, and
+five verifiable increments removed the duplication without a single
+un-smoke-testable big-bang step. What remains distinct is setup, history preload
+and the REPL loop, which is genuine per-backend difference of the kind Phase 3
+established should stay separate.
+
+**What a rewrite would still buy, if it is ever wanted:** the chat sessions are
+the last code in `src/` on `using static System.Console` rather than `Ui`, so
+they missed Phase 10 entirely. That, not the duplication, is now the strongest
+argument for touching them again.
 
 Config before UI, because Phase 10's verbosity handling, `show config` command
 and menu tables all consume the new config shape — the other order means
