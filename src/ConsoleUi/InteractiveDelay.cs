@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using LectureExtraction.Infrastructure;
 using Spectre.Console;
 
 namespace LectureExtraction.ConsoleUi;
@@ -30,8 +31,16 @@ public static class InteractiveDelay {
         Console.CancelKeyPress += cancelHandler;
         IsInSmartDelay = true;
         using var cts = new CancellationTokenSource();
+
+        // [AI Context] Every rate-limit wait in the app funnels through here, so measuring the real
+        // elapsed time at this one point captures all 18 call sites - including the retry policy's
+        // backoff, which is the wait users are least aware of paying (finding F10).
+        // [Human] Misst die tatsächliche Wartezeit zentral für alle Aufrufer.
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        bool skippedByUser = false;
+
         try {
-            return await AnsiConsole.Status()
+            bool completed = await AnsiConsole.Status()
                 .Spinner(Spinner.Known.Dots)
                 .SpinnerStyle(Style.Parse("yellow"))
                 .StartAsync($"Warte {seconds}s: {message}", async ctx => {
@@ -90,10 +99,16 @@ public static class InteractiveDelay {
 
                     return await delayTask;
                 });
+
+            // The return value cannot distinguish "waited the full time" from "user pressed Enter" -
+            // both are true - so the elapsed time is what tells them apart.
+            skippedByUser = completed && stopwatch.Elapsed.TotalSeconds < seconds * 0.9;
+            return completed;
         }
         finally {
             IsInSmartDelay = false;
             Console.CancelKeyPress -= cancelHandler;
+            SessionCostLedger.RecordWait(stopwatch.Elapsed, skippedByUser);
         }
     }
 }

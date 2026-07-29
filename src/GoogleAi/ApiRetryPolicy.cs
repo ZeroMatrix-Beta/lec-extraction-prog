@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 using Google.GenAI.Types;
 
 namespace LectureExtraction.GoogleAi;
@@ -48,6 +49,7 @@ public static partial class ApiRetryPolicy {
                     onRetry?.Invoke();
                 }
 
+                SessionCostLedger.RecordRequest(isGeneration: true, attempt);
                 var responseStream = streamFactory();
                 await foreach (var chunk in responseStream.WithCancellation(cancellationToken)) {
                     if (cancellationToken.IsCancellationRequested) break;
@@ -95,6 +97,7 @@ public static partial class ApiRetryPolicy {
                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
                     Ui.Detail($"{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...", "API Retry");
                 }
+                SessionCostLedger.RecordRequest(isGeneration: false, attempt);
                 return await apiCall();
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {

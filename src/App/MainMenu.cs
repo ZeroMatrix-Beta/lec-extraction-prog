@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.App;
 
@@ -54,6 +55,13 @@ public static class MainMenu {
 
             string selection = result.Value!;
 
+            // [AI Context] One trip through one menu entry is what "session" means for the cost
+            // ledger, so it is reset and reported here rather than inside each session type - that
+            // covers extraction, refinement, chat and FFmpeg without touching any of them, and
+            // covers a refinement launched from inside an extraction as part of the same run.
+            // [Human] Setzt die Kosten-Erfassung pro Menüpunkt zurück und zeigt sie danach an.
+            SessionCostLedger.Reset();
+
             if (selection == choice1) {
                 await SessionFactory.RunDirectAiStudioChatAsync();
             }
@@ -75,6 +83,23 @@ public static class MainMenu {
             else if (selection == choice7) {
                 ApiKeyProfileMenu.Show();
             }
+
+            ReportSessionCost();
         }
+    }
+
+    /// <summary>
+    /// [AI Context] Prints the request / wall-clock summary, but only when something actually
+    /// happened - the config menus issue no requests, and a table of zeros after every visit would
+    /// train the user to ignore the one that matters.
+    /// [Human] Zeigt die Anfragen- und Wartezeit-Bilanz, aber nur wenn wirklich etwas passiert ist.
+    /// </summary>
+    private static void ReportSessionCost() {
+        if (!SessionCostLedger.HasActivity) {
+            return;
+        }
+
+        Ui.Blank();
+        Ui.Table("Aufwand dieser Sitzung", SessionCostLedger.Summary());
     }
 }

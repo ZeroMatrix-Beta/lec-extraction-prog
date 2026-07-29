@@ -420,6 +420,7 @@ Ui.Success($"Splitting konfiguriert: {_splitParts} Teile.");
 Ui.Success($"Teildatei gespeichert unter: {targetPartPath}");
 Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
 Ui.Success($"{inputFiles.Length} Datei(en) für die Stapelverarbeitung gefunden.");
+Ui.Table("Aufwand dieser Sitzung", SessionCostLedger.Summary());
 Ui.Warn("API Profile sind nur für AI Studio relevant.");
 Ui.Warn("Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).", "AutoExtraction");
 Ui.Warn("Execution cancelled by user. Exiting cleanly.", "System");
