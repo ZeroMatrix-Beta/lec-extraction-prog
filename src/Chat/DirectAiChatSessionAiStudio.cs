@@ -367,9 +367,14 @@ public partial class DirectAiChatSessionAiStudio {
 
             case ChatCommandKind.SetGrounding:
                 AIParams.UseGoogleSearch = command.Flag;
-                WriteLine(command.Flag
-                    ? "[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT."
-                    : "[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
+                // Written as if/else rather than a ternary so both strings stay literal arguments of a
+                // WriteLine - dump-ui-strings.sh matches on that shape, and a ternary hides them.
+                if (command.Flag) {
+                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
+                }
+                else {
+                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
+                }
                 return true;
 
             case ChatCommandKind.ChangeApiKeyProfile:

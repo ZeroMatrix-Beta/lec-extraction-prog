@@ -41,6 +41,14 @@ sources() {
   # Anchored to start-of-line whitespace so "sw.WriteLine(...)" and other non-console writers
   # do not match; the leading indent is stripped so the entry matches the qualified form.
   sources | xargs -0 grep -hoE '^[[:space:]]+(Write|WriteLine)\(.*' | sed -e 's/^[[:space:]]*//'
+
+  # ChatCommand.Error -- German messages the parser produces and the sessions print via
+  # WriteLine($"[FEHLER] {command.Error}").
+  #
+  # Separating parsing from printing (8.5b increment 2) moved these out of the literal-argument
+  # shape the two greps above match, so the inventory silently lost them the moment the second
+  # session stopped carrying its own copies. They are user-facing text and belong here.
+  sources | xargs -0 grep -hoE 'Error = \$?".*' | sed -e 's/^[[:space:]]*//'
 } \
   | sed -e 's/[[:space:]]\+$//' \
   | sort -u

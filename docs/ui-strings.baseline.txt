@@ -10,6 +10,12 @@ Console.Write(table);
 Console.WriteLine("=== Serialized Part JSON ===");
 Console.WriteLine();
 Console.WriteLine(json);
+Error = "Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben." };
+Error = "Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben." };
+Error = $"Ungültiger Temperaturwert '{temp}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben." };
+Error = $"Ungültiger Token-Wert '{tokens}'. Bitte eine positive ganze Zahl angeben." };
+Error = $"Ungültiger Wert für ThinkingBudget '{budget}'. Bitte eine positive ganze Zahl angeben." };
+Error = $"Ungültiger Wert für ThinkingLevel '{upper}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH." };
 SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?");
 SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?", ChangeApiKeyProfileInteractive);
 SetupQuestionPrompt.Ask("[Setup] System Instruction laden?");
@@ -515,7 +521,6 @@ WriteLine("  🤖 set model [name/index]  -> Ändert das aktive Modell mitten im
 WriteLine("  🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");
 WriteLine("  🧠 set thinking-level [l]  -> Setzt das Thinking Level für Gemini 3.x (z.B. HIGH)");
 WriteLine("  🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-WriteLine("[FEHLER] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
 WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
 WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
 WriteLine("\nVerfügbare Modelle:");
@@ -566,8 +571,6 @@ WriteLine($" {i + 1}) {AvailableModels[i]}");
 WriteLine($"Originaler Fehlertext: {ex.Message}");
 WriteLine($"[FEHLER] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
 WriteLine($"[FEHLER] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
-WriteLine($"[FEHLER] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
-WriteLine($"[FEHLER] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
 WriteLine($"[FEHLER] {command.Error}");
 WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
 WriteLine($"[INFO] MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
@@ -594,4 +597,3 @@ WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugr
 WriteLine($"\n{userName}: {input}");
 WriteLine($"{ex}");
 WriteLine();
-WriteLine(command.Flag

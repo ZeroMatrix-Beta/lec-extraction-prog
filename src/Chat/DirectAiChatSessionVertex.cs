@@ -244,140 +244,145 @@ public class DirectAiChatSessionVertex {
     }
 
     /// <summary>
-    /// [AI Context] Intercepts and executes local REPL commands (e.g., /clear, /set temp) to avoid sending them as prompts to the AI.
-    /// [Human] Fängt spezielle Befehle ab, bevor sie an die KI geschickt werden (z.B. zum Löschen der Historie).
+    /// [AI Context] Recognises the input with <see cref="ChatCommandParser"/> and applies it, exactly
+    /// as the AI Studio session does. Vertex carried its own copy of the nine hand-written handlers,
+    /// including <i>the same two hand-counted argument offsets</i> that left
+    /// <c>set thinking-budget</c> (<c>[18..]</c> against a 20-character prefix) and
+    /// <c>set thinking-level</c> (<c>[17..]</c> against a 19-character one) permanently broken - the
+    /// defect was copy-pasted along with the code. Sharing the parser fixes both copies once.
+    ///
+    /// <para>The applied <i>effects</i> stay per-backend: Vertex's confirmations are worded
+    /// differently ("Temperatur auf ... gesetzt", "Vertex Modell startet frisch") and are held
+    /// byte-identical here, and Vertex has no API-key profile to switch at all.</para>
+    /// [Human] Erkennt und führt die eingebauten Befehle aus; das Zerlegen passiert getrennt und
+    /// getestet im ChatCommandParser. Die Vertex-eigenen Meldungen bleiben unverändert.
     /// </summary>
     private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText, CancellationToken cancellationToken) {
-        string normalizedInput = input.TrimStart('/');
+        var command = ChatCommandParser.Parse(input);
 
-        if (normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-            WriteCommandHelp();
+        // Vertex authenticates through ADC, not an API key, so 'change-key' is not a command here.
+        // Leaving it unrecognised sends it to the model as ordinary text, which is what it did before.
+        if (command.Kind == ChatCommandKind.ChangeApiKeyProfile) return false;
+
+        // The parser reports a bad argument rather than throwing; the command was still recognised,
+        // so the turn is consumed either way and never reaches the model.
+        if (!command.IsValid) {
+            WriteLine($"[FEHLER] {command.Error}");
             return true;
         }
 
-        if (normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
-            history.Clear();
-            history.AddRange(initialHistory);
-            WriteLine("\n[INFO] Gedächtnis gelöscht! Vertex Modell startet frisch.");
-            return true;
-        }
+        switch (command.Kind) {
+            case ChatCommandKind.Help:
+                WriteCommandHelp();
+                return true;
 
-        if (normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) {
-            string tempValueStr = normalizedInput[9..].Trim();
-            if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
-                AIParams.Temperature = newTemp;
+            case ChatCommandKind.Clear:
+                history.Clear();
+                history.AddRange(initialHistory);
+                WriteLine("\n[INFO] Gedächtnis gelöscht! Vertex Modell startet frisch.");
+                return true;
+
+            case ChatCommandKind.SetTemperature:
+                AIParams.Temperature = command.Number;
                 WriteLine($"[INFO] Temperatur auf {AIParams.Temperature:F1} gesetzt.");
-            }
-            return true;
-        }
+                return true;
 
-        if (normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) {
-            string tokenValueStr = normalizedInput[11..].Trim();
-            if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
-                AIParams.MaxOutputTokens = newTokens;
+            case ChatCommandKind.SetMaxTokens:
+                AIParams.MaxOutputTokens = command.Integer;
                 WriteLine($"[INFO] MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
-            }
-            return true;
-        }
+                return true;
 
-        if (normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) {
-            string budgetValueStr = normalizedInput[18..].Trim();
-            if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
-                AIParams.ThinkingBudget = newBudget;
+            case ChatCommandKind.SetThinkingBudget:
+                AIParams.ThinkingBudget = command.Integer;
                 WriteLine($"[INFO] ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
-            }
-            else {
-                WriteLine($"[FEHLER] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
-            }
-            return true;
-        }
+                return true;
 
-        if (normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) {
-            string levelValueStr = normalizedInput[17..].Trim().ToUpper();
-            var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
-            if (validLevels.Contains(levelValueStr)) {
-                AIParams.ThinkingLevel = levelValueStr;
+            case ChatCommandKind.SetThinkingLevel:
+                AIParams.ThinkingLevel = command.Text;
                 WriteLine($"[INFO] ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
-            }
-            else {
-                WriteLine($"[FEHLER] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
-            }
-            return true;
-        }
+                return true;
 
-        if (normalizedInput.StartsWith("set grounding ", StringComparison.OrdinalIgnoreCase)) {
-            string val = normalizedInput[14..].Trim().ToLowerInvariant();
-            if (val == "on" || val == "true" || val == "ja" || val == "yes" || val == "1") {
-                AIParams.UseGoogleSearch = true;
-                WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
-            }
-            else if (val == "off" || val == "false" || val == "nein" || val == "no" || val == "0") {
-                AIParams.UseGoogleSearch = false;
-                WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
-            }
-            else {
-                WriteLine("[FEHLER] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
-            }
-            return true;
-        }
-
-        if (normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) {
-            string arg = normalizedInput.Length > 9 ? normalizedInput[9..].Trim() : "";
-            string newModel = "";
-            if (string.IsNullOrEmpty(arg)) {
-                WriteLine("\nVerfügbare Modelle:");
-                for (int i = 0; i < AvailableModels.Length; i++) {
-                    WriteLine($" {i + 1}) {AvailableModels[i]}");
-                }
-                Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
-                string? choice = ReadLine()?.Trim();
-                if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                    newModel = AvailableModels[idx - 1];
-                }
-                else if (!string.IsNullOrEmpty(choice)) {
-                    newModel = choice;
-                }
-            }
-            else {
-                if (int.TryParse(arg, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                    newModel = AvailableModels[idx - 1];
+            case ChatCommandKind.SetGrounding:
+                AIParams.UseGoogleSearch = command.Flag;
+                // Written as if/else rather than a ternary so both strings stay literal arguments of a
+                // WriteLine - dump-ui-strings.sh matches on that shape, and a ternary hides them.
+                if (command.Flag) {
+                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
                 }
                 else {
-                    newModel = arg;
+                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
                 }
+                return true;
+
+            case ChatCommandKind.SetModel:
+                ApplySetModel(command.Text);
+                return true;
+
+            case ChatCommandKind.Attach: {
+                var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(input.TrimStart('/'), cancellationToken: cancellationToken);
+
+                // Handled but failed: returning true with empty 'parts' makes the main loop skip the
+                // turn cleanly rather than sending a prompt with nothing attached.
+                if (!success) return true;
+
+                parts.AddRange(attachmentParts);
+                updatePromptText(parsedPrompt);
+                return true;
             }
 
-            if (!string.IsNullOrEmpty(newModel)) {
-                _activeModel = newModel;
-                WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
+            default:
+                return false; // Not a built-in command - send it to the model
+        }
+    }
 
-                Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
-                string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
-                if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
-                    int idx = Array.IndexOf(AvailableModels, _activeModel);
-                    if (idx >= 0) _config.CurrentModelIndex = idx;
-                    _config.CurrentModel = _activeModel;
-                    ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
-                    WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
-                }
-                else {
-                    WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
-                }
+    /// <summary>
+    /// [AI Context] Applies the <c>set model</c> command. Keeps its interactive picker: with no
+    /// argument it lists the configured models and reads a choice, which is also the only way to
+    /// reach a freetext model name such as a Gemma build.
+    /// [Human] Wechselt das Modell; ohne Argument mit Auswahlliste.
+    /// </summary>
+    private void ApplySetModel(string arg) {
+        string newModel = "";
+        if (string.IsNullOrEmpty(arg)) {
+            WriteLine("\nVerfügbare Modelle:");
+            for (int i = 0; i < AvailableModels.Length; i++) {
+                WriteLine($" {i + 1}) {AvailableModels[i]}");
             }
-            return true;
+            Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
+            string? choice = ReadLine()?.Trim();
+            if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
+                newModel = AvailableModels[idx - 1];
+            }
+            else if (!string.IsNullOrEmpty(choice)) {
+                newModel = choice;
+            }
+        }
+        else {
+            if (int.TryParse(arg, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
+                newModel = AvailableModels[idx - 1];
+            }
+            else {
+                newModel = arg;
+            }
         }
 
-        if (normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
-            var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput, cancellationToken: cancellationToken);
+        if (string.IsNullOrEmpty(newModel)) return;
 
-            if (!success) return true;
+        _activeModel = newModel;
+        WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
 
-            parts.AddRange(attachmentParts);
-            updatePromptText(parsedPrompt);
-            return true;
+        Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
+        string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
+        if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+            int savedIndex = Array.IndexOf(AvailableModels, _activeModel);
+            if (savedIndex >= 0) _config.CurrentModelIndex = savedIndex;
+            _config.CurrentModel = _activeModel;
+            ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
+            WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
         }
-
-        return false;
+        else {
+            WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
+        }
     }
 
     /// <summary>
