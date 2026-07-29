@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Spectre.Console;
 
 namespace LectureExtraction.ConsoleUi;
@@ -107,6 +108,130 @@ public static class Ui {
             .AddChoices(defaultYes ? [yes, no] : [no, yes]);
 
         return AnsiConsole.Prompt(prompt) == yes;
+    }
+
+    /// <summary>
+    /// [AI Context] The two navigation entries every menu can carry. They are constants rather than
+    /// literals at the call sites so the wording, the icon and the ordering are identical in all
+    /// menus - a "back" option that is spelled differently in each menu is the failure mode this
+    /// whole abstraction exists to prevent.
+    /// [Human] Einheitliche Beschriftung für "zurück" und "abbrechen" in allen Menüs.
+    /// </summary>
+    public const string BackChoiceLabel = "↩ Zurück";
+    public const string ExitChoiceLabel = "🚪 Abbrechen";
+
+    /// <summary>
+    /// [AI Context] Carries a choice's label, its payload and the navigation meaning of picking it.
+    /// The prompt is built over this type rather than over <c>string</c> so that labels never have
+    /// to be unique, never have to be parsed back into a value (the old
+    /// <c>selection.StartsWith("2)")</c> pattern), and are escaped in exactly one place - the
+    /// converter below.
+    /// [Human] Interner Menüeintrag: Beschriftung, Wert und Bedeutung (Wert / zurück / abbrechen).
+    /// </summary>
+    private sealed class SelectItem<T>(string label, T? value, PromptOutcome outcome) {
+        public string Label { get; } = label;
+        public T? Value { get; } = value;
+        public PromptOutcome Outcome { get; } = outcome;
+    }
+
+    /// <summary>
+    /// [AI Context] The single menu primitive. Renders <paramref name="choices"/> plus, optionally,
+    /// a back and/or cancel entry, and reports which of the three the user picked via
+    /// <see cref="PromptResult{T}"/>.
+    ///
+    /// <para>Labels are passed unescaped and escaped here; do not pre-escape them, or square
+    /// brackets show up doubled.</para>
+    /// [Human] Zentrales Auswahlmenü: zeigt die Einträge plus optional "Zurück"/"Abbrechen" und
+    /// meldet, was gewählt wurde.
+    /// </summary>
+    public static PromptResult<T> Select<T>(
+        string title,
+        IEnumerable<(string Label, T Value)> choices,
+        bool allowBack = true,
+        bool allowExit = false,
+        string backLabel = BackChoiceLabel,
+        string exitLabel = ExitChoiceLabel,
+        int pageSize = 15,
+        string? moreChoicesText = null) {
+
+        var items = new List<SelectItem<T>>();
+        foreach (var (label, value) in choices) {
+            items.Add(new SelectItem<T>(label, value, PromptOutcome.Value));
+        }
+        if (allowBack) {
+            items.Add(new SelectItem<T>(backLabel, default, PromptOutcome.Back));
+        }
+        if (allowExit) {
+            items.Add(new SelectItem<T>(exitLabel, default, PromptOutcome.Exit));
+        }
+
+        var prompt = new SelectionPrompt<SelectItem<T>>()
+            .Title($"[bold]{Markup.Escape(title)}[/]")
+            .PageSize(Math.Max(3, pageSize))
+            .UseConverter(item => Markup.Escape(item.Label))
+            .AddChoices(items);
+
+        if (moreChoicesText != null) {
+            prompt.MoreChoicesText($"[grey]{Markup.Escape(moreChoicesText)}[/]");
+        }
+
+        var selected = AnsiConsole.Prompt(prompt);
+        return new PromptResult<T>(selected.Outcome, selected.Value);
+    }
+
+    /// <summary>
+    /// [AI Context] <see cref="Select{T}"/> for the common case where the label *is* the value.
+    /// [Human] Auswahlmenü, bei dem die Beschriftung selbst der Wert ist.
+    /// </summary>
+    public static PromptResult<string> Select(
+        string title,
+        IEnumerable<string> choices,
+        bool allowBack = true,
+        bool allowExit = false,
+        string backLabel = BackChoiceLabel,
+        string exitLabel = ExitChoiceLabel,
+        int pageSize = 15,
+        string? moreChoicesText = null)
+        => Select(title, choices.Select(c => (c, c)), allowBack, allowExit, backLabel, exitLabel, pageSize, moreChoicesText);
+
+    /// <summary>
+    /// [AI Context] <see cref="Confirm"/> with a third way out, for yes/no questions that sit in the
+    /// middle of a multi-step setup. Without it a confirm is a one-way door in an otherwise
+    /// back-navigable flow.
+    /// [Human] Ja/Nein-Frage mit zusätzlicher "Zurück"-Option.
+    /// </summary>
+    public static PromptResult<bool> ConfirmOrBack(string question, bool defaultYes = true) {
+        var choices = defaultYes
+            ? new[] { ("Ja", true), ("Nein", false) }
+            : new[] { ("Nein", false), ("Ja", true) };
+
+        return Select(question, choices, allowBack: true);
+    }
+
+    /// <summary>
+    /// [AI Context] Free-text input. Wraps <c>AnsiConsole.Ask</c> so the question is markup-escaped
+    /// at one place - an unescaped path or filename in a question would otherwise be parsed as
+    /// markup and either throw or vanish.
+    /// [Human] Freitext-Eingabe mit markup-sicherer Frage.
+    /// </summary>
+    public static string Ask(string question, string? defaultValue = null) {
+        var prompt = new TextPrompt<string>($"[bold]{Markup.Escape(question)}[/]");
+        if (defaultValue != null) {
+            prompt.DefaultValue(defaultValue);
+        }
+        return AnsiConsole.Prompt(prompt);
+    }
+
+    /// <summary>
+    /// [AI Context] Typed free-text input with a default. The escaping is the point: several of
+    /// these questions end in "[aktuell: 1.2x]", which <c>AnsiConsole.Ask</c> parses as a style tag
+    /// and throws on - the same crash class as the invalid "text-primary" style fixed earlier.
+    /// [Human] Eingabe mit Standardwert; die Frage wird escaped, damit eckige Klammern nicht als
+    /// Formatierung interpretiert werden (das führte zu Abstürzen).
+    /// </summary>
+    public static T Ask<T>(string question, T defaultValue) {
+        var prompt = new TextPrompt<T>($"[bold]{Markup.Escape(question)}[/]").DefaultValue(defaultValue);
+        return AnsiConsole.Prompt(prompt);
     }
 
     // Data

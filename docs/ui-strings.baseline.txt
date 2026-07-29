@@ -10,6 +10,25 @@ Console.Write(table);
 Console.WriteLine("=== Serialized Part JSON ===");
 Console.WriteLine();
 Console.WriteLine(json);
+SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?");
+SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?", ChangeApiKeyProfileInteractive);
+SetupQuestionPrompt.Ask("[Setup] System Instruction laden?");
+SetupQuestionPrompt.Ask("[Setup] System Instruction laden?", ChangeApiKeyProfileInteractive);
+Ui.Ask("Bitte neuen Pfad für den Quellordner eingeben:").Trim();
+Ui.Ask("Eigenen Befehl eingeben:");
+Ui.Ask("Neue Standarddauer in Minuten:", _config.ContextCachingMinutes);
+Ui.Ask("Neuen Zielordner eingeben:").Trim('\"', '\'');
+Ui.Ask("Neues Verlängerungsintervall in Minuten:", _config.ContextCachingIncrementMinutes);
+Ui.Confirm("Context Caching aktivieren?", _config.UseContextCaching);
+Ui.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", true)) {
+Ui.Confirm("Möchtest du diese Aufgaben ausführen?", true)) {
+Ui.Confirm($"Der Ordner '{newPath}' existiert nicht. Möchten Sie ihn erstellen?", true)) {
+Ui.Confirm(confirmPrompt, true)) {
+Ui.Confirm(promptText, true)) {
+Ui.ConfirmOrBack("Möchten Sie diesen Zielordner beibehalten?", true);
+Ui.ConfirmOrBack("Möchten Sie dieses API-Key Profil verwenden?", true);
+Ui.ConfirmOrBack("Möchtest du ab diesem Schritt die restliche Pipeline bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausführen?", false);
+Ui.ConfirmOrBack($"Möchten Sie dieses voreingestellte Modell ({currentModel}) verwenden?", true);
 Ui.Detail("  " + choice2);
 Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
 Ui.Detail("API-Key:         Dedizierter Key für automatisierte Extraktion");
@@ -125,7 +144,6 @@ Ui.Error("Ein Fehler ist beim Ausführen von ffprobe aufgetreten.", "ffprobe");
 Ui.Error("Ein Fehler ist beim Starten von FFmpeg aufgetreten.", "FFmpeg error");
 Ui.Error("Einige oder alle History-Dateien konnten nicht eingelesen werden.");
 Ui.Error("Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
-Ui.Error("Invalid selection.");
 Ui.Error("Konnte Bestätigung für History nicht erhalten. Breche Extraktion ab.");
 Ui.Error("Ordner nicht gefunden. Bitte prüfe den SourceFolder in der Konfiguration.", "LaTeX Refinement");
 Ui.Error("Schritt 1 (Merge) fehlgeschlagen. Breche Pipeline ab.", "LaTeX Refinement");
@@ -175,6 +193,9 @@ Ui.Error($"pdflatex hat das Zeitlimit von {timeoutSeconds}s überschritten und w
 Ui.Error($"pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert? Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}", "LatexToolkit");
 Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
 Ui.Error($"{ex.GetType().Name}: {ex.Message}", "Debug Roundtrip");
+Ui.Header("Interaktiver LaTeX Refinement Modus");
+Ui.Header("🎬 FFmpeg Console Video Preprocessor Dashboard");
+Ui.Header("🚀 Starte FFmpeg Konvertierungsprozess...");
 Ui.Info("Behalte bisherigen Ordner bei.");
 Ui.Info("Bestätigung durch Benutzer abgebrochen.");
 Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
@@ -238,7 +259,7 @@ Ui.Info("[YouTube Mode] Keine vorgegebenen YouTube-Aufgaben in der Konfiguration
 Ui.Info("Übergeordneter Ordner nicht vorhanden (Root erreicht).");
 Ui.Info("Überspringe Audio-Auswahl für 'Last Refinement' (Schritt 3 benötigt kein Audio).");
 Ui.Info($"Aktueller Pfad: {currentPath}", "Ordnernavigation");
-Ui.Info($"Aktueller Zielordner (Destination): [bold]{destFolder}[/]");
+Ui.Info($"Aktueller Zielordner (Destination): {destFolder}");
 Ui.Info($"Audio-Datei erfolgreich verarbeitet: {audioFilePath}", "Step 1");
 Ui.Info($"Audio-Datei erfolgreich verarbeitet: {audioFilePath}", "Step 2");
 Ui.Info($"Ausführung erfolgt ohne Audio-Datei (Pfad: {_audioFilePath ?? "null"}).", "LaTeX Refinement");
@@ -312,6 +333,24 @@ Ui.Info($"Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) 
 Ui.Info($"📁 {baseDir}");
 Ui.Raw(text);
 Ui.Raw(txt);
+Ui.Select(
+Ui.Select("Bei welchem Video soll gestartet werden?", choices,
+Ui.Select("Bitte gewünschten Modus auswählen:", choices,
+Ui.Select("Dateiauswahl-Modus:", [
+Ui.Select("Modus auswählen:", [
+Ui.Select("Optionen:", [
+Ui.Select("Verfügbare API-Key Profile:", choices);
+Ui.Select("Verfügbare Dateien im Quellordner:", choices, pageSize: 15);
+Ui.Select("Verfügbare Modelle:", choices);
+Ui.Select("Welchen Schritt möchtest du ausführen?", [
+Ui.Select("Wähle Kompressions-Voreinstellung (Preset):", presets);
+Ui.Select("Wähle die .tex Datei für das Refinement:", fileChoices, pageSize: 15);
+Ui.Select("Wähle die Audio-Datei:", choices);
+Ui.Select("Wähle ein Modell:", ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"]);
+Ui.Select("Wähle eine Option oder einen Unterordner:", options, allowBack: false, pageSize: 15);
+Ui.Select($"Was soll verarbeitet werden? ({files.Length} Video(s))", [
+Ui.Select(question, choices, allowBack: true, allowExit: true);
+Ui.Select(title, choices, allowBack);
 Ui.Step("API-Key Profil Konfiguration (JSON)");
 Ui.Step("Automatisierte Extraktion (AI Studio)");
 Ui.Step("Automatisierte Extraktion (Vertex AI)");
@@ -357,9 +396,9 @@ Ui.Success($"=> TO: {outputFile}", "FFmpegToolkit");
 Ui.Success($"Agent hat Korrekturen angewendet und in `{finalFileName}` gespeichert. Starte nächsten Kompilierungs-Versuch...", "Antigravity Agent API");
 Ui.Success($"Audio-Extraktion für {Path.GetFileName(sourceVideoPath)} abgeschlossen.", "FFmpeg");
 Ui.Success($"Auf 720p skalieren: {(_scaleTo720p ? "AKTIVIERT" : "DEAKTIVIERT (Original-Auflösung)")}");
-Ui.Success($"Ausgewählte Audio-Datei: {audioChoice}");
-Ui.Success($"Ausgewählte Datei: {selectedRelativeTex}");
-Ui.Success($"Ausgewähltes Ziel: {Path.GetFileName(inputFiles[idx])}");
+Ui.Success($"Ausgewählte Audio-Datei: {Path.GetFileName(choice.Value)}");
+Ui.Success($"Ausgewählte Datei: {Path.GetRelativePath(searchFolder, selectedTex)}");
+Ui.Success($"Ausgewähltes Ziel: {Path.GetFileName(selection.Value!)}");
 Ui.Success($"Downmix to Mono: {(_downmixToMono ? "AKTIVIERT (Mono 96k)" : "DEAKTIVIERT (Original Stereo Copy)")}");
 Ui.Success($"Ergebnis gespeichert unter: {outPath}", "Refinement");
 Ui.Success($"FPS auf {_fps} gesetzt.");
@@ -370,7 +409,7 @@ Ui.Success($"Google Kontext-Cache erfolgreich angelegt: {_cachedContentName} (G�
 Ui.Success($"Google Kontext-Cache erfolgreich erstellt: {cacheName}");
 Ui.Success($"Google Kontext-Cache erfolgreich neu erstellt: {cacheName}");
 Ui.Success($"Kompression Preset auf '{_preset}' gesetzt.");
-Ui.Success($"Modell auf '{newModel}' aktualisiert.");
+Ui.Success($"Modell auf '{newModel.Value}' aktualisiert.");
 Ui.Success($"Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
 Ui.Success($"Ordner erstellt: {newPath}");
 Ui.Success($"PDF durch Antigravity Agent erfolgreich (Runde {round}/{maxRounds}) generiert!", "LatexToolkit");
@@ -393,7 +432,7 @@ Ui.Warn("Keine Dateien im Quellordner gefunden.");
 Ui.Warn("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
 Ui.Warn("Keine System Instruction-Dateien gefunden oder konfiguriert.");
 Ui.Warn("Keine URL eingegeben.", "Abbruch");
-Ui.Warn("Keine Videos ausgewählt. Verarbeitung wird übersprungen.");
+Ui.Warn("Keine Videos ausgewählt.");
 Ui.Warn("LaTeX Refinement übersprungen.", "LaTeX Refinement");
 Ui.Warn("No files found in the source folder.");
 Ui.Warn("Operation cancelled by user.", "API");

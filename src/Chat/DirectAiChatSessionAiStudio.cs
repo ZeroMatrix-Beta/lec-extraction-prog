@@ -95,61 +95,89 @@ public partial class DirectAiChatSessionAiStudio {
     /// [Human] Startet die Session, verbindet sich mit Google und erstellt die Log-Ordner für diesen Chat-Verlauf.
     /// </summary>
     public async Task StartAsync() {
+        // [AI Context] The setup runs as a three-step machine so every prompt can offer "back": each
+        // step knows its predecessor, and a profile change (Restart) rewinds to the first step
+        // because the client built from the old profile is stale. The side effects that used to sit
+        // between the prompts - bucket cleanup and creating the session log folder - moved behind
+        // the last step, so backing out no longer leaves an empty session folder behind.
+        // [Human] Das Setup läuft als Schrittkette, damit jede Frage ein "Zurück" anbieten kann.
+        int step = 0;
+        bool loadedSysPrompt = false;
+        string? initialInput = null;
+
         while (true) {
-            string selectedModel = ConfigurationPrompts.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
-                int idx = Array.IndexOf(_config.Model, newModel);
-                if (idx >= 0) _config.CurrentModelIndex = idx;
-                _config.CurrentModel = newModel;
-                ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
-            });
-            if (selectedModel == "__EXIT__") return;
-            if (selectedModel == "__CHANGED_KEY__") continue;
-            _activeModel = selectedModel;
-
-            // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
-            await CleanupGcsBucketAsync();
-
-            // [AI Context] Implements session persistence by isolating text/LaTeX outputs in discrete timestamped directories.
-            // [Human] Erstellt für jede neue Chat-Sitzung einen eigenen Ordner, damit nichts aus Versehen überschrieben wird.
-            // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
-            _sessionLogger.InitializeSession();
-
-            // [AI Context] Load System Instructions (Persona & Rules) into memory.
-            bool loadedSysPrompt = false;
-            if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
-                WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
-                FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
-            }
-            string sysPromptChoice = PromptWithCommands("[Setup] System Instruction laden? (j/n): ");
-            if (sysPromptChoice == "__EXIT__") return;
-            if (sysPromptChoice == "__CHANGED_KEY__") continue;
-
-            if (sysPromptChoice.IsAffirmativeResponse(defaultIfEmpty: true)) {
-                if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
-                    _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-                    WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
-                    loadedSysPrompt = true;
+            switch (step) {
+                case 0: {
+                    var model = ConfigurationPrompts.ConfirmOrChangeModel(_config.CurrentModel, "AI Studio", _config.Model, newModel => {
+                        int idx = Array.IndexOf(_config.Model, newModel);
+                        if (idx >= 0) _config.CurrentModelIndex = idx;
+                        _config.CurrentModel = newModel;
+                        ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
+                    });
+                    if (!model.IsValue) return; // Back at the first step leaves the session
+                    _activeModel = model.Value!;
+                    step = 1;
+                    break;
                 }
-                else {
-                    WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+
+                case 1: {
+                    // [AI Context] Load System Instructions (Persona & Rules) into memory.
+                    if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
+                        WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
+                        FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
+                    }
+
+                    var answer = SetupQuestionPrompt.Ask("[Setup] System Instruction laden?", ChangeApiKeyProfileInteractive);
+                    if (answer.IsRestart || answer.IsBack) { step = 0; break; }
+                    if (!answer.IsValue) return;
+
+                    loadedSysPrompt = false;
+                    _systemInstructionText = null;
+
+                    if (answer.Value) {
+                        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+                            _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+                            WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                            loadedSysPrompt = true;
+                        }
+                        else {
+                            WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+                        }
+                    }
+                    else {
+                        WriteLine("  [INFO] System Instruction wird ignoriert.");
+                    }
+
+                    step = 2;
+                    break;
+                }
+
+                case 2: {
+                    var history = GetInitialHistoryCommand(_activeModel);
+                    if (history.IsRestart) { step = 0; break; }
+                    if (history.IsBack) { step = 1; break; }
+                    if (!history.IsValue) return;
+                    initialInput = history.Value;
+                    step = 3;
+                    break;
+                }
+
+                default: {
+                    // 3b. Bucket beim Start aufräumen (falls von einem vorherigen Absturz noch Videos übrig sind)
+                    await CleanupGcsBucketAsync();
+
+                    // [AI Context] Implements session persistence by isolating text/LaTeX outputs in discrete timestamped directories.
+                    // [Human] Erstellt für jede neue Chat-Sitzung einen eigenen Ordner, damit nichts aus Versehen überschrieben wird.
+                    // 3c. Session Log-Ordner ermitteln und erstellen (folder-1, folder-2...)
+                    _sessionLogger.InitializeSession();
+                    _sessionLogger.SetSessionMetadata(loadedSysPrompt, initialInput != null);
+                    await _sessionLogger.LogSessionSetupAsync();
+
+                    // 4. Starte die Haupt-Chat-Schleife
+                    await RunChatSessionAsync(initialInput);
+                    return;
                 }
             }
-            else {
-                WriteLine("  [INFO] System Instruction wird ignoriert.");
-            }
-
-            string? initialInput = GetInitialHistoryCommand(_activeModel);
-            if (initialInput == "__EXIT__") return;
-            if (initialInput == "__CHANGED_KEY__") continue;
-
-            bool loadedHistory = initialInput != null;
-
-            _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
-            await _sessionLogger.LogSessionSetupAsync();
-
-            // 4. Starte die Haupt-Chat-Schleife
-            await RunChatSessionAsync(initialInput);
-            break; // Beendet den aktuellen Setup-Loop und geht komplett ins Hauptmenü zurück
         }
     }
 
@@ -249,23 +277,21 @@ public partial class DirectAiChatSessionAiStudio {
         await CleanupGcsBucketAsync();
     }
 
-    private string PromptWithCommands(string promptMessage) {
-        while (true) {
-            Write(promptMessage);
-            string? input = ReadLine()?.Trim();
-            if (string.IsNullOrWhiteSpace(input)) continue;
+    /// <summary>
+    /// [AI Context] The setup-time entry point for switching the API key profile, offered as a menu
+    /// entry by <see cref="SetupQuestionPrompt"/>. Same effect as typing <c>change-key N</c> inside
+    /// the chat, but reachable without knowing the command exists.
+    /// [Human] Wechselt das API-Key Profil während des Setups über das Menü statt per Tippbefehl.
+    /// </summary>
+    private void ChangeApiKeyProfileInteractive() {
+        var profile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
+            _activeApiProfile,
+            "Direct AI Studio Chat",
+            envNames: _config.AiStudioApiKeyEnvNames,
+            allowBack: false);
 
-            string normalizedInput = input.TrimStart('/');
-
-            if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
-                return "__EXIT__";
-            }
-
-            if (MyRegex().IsMatch(normalizedInput)) {
-                HandleChangeKey(normalizedInput);
-                return "__CHANGED_KEY__";
-            }
-            return input; // Return the non-command input
+        if (profile.IsValue && profile.Value != _activeApiProfile) {
+            ApplyApiKeyProfile(profile.Value);
         }
     }
 
@@ -662,9 +688,9 @@ public partial class DirectAiChatSessionAiStudio {
     /// [AI Context] Searches configured directories for previous chat histories and prepares an attachment command to preload context.
     /// [Human] Fragt den Nutzer, ob eine bestehende History geladen werden soll, und baut den entsprechenden /attach Befehl zusammen.
     /// </summary>
-    private string? GetInitialHistoryCommand(string selectedModel) {
+    private PromptResult<string?> GetInitialHistoryCommand(string selectedModel) {
         if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
-            return null;
+            return PromptResult.FromValue<string?>(null);
         }
 
         var allHistoryFiles = new List<string>();
@@ -698,23 +724,21 @@ public partial class DirectAiChatSessionAiStudio {
         }
 
         if (distinctFiles.Count == 0) {
-            return null;
+            return PromptResult.FromValue<string?>(null);
         }
 
         WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
         FileTreeRenderer.PrintFileTree(distinctFiles);
 
-        string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
-        if (historyChoice == "__EXIT__" || historyChoice == "__CHANGED_KEY__") return historyChoice;
+        var answer = SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?", ChangeApiKeyProfileInteractive);
+        if (!answer.IsValue) return new PromptResult<string?>(answer.Outcome, null);
 
-        bool loadHistory = historyChoice.IsAffirmativeResponse(defaultIfEmpty: true);
-
-        if (!loadHistory) return null;
+        if (!answer.Value) return PromptResult.FromValue<string?>(null);
 
         // Die `historyFiles` enthalten bereits die vollen, absoluten Pfade.
         // Wir können sie direkt verwenden und für den Befehl in Anführungszeichen setzen.
         string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-        return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
+        return PromptResult.FromValue<string?>($"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}");
     }
 
     /// <summary>
@@ -724,27 +748,38 @@ public partial class DirectAiChatSessionAiStudio {
     private void HandleChangeKey(string input) {
         var match = ChangeKeyParamsRegex().Match(input);
         if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
-            string? newApiKey;
-            if (newProfile == 0) {
-                // [AI Context] Profile 0 is a convention for the dedicated, high-quota extraction key.
-                newApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
-            }
-            else {
-                newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
-            }
-
-            if (!string.IsNullOrEmpty(newApiKey)) {
-                _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
-                _attachmentHandler.UpdateClient(_client);
-                _activeApiProfile = newProfile;
-                WriteLine($"  [INFO] API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
-            }
-            else {
-                WriteLine($"[FEHLER] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
-            }
+            ApplyApiKeyProfile(newProfile);
         }
         else {
             WriteLine("[FEHLER] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Rebuilds the client on the given profile's key and points the attachment handler
+    /// at it. Split out of <see cref="HandleChangeKey"/> so the menu path
+    /// (<see cref="ChangeApiKeyProfileInteractive"/>) and the typed <c>change-key N</c> command share
+    /// one implementation instead of drifting apart.
+    /// [Human] Baut den Client mit dem Key des gewählten Profils neu auf.
+    /// </summary>
+    private void ApplyApiKeyProfile(int newProfile) {
+        string? newApiKey;
+        if (newProfile == 0) {
+            // [AI Context] Profile 0 is a convention for the dedicated, high-quota extraction key.
+            newApiKey = GoogleAiClientBuilder.ResolveApiKeyByName("API_KEY-automated-content-extraction");
+        }
+        else {
+            newApiKey = GoogleAiClientBuilder.ResolveApiKey(newProfile);
+        }
+
+        if (!string.IsNullOrEmpty(newApiKey)) {
+            _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
+            _attachmentHandler.UpdateClient(_client);
+            _activeApiProfile = newProfile;
+            WriteLine($"  [INFO] API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
+        }
+        else {
+            WriteLine($"[FEHLER] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
         }
     }
 

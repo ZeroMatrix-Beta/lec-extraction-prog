@@ -92,36 +92,44 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             }
         }
 
-        string choice = Spectre.Console.AnsiConsole.Prompt(
-            new Spectre.Console.SelectionPrompt<string> {
-                Title = "[bold]Modus auswählen:[/]"
-            }.AddChoices(
-                "1) 🚀 Alle Videos im Quellordner konvertieren (Standard)",
-                "2) 🎬 Einzelnes Video auswählen und konvertieren",
-                "3) 📺 YouTube-Video transkribieren",
-                "4) 🚪 Abbrechen / Zurück"
-            ));
+        // Same loop as the AI Studio twin: backing out of a branch returns to this menu, and only
+        // "Zurück" leaves the session.
+        while (true) {
+            var choice = Ui.Select("Modus auswählen:", [
+                ("1) 🚀 Alle Videos im Quellordner konvertieren (Standard)", ExtractionMode.AllVideos),
+                ("2) 🎬 Einzelnes Video auswählen und konvertieren", ExtractionMode.SingleVideo),
+                ("3) 📺 YouTube-Video transkribieren", ExtractionMode.YouTube)
+            ], backLabel: "4) 🚪 Abbrechen / Zurück");
 
-        if (choice.StartsWith("4") || choice.Equals("exit", StringComparison.OrdinalIgnoreCase) || choice.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
-            return;
-        }
+            if (!choice.IsValue) return;
 
-        if (choice.StartsWith("2")) {
-            var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
-            if (files.Length > 0) {
-                await SetupContextAndProcessAsync(files);
-            }
-        }
-        else if (choice.StartsWith("3")) {
-            await ProcessYouTubeTasksAsync();
-        }
-        else {
-            var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
-            if (files.Length > 0) {
-                await SetupContextAndProcessAsync(files);
+            switch (choice.Value) {
+                case ExtractionMode.SingleVideo: {
+                    var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
+                    if (files.Length > 0) {
+                        await SetupContextAndProcessAsync(files);
+                        return;
+                    }
+                    break;
+                }
+
+                case ExtractionMode.YouTube:
+                    await ProcessYouTubeTasksAsync();
+                    return;
+
+                default: {
+                    var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
+                    if (files.Length > 0) {
+                        await SetupContextAndProcessAsync(files);
+                        return;
+                    }
+                    break;
+                }
             }
         }
     }
+
+    private enum ExtractionMode { AllVideos, SingleVideo, YouTube }
 
     /// <summary>
     /// [AI Context] Core initialization routine before batch processing. Loads system instructions and pre-warms the model context with attachments.
@@ -482,8 +490,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         Ui.Detail($"ContextCachingIncrementMinutes: {_config.ContextCachingIncrementMinutes} min");
 
         _config.UseContextCaching = Ui.Confirm("Context Caching aktivieren?", _config.UseContextCaching);
-        _config.ContextCachingMinutes = AnsiConsole.Ask("Neue Standarddauer in Minuten:", _config.ContextCachingMinutes);
-        _config.ContextCachingIncrementMinutes = AnsiConsole.Ask("Neues Verlängerungsintervall in Minuten:", _config.ContextCachingIncrementMinutes);
+        _config.ContextCachingMinutes = Ui.Ask("Neue Standarddauer in Minuten:", _config.ContextCachingMinutes);
+        _config.ContextCachingIncrementMinutes = Ui.Ask("Neues Verlängerungsintervall in Minuten:", _config.ContextCachingIncrementMinutes);
 
         ConfigLoader<VertexAutoExtractionConfig>.Save(_config);
         Ui.Success("Einstellungen in VertexAutoExtractionConfig.json gespeichert.");

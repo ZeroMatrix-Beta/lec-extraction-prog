@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
-using Spectre.Console;
 
 namespace LectureExtraction.Media;
 
@@ -40,12 +39,56 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     public async Task StartAsync() {
         Ui.Header("🎬 FFmpeg Console Video Preprocessor Dashboard");
 
-        if (!SetupDirectories(out string sourceFolder, out string destFolder)) return;
+        // [AI Context] Source folder → destination folder → file selection, as a step machine so each
+        // one can be corrected with "back" instead of restarting the session from the main menu.
+        // [Human] Quellordner, Zielordner und Dateiauswahl als Schrittkette mit "Zurück".
+        var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
+        string sourceFolder = string.IsNullOrEmpty(DefaultSourceFolder) ? ffmpegConfig.SourceFolder : DefaultSourceFolder;
+        string destFolder = "";
+        string[] filesToProcess = [];
+        int setupStep = 0;
 
-        string[] filesToProcess = SelectTargetFiles(sourceFolder);
-        if (filesToProcess == null || filesToProcess.Length == 0) {
-            Ui.Warn("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
-            return;
+        while (setupStep < 3) {
+            switch (setupStep) {
+                case 0: {
+                    var folder = ConfigurationPrompts.PromptForSourceFolder(sourceFolder, newFolder => {
+                        ffmpegConfig.SourceFolder = newFolder;
+                        ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
+                    });
+                    if (!folder.IsValue) return;
+
+                    sourceFolder = folder.Value!;
+                    if (!Directory.Exists(sourceFolder)) {
+                        Ui.Error($"Quellordner '{sourceFolder}' existiert nicht.");
+                        break;
+                    }
+                    setupStep = 1;
+                    break;
+                }
+
+                case 1: {
+                    var destination = ResolveDestinationFolder(sourceFolder);
+                    if (destination.IsBack) { setupStep = 0; break; }
+                    if (!destination.IsValue) return;
+                    destFolder = destination.Value!;
+                    setupStep = 2;
+                    break;
+                }
+
+                default: {
+                    var files = SelectTargetFiles(sourceFolder);
+                    if (files.IsBack) { setupStep = 1; break; }
+                    if (!files.IsValue) return;
+
+                    filesToProcess = files.Value!;
+                    if (filesToProcess.Length == 0) {
+                        Ui.Warn("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
+                        return;
+                    }
+                    setupStep = 3;
+                    break;
+                }
+            }
         }
 
         while (true) {
@@ -93,61 +136,53 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         }
     }
 
-    private bool SetupDirectories(out string sourceFolder, out string destFolder) {
-        var ffmpegConfig = ConfigLoader<FfmpegSessionConfig>.Load();
-        string currentSource = string.IsNullOrEmpty(DefaultSourceFolder) ? ffmpegConfig.SourceFolder : DefaultSourceFolder;
-
-        sourceFolder = ConfigurationPrompts.PromptForSourceFolder(currentSource, newFolder => {
-            ffmpegConfig.SourceFolder = newFolder;
-            ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
-        });
-
-        destFolder = DefaultDestinationFolder;
-        if (string.IsNullOrEmpty(destFolder)) {
-            destFolder = Path.Combine(sourceFolder, "extracted_output");
-        }
-
-        Ui.Info($"Aktueller Zielordner (Destination): [bold]{destFolder}[/]");
-        bool keepDest = Ui.Confirm("Möchten Sie diesen Zielordner beibehalten?", true);
-        if (!keepDest) {
-            destFolder = AnsiConsole.Ask<string>("Neuen Zielordner eingeben:").Trim('\"', '\'');
-        }
-
-        if (!Directory.Exists(sourceFolder)) {
-            Ui.Error($"Quellordner '{sourceFolder}' existiert nicht.");
-            return false;
-        }
-
-        if (!Directory.Exists(destFolder)) {
-            try {
-                Ui.Info($"Erstelle Zielordner '{destFolder}'...");
-                Directory.CreateDirectory(destFolder);
+    /// <summary>
+    /// [AI Context] Confirms or replaces the destination folder and makes sure it exists. Loops on a
+    /// creation failure rather than aborting the session - the user can simply name a different
+    /// folder - and reports "back" so the caller can re-ask for the source folder.
+    /// [Human] Bestätigt oder ändert den Zielordner und legt ihn bei Bedarf an.
+    /// </summary>
+    private PromptResult<string> ResolveDestinationFolder(string sourceFolder) {
+        while (true) {
+            string destFolder = DefaultDestinationFolder;
+            if (string.IsNullOrEmpty(destFolder)) {
+                destFolder = Path.Combine(sourceFolder, "extracted_output");
             }
-            catch (Exception ex) {
-                Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.Message}");
-                return false;
-            }
-        }
 
-        return true;
+            Ui.Info($"Aktueller Zielordner (Destination): {destFolder}");
+            var keepDest = Ui.ConfirmOrBack("Möchten Sie diesen Zielordner beibehalten?", true);
+            if (!keepDest.IsValue) return new PromptResult<string>(keepDest.Outcome, null);
+
+            if (!keepDest.Value) {
+                destFolder = Ui.Ask("Neuen Zielordner eingeben:").Trim('\"', '\'');
+            }
+
+            if (!Directory.Exists(destFolder)) {
+                try {
+                    Ui.Info($"Erstelle Zielordner '{destFolder}'...");
+                    Directory.CreateDirectory(destFolder);
+                }
+                catch (Exception ex) {
+                    Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.Message}");
+                    continue;
+                }
+            }
+
+            return PromptResult.FromValue(destFolder);
+        }
     }
 
-    private static string[] SelectTargetFiles(string sourceFolder) {
-        var selection = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("[bold cyan]Dateiauswahl-Modus:[/]")
-                .AddChoices(
-                    "Einzelne Videodatei auswählen",
-                    "Alle Videodateien im Quellordner verarbeiten (Batch-Modus)"
-                )
-        );
+    private static PromptResult<string[]> SelectTargetFiles(string sourceFolder) {
+        var selection = Ui.Select("Dateiauswahl-Modus:", [
+            ("Einzelne Videodatei auswählen", false),
+            ("Alle Videodateien im Quellordner verarbeiten (Batch-Modus)", true)
+        ]);
 
-        if (selection.Contains("Batch-Modus")) {
-            return FileSelectionPrompt.SelectBatchFiles(sourceFolder);
-        }
-        else {
-            return FileSelectionPrompt.SelectSingleFile(sourceFolder);
-        }
+        if (!selection.IsValue) return new PromptResult<string[]>(selection.Outcome, null);
+
+        return PromptResult.FromValue(selection.Value
+            ? FileSelectionPrompt.SelectBatchFiles(sourceFolder)
+            : FileSelectionPrompt.SelectSingleFile(sourceFolder));
     }
 
     private string RenderDashboardAndPromptChoice(string sourceFolder, string destFolder, string[] filesToProcess) {
@@ -186,20 +221,18 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         }
 
         choices["🚀 KONVERTIERUNG STARTEN"] = "start";
-        choices["🚪 Kehre zum Hauptmenü zurück"] = "exit";
 
-        var selectedKey = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("[bold cyan]FFmpeg Konvertierungs-Dashboard:[/]")
-                .PageSize(12)
-                .AddChoices(choices.Keys)
-        );
+        var selection = Ui.Select(
+            "FFmpeg Konvertierungs-Dashboard:",
+            choices.Select(c => (c.Key, c.Value)),
+            backLabel: "🚪 Kehre zum Hauptmenü zurück",
+            pageSize: 12);
 
-        return choices[selectedKey];
+        return selection.IsValue ? selection.Value! : "exit";
     }
 
     private void ConfigureSpeed() {
-        double val = AnsiConsole.Ask<double>($"Neue Geschwindigkeit eingeben (z. B. 1.0, 1.2, 1.3, 1.5) [aktuell: {_speedMultiplier}x]:", _speedMultiplier);
+        double val = Ui.Ask<double>($"Neue Geschwindigkeit eingeben (z. B. 1.0, 1.2, 1.3, 1.5) [aktuell: {_speedMultiplier}x]:", _speedMultiplier);
         if (val >= 0.1 && val <= 10.0) {
             _speedMultiplier = val;
             _useCustomTemplate = false;
@@ -211,7 +244,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     }
 
     private void ConfigureFps() {
-        int val = AnsiConsole.Ask<int>($"Bilder pro Sekunde (FPS) eingeben (z. B. 1, 2, 5, 10) [aktuell: {_fps}]:", _fps);
+        int val = Ui.Ask<int>($"Bilder pro Sekunde (FPS) eingeben (z. B. 1, 2, 5, 10) [aktuell: {_fps}]:", _fps);
         if (val >= 1 && val <= 60) {
             _fps = val;
             _useCustomTemplate = false;
@@ -224,20 +257,17 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
 
     private void ConfigurePreset() {
         string[] presets = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"];
-        string choice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("[bold cyan]Wähle Kompressions-Voreinstellung (Preset):[/]")
-                .AddChoices(presets)
-        );
+        var choice = Ui.Select("Wähle Kompressions-Voreinstellung (Preset):", presets);
+        if (!choice.IsValue) return;
 
-        _preset = choice;
+        _preset = choice.Value!;
         _useCustomTemplate = false;
         Ui.Success($"Kompression Preset auf '{_preset}' gesetzt.");
     }
 
     private void ConfigureTimeRange() {
         Ui.Info("Zeitbereichs-Auswahl (z. B. 00:10:00, 5:30 oder Sekunden)", "Zeitbereich");
-        string startInput = AnsiConsole.Ask<string>($"Startzeit eingeben [aktuell: {(_startTimeSeconds.HasValue ? _startTimeSeconds.Value.ToString() : "Anfang")}]:", "");
+        string startInput = Ui.Ask<string>($"Startzeit eingeben [aktuell: {(_startTimeSeconds.HasValue ? _startTimeSeconds.Value.ToString() : "Anfang")}]:", "");
         
         double? startSec = ParseTimeInput(startInput);
         if (startSec.HasValue) {
@@ -247,7 +277,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
             _startTimeSeconds = null;
         }
 
-        string durInput = AnsiConsole.Ask<string>($"Dauer eingeben [aktuell: {(_durationSeconds.HasValue ? _durationSeconds.Value.ToString() : "Gesamtes restliches Video")}]:", "");
+        string durInput = Ui.Ask<string>($"Dauer eingeben [aktuell: {(_durationSeconds.HasValue ? _durationSeconds.Value.ToString() : "Gesamtes restliches Video")}]:", "");
 
         double? durSec = ParseTimeInput(durInput);
         if (durSec.HasValue) {
@@ -262,11 +292,11 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     }
 
     private void ConfigureSplitting() {
-        int parts = AnsiConsole.Ask<int>($"In wie viele Teile soll das Video aufgeteilt werden? (1 = kein Splitting) [aktuell: {_splitParts}]:", _splitParts);
+        int parts = Ui.Ask<int>($"In wie viele Teile soll das Video aufgeteilt werden? (1 = kein Splitting) [aktuell: {_splitParts}]:", _splitParts);
         if (parts >= 1) {
             _splitParts = parts;
             if (_splitParts > 1) {
-                double overlap = AnsiConsole.Ask<double>($"Überlappungszeit in Sekunden eingeben [aktuell: {_overlapSeconds}s]:", _overlapSeconds);
+                double overlap = Ui.Ask<double>($"Überlappungszeit in Sekunden eingeben [aktuell: {_overlapSeconds}s]:", _overlapSeconds);
                 if (overlap >= 0) {
                     _overlapSeconds = overlap;
                 }
@@ -281,10 +311,10 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         Ui.Detail("Tipp: Verwende {0} als Platzhalter für die Input-Datei und {1} für die Output-Datei.");
         Ui.Detail("Beispiel: -i \"{0}\" -vcodec libx264 -preset fast -crf 28 \"{1}\"");
         
-        string template = AnsiConsole.Ask<string>("Eigenen Befehl eingeben:");
+        string template = Ui.Ask("Eigenen Befehl eingeben:");
         if (!string.IsNullOrWhiteSpace(template)) {
             _customCommandTemplate = template;
-            string ext = AnsiConsole.Ask<string>("Ausgabe-Dateiendung eingeben [Standard: .mp4]:", ".mp4");
+            string ext = Ui.Ask<string>("Ausgabe-Dateiendung eingeben [Standard: .mp4]:", ".mp4");
             if (!ext.StartsWith(".")) ext = "." + ext;
             _customOutputExtension = ext;
             

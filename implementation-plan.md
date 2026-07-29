@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–10 complete.** The Spectre.Console migration is finished — `Console.Write` in `src/` went from 624 call sites to **4** (input prompts in `YouTubeTaskPrompt` that pair with `ReadLine`, which belong with F2). `docs/ui-strings.baseline.txt` regenerated, drift **0**. **Phase 11 substantially advanced:** `LatexRefinementSession.cs` 1603 → 520 (+ `.Pdf.cs` 617, `.Generation.cs` 383) and `AiStudioAutoExtractionSession.cs` 1323 → 755 (+ `.Generation.cs` 305, `.PrefixCache.cs` 181), plus `YouTubeTaskRunner`, `DebugRoundtripRunner` and `SystemInstructionTextBuilder` extracted as real types. Nothing on the AI Studio path exceeds 760 lines. · **Pick up next: F2 (`__EXIT__`, 13 sites), then `RefinementOptions` for the 4 telescoping constructors, then `VertexAutoExtractionSession` (~1690 lines, untouched).** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
+**Status:** **Phases 0–10 complete.** The Spectre.Console migration is finished — `Console.Write` in `src/` went from 624 call sites to **4** (input prompts in `YouTubeTaskPrompt` that pair with `ReadLine`, which belong with F2). `docs/ui-strings.baseline.txt` regenerated, drift **0**. **Phase 11 substantially advanced:** `LatexRefinementSession.cs` 1603 → 520 (+ `.Pdf.cs` 617, `.Generation.cs` 383) and `AiStudioAutoExtractionSession.cs` 1323 → 755 (+ `.Generation.cs` 305, `.PrefixCache.cs` 181), plus `YouTubeTaskRunner`, `DebugRoundtripRunner` and `SystemInstructionTextBuilder` extracted as real types. Nothing on the AI Studio path exceeds 760 lines. **F2 + F11 done (2026-07-29): both sentinels retired, `PromptResult<T>` introduced, "Zurück" available in every menu; 128 tests green, UI-string baseline regenerated to 483 entries with prompts now tracked.** · **Pick up next: `RefinementOptions` for the 4 telescoping constructors, then `VertexAutoExtractionSession` (~1250 lines, untouched).** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -10,7 +10,7 @@ Independent review of the Phase 8 / 8.5 / 9 work. The build was 0/0 and the
 suite green throughout, so none of these were compile or test failures — they
 are behavioural gaps the tests did not cover.
 
-**Status: F1, F3, F4, F5, F6, F7 closed. F2 still open (untouched) — it is the one remaining Phase 10 item.**
+**Status: F1–F8 and F11, F12 closed. F9 and F10 remain open (both are reporting/measurement questions on the paid path, not code defects).**
 
 **F4 reopened (2026-07-29):** the baseline was regenerated to 0 drift before the
 Spectre work, then the migration changed nearly every call site without
@@ -39,18 +39,17 @@ generations rather than during one.
 
 **Status:** **FIXED**. `ModelSelection.SelectOrAdd(name)` implemented in [ModelSelection.cs](src/Configuration/ModelSelection.cs), and `Current` property setter delegates to `SelectOrAdd`. New model names are appended to `Available[]` without overwriting existing entries. Covered by unit test `ModelSelection_SelectOrAdd_AppendsNewModel_WithoutOverwritingExisting` in [ConfigBindingTests.cs](tests/LectureExtraction.Tests/ConfigBindingTests.cs).
 
-### F2 · `__EXIT__` is more entrenched than backlog item 4 assumed · **open**
+### F2 · `__EXIT__` is more entrenched than backlog item 4 assumed · **RESOLVED (2026-07-29)**
 
-Measured: **13 occurrences across 4 files**, plus a second sentinel
-`__CHANGED_KEY__` ([DirectAiChatSessionAiStudio.cs:708](src/Chat/DirectAiChatSessionAiStudio.cs:708)).
-It is not only the model prompt — it is also the system-prompt choice, the
-initial input, and the history choice in both chat sessions, and it is returned
-from [ConfigurationPrompts.cs:158](src/ConsoleUi/ConfigurationPrompts.cs:158) and
-[:261](src/ConsoleUi/ConfigurationPrompts.cs:261). Backlog item 4 described it as
-one return value from `ConfirmOrChangeModel`; it is really a project-wide
-convention for "user typed exit". Phase 10's `SelectionPrompt` migration should
-replace it with a nullable return or a small result type, in one pass across all
-13 sites rather than piecemeal.
+Was: **13 occurrences across 4 files**, plus a second sentinel `__CHANGED_KEY__`.
+Not only the model prompt — also the system-prompt choice, the initial input and
+the history choice in both chat sessions: a project-wide convention for "user
+typed exit".
+
+**Fixed together with F11 in one pass**, as that finding argued it had to be.
+Both sentinels are gone from `src/` (grep returns nothing); every prompt now
+returns `PromptResult<T>` and every caller switches on `PromptOutcome`. See F11
+for the shape and the scope.
 
 ### F3 · `_playbackSpeedMultiplier` is NOT dead — it is a stranded feature · **RESOLVED (2026-07-28)**
 
@@ -75,7 +74,59 @@ was finished and committed, making the diff one known change rather than a
 mixture. From here the normal rule applies again — read the diff, confirm every
 change was intended, regenerate in the same commit.
 
-### F11 · A "back" option is the same job as F2 — do them together · **open**
+### F11 · A "back" option is the same job as F2 — do them together · **RESOLVED (2026-07-29)**
+
+**Done exactly as this finding specified: one pass, one result type, both
+sentinels retired.** Build 0/0, **128 tests green** (12 new), UI-string drift 0
+against a deliberately regenerated baseline.
+
+What landed:
+
+* `src/ConsoleUi/PromptResult.cs` — `PromptResult<T>(PromptOutcome, T?)` with
+  `PromptOutcome { Value, Back, Exit, Restart }`. `Restart` is the former
+  `__CHANGED_KEY__`, folded in as the finding asked: the API-key profile changed,
+  so the flow must start over rather than continue on a stale client.
+* `Ui.Select<T>` — the single menu primitive, over a `(Label, Value)` pair type
+  rather than over `string`. That removes the whole `selection.StartsWith("2)")`
+  family of label-parsing (every menu did this), makes labels non-unique-safe,
+  and puts `Markup.Escape` in exactly one place. Plus `Ui.ConfirmOrBack`,
+  `Ui.Ask`/`Ui.Ask<T>`.
+* `src/ConsoleUi/SetupQuestionPrompt.cs` — the chat sessions' setup questions,
+  which were typed `(j/n)` prompts whose `exit` and `change-key N` answers were
+  advertised nowhere. Now visible menu entries.
+* Multi-step flows became explicit step machines, so back means "the previous
+  step" rather than "somewhere": extraction setup (backend → folder → model →
+  key profile), both chat setups (model → system prompt → history), refinement
+  (options → folder → step → .tex → audio → scope), FFmpeg (source → target →
+  files), the two extraction mode menus, and `VideoBatchSelector`.
+* Side effects moved behind the last setup step in both chat sessions — backing
+  out no longer leaves an empty session log folder behind.
+
+Two things the finding did not predict:
+
+* **`ConfigurationPrompts.ConfirmOrChangeModel` never actually returned
+  `__EXIT__`.** Four of the 13 sites were checks against a value that could not
+  arrive — dead branches that looked like working exit handling. This is the
+  silent-fall-through failure mode the finding warned about, already present.
+* **The FFmpeg dashboard's numeric prompts crash.** See F12.
+
+### F12 · Free-text prompts pass unescaped `[...]` to Spectre · **FIXED (2026-07-29)**
+
+Found while routing prompts through `Ui`. Nine `AnsiConsole.Ask` call sites ask
+questions ending in `[aktuell: 1.2x]`, `[Standard: .mp4]` — Spectre parses the
+prompt as markup, so `aktuell:` is read as a style name and throws. Every
+settings entry in the FFmpeg dashboard (speed, FPS, range, splitting, custom
+command) hit this, as did Vertex's context-cache duration prompts. Same class as
+the invalid `text-primary` style fixed in `dbf54f0`, and the same lesson: any
+string reaching Spectre needs `Markup.Escape`, which is now only possible
+centrally via `Ui.Ask`.
+
+Note this was invisible to the UI-string baseline, because
+`dump-ui-strings.sh` only tracked output helpers, not prompts. It now also
+tracks `Ui.Header/Confirm/ConfirmOrBack/Select/Ask` and `SetupQuestionPrompt.Ask`
+— which is why the inventory went 444 → 483 in the same commit.
+
+### F11 (original text, for the record)
 
 User asked (2026-07-29) for a back button in the menus. It is not a UI addition:
 every prompt's caller has to distinguish "user chose a value" from "user wants to
@@ -236,6 +287,17 @@ believing, not what an intermediate artefact looks like. Concretely — bind the
 config and assert the property, do not assert the JSON key. This matters more
 here than usual, because `Microsoft.Extensions.Configuration` **silently ignores
 keys it cannot match**, so every structural mismatch fails quietly.
+
+### Console tests must share one xUnit collection
+
+Learned on 2026-07-29 while adding the `PromptResult` tests. `AnsiConsole.Console`
+is a **global static**, and xUnit runs test *classes* in parallel — so a second
+class installing its own `TestConsole` intermittently steals the first one's
+queued keystrokes. The suite passed, then failed 1/128, then passed again, with
+no code change in between. Both classes now carry
+`[Collection(ConsoleTestCollection.Name)]`; any new class that touches
+`AnsiConsole.Console` must join it. A green run is not evidence here either —
+run it five times.
 
 ### And the pattern that unlocked Phase 11
 

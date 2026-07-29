@@ -1,7 +1,6 @@
 using System;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
-using Spectre.Console;
 
 namespace LectureExtraction.App;
 
@@ -24,39 +23,37 @@ public static class SourceFolderMenu {
             string choice2 = $"2) Google Cloud Vertex AI Auto-Extraktion: {vertexConfig.SourceFolder}";
             string choice3 = $"3) FFmpeg Converter: {ffmpegConfig.SourceFolder}";
             string choice4 = $"4) LaTeX Refinement Session Source: {(string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder)}";
-            string choiceExit = "5) 🚪 Zurück zum Hauptmenü";
+            var selection = Ui.Select(
+                "Welchen Quellordner möchten Sie ansehen / ändern?",
+                [choice1, choice2, choice3, choice4],
+                backLabel: "🚪 Zurück zum Hauptmenü");
 
-            var selection = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold]Welchen Quellordner möchten Sie ansehen / ändern?[/]")
-                    .AddChoices(choice1, choice2, choice3, choice4, choiceExit));
+            if (!selection.IsValue) break;
 
-            if (selection == choiceExit) break;
-
-            if (selection == choice1) {
+            if (selection.Value == choice1) {
                 aiStudioConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(aiStudioConfig.SourceFolder, newFolder => {
                     aiStudioConfig.SourceFolder = newFolder;
                     ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
-                }, aiStudioConfig.PredefinedSourceFolders);
+                }, aiStudioConfig.PredefinedSourceFolders).Or(aiStudioConfig.SourceFolder);
             }
-            else if (selection == choice2) {
+            else if (selection.Value == choice2) {
                 vertexConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(vertexConfig.SourceFolder, newFolder => {
                     vertexConfig.SourceFolder = newFolder;
                     ConfigLoader<VertexAutoExtractionConfig>.Save(vertexConfig);
-                }, vertexConfig.PredefinedSourceFolders);
+                }, vertexConfig.PredefinedSourceFolders).Or(vertexConfig.SourceFolder);
             }
-            else if (selection == choice3) {
+            else if (selection.Value == choice3) {
                 ffmpegConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(ffmpegConfig.SourceFolder, newFolder => {
                     ffmpegConfig.SourceFolder = newFolder;
                     ConfigLoader<FfmpegSessionConfig>.Save(ffmpegConfig);
-                });
+                }).Or(ffmpegConfig.SourceFolder);
             }
-            else if (selection == choice4) {
+            else if (selection.Value == choice4) {
                 string currentLatexSource = string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder;
                 latexConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(currentLatexSource, newFolder => {
                     latexConfig.SourceFolder = newFolder;
                     ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
-                });
+                }).Or(currentLatexSource);
             }
         }
     }

@@ -72,55 +72,83 @@ public class DirectAiChatSessionVertex {
     /// [Human] Startet die Vertex-Session, verbindet sich mit Google Cloud und stellt sicher, dass der GCS Bucket für Datei-Uploads komplett leer ist.
     /// </summary>
     public async Task StartAsync() {
+        // [AI Context] Three-step setup machine, mirroring the AI Studio session: every prompt can
+        // offer "back" because each step knows its predecessor. The bucket purge and the session log
+        // folder happen after the last step, so abandoning the setup costs nothing.
+        // [Human] Setup als Schrittkette, damit jede Frage ein "Zurück" anbieten kann.
+        int step = 0;
+        bool loadedSysPrompt = false;
+        string? initialInput = null;
+
         while (true) {
-            string selectedModel = ConfigurationPrompts.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
-                int idx = Array.IndexOf(_config.Model, newModel);
-                if (idx >= 0) _config.CurrentModelIndex = idx;
-                _config.CurrentModel = newModel;
-                ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
-            });
-            if (selectedModel == "__EXIT__") return;
-            _activeModel = selectedModel;
-
-            WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
-
-            // ALWAYS clean up the bucket completely before starting a session (crash recovery)
-            await ForcePurgeGcsBucketAsync();
-
-            _sessionLogger.InitializeSession();
-
-            bool loadedSysPrompt = false;
-            if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
-                WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
-                FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
-            }
-            string sysPromptChoice = PromptWithCommands("[Setup] System Instruction laden? (j/n): ");
-            if (sysPromptChoice == "__EXIT__") return;
-
-            if (sysPromptChoice.IsAffirmativeResponse(defaultIfEmpty: true)) {
-                if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
-                    _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-                    WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
-                    loadedSysPrompt = true;
+            switch (step) {
+                case 0: {
+                    var model = ConfigurationPrompts.ConfirmOrChangeModel(_config.CurrentModel, "Vertex AI", _config.Model, newModel => {
+                        int idx = Array.IndexOf(_config.Model, newModel);
+                        if (idx >= 0) _config.CurrentModelIndex = idx;
+                        _config.CurrentModel = newModel;
+                        ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
+                    });
+                    if (!model.IsValue) return; // Back at the first step leaves the session
+                    _activeModel = model.Value!;
+                    step = 1;
+                    break;
                 }
-                else {
-                    WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+
+                case 1: {
+                    if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
+                        WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
+                        FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
+                    }
+
+                    var answer = SetupQuestionPrompt.Ask("[Setup] System Instruction laden?");
+                    if (answer.IsBack) { step = 0; break; }
+                    if (!answer.IsValue) return;
+
+                    loadedSysPrompt = false;
+                    _systemInstructionText = null;
+
+                    if (answer.Value) {
+                        if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+                            _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+                            WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                            loadedSysPrompt = true;
+                        }
+                        else {
+                            WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+                        }
+                    }
+                    else {
+                        WriteLine("  [INFO] System Instruction wird ignoriert.");
+                    }
+
+                    step = 2;
+                    break;
+                }
+
+                case 2: {
+                    var history = GetInitialHistoryCommand(_activeModel);
+                    if (history.IsBack) { step = 1; break; }
+                    if (!history.IsValue) return;
+                    initialInput = history.Value;
+                    step = 3;
+                    break;
+                }
+
+                default: {
+                    WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
+
+                    // ALWAYS clean up the bucket completely before starting a session (crash recovery)
+                    await ForcePurgeGcsBucketAsync();
+
+                    _sessionLogger.InitializeSession();
+                    _sessionLogger.SetSessionMetadata(loadedSysPrompt, initialInput != null);
+                    await _sessionLogger.LogSessionSetupAsync();
+
+                    await RunChatSessionAsync(initialInput);
+                    return;
                 }
             }
-            else {
-                WriteLine("  [INFO] System Instruction wird ignoriert.");
-            }
-
-            string? initialInput = GetInitialHistoryCommand(_activeModel);
-            if (initialInput == "__EXIT__") return;
-
-            bool loadedHistory = initialInput != null;
-
-            _sessionLogger.SetSessionMetadata(loadedSysPrompt, loadedHistory);
-            await _sessionLogger.LogSessionSetupAsync();
-
-            await RunChatSessionAsync(initialInput);
-            break; // Session beendet, zurück zu Program.cs
         }
     }
 
@@ -199,24 +227,6 @@ public class DirectAiChatSessionVertex {
 
         // ALWAYS clean up the bucket at the end of the session to save costs.
         await ForcePurgeGcsBucketAsync();
-    }
-
-    private static string PromptWithCommands(string promptMessage) {
-        while (true) {
-            Write(promptMessage);
-            string? input = ReadLine()?.Trim();
-            if (string.IsNullOrWhiteSpace(input)) continue;
-
-            string normalizedInput = input.TrimStart('/');
-            if (normalizedInput.Equals("exit", StringComparison.OrdinalIgnoreCase) || normalizedInput.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
-                return "__EXIT__";
-            }
-
-            // Placeholder for future setup-time commands in Vertex mode
-            // if (input.StartsWith("some-vertex-command")) { ...; continue; }
-
-            return input; // Return the non-command input
-        }
     }
 
     private static void WriteCommandHelp() {
@@ -538,9 +548,9 @@ public class DirectAiChatSessionVertex {
     /// [AI Context] Scans history directories to automatically append context to the beginning of the chat session.
     /// [Human] Sucht nach alten Chat-Verläufen, um sie gleich beim Start als Erinnerung für das Modell hochzuladen.
     /// </summary>
-    private string? GetInitialHistoryCommand(string selectedModel) {
+    private PromptResult<string?> GetInitialHistoryCommand(string selectedModel) {
         if (HistoryPreloadPaths == null || HistoryPreloadPaths.Length == 0) {
-            return null;
+            return PromptResult.FromValue<string?>(null);
         }
 
         var allHistoryFiles = new List<string>();
@@ -572,20 +582,18 @@ public class DirectAiChatSessionVertex {
             distinctFiles = [.. distinctFiles.Where(f => !string.Equals(f, Path.GetFullPath(SystemInstructionPath), StringComparison.OrdinalIgnoreCase))];
         }
 
-        if (distinctFiles.Count == 0) return null;
+        if (distinctFiles.Count == 0) return PromptResult.FromValue<string?>(null);
 
         WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
         FileTreeRenderer.PrintFileTree(distinctFiles);
 
-        string historyChoice = PromptWithCommands("Sollen diese Dateien als History geladen werden? (j/n): ");
-        if (historyChoice == "__EXIT__") return historyChoice;
+        var answer = SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?");
+        if (!answer.IsValue) return new PromptResult<string?>(answer.Outcome, null);
 
-        bool loadHistory = historyChoice.IsAffirmativeResponse(defaultIfEmpty: true);
-
-        if (!loadHistory) return null;
+        if (!answer.Value) return PromptResult.FromValue<string?>(null);
 
         string fileList = string.Join(", ", distinctFiles.Select(p => $"\"{p}\""));
-        return $"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}";
+        return PromptResult.FromValue<string?>($"attach {fileList} | {string.Format(InitialHistoryPrompt, selectedModel)}");
     }
 
     /// <summary>

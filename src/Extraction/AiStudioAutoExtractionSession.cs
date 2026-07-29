@@ -111,36 +111,44 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        string choice = Spectre.Console.AnsiConsole.Prompt(
-            new Spectre.Console.SelectionPrompt<string> {
-                Title = "[bold]Modus auswählen:[/]"
-            }.AddChoices(
-                "1) 🚀 Alle Videos im Quellordner konvertieren (Standard)",
-                "2) 🎬 Einzelnes Video auswählen und konvertieren",
-                "3) 📺 YouTube-Video transkribieren",
-                "4) 🚪 Abbrechen / Zurück"
-            ));
+        // The mode menu loops: every branch below can be backed out of, and landing here again is
+        // what "back" from the branch means. Only "Zurück" leaves the session.
+        while (true) {
+            var choice = Ui.Select("Modus auswählen:", [
+                ("1) 🚀 Alle Videos im Quellordner konvertieren (Standard)", ExtractionMode.AllVideos),
+                ("2) 🎬 Einzelnes Video auswählen und konvertieren", ExtractionMode.SingleVideo),
+                ("3) 📺 YouTube-Video transkribieren", ExtractionMode.YouTube)
+            ], backLabel: "4) 🚪 Abbrechen / Zurück");
 
-        if (choice.StartsWith("4") || choice.Equals("exit", StringComparison.OrdinalIgnoreCase) || choice.Equals("quit", StringComparison.OrdinalIgnoreCase)) {
-            return;
-        }
+            if (!choice.IsValue) return;
 
-        if (choice.StartsWith("2")) {
-            var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
-            if (files.Length > 0) {
-                await SetupContextAndProcessAsync(files);
-            }
-        }
-        else if (choice.StartsWith("3")) {
-            await new YouTubeTaskRunner(_config, this).RunAsync();
-        }
-        else {
-            var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
-            if (files.Length > 0) {
-                await SetupContextAndProcessAsync(files);
+            switch (choice.Value) {
+                case ExtractionMode.SingleVideo: {
+                    var files = FileSelectionPrompt.SelectSingleFile(_config.SourceFolder);
+                    if (files.Length > 0) {
+                        await SetupContextAndProcessAsync(files);
+                        return;
+                    }
+                    break;
+                }
+
+                case ExtractionMode.YouTube:
+                    await new YouTubeTaskRunner(_config, this).RunAsync();
+                    return;
+
+                default: {
+                    var files = VideoBatchSelector.SelectAndFilterVideosForBatch(_config.SourceFolder);
+                    if (files.Length > 0) {
+                        await SetupContextAndProcessAsync(files);
+                        return;
+                    }
+                    break;
+                }
             }
         }
     }
+
+    private enum ExtractionMode { AllVideos, SingleVideo, YouTube }
 
     /// <summary>
     /// [AI Context] Core initialization routine before batch processing. Loads system instructions and pre-warms the model context with attachments.

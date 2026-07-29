@@ -6,6 +6,7 @@ using Xunit;
 
 namespace LectureExtraction.Tests;
 
+[Collection(ConsoleTestCollection.Name)]
 public class UiTests {
     [Theory]
     [InlineData(@"\section[short]{long}")]

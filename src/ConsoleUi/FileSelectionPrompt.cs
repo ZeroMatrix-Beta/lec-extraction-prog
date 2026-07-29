@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using LectureExtraction.Extraction;
-using Spectre.Console;
 
 namespace LectureExtraction.ConsoleUi;
 
@@ -19,24 +18,14 @@ public static class FileSelectionPrompt {
         var choices = inputFiles.Select(f => {
             string ext = Path.GetExtension(f).ToLowerInvariant();
             string icon = DirectoryTreeRenderer.GetFileIcon(ext);
-            return $"{icon} {Path.GetFileName(f)}";
-        }).ToArray();
+            return ($"{icon} {Path.GetFileName(f)}", f);
+        });
 
-        string selectedChoice = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title("[bold cyan]Verfügbare Dateien im Quellordner:[/]")
-                .PageSize(15)
-                .AddChoices(choices)
-        );
+        var selection = Ui.Select("Verfügbare Dateien im Quellordner:", choices, pageSize: 15);
+        if (!selection.IsValue) return [];
 
-        int idx = Array.IndexOf(choices, selectedChoice);
-        if (idx >= 0) {
-            Ui.Success($"Ausgewähltes Ziel: {Path.GetFileName(inputFiles[idx])}");
-            return [inputFiles[idx]];
-        }
-
-        Ui.Error("Invalid selection.");
-        return [];
+        Ui.Success($"Ausgewähltes Ziel: {Path.GetFileName(selection.Value!)}");
+        return [selection.Value!];
     }
 
     public static string[] SelectBatchFiles(string sourceFolder) {
@@ -69,29 +58,21 @@ public static class FileSelectionPrompt {
 
             Array.Sort(subDirs, StringComparer.OrdinalIgnoreCase);
 
-            var options = new List<string> {
-                "[Diesen Ordner auswählen]",
-                "[..] Einen Ordner nach oben"
+            var options = new List<(string Label, string? Value)> {
+                ("[Diesen Ordner auswählen]", currentPath),
+                ("[..] Einen Ordner nach oben", null)
             };
 
             foreach (var sd in subDirs) {
-                string name = Path.GetFileName(sd);
-                string cleaned = FileTreeRenderer.CleanCopySuffix(name);
-                options.Add($"📁 {cleaned}/");
+                string cleaned = FileTreeRenderer.CleanCopySuffix(Path.GetFileName(sd));
+                options.Add(($"📁 {cleaned}/", sd));
             }
 
-            string choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold cyan]Wähle eine Option oder einen Unterordner:[/]")
-                    .PageSize(15)
-                    .AddChoices(options)
-            );
+            // No back entry: ".." *is* the back navigation here, and "Diesen Ordner auswählen"
+            // with the unchanged starting folder is the way out without changing anything.
+            var choice = Ui.Select("Wähle eine Option oder einen Unterordner:", options, allowBack: false, pageSize: 15);
 
-            if (choice == "[Diesen Ordner auswählen]") {
-                return currentPath;
-            }
-
-            if (choice == "[..] Einen Ordner nach oben") {
+            if (choice.Value == null) {
                 var parent = Directory.GetParent(currentPath);
                 if (parent != null) {
                     currentPath = parent.FullName;
@@ -102,10 +83,12 @@ public static class FileSelectionPrompt {
                 continue;
             }
 
-            string selectedFolderCleaned = choice.Replace("📁 ", "").TrimEnd('/');
-            string? matchedSubDir = subDirs.FirstOrDefault(sd => FileTreeRenderer.CleanCopySuffix(Path.GetFileName(sd)) == selectedFolderCleaned || Path.GetFileName(sd) == selectedFolderCleaned);
-            if (matchedSubDir != null && Directory.Exists(matchedSubDir)) {
-                currentPath = matchedSubDir;
+            if (choice.Value == currentPath) {
+                return currentPath;
+            }
+
+            if (Directory.Exists(choice.Value)) {
+                currentPath = choice.Value;
             }
         }
     }

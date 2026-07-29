@@ -1,7 +1,6 @@
 using System;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
-using Spectre.Console;
 
 namespace LectureExtraction.App;
 
@@ -27,16 +26,14 @@ public static class ApiKeyProfileMenu {
             string choice1 = $"1) Google AI Studio Auto-Extraktion: {autoExtProfileLabel}";
             string choice2 = $"2) Direct AI Studio Chat:          {chatProfileLabel}";
             string choice3 = $"3) LaTeX Refinement Session:       {latexProfileLabel}";
-            string choiceExit = "4) 🚪 Zurück zum Hauptmenü";
+            var selection = Ui.Select(
+                "Welches API-Key Profil möchten Sie ansehen / ändern?",
+                [choice1, choice2, choice3],
+                backLabel: "🚪 Zurück zum Hauptmenü");
 
-            var selection = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("[bold]Welches API-Key Profil möchten Sie ansehen / ändern?[/]")
-                    .AddChoices(choice1, choice2, choice3, choiceExit));
+            if (!selection.IsValue) break;
 
-            if (selection == choiceExit) break;
-
-            if (selection == choice1) {
+            if (selection.Value == choice1) {
                 aiStudioConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                     aiStudioConfig.ActiveApiProfile,
                     "AI Studio Auto-Extraktion",
@@ -45,9 +42,9 @@ public static class ApiKeyProfileMenu {
                         ConfigLoader<AiStudioAutoExtractionConfig>.Save(aiStudioConfig);
                     },
                     aiStudioConfig.AiStudioApiKeyEnvNames
-                );
+                ).Or(aiStudioConfig.ActiveApiProfile);
             }
-            else if (selection == choice2) {
+            else if (selection.Value == choice2) {
                 chatConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                     chatConfig.ActiveApiProfile,
                     "Direct AI Studio Chat",
@@ -56,9 +53,9 @@ public static class ApiKeyProfileMenu {
                         ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(chatConfig);
                     },
                     chatConfig.AiStudioApiKeyEnvNames
-                );
+                ).Or(chatConfig.ActiveApiProfile);
             }
-            else if (selection == choice3) {
+            else if (selection.Value == choice3) {
                 latexConfig.AiStudioActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(
                     latexConfig.AiStudioActiveApiProfile,
                     "LaTeX Refinement Session",
@@ -67,7 +64,7 @@ public static class ApiKeyProfileMenu {
                         ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
                     },
                     latexConfig.AiStudioApiKeyEnvNames
-                );
+                ).Or(latexConfig.AiStudioActiveApiProfile);
             }
         }
     }

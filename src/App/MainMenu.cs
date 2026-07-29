@@ -1,8 +1,7 @@
-using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
-using Spectre.Console;
 
 namespace LectureExtraction.App;
 
@@ -35,32 +34,25 @@ public static class MainMenu {
             string choice5 = "5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)";
             string choice6 = "6) ⚙️ Quellordner (Source Folders) verwalten & ändern";
             string choice7 = "7) 🔑 API-Key Profile (AI Studio & Refinement) verwalten & ändern";
-            string choiceExit = "8) 🚪 Beenden";
-
-            var prompt = new SelectionPrompt<string>()
-                .Title("[bold]Bitte gewünschten Modus auswählen:[/]")
-                .PageSize(10);
-
-            prompt.AddChoice(choice1);
+            var choices = new List<string> { choice1 };
             if (AppConfig.IsVertexAiEnabled) {
-                prompt.AddChoice(choice2);
+                choices.Add(choice2);
             }
-            prompt.AddChoice(choice3);
-            prompt.AddChoice(choice4);
-            prompt.AddChoice(choice5);
-            prompt.AddChoice(choice6);
-            prompt.AddChoice(choice7);
-            prompt.AddChoice(choiceExit);
+            choices.AddRange([choice3, choice4, choice5, choice6, choice7]);
 
             if (!AppConfig.IsVertexAiEnabled) {
                 Ui.Detail("  " + choice2);
             }
 
-            var selection = AnsiConsole.Prompt(prompt);
+            // The main menu is the root of the navigation, so its "back" is leaving the program.
+            var result = Ui.Select("Bitte gewünschten Modus auswählen:", choices,
+                backLabel: "8) 🚪 Beenden", pageSize: 10);
 
-            if (selection == choiceExit) {
+            if (!result.IsValue) {
                 break;
             }
+
+            string selection = result.Value!;
 
             if (selection == choice1) {
                 await SessionFactory.RunDirectAiStudioChatAsync();
