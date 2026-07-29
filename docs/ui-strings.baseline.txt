@@ -497,7 +497,7 @@ Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
 Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
 Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
 Write($"\n{userName}: ");
-Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
+Write(chunkText);
 WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
 WriteLine("  Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
 WriteLine("  Bitte prüfe deine Internetverbindung.");
@@ -540,7 +540,7 @@ WriteLine($"   - {loc}");
 WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
 WriteLine($"  - {path}");
 WriteLine($"  ----------------------\n");
-WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+WriteLine($"  Suchanfragen: {string.Join(", ", grounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
 WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
 WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
 WriteLine($"  [AI Studio] Upload-Dauer: {stopwatch.Elapsed.Minutes} Minuten und {stopwatch.Elapsed.Seconds} Sekunden.");

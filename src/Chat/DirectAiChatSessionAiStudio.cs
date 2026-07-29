@@ -58,9 +58,8 @@ public partial class DirectAiChatSessionAiStudio {
     private readonly SessionLogger _sessionLogger;
     private Client _client;
     private int _activeApiProfile;
-    private int _sessionTotalInputTokens = 0;
-    private int _sessionTotalOutputTokens = 0;
-    private int _sessionTotalCachedTokens = 0;
+    // Owns the running session token totals; they were read nowhere else.
+    private readonly ResponseStreamPrinter _streamPrinter = new();
     private string _activeModel = "";
 
     // [AI Context] Constructor injects config dependencies to isolate state.
@@ -461,7 +460,8 @@ public partial class DirectAiChatSessionAiStudio {
         Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
 
         var (config, apiContents) = BuildChatRequestConfig(selectedModel, history);
-        var (fullResponse, inputTokens, outputTokens, cachedTokens) = await StreamChatTurnAsync(selectedModel, apiContents, config);
+        var (fullResponse, inputTokens, outputTokens, cachedTokens) =
+            await _streamPrinter.StreamAsync(_client, selectedModel, apiContents, config, WaitForQuotaWindowAsync);
 
         // 7. KI-Antwort in die Historie aufnehmen
         if (!string.IsNullOrWhiteSpace(fullResponse)) {
@@ -539,117 +539,21 @@ public partial class DirectAiChatSessionAiStudio {
     }
 
     /// <summary>
-    /// [AI Context] Streams one chat turn: rate-limit guardrail, retry-wrapped streaming call with a
-    /// background key-press interceptor (so accidental keystrokes don't abort generation), grounding
-    /// source printing, and session token-total bookkeeping.
-    /// [Human] Streamt eine Chat-Antwort, inkl. Rate-Limit-Schutz, Tastatur-Interceptor und Token-Reporting.
+    /// [AI Context] Rate-Limit &amp; Quota Guardrail: Always wait 130s before every
+    /// GenerateContentStreamAsync request to Google AI Studio. HasJustUploaded is intentionally NOT
+    /// checked here – the 130s in AttachmentUploader does not replace this per-request delay. Vertex
+    /// has no equivalent, which is why this stays at the call site rather than inside
+    /// <see cref="ResponseStreamPrinter"/>. Returns false when the user cancels the wait.
+    /// [Human] Wir warten VOR JEDEM AI-Studio-Request 130 Sekunden, egal ob gerade eine Datei
+    /// hochgeladen wurde oder nicht.
     /// </summary>
-    private async Task<(string FullResponse, int InputTokens, int OutputTokens, int CachedTokens)> StreamChatTurnAsync(string selectedModel, List<Content> apiContents, GenerateContentConfig config) {
-        string fullResponse = "";
-        int inputTokens = 0;
-        int outputTokens = 0;
-        int cachedTokens = 0;
-
-        bool exceptionCaught = false;
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
-            e.Cancel = true; // Verhindert das Beenden des Programms
-            try { cts.Cancel(); } catch { }
+    private static async Task<bool> WaitForQuotaWindowAsync() {
+        bool proceed = true;
+        if (!InteractiveDelay.IsInSmartDelay) {
+            proceed = await InteractiveDelay.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...");
         }
-        Console.CancelKeyPress += cancelHandler;
-
-        bool isGenerating = true;
-        var inputInterceptorTask = Task.Run(async () => {
-            while (isGenerating) {
-                if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
-                    while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                    WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
-                }
-                await Task.Delay(100);
-            }
-        });
-
-        GroundingMetadata? accumulatedGrounding = null;
-
-        try {
-            // [AI Context] Rate-Limit & Quota Guardrail: Always wait 130s before every GenerateContentStreamAsync request to Google AI Studio.
-            // HasJustUploaded is intentionally NOT checked here – the 130s in AttachmentUploader does not replace this per-request delay.
-            // [Human] Wir warten VOR JEDEM AI-Studio-Request 130 Sekunden, egal ob gerade eine Datei hochgeladen wurde oder nicht.
-            if (!InteractiveDelay.IsInSmartDelay) {
-                if (!await InteractiveDelay.SmartDelayAsync(130, "Warte 130 Sekunden vor API-Request an Google AI Studio (Token-Refill Schutz für Max-Token/Quota)...")) {
-                    exceptionCaught = true;
-                }
-            }
-            AttachmentUploader.HasJustUploaded = false;
-
-            if (!exceptionCaught) {
-                bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                    streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
-                    onChunkReceived: async (chunk) => {
-                        string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                        Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
-                        fullResponse += chunkText;
-
-                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
-                        if (metadata != null) {
-                            accumulatedGrounding = metadata;
-                        }
-
-                        if (chunk.UsageMetadata != null) {
-                            if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                            if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                        }
-                        await Task.CompletedTask;
-                    },
-                    cancellationToken: cts.Token,
-                    maxRetries: 5,
-                    retryContext: "Chat-Antwort"
-                );
-                if (!success) exceptionCaught = true;
-
-                if (!exceptionCaught && accumulatedGrounding != null) {
-                    WriteLine("\n\n🔍 [Google Search Grounding] Quellen:");
-                    if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
-                        WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
-                    }
-                    if (accumulatedGrounding.GroundingChunks != null) {
-                        int refIdx = 1;
-                        foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
-                            if (chunkRef.Web != null) {
-                                WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
-                                refIdx++;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
-            exceptionCaught = true;
-        }
-        finally {
-            isGenerating = false;
-            await inputInterceptorTask; // Warte kurz, bis der Input-Blocker sauber beendet ist
-            Console.CancelKeyPress -= cancelHandler;
-
-            if (inputTokens > 0 || outputTokens > 0) {
-                _sessionTotalInputTokens += inputTokens;
-                _sessionTotalOutputTokens += outputTokens;
-                _sessionTotalCachedTokens += cachedTokens;
-                WriteLine($"\n[Request Tokens]       Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {(Math.Max(0, inputTokens - cachedTokens)):N0} | Output: {outputTokens:N0} (inkl. Thinking Tokens)");
-                WriteLine($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
-            }
-
-            if (exceptionCaught || cts.IsCancellationRequested) {
-                WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
-            }
-            else {
-                WriteLine();
-            }
-        }
-
-        return (fullResponse, inputTokens, outputTokens, cachedTokens);
+        AttachmentUploader.HasJustUploaded = false;
+        return proceed;
     }
 
     /// <summary>

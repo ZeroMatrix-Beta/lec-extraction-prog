@@ -40,9 +40,8 @@ public class DirectAiChatSessionVertex {
     private readonly AttachmentUploader _attachmentHandler;
     private readonly SessionLogger _sessionLogger;
     private readonly Client _client;
-    private int _sessionTotalInputTokens = 0;
-    private int _sessionTotalOutputTokens = 0;
-    private int _sessionTotalCachedTokens = 0;
+    // Owns the running session token totals; they were read nowhere else.
+    private readonly ResponseStreamPrinter _streamPrinter = new();
     private string _activeModel = "";
 
     // [AI Context] Constructor receives injected dependencies. The 'client' here is strictly a Vertex-configured client (GoogleAiClientBuilder.BuildVertexClient).
@@ -391,12 +390,27 @@ public class DirectAiChatSessionVertex {
     /// </summary>
     private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
         Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
-        string fullResponse = "";
 
-        int inputTokens = 0;
-        int outputTokens = 0;
-        int cachedTokens = 0;
+        var (config, apiContents) = BuildChatRequestConfig(selectedModel, history);
+        var (fullResponse, inputTokens, outputTokens, cachedTokens) =
+            await _streamPrinter.StreamAsync(_client, selectedModel, apiContents, config);
 
+        if (!string.IsNullOrWhiteSpace(fullResponse)) {
+            history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
+            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens, cachedTokens);
+        }
+        else {
+            history.RemoveAt(history.Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Maps current dynamic AI params (temperature, thinking, grounding) and the system
+    /// instruction onto the request. Gemma models (pre-v4) don't support the 'system' role, so for
+    /// those the instruction is prepended into the first user message instead.
+    /// [Human] Baut die Anfrage-Konfiguration und den ggf. für Gemma angepassten History-Kontext.
+    /// </summary>
+    private (GenerateContentConfig Config, List<Content> ApiContents) BuildChatRequestConfig(string selectedModel, List<Content> history) {
         var config = new GenerateContentConfig {
             Temperature = AIParams.Temperature,
             TopP = AIParams.TopP,
@@ -453,100 +467,7 @@ public class DirectAiChatSessionVertex {
             }
         }
 
-        bool exceptionCaught = false;
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
-            e.Cancel = true; // Verhindert das harte Beenden
-            try { cts.Cancel(); } catch { }
-        }
-        Console.CancelKeyPress += cancelHandler;
-
-        bool isGenerating = true;
-        var inputInterceptorTask = Task.Run(async () => {
-            while (isGenerating) {
-                if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
-                    while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                    WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
-                }
-                await Task.Delay(100);
-            }
-        });
-
-        GroundingMetadata? accumulatedGrounding = null;
-
-        try {
-            bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                streamFactory: () => _client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
-                onChunkReceived: async (chunk) => {
-                    string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    Write(chunkText); // The variable chunkText is already updated from `chunk.Text ?? ...`, no change needed here.
-                    fullResponse += chunkText;
-
-                    var metadata = chunk.Candidates?[0]?.GroundingMetadata;
-                    if (metadata != null) {
-                        accumulatedGrounding = metadata;
-                    }
-
-                    if (chunk.UsageMetadata != null) {
-                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                    }
-                    await Task.CompletedTask;
-                },
-                cancellationToken: cts.Token,
-                maxRetries: 5,
-                retryContext: "Chat-Antwort"
-            );
-            if (!success) exceptionCaught = true;
-
-            if (accumulatedGrounding != null) {
-                WriteLine("\n\n🔍 [Google Search Grounding] Quellen:");
-                if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
-                    WriteLine($"  Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
-                }
-                if (accumulatedGrounding.GroundingChunks != null) {
-                    int refIdx = 1;
-                    foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
-                        if (chunkRef.Web != null) {
-                            WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
-                            refIdx++;
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled") || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
-            exceptionCaught = true;
-        }
-        finally {
-            isGenerating = false;
-            await inputInterceptorTask;
-            Console.CancelKeyPress -= cancelHandler;
-
-            if (inputTokens > 0 || outputTokens > 0) {
-                _sessionTotalInputTokens += inputTokens;
-                _sessionTotalOutputTokens += outputTokens;
-                _sessionTotalCachedTokens += cachedTokens;
-                WriteLine($"\n[Request Tokens]       Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {(Math.Max(0, inputTokens - cachedTokens)):N0} | Output: {outputTokens:N0} (inkl. Thinking Tokens)");
-                WriteLine($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
-            }
-
-            if (exceptionCaught || cts.IsCancellationRequested) {
-                WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
-            }
-            else {
-                WriteLine();
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(fullResponse)) {
-            history.Add(new Content { Role = "model", Parts = [new() { Text = fullResponse }] });
-            await _sessionLogger.LogChatAsync(input, promptText, selectedModel, fullResponse, userName, inputTokens, outputTokens, cachedTokens);
-        }
-        else {
-            history.RemoveAt(history.Count - 1);
-        }
+        return (config, apiContents);
     }
 
     /// <summary>
