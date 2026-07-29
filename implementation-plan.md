@@ -1963,7 +1963,7 @@ Phase 8.5a Delete the in-session debug REPL  ~small   ✅ done  (93827bb)
 Phase 9    Config consolidation + migrator   ~large   ✅ done
 Phase 10   Spectre.Console UI                ~large   ✅ done
 Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
-Phase 8.5b Rebuild the Direct chat sessions  ~large   ← THE ONLY REMAINING ITEM (except Phase 12)
+Phase 8.5b Rebuild the Direct chat sessions  ~large   ← IN PROGRESS, 2 of ~5 increments done
 Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
 ```
 
@@ -1981,6 +1981,42 @@ is freetext-only, so no menu exercises it and no smoke test would catch its loss
 chat) pair are genuinely different — free-tier guard, richer Vertex diagnostics
 including a billing-account branch, mixed EN/DE strings. A unified rewrite must
 consciously choose the merged behaviour rather than silently take one.
+
+#### 8.5b progress (2026-07-29) — done in increments, deliberately
+
+F8 in this document records a rewrite that outran its budget and left 60 compile
+errors. So this one lands in verifiable steps, each committed green.
+
+**Done:**
+
+1. **`ModelCapabilities.RequiresSystemInstructionInFirstUserTurn`** (`06be4b6`) —
+   the Gemma pre-v4 rule, extracted from both sessions and pinned. The plan's own
+   stated precondition.
+2. **`ChatCommandParser` + `ChatCommand`** (`e2b4d3a`) — the command surface,
+   parsed purely and pinned by 57 tests. Wired into the AI Studio session;
+   `HandleChangeKey` and its two regexes deleted.
+
+**Two defects this uncovered, both now fixed:**
+
+* **`set thinking-budget` and `set thinking-level` had never worked.** Each
+  handler sliced its argument at a hand-counted index — `[18..]` against a
+  20-character prefix, `[17..]` against a 19-character one — so the parsed value
+  was `"t 4096"` / `"l HIGH"` and both commands always took the error branch.
+  Unnoticeable by reading, because 18 looks as plausible as 20.
+* **The UI-string baseline never covered the chat sessions at all.** Both use
+  `using static System.Console` and call bare `WriteLine(...)`, which
+  `dump-ui-strings.sh` did not match — ~1400 lines of user-facing output with no
+  characterization harness, in exactly the files this phase rewrites. Fixed; the
+  inventory went 484 → 597, all additions.
+
+**Remaining increments, in order:**
+
+3. Wire the parser into `DirectAiChatSessionVertex` (same nine handlers, same two
+   broken offsets — verify before assuming they are identical).
+4. Extract response streaming (`StreamChatTurnAsync` / `StreamGeminiResponseAsync`)
+   into a shared `ResponseStreamPrinter`; both twins have it at ~178/164 lines.
+5. Decide the GCS-cleanup merge above, then collapse what is left of the two
+   sessions.
 
 Config before UI, because Phase 10's verbosity handling, `show config` command
 and menu tables all consume the new config shape — the other order means
