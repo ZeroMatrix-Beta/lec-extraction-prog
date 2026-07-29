@@ -11,7 +11,6 @@ using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
-using static System.Console;
 
 namespace LectureExtraction.Chat;
 
@@ -95,7 +94,8 @@ public class DirectAiChatSessionVertex {
 
                 case 1: {
                     if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
-                        WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
+                        Ui.Blank();
+                        Ui.Info("Folgende System Instruction ist konfiguriert:", "Setup");
                         FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
                     }
 
@@ -109,15 +109,15 @@ public class DirectAiChatSessionVertex {
                     if (answer.Value) {
                         if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
                             _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-                            WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                            Ui.Success($"System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
                             loadedSysPrompt = true;
                         }
                         else {
-                            WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+                            Ui.Warn($"System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
                         }
                     }
                     else {
-                        WriteLine("  [INFO] System Instruction wird ignoriert.");
+                        Ui.Info("System Instruction wird ignoriert.");
                     }
 
                     step = 2;
@@ -134,7 +134,8 @@ public class DirectAiChatSessionVertex {
                 }
 
                 default: {
-                    WriteLine("\n[System] Initiating Vertex AI Enterprise Session...");
+                    Ui.Blank();
+                    Ui.Info("Initiating Vertex AI Enterprise Session...", "System");
 
                     // ALWAYS clean up the bucket completely before starting a session (crash recovery)
                     await ForcePurgeGcsBucketAsync();
@@ -159,7 +160,7 @@ public class DirectAiChatSessionVertex {
         var initialHistory = new List<Content>(history);
         string userName = "Vertex AI User";
 
-        WriteLine($"\n--- Vertex Chat gestartet ({_activeModel}) ---");
+        Ui.Header($"Vertex Chat gestartet ({_activeModel})");
         WriteCommandHelp();
 
         while (true) {
@@ -173,13 +174,19 @@ public class DirectAiChatSessionVertex {
             try {
                 string? input;
                 if (initialInput != null) {
+                    // Echoed through Ui.Raw, not a markup helper: the generated command carries quoted
+                    // file paths and the history prompt's own "[AI-Model: ...]" and "[...]" literals.
                     input = initialInput;
-                    WriteLine($"\n{userName}: {input}");
+                    Ui.Blank();
+                    Ui.RawLine($"{userName}: {input}");
                     initialInput = null;
                 }
                 else {
-                    Write($"\n{userName}: ");
-                    input = ReadLine();
+                    // Deliberately a raw line rather than a Ui prompt - see the AI Studio session's
+                    // note: an empty line is a valid no-op here and a Spectre TextPrompt would reject it.
+                    Ui.Blank();
+                    Ui.Raw($"{userName}: ");
+                    input = Console.ReadLine();
                 }
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
@@ -204,10 +211,12 @@ public class DirectAiChatSessionVertex {
                     await StreamGeminiResponseAsync(_activeModel, history, input, promptText, userName);
                 }
                 catch (Exception ex) {
-                    WriteLine($"\n[Vertex Error]: {ex.Message}");
+                    Ui.Blank();
+                    Ui.Error($"{ex.Message}", "Vertex");
 
                     if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
-                        WriteLine($"\n[Vertex Info]: Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut!");
+                        Ui.Blank();
+                        Ui.Info("Google Cloud richtet gerade im Hintergrund die Zugriffsrechte (Service Agents) für deinen Bucket ein. Das passiert meistens nur beim allerersten Mal im Projekt. Bitte warte einfach 2-3 Minuten und versuche die Anfrage dann erneut!", "Vertex");
                     }
 
                     // Letzte Nachricht aus der History löschen, damit es bei erneuter Frage nicht zu Fehlerkaskaden kommt
@@ -221,24 +230,25 @@ public class DirectAiChatSessionVertex {
             }
         }
 
-        WriteLine("\n[INFO] Chat beendet. Räume GCS Bucket komplett auf...");
+        Ui.Blank();
+        Ui.Info("Chat beendet. Räume GCS Bucket komplett auf...");
 
         // ALWAYS clean up the bucket at the end of the session to save costs.
         await ForcePurgeGcsBucketAsync();
     }
 
     private static void WriteCommandHelp() {
-        WriteLine("\n📋 Befehle:");
-        WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
-        WriteLine("  🚪 exit / quit             -> Beendet den Chat");
-        WriteLine("  🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-        WriteLine("  📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
-        WriteLine("  🌡️  set temp [wert]         -> Ändert die Temperatur dynamisch");
-        WriteLine("  🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch");
-        WriteLine("  🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");
-        WriteLine("  🧠 set thinking-level [l]  -> Setzt das Thinking Level für Gemini 3.x (z.B. HIGH)");
-        WriteLine("  🔍 set grounding [on/off]  -> Aktiviert/Deaktiviert Google Search Grounding (Websuche)");
-        WriteLine("  🤖 set model [name/index]  -> Ändert das aktive Modell mitten im Chat");
+        Ui.Step("📋 Befehle");
+        Ui.Detail("📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
+        Ui.Detail("🚪 exit / quit             -> Beendet den Chat");
+        Ui.Detail("🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+        Ui.Detail("📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
+        Ui.Detail("🌡️  set temp [wert]         -> Ändert die Temperatur dynamisch");
+        Ui.Detail("🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch");
+        Ui.Detail("🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");
+        Ui.Detail("🧠 set thinking-level [l]  -> Setzt das Thinking Level für Gemini 3.x (z.B. HIGH)");
+        Ui.Detail("🔍 set grounding [on/off]  -> Aktiviert/Deaktiviert Google Search Grounding (Websuche)");
+        Ui.Detail("🤖 set model [name/index]  -> Ändert das aktive Modell mitten im Chat");
     }
 
     /// <summary>
@@ -265,7 +275,7 @@ public class DirectAiChatSessionVertex {
         // The parser reports a bad argument rather than throwing; the command was still recognised,
         // so the turn is consumed either way and never reaches the model.
         if (!command.IsValid) {
-            WriteLine($"[FEHLER] {command.Error}");
+            Ui.Error(command.Error!); // IsValid is exactly "Error == null"
             return true;
         }
 
@@ -277,38 +287,39 @@ public class DirectAiChatSessionVertex {
             case ChatCommandKind.Clear:
                 history.Clear();
                 history.AddRange(initialHistory);
-                WriteLine("\n[INFO] Gedächtnis gelöscht! Vertex Modell startet frisch.");
+                Ui.Blank();
+                Ui.Info("Gedächtnis gelöscht! Vertex Modell startet frisch.");
                 return true;
 
             case ChatCommandKind.SetTemperature:
                 AIParams.Temperature = command.Number;
-                WriteLine($"[INFO] Temperatur auf {AIParams.Temperature:F1} gesetzt.");
+                Ui.Info($"Temperatur auf {AIParams.Temperature:F1} gesetzt.");
                 return true;
 
             case ChatCommandKind.SetMaxTokens:
                 AIParams.MaxOutputTokens = command.Integer;
-                WriteLine($"[INFO] MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
+                Ui.Info($"MaxOutputTokens auf {AIParams.MaxOutputTokens} gesetzt.");
                 return true;
 
             case ChatCommandKind.SetThinkingBudget:
                 AIParams.ThinkingBudget = command.Integer;
-                WriteLine($"[INFO] ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
+                Ui.Info($"ThinkingBudget auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
                 return true;
 
             case ChatCommandKind.SetThinkingLevel:
                 AIParams.ThinkingLevel = command.Text;
-                WriteLine($"[INFO] ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
+                Ui.Info($"ThinkingLevel auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
                 return true;
 
             case ChatCommandKind.SetGrounding:
                 AIParams.UseGoogleSearch = command.Flag;
                 // Written as if/else rather than a ternary so both strings stay literal arguments of a
-                // WriteLine - dump-ui-strings.sh matches on that shape, and a ternary hides them.
+                // Ui call - dump-ui-strings.sh matches on that shape, and a ternary hides them.
                 if (command.Flag) {
-                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
+                    Ui.Info("Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
                 }
                 else {
-                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
+                    Ui.Info("Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
                 }
                 return true;
 
@@ -334,52 +345,30 @@ public class DirectAiChatSessionVertex {
     }
 
     /// <summary>
-    /// [AI Context] Applies the <c>set model</c> command. Keeps its interactive picker: with no
-    /// argument it lists the configured models and reads a choice, which is also the only way to
-    /// reach a freetext model name such as a Gemma build.
-    /// [Human] Wechselt das Modell; ohne Argument mit Auswahlliste.
+    /// [AI Context] Applies the <c>set model</c> command, through the same
+    /// <see cref="ChatModelPrompt"/> as the AI Studio session - the picker was a byte-identical copy
+    /// in both, hand-numbered list included.
+    /// [Human] Wechselt das Modell; ohne Argument mit Auswahlliste plus Freitext-Eintrag.
     /// </summary>
     private void ApplySetModel(string arg) {
-        string newModel = "";
-        if (string.IsNullOrEmpty(arg)) {
-            WriteLine("\nVerfügbare Modelle:");
-            for (int i = 0; i < AvailableModels.Length; i++) {
-                WriteLine($" {i + 1}) {AvailableModels[i]}");
-            }
-            Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
-            string? choice = ReadLine()?.Trim();
-            if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                newModel = AvailableModels[idx - 1];
-            }
-            else if (!string.IsNullOrEmpty(choice)) {
-                newModel = choice;
-            }
-        }
-        else {
-            if (int.TryParse(arg, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                newModel = AvailableModels[idx - 1];
-            }
-            else {
-                newModel = arg;
-            }
-        }
+        string newModel = string.IsNullOrEmpty(arg)
+            ? ChatModelPrompt.Pick(AvailableModels)
+            : ChatModelPrompt.Resolve(arg, AvailableModels);
 
         if (string.IsNullOrEmpty(newModel)) return;
 
         _activeModel = newModel;
-        WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
+        Ui.Info($"Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
 
-        Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
-        string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
-        if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
+        if (Ui.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", true)) {
             int savedIndex = Array.IndexOf(AvailableModels, _activeModel);
             if (savedIndex >= 0) _config.CurrentModelIndex = savedIndex;
             _config.CurrentModel = _activeModel;
             ConfigLoader<DirectAiChatSessionVertexConfig>.Save(_config);
-            WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
+            Ui.Success("💾 Das neue Modell wurde permanent in der Konfiguration gespeichert.");
         }
         else {
-            WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
+            Ui.Info("Die Änderung ist nur vorübergehend.");
         }
     }
 
@@ -388,7 +377,8 @@ public class DirectAiChatSessionVertex {
     /// [Human] Holt sich die Antwort Stück für Stück von der Vertex API und schreibt sie flüssig in die Konsole.
     /// </summary>
     private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
-        Write($"\n[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
+        Ui.Blank();
+        Ui.Raw($"[Vertex] {selectedModel} (Drücke Strg+C zum Abbrechen): ");
 
         var (config, apiContents) = BuildChatRequestConfig(selectedModel, history);
         var (fullResponse, inputTokens, outputTokens, cachedTokens) =
@@ -494,9 +484,10 @@ public class DirectAiChatSessionVertex {
         }
 
         if (notFoundPaths.Count > 0) {
-            WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
+            Ui.Blank();
+            Ui.Warn("Folgende History-Pfade wurden nicht gefunden:", "Setup");
             foreach (var path in notFoundPaths) {
-                WriteLine($"  - {path}");
+                Ui.Detail($"- {path}");
             }
         }
 
@@ -509,7 +500,8 @@ public class DirectAiChatSessionVertex {
 
         if (distinctFiles.Count == 0) return PromptResult.FromValue<string?>(null);
 
-        WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+        Ui.Blank();
+        Ui.Info("Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:", "Setup");
         FileTreeRenderer.PrintFileTree(distinctFiles);
 
         var answer = SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?");
@@ -526,6 +518,6 @@ public class DirectAiChatSessionVertex {
     /// [Human] Löscht radikal alle Dateien aus dem Cloud Bucket. Das ist bei Vertex besonders wichtig, um horrende Speicherkosten zu vermeiden!
     /// </summary>
     private async Task ForcePurgeGcsBucketAsync() {
-        await GcsWorkspace.PurgeChatWorkspaceAsync(GcsBucketName, _config.VerboseConsoleOutput);
+        await GcsWorkspace.PurgeAsync(GcsBucketName, _config.VerboseConsoleOutput);
     }
 }

@@ -7,7 +7,6 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.GoogleAi;
-using static System.Console;
 
 namespace LectureExtraction.Chat;
 
@@ -34,6 +33,10 @@ public readonly record struct ChatTurnResult(string FullResponse, int InputToken
 /// <para>The running session totals live here, not in the sessions, because that is the only place
 /// they were ever read. One instance per session; the client is passed per call, since AI Studio
 /// replaces its own on <c>change-key</c>.</para>
+///
+/// <para>The model's own text goes out through <see cref="Ui.Raw"/>, never through a markup-parsing
+/// helper: an answer containing LaTeX or any other square bracket would otherwise be read as a
+/// Spectre style tag and either vanish or throw. Every other line here is ordinary UI.</para>
 /// [Human] Streamt eine Chat-Antwort inkl. Wiederholungen, Tastatur-Schutz, Quellenangaben und
 /// Token-Bericht. Die Session-Summen liegen hier, weil sie nirgends sonst gelesen werden.
 /// </summary>
@@ -53,9 +56,7 @@ public sealed class ResponseStreamPrinter {
         GenerateContentConfig config,
         Func<Task<bool>>? beforeRequestAsync = null) {
         string fullResponse = "";
-        int inputTokens = 0;
-        int outputTokens = 0;
-        int cachedTokens = 0;
+        var usage = new UsageReport();
 
         bool exceptionCaught = false;
         using var cts = new CancellationTokenSource();
@@ -70,7 +71,8 @@ public sealed class ResponseStreamPrinter {
             while (isGenerating) {
                 if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                     while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                    WriteLine("\n[AI-Model] Still waiting for the acknowledgment / response. Please wait...");
+                    Ui.Blank();
+                    Ui.Info("Still waiting for the acknowledgment / response. Please wait...", "AI-Model");
                 }
                 await Task.Delay(100);
             }
@@ -88,7 +90,7 @@ public sealed class ResponseStreamPrinter {
                     streamFactory: () => client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
                     onChunkReceived: async (chunk) => {
                         string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                        Write(chunkText);
+                        Ui.Raw(chunkText);
                         fullResponse += chunkText;
 
                         var metadata = chunk.Candidates?[0]?.GroundingMetadata;
@@ -96,11 +98,7 @@ public sealed class ResponseStreamPrinter {
                             accumulatedGrounding = metadata;
                         }
 
-                        if (chunk.UsageMetadata != null) {
-                            if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                            if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                        }
+                        usage.Absorb(chunk.UsageMetadata);
                         await Task.CompletedTask;
                     },
                     cancellationToken: cts.Token,
@@ -122,23 +120,34 @@ public sealed class ResponseStreamPrinter {
             await inputInterceptorTask; // Warte kurz, bis der Input-Blocker sauber beendet ist
             Console.CancelKeyPress -= cancelHandler;
 
-            if (inputTokens > 0 || outputTokens > 0) {
-                _sessionTotalInputTokens += inputTokens;
-                _sessionTotalOutputTokens += outputTokens;
-                _sessionTotalCachedTokens += cachedTokens;
-                WriteLine($"\n[Request Tokens]       Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {(Math.Max(0, inputTokens - cachedTokens)):N0} | Output: {outputTokens:N0} (inkl. Thinking Tokens)");
-                WriteLine($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
+            // [AI Context] Unconditional, per review finding F9: the old guard was
+            // "if (inputTokens > 0 || outputTokens > 0)", so a turn whose usage metadata never
+            // arrived printed nothing and read as free. This was the last reporting site F9 had not
+            // reached - the chat sessions were outside the Ui layer when it landed.
+            // [Human] Die Token-Zeile kommt immer, damit "nicht gemeldet" nicht wie "kostenlos" aussieht.
+            if (usage.WasReported) {
+                _sessionTotalInputTokens += usage.PromptTokens;
+                _sessionTotalOutputTokens += usage.CandidateTokens;
+                _sessionTotalCachedTokens += usage.CachedTokens;
             }
 
+            int freshPromptTokens = Math.Max(0, usage.PromptTokens - usage.CachedTokens);
+            Ui.Blank();
+            // Kept on one line, long as it is: dump-ui-strings.sh is line-based, and a wrapped call
+            // records only "Ui.Detail(usage.Describe(" in the inventory - the string itself drops out.
+            Ui.Detail(usage.Describe($"Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshPromptTokens:N0} | Output: {usage.CandidateTokens:N0}", "[Request Tokens]      "));
+            Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens):N0} | Output: {_sessionTotalOutputTokens:N0}");
+
             if (exceptionCaught || cts.IsCancellationRequested) {
-                WriteLine("\n\n[INFO] Generierung durch Benutzer abgebrochen.");
+                Ui.Blank();
+                Ui.Info("Generierung durch Benutzer abgebrochen.");
             }
             else {
-                WriteLine();
+                Ui.Blank();
             }
         }
 
-        return new ChatTurnResult(fullResponse, inputTokens, outputTokens, cachedTokens);
+        return new ChatTurnResult(fullResponse, usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens);
     }
 
     /// <summary>
@@ -146,16 +155,17 @@ public sealed class ResponseStreamPrinter {
     /// [Human] Zeigt die Quellen an, auf die sich die Antwort stützt.
     /// </summary>
     private static void PrintGroundingSources(GroundingMetadata grounding) {
-        WriteLine("\n\n🔍 [Google Search Grounding] Quellen:");
+        Ui.Blank();
+        Ui.Step("🔍 Quellen", "Google Search Grounding");
         if (grounding.WebSearchQueries != null && grounding.WebSearchQueries.Count > 0) {
-            WriteLine($"  Suchanfragen: {string.Join(", ", grounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
+            Ui.Detail($"Suchanfragen: {string.Join(", ", grounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
         }
         if (grounding.GroundingChunks == null) return;
 
         int refIdx = 1;
         foreach (var chunkRef in grounding.GroundingChunks) {
             if (chunkRef.Web != null) {
-                WriteLine($"   [{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
+                Ui.Detail($"[{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri} ({chunkRef.Web.Domain})");
                 refIdx++;
             }
         }

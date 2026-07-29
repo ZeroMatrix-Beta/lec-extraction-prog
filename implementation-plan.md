@@ -18,15 +18,21 @@ both sessions (fixing two commands that had never worked, in both copies),
 `ResponseStreamPrinter` extracted, and the two GCS purges merged on an explicit
 user decision. The chat twins went 792 + 638 → **654 + 530**.
 
-**Build 0/0 · 228 tests green · UI-string drift 0 · baseline 597 entries.**
+**2026-07-29, later still — the chat layer joined Phase 10, and that was the last
+of it.** `src/` no longer contains a single `using static System.Console`: both
+chat sessions, `ResponseStreamPrinter` and `AttachmentUploader` now write through
+`Ui`. With the chat sessions on the Spectre layer, `GcsWorkspace`'s two purge
+entry points collapsed into one, exactly as the 8.5b notes said they should.
+See "Phase 10 catch-up" below.
+
+**Build 0/0 · 236 tests green · UI-string drift 0 · baseline 588 entries.**
 
 **Every phase is now closed except Phase 12, which the user deferred.** **(a) The
 back-navigation has been walked in the real app — user confirmed, 2026-07-29; F11
 is verified, not just built.** **(b) Still open, and not code: read the
 handshake's new `Denk-Tokens` figure on one real extraction, then decide
-`DisableThinkingDuringWarmUp`.** The one piece of code work the plan still
-points at is optional: the chat sessions are the last files in `src/` on
-`using static System.Console` rather than `Ui`, so they never got Phase 10. · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
+`DisableThinkingDuringWarmUp`.** **There is no remaining optional code work — the
+`using static System.Console` catch-up the plan used to point at is done.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -1972,11 +1978,12 @@ Phase 9    Config consolidation + migrator   ~large   ✅ done
 Phase 10   Spectre.Console UI                ~large   ✅ done
 Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
 Phase 8.5b Rebuild the Direct chat sessions  ~large   ✅ done  (5 increments)
+Phase 10c  Chat layer joins Ui + GCS merge   ~medium  ✅ done  (2026-07-29)
 Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
 ```
 
 **State as of 2026-07-29:** every phase is closed except Phase 12, which the user
-deferred. Findings F1–F12 are all resolved. 228 tests green, build 0/0,
+deferred. Findings F1–F12 are all resolved. 236 tests green, build 0/0,
 UI-string drift 0.
 
 **The two things that still need a real run, not more code:** walk the new
@@ -2089,7 +2096,67 @@ established should stay separate.
 **What a rewrite would still buy, if it is ever wanted:** the chat sessions are
 the last code in `src/` on `using static System.Console` rather than `Ui`, so
 they missed Phase 10 entirely. That, not the duplication, is now the strongest
-argument for touching them again.
+argument for touching them again. — **Done 2026-07-29; see below.**
+
+### Phase 10 catch-up — the chat layer joins `Ui` · **DONE (2026-07-29)**
+
+The last four files on `using static System.Console` migrated to `Ui`:
+`DirectAiChatSessionAiStudio`, `DirectAiChatSessionVertex`,
+`ResponseStreamPrinter` and `AttachmentUploader`. A grep for
+`using static System.Console` in `src/` now returns nothing, and so does a grep
+for a bare `WriteLine(` at start-of-line. Severity tags became `Ui.Info/Warn/
+Error/Success`, subsystem prefixes (`[GCS]`, `[AI Studio]`, `[Lokal]`, `[Setup]`,
+`[Vertex]`) became the `scope` argument, and the `--- ... ---` session banners
+became `Ui.Header`.
+
+**The two things deliberately left as raw output**, both for the same reason —
+they are not lines, they are cursor positions:
+
+* The REPL's own input line (`Ui.Raw($"{userName}: ")` + `Console.ReadLine()`).
+  A Spectre `TextPrompt` rejects empty input and re-asks, but an empty line here
+  is a valid no-op the loop skips with `continue`.
+* `AttachmentUploader`'s processing dots. A Spectre `Status`/`Progress` region
+  cannot be written to from outside itself, and the keypress interceptor writes
+  into that same line. This is the same rule as the streaming ban.
+
+Model output still goes through `Ui.Raw` — the unparsed `new Text()` path — so
+the escaping boundary is unchanged.
+
+**Three things fell out of it.**
+
+1. **`GcsWorkspace` is one method again**, down from two and originally three.
+   `PurgeChatWorkspaceAsync` existed only because the chat sessions wrote through
+   `Console`; with that gone, `PurgeAsync(bucketName, verbose)` is the union —
+   placeholder-name guard, empty-bucket line, billing-account and network
+   branches, and the verbose exception dump. Where the two disagreed on wording,
+   the extraction path's won, because that is the path that actually runs.
+2. **F9 reached its last site.** `ResponseStreamPrinter` still read usage
+   metadata by hand and printed only `if (inputTokens > 0 || outputTokens > 0)` —
+   the exact defect F9 closed everywhere else, surviving in the chat path because
+   the chat sessions were outside the `Ui` layer when F9 landed. It now uses
+   `UsageReport`: the token line is unconditional, and `Denk-Tokens` is reported
+   in chat for the first time.
+3. **`ChatModelPrompt`** — the `set model` picker was a byte-identical
+   hand-numbered menu in both sessions, and the last hand-numbered menu in
+   `src/`. Now one `Ui.Select` with an explicit "manuell eingeben" entry, so the
+   freetext path (Gemma builds) is visible rather than being the undocumented
+   behaviour of typing something unparseable. `Resolve` is split out pure and
+   pinned by 8 tests, per the `ChatCommandParser` lesson.
+
+**And a fourth, which is a rule.** `dump-ui-strings.sh` runs under `set -e`, and
+`grep` exits 1 when it matches nothing. The moment the bare-`Write` clause stopped
+matching — which is precisely what success at this task looks like — the script
+aborted mid-group and the `ChatCommand.Error` clause never ran, silently dropping
+six user-facing strings from the inventory as if they had been deleted. Every
+clause now ends in `|| true`. **A clause matching nothing is a legitimate state
+in this harness; a clause being skipped is not, and the two were indistinguishable
+in the output.** This is the third harness hole this refactor has found, and the
+first one the harness caught by itself.
+
+Inventory 597 → **588**, drift 0. The drop is consolidation, not lost output:
+every removed line has a live replacement, and roughly a dozen collapsed onto
+strings `ConfigurationPrompts` already owned (the model list, the "permanent
+speichern?" confirm) or onto the merged purge.
 
 Config before UI, because Phase 10's verbosity handling, `show config` command
 and menu tables all consume the new config shape — the other order means

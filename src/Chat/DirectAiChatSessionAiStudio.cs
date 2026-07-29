@@ -11,7 +11,6 @@ using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
-using static System.Console;
 
 namespace LectureExtraction.Chat;
 
@@ -121,7 +120,8 @@ public partial class DirectAiChatSessionAiStudio {
                 case 1: {
                     // [AI Context] Load System Instructions (Persona & Rules) into memory.
                     if (!string.IsNullOrWhiteSpace(SystemInstructionPath)) {
-                        WriteLine("\n[Setup] Folgende System Instruction ist konfiguriert:");
+                        Ui.Blank();
+                        Ui.Info("Folgende System Instruction ist konfiguriert:", "Setup");
                         FileTreeRenderer.PrintFileTree([SystemInstructionPath]);
                     }
 
@@ -135,15 +135,15 @@ public partial class DirectAiChatSessionAiStudio {
                     if (answer.Value) {
                         if (!string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
                             _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
-                            WriteLine($"  [INFO] System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                            Ui.Success($"System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
                             loadedSysPrompt = true;
                         }
                         else {
-                            WriteLine($"  [WARNUNG] System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+                            Ui.Warn($"System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
                         }
                     }
                     else {
-                        WriteLine("  [INFO] System Instruction wird ignoriert.");
+                        Ui.Info("System Instruction wird ignoriert.");
                     }
 
                     step = 2;
@@ -194,7 +194,7 @@ public partial class DirectAiChatSessionAiStudio {
         var initialHistory = new List<Content>(history); // Den Startzustand merken
         string userName = "AI Studio User";
 
-        WriteLine($"\n--- Chat gestartet ({_activeModel} | API Profil: {_activeApiProfile}) ---");
+        Ui.Header($"Chat gestartet ({_activeModel} | API Profil: {_activeApiProfile})");
         WriteCommandHelp();
 
         while (true) {
@@ -209,8 +209,11 @@ public partial class DirectAiChatSessionAiStudio {
                 string? input;
                 if (initialInput != null) {
                     // [AI Context] Automatically executes the history attachment command on the first loop iteration without requiring user interaction.
+                    // Echoed through Ui.Raw, not a markup helper: the generated command carries quoted
+                    // file paths and the history prompt's own "[AI-Model: ...]" and "[...]" literals.
                     input = initialInput;
-                    WriteLine($"\n{userName}: {input}");
+                    Ui.Blank();
+                    Ui.RawLine($"{userName}: {input}");
                     initialInput = null; // Nur beim allerersten Durchlauf verwenden
                 }
                 else {
@@ -219,8 +222,15 @@ public partial class DirectAiChatSessionAiStudio {
                     if (!Console.IsInputRedirected) {
                         while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                     }
-                    Write($"\n{userName}: ");
-                    input = ReadLine();
+                    // [AI Context] The one prompt in this file that is not a Ui prompt. Spectre's
+                    // TextPrompt rejects empty input and re-asks, but an empty line here is a valid
+                    // no-op the loop skips with 'continue', and a chat turn may legitimately be any
+                    // text at all - including markup-looking text. So: raw label, raw ReadLine.
+                    // [Human] Bewusst eine einfache Eingabezeile - ein Spectre-Prompt würde leere
+                    // Eingaben ablehnen und den Chat-Rhythmus brechen.
+                    Ui.Blank();
+                    Ui.Raw($"{userName}: ");
+                    input = Console.ReadLine();
                 }
 
                 if (string.IsNullOrWhiteSpace(input)) continue;
@@ -257,8 +267,9 @@ public partial class DirectAiChatSessionAiStudio {
                 }
                 catch (Exception ex) {
                     // This block now catches unrecoverable errors re-thrown by the resilience helper.
-                    WriteLine($"\n[Abbruch] Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
-                    WriteLine($"Originaler Fehlertext: {ex.Message}");
+                    Ui.Blank();
+                    Ui.Error("Der Fehler konnte nicht durch einen automatischen Retry behoben werden.", "Abbruch");
+                    Ui.Error($"Originaler Fehlertext: {ex.Message}");
 
                     // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
                     if (history.Count > 0 && history.Last().Role == "user") {
@@ -271,7 +282,8 @@ public partial class DirectAiChatSessionAiStudio {
             }
         }
 
-        WriteLine("\n[INFO] Chat beendet. Räume temporäre Dateien im Cloud Storage auf...");
+        Ui.Blank();
+        Ui.Info("Chat beendet. Räume temporäre Dateien im Cloud Storage auf...");
         await CleanupGcsBucketAsync();
     }
 
@@ -294,19 +306,19 @@ public partial class DirectAiChatSessionAiStudio {
     }
 
     private static void WriteCommandHelp() {
-        WriteLine("\n📋 Befehle:");
-        WriteLine("  📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
-        WriteLine("  🚪 exit / quit             -> Beendet den Chat");
-        WriteLine("  🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-        WriteLine("  📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
-        WriteLine("                             (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
-        WriteLine("  🌡️  set temp [wert]         -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
-        WriteLine("  🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
-        WriteLine("  🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");
-        WriteLine("  🧠 set thinking-level [l]  -> Setzt das Thinking Level für Gemini 3.x (z.B. HIGH)");
-        WriteLine("  🔍 set grounding [on/off]  -> Aktiviert/Deaktiviert Google Search Grounding (Websuche)");
-        WriteLine("  🤖 set model [name/index]  -> Ändert das aktive Modell mitten im Chat");
-        WriteLine("  🔑 change-key [0-3]        -> Wechselt das API-Key Profil für diese Session (0 für dediziert)");
+        Ui.Step("📋 Befehle");
+        Ui.Detail("📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
+        Ui.Detail("🚪 exit / quit             -> Beendet den Chat");
+        Ui.Detail("🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
+        Ui.Detail("📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
+        Ui.Detail("                           (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
+        Ui.Detail("🌡️  set temp [wert]         -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
+        Ui.Detail("🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");
+        Ui.Detail("🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");
+        Ui.Detail("🧠 set thinking-level [l]  -> Setzt das Thinking Level für Gemini 3.x (z.B. HIGH)");
+        Ui.Detail("🔍 set grounding [on/off]  -> Aktiviert/Deaktiviert Google Search Grounding (Websuche)");
+        Ui.Detail("🤖 set model [name/index]  -> Ändert das aktive Modell mitten im Chat");
+        Ui.Detail("🔑 change-key [0-3]        -> Wechselt das API-Key Profil für diese Session (0 für dediziert)");
     }
 
     /// <summary>
@@ -328,7 +340,7 @@ public partial class DirectAiChatSessionAiStudio {
         // The parser reports a bad argument rather than throwing; the command was still recognised,
         // so the turn is consumed either way and never reaches the model.
         if (!command.IsValid) {
-            WriteLine($"[FEHLER] {command.Error}");
+            Ui.Error(command.Error!); // IsValid is exactly "Error == null"
             return true;
         }
 
@@ -340,38 +352,39 @@ public partial class DirectAiChatSessionAiStudio {
             case ChatCommandKind.Clear:
                 history.Clear();
                 history.AddRange(initialHistory);
-                WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
+                Ui.Blank();
+                Ui.Info("Gedächtnis gelöscht! Gemini startet komplett frisch.");
                 return true;
 
             case ChatCommandKind.SetTemperature:
                 AIParams.Temperature = command.Number;
-                WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
+                Ui.Info($"Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
                 return true;
 
             case ChatCommandKind.SetMaxTokens:
                 AIParams.MaxOutputTokens = command.Integer;
-                WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
+                Ui.Info($"MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
                 return true;
 
             case ChatCommandKind.SetThinkingBudget:
                 AIParams.ThinkingBudget = command.Integer;
-                WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
+                Ui.Info($"ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
                 return true;
 
             case ChatCommandKind.SetThinkingLevel:
                 AIParams.ThinkingLevel = command.Text;
-                WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
+                Ui.Info($"ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
                 return true;
 
             case ChatCommandKind.SetGrounding:
                 AIParams.UseGoogleSearch = command.Flag;
                 // Written as if/else rather than a ternary so both strings stay literal arguments of a
-                // WriteLine - dump-ui-strings.sh matches on that shape, and a ternary hides them.
+                // Ui call - dump-ui-strings.sh matches on that shape, and a ternary hides them.
                 if (command.Flag) {
-                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
+                    Ui.Info("Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
                 }
                 else {
-                    WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
+                    Ui.Info("Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
                 }
                 return true;
 
@@ -403,50 +416,30 @@ public partial class DirectAiChatSessionAiStudio {
     /// <summary>
     /// [AI Context] Applies the <c>set model</c> command. Keeps its interactive picker: with no
     /// argument it lists the configured models and reads a choice, which is also the only way to
-    /// reach a freetext model name such as a Gemma build.
-    /// [Human] Wechselt das Modell; ohne Argument mit Auswahlliste.
+    /// reach a freetext model name such as a Gemma build - so the list carries an explicit
+    /// "manuell eingeben" entry rather than relying on the old picker's undocumented behaviour of
+    /// treating any unparseable answer as a model name.
+    /// [Human] Wechselt das Modell; ohne Argument mit Auswahlliste plus Freitext-Eintrag.
     /// </summary>
     private void ApplySetModel(string arg) {
-        string newModel = "";
-        if (string.IsNullOrEmpty(arg)) {
-            WriteLine("\nVerfügbare Modelle:");
-            for (int i = 0; i < AvailableModels.Length; i++) {
-                WriteLine($" {i + 1}) {AvailableModels[i]}");
-            }
-            Write($"Bitte Modell auswählen (1-{AvailableModels.Length}): ");
-            string? choice = ReadLine()?.Trim();
-            if (int.TryParse(choice, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                newModel = AvailableModels[idx - 1];
-            }
-            else if (!string.IsNullOrEmpty(choice)) {
-                newModel = choice;
-            }
+        string newModel = string.IsNullOrEmpty(arg)
+            ? ChatModelPrompt.Pick(AvailableModels)
+            : ChatModelPrompt.Resolve(arg, AvailableModels);
+
+        if (string.IsNullOrEmpty(newModel)) return;
+
+        _activeModel = newModel;
+        Ui.Info($"Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
+
+        if (Ui.Confirm("Möchten Sie diese Änderung permanent in der Konfiguration speichern?", true)) {
+            int idx = Array.IndexOf(AvailableModels, _activeModel);
+            if (idx >= 0) _config.CurrentModelIndex = idx;
+            _config.CurrentModel = _activeModel;
+            ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
+            Ui.Success("💾 Das neue Modell wurde permanent in der Konfiguration gespeichert.");
         }
         else {
-            if (int.TryParse(arg, out int idx) && idx >= 1 && idx <= AvailableModels.Length) {
-                newModel = AvailableModels[idx - 1];
-            }
-            else {
-                newModel = arg;
-            }
-        }
-
-        if (!string.IsNullOrEmpty(newModel)) {
-            _activeModel = newModel;
-            WriteLine($"[INFO] Aktives Modell für die nächste(n) Antwort(en) auf '{_activeModel}' geändert.");
-
-            Write("Möchten Sie diese Änderung permanent in der Konfiguration speichern? (j/n, Standard: j): ");
-            string? saveChoice = ReadLine()?.Trim().ToLowerInvariant();
-            if (saveChoice != "n" && saveChoice != "nein" && saveChoice != "no") {
-                int idx = Array.IndexOf(AvailableModels, _activeModel);
-                if (idx >= 0) _config.CurrentModelIndex = idx;
-                _config.CurrentModel = _activeModel;
-                ConfigLoader<DirectAiChatSessionAiStudioConfig>.Save(_config);
-                WriteLine("  💾 [INFO] Das neue Modell wurde permanent in der Konfiguration gespeichert.");
-            }
-            else {
-                WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
-            }
+            Ui.Info("Die Änderung ist nur vorübergehend.");
         }
     }
 
@@ -456,7 +449,8 @@ public partial class DirectAiChatSessionAiStudio {
     /// [Human] Streamt die Antwort von Gemini asynchron in die Konsole und speichert das Ergebnis in der Historie und einem Logfile.
     /// </summary>
     private async Task StreamGeminiResponseAsync(string selectedModel, List<Content> history, string input, string promptText, string userName) {
-        Write($"\n{selectedModel} (Drücke Strg+C zum Abbrechen): ");
+        Ui.Blank();
+        Ui.Raw($"{selectedModel} (Drücke Strg+C zum Abbrechen): ");
 
         var (config, apiContents) = BuildChatRequestConfig(selectedModel, history);
         var (fullResponse, inputTokens, outputTokens, cachedTokens) =
@@ -580,9 +574,10 @@ public partial class DirectAiChatSessionAiStudio {
         }
 
         if (notFoundPaths.Count > 0) {
-            WriteLine($"\n[Setup-Warnung] Folgende History-Pfade wurden nicht gefunden:");
+            Ui.Blank();
+            Ui.Warn("Folgende History-Pfade wurden nicht gefunden:", "Setup");
             foreach (var path in notFoundPaths) {
-                WriteLine($"  - {path}");
+                Ui.Detail($"- {path}");
             }
         }
 
@@ -598,7 +593,8 @@ public partial class DirectAiChatSessionAiStudio {
             return PromptResult.FromValue<string?>(null);
         }
 
-        WriteLine($"\n[Setup] Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
+        Ui.Blank();
+        Ui.Info("Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:", "Setup");
         FileTreeRenderer.PrintFileTree(distinctFiles);
 
         var answer = SetupQuestionPrompt.Ask("Sollen diese Dateien als History geladen werden?", ChangeApiKeyProfileInteractive);
@@ -633,10 +629,10 @@ public partial class DirectAiChatSessionAiStudio {
             _client = GoogleAiClientBuilder.BuildAiStudioClient(newApiKey);
             _attachmentHandler.UpdateClient(_client);
             _activeApiProfile = newProfile;
-            WriteLine($"  [INFO] API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
+            Ui.Success($"API-Key Profil für diese Session erfolgreich auf {newProfile} gewechselt!");
         }
         else {
-            WriteLine($"[FEHLER] Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
+            Ui.Error($"Konnte API-Key für Profil {newProfile} nicht finden. Der Wechsel wurde abgebrochen.");
         }
     }
 
@@ -649,7 +645,7 @@ public partial class DirectAiChatSessionAiStudio {
         // own knowledge, not the purge's. Everything below it is shared with the Vertex chat session.
         if (IsAiStudio) return; // Prevent free-tier from pinging GCS
 
-        await GcsWorkspace.PurgeChatWorkspaceAsync(GcsBucketName, _config.VerboseConsoleOutput);
+        await GcsWorkspace.PurgeAsync(GcsBucketName, _config.VerboseConsoleOutput);
     }
 
 }

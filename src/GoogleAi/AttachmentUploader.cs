@@ -8,7 +8,6 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
-using static System.Console;
 
 namespace LectureExtraction.GoogleAi;
 
@@ -80,16 +79,17 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 }
             }
             else {
-                WriteLine($"\n[FEHLER] Die Datei '{rawName}' wurde absolut nirgends gefunden.");
-                WriteLine("  Ich habe exakt hier gesucht:");
+                Ui.Blank();
+                Ui.Error($"Die Datei '{rawName}' wurde absolut nirgends gefunden.");
+                Ui.Detail("Ich habe exakt hier gesucht:");
                 foreach (var loc in searchedLocations) {
-                    WriteLine($"   - {loc}");
+                    Ui.Detail($"- {loc}");
                 }
             }
         }
 
         if (loadedNames.Count > 0) {
-            WriteLine($"[{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}]");
+            Ui.Success($"{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}");
         }
 
         return (anyFileLoaded, promptText, parts);
@@ -153,13 +153,13 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
 
         if (s_textExtensions.Contains(ext)) {
             if (asSystemInstruction) {
-                WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...");
+                Ui.Detail($"Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...", "Lokal");
                 string fileContent = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
                 parts.Add(new Part { Text = $"\n<file path=\"{displayPath}\">\n{fileContent}\n</file>\n" });
                 return true;
             }
             else {
-                WriteLine($"  [Lokal] Lese Textdokument '{Path.GetFileName(filePath)}' ein...");
+                Ui.Detail($"Lese Textdokument '{Path.GetFileName(filePath)}' ein...", "Lokal");
                 string fileContent = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
                 parts.Add(new Part { Text = $"<attached_file name=\"{Path.GetFileName(filePath)}\">\n{fileContent}\n</attached_file>\n\n" });
                 return true;
@@ -179,7 +179,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
         };
 
         if (mimeType == null) {
-            WriteLine($"[FEHLER] Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
+            Ui.Error($"Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
             return false;
         }
 
@@ -190,7 +190,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             // [Human] Bilder werden als Blob eingebettet, wenn sie in der System Instruction sind ODER InlineHistoryImages=true ist.
             if (asSystemInstruction || _inlineImages) {
                 string context = asSystemInstruction ? "Inline System Instruction" : "Inline History/Prefix-Cache";
-                WriteLine($"  [Lokal] Lese Bilddatei '{Path.GetFileName(filePath)}' für {context} ein...");
+                Ui.Detail($"Lese Bilddatei '{Path.GetFileName(filePath)}' für {context} ein...", "Lokal");
                 byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath, cancellationToken);
                 if (asSystemInstruction) {
                     parts.Add(new Part { Text = $"\n<image path=\"{displayPath}\">\n" });
@@ -206,7 +206,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
         if (_isAiStudio) {
             // [AI Context] Integrates with Google's newer File API specifically designed for AI Studio.
             // [Human] Das ist der direkte Datei-Upload über die Google AI Studio API (ohne GCS Buckets).
-            WriteLine($"  [AI Studio] Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...");
+            Ui.Detail($"Lade '{Path.GetFileName(filePath)}' über die Google File API hoch...", "AI Studio");
             try {
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 var uploadConfig = new Google.GenAI.Types.UploadFileConfig { MimeType = mimeType };
@@ -227,16 +227,21 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 );
 
                 if (uploadedFile?.Name == null) {
-                    WriteLine($"  [FEHLER] Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null oder Upload nach mehreren Versuchen fehlgeschlagen.");
+                    Ui.Error($"Die Dateireferenz (Name) vom Server für '{Path.GetFileName(filePath)}' ist null oder Upload nach mehreren Versuchen fehlgeschlagen.");
                     return false;
                 }
 
                 stopwatch.Stop();
                 string remoteFileName = uploadedFile.Name;
 
-                WriteLine($"  [AI Studio] Upload abgeschlossen. URI: {uploadedFile.Uri}");
-                WriteLine($"  [AI Studio] Upload-Dauer: {stopwatch.Elapsed.Minutes} Minuten und {stopwatch.Elapsed.Seconds} Sekunden.");
-                Write("  [AI Studio] Warte auf serverseitige Verarbeitung ");
+                Ui.Detail($"Upload abgeschlossen. URI: {uploadedFile.Uri}", "AI Studio");
+                Ui.Detail($"Upload-Dauer: {stopwatch.Elapsed.Minutes} Minuten und {stopwatch.Elapsed.Seconds} Sekunden.", "AI Studio");
+                // [AI Context] The processing wait is a growing line of dots, so it goes out through
+                // Ui.Raw rather than a Spectre Status/Progress region: the keypress interceptor below
+                // writes into the same line, and a live region cannot be written to from outside itself.
+                // [Human] Bewusst einfache Punkte statt einer Spectre-Fortschrittsanzeige - der
+                // Tastatur-Abfänger schreibt in dieselbe Zeile.
+                Ui.Raw("  [AI Studio] Warte auf serverseitige Verarbeitung ");
 
                 var fileInfo = await ApiRetryPolicy.ExecuteWithRetryAsync(
                     () => _client.Files.GetAsync(remoteFileName, config: null, cancellationToken: cancellationToken),
@@ -244,12 +249,12 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                     retryContext: $"Check File State: {Path.GetFileName(filePath)}"
                 );
                 while (string.Equals(fileInfo?.State?.ToString(), "PROCESSING", StringComparison.OrdinalIgnoreCase)) {
-                    Write(".");
+                    Ui.Raw(".");
                     for (int i = 0; i < 50; i++) {
                         await Task.Delay(100, cancellationToken);
                         if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                            Write("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
+                            Ui.Raw("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
                         }
                     }
                     fileInfo = await ApiRetryPolicy.ExecuteWithRetryAsync(
@@ -258,14 +263,14 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                         retryContext: $"Check File State: {Path.GetFileName(filePath)}"
                     );
                 }
-                WriteLine();
+                Ui.Blank();
 
                 if (fileInfo == null || string.Equals(fileInfo?.State?.ToString(), "FAILED", StringComparison.OrdinalIgnoreCase)) {
-                    WriteLine($"  [FEHLER] Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
+                    Ui.Error($"Die serverseitige Verarbeitung von '{Path.GetFileName(filePath)}' ist fehlgeschlagen.");
                     return false;
                 }
 
-                WriteLine("  [AI Studio] Datei ist ACTIVE und bereit für Gemini.");
+                Ui.Success("Datei ist ACTIVE und bereit für Gemini.", "AI Studio");
                 // [AI Context] Financial & Rate-Limit Guardrail: When using the standard AI Studio API (_isAiStudio == true),
                 // we historically waited here. However, as Gemini is stateless, token consumption (TPM) only happens upon the
                 // actual GenerateContent request, not during file upload. Thus, waiting after uploading a system instruction is unnecessary.
@@ -294,26 +299,27 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             }
             catch (Exception ex) {
                 if (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
-                    WriteLine("\n[INFO] Datei-Upload vom Benutzer abgebrochen.");
+                    Ui.Blank();
+                    Ui.Info("Datei-Upload vom Benutzer abgebrochen.");
                     return false;
                 }
 
-                WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                WriteLine($"Originaler Fehlertext: {ex.Message}");
+                Ui.Blank();
+                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
 
                 if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
-                    WriteLine("  [Netzwerk-Fehler] Der Google-Server konnte nicht erreicht werden.");
-                    WriteLine("  Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
+                    Ui.Error("Der Google-Server konnte nicht erreicht werden.", "Netzwerk-Fehler");
+                    Ui.Detail("Bitte prüfe deine Internetverbindung oder DNS-Einstellungen.");
                 }
 
-                WriteLine($"  [FEHLER] Upload über File API endgültig fehlgeschlagen.");
+                Ui.Error("Upload über File API endgültig fehlgeschlagen.");
                 return false;
             }
         }
         else {
             // [AI Context] Integrates with Google Cloud Storage for Enterprise Vertex AI workloads.
             // [Human] Das ist der Upload in deinen (ggf. kostenpflichtigen) Google Cloud Storage Bucket.
-            WriteLine($"  [GCS] Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...");
+            Ui.Detail($"Lade '{Path.GetFileName(filePath)}' in den Google Cloud Storage hoch...", "GCS");
             try {
                 var uploadResult = await ApiRetryPolicy.ExecuteWithRetryAsync(async () => {
                     var storageClient = await StorageClient.CreateAsync();
@@ -326,12 +332,12 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 }, maxRetries: 10, retryContext: $"GCS Upload: {Path.GetFileName(filePath)}");
 
                 if (uploadResult == null) {
-                    WriteLine($"  [FEHLER] Upload in GCS nach mehreren Versuchen fehlgeschlagen.");
+                    Ui.Error("Upload in GCS nach mehreren Versuchen fehlgeschlagen.");
                     return false;
                 }
 
                 string gcsUri = uploadResult;
-                WriteLine($"  [GCS] Upload abgeschlossen. Sende URI an Gemini: {gcsUri}");
+                Ui.Detail($"Upload abgeschlossen. Sende URI an Gemini: {gcsUri}", "GCS");
 
                 var fileDataPart = new Part { FileData = new FileData { FileUri = gcsUri, MimeType = mimeType } };
                 if (mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) && _googleVideoFps.HasValue) {
@@ -349,19 +355,20 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             }
             catch (Exception ex) {
                 if (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
-                    WriteLine("\n[INFO] GCS Datei-Upload vom Benutzer abgebrochen.");
+                    Ui.Blank();
+                    Ui.Info("GCS Datei-Upload vom Benutzer abgebrochen.");
                     return false;
                 }
 
-                WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                WriteLine($"Originaler Fehlertext: {ex.Message}");
+                Ui.Blank();
+                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
 
                 if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
-                    WriteLine("  [Netzwerk-Fehler] Der Google Cloud Storage konnte nicht erreicht werden.");
-                    WriteLine("  Bitte prüfe deine Internetverbindung.");
+                    Ui.Error("Der Google Cloud Storage konnte nicht erreicht werden.", "Netzwerk-Fehler");
+                    Ui.Detail("Bitte prüfe deine Internetverbindung.");
                 }
 
-                WriteLine($"  [FEHLER] Upload in GCS endgültig fehlgeschlagen.");
+                Ui.Error("Upload in GCS endgültig fehlgeschlagen.");
                 return false;
             }
         }
