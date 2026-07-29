@@ -75,6 +75,34 @@ was finished and committed, making the diff one known change rather than a
 mixture. From here the normal rule applies again — read the diff, confirm every
 change was intended, regenerate in the same commit.
 
+### F11 · A "back" option is the same job as F2 — do them together · **open**
+
+User asked (2026-07-29) for a back button in the menus. It is not a UI addition:
+every prompt's caller has to distinguish "user chose a value" from "user wants to
+step back" and unwind one level. Done partially it produces prompts that go back
+next to prompts that silently fall through — the exact failure mode of the silent
+`SelectModel` branch and the `(j/n)` confirm, both fixed earlier today.
+
+**The insight worth acting on:** `__EXIT__` (F2) is already a sentinel meaning
+"user bailed", checked at 13 sites. "Back" is the same plumbing with one more
+case. So F2 should not be done as "replace `__EXIT__` with a nullable return" —
+that solves half the problem and has to be redone. Do it once as a result type:
+
+```csharp
+public readonly record struct PromptResult<T>(PromptOutcome Outcome, T? Value);
+public enum PromptOutcome { Value, Back, Exit }
+```
+
+Every prompt returns it, every caller switches on it, and `Back` becomes
+expressible without touching those sites a second time. `__CHANGED_KEY__`
+(`DirectAiChatSessionAiStudio.cs:708`) is a fourth case of the same pattern and
+should fold in.
+
+Scope: 13 `__EXIT__` sites + 1 `__CHANGED_KEY__`, the `SelectionPrompt` call
+sites in `ConfigurationPrompts`, `SessionFactory`, `RefinementUiHelper`,
+`FfmpegInteractiveSession` and `VideoBatchSelector`. Not large, but it is
+control flow, so it wants a full session rather than a leftover budget.
+
 ### F9 · The warm-up's token report is silent when usage metadata is missing · **open**
 
 Raised by the user (2026-07-29): *"the warm-up didn't seem to cause round-trip
