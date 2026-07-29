@@ -20,9 +20,10 @@ user decision. The chat twins went 792 + 638 → **654 + 530**.
 
 **Build 0/0 · 228 tests green · UI-string drift 0 · baseline 597 entries.**
 
-**Every phase is now closed except Phase 12, which the user deferred.** **What
-is left is not code: (a) walk the new back-navigation once, nobody has launched
-the app; (b) read the handshake's new `Denk-Tokens` figure, then decide
+**Every phase is now closed except Phase 12, which the user deferred.** **(a) The
+back-navigation has been walked in the real app — user confirmed, 2026-07-29; F11
+is verified, not just built.** **(b) Still open, and not code: read the
+handshake's new `Denk-Tokens` figure on one real extraction, then decide
 `DisableThinkingDuringWarmUp`.** The one piece of code work the plan still
 points at is optional: the chat sessions are the last files in `src/` on
 `using static System.Console` rather than `Ui`, so they never got Phase 10. · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
