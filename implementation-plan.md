@@ -75,6 +75,46 @@ was finished and committed, making the diff one known change rather than a
 mixture. From here the normal rule applies again — read the diff, confirm every
 change was intended, regenerate in the same commit.
 
+### F9 · The warm-up's token report is silent when usage metadata is missing · **open**
+
+Raised by the user (2026-07-29): *"the warm-up didn't seem to cause round-trip
+costs, and output was only 2 tokens."*
+
+Partly by design, partly a reporting gap:
+
+* **2 output tokens is intended.** The handshake asks for exactly
+  `[AI-Model: …] Handshake confirmed. Ready.` with `MaxOutputTokens = 100`.
+* **But `PrimePrefixCacheAsync` sets no `ThinkingConfig`**, unlike the real
+  generation path — so the warm-up runs at the model's default thinking
+  behaviour and reasoning tokens are reported separately from
+  `CandidatesTokenCount`. Worth deciding whether the warm-up should explicitly
+  disable thinking; it has nothing to reason about.
+* **The token line prints only `if (inputTokens > 0)`.** Usage is read per-chunk
+  from `chunk.UsageMetadata`, which on a streamed response typically arrives
+  only on the final chunk. If it never arrives, the line is silently skipped and
+  the handshake *looks* free. Silence there means "not reported", not "not
+  charged".
+
+Cheap diagnostic before changing anything: log whether `chunk.UsageMetadata` was
+ever non-null for one run. That distinguishes "not reported" from "genuinely
+zero" definitively. It touches the paid path, so decide before implementing.
+
+### F10 · Cost is reported in the wrong currency · **idea, not yet scoped**
+
+Every report in this app counts tokens. Tokens are not what limits it — **requests
+per minute** are, which is why `VideoPartDelaySeconds` is 130 and
+`HistoryRateLimitDelaySeconds` is 120. A warm-up that hits the cache perfectly
+still spends one request and a 120-second delay, and the token report shows
+neither. With `HistoryBatchCount: 3` that is roughly six minutes of wall clock
+before the first video is touched, invisible in the output.
+
+Proposal: a session-end summary reporting **requests issued** and **wall-clock
+spent waiting in `SmartDelayAsync`**, alongside the token totals. Both numbers
+are already available — requests can be counted where `ApiRetryPolicy` runs, and
+`InteractiveDelay` already knows how long it waited. This would make the actual
+cost of a configuration visible for the first time, and would immediately answer
+questions like "is `HistoryBatchCount: 3` worth it?".
+
 ### F5 · Two models worked the same uncommitted tree · **resolved**
 
 Phases 8.5 and 9 were produced by a different assistant concurrently with this
@@ -123,6 +163,61 @@ call `Migrate` without the `configType` argument, which would have moved
 folders. It does pass `typeof(T)`; there is now a test pinning that.
 
 *State after F6/F7:* build 0/0, **109 tests green**.
+
+---
+
+## Two practices this refactor earned the hard way
+
+Both were learned from actual failures on 2026-07-28/29, not adopted on
+principle. They cost minutes and save hours.
+
+### Verify a line-range move three ways — a green build is not evidence
+
+Moving code by line range (`sed -n 'X,Yp'`) is the safest way to relocate large
+blocks, because nothing is retyped. But it silently took a closing brace one line
+too early during the `SystemInstructionTextBuilder` extraction, and the build
+still failed only by luck — a different slip would have compiled fine while
+losing a method. After every such move, before committing:
+
+```bash
+# 1. no method lost or gained
+diff <(git show HEAD:<file> | grep -oE '^    (public|private|protected|internal)[^;{]*\(' | sort) \
+     <(cat <new-files> | grep -oE '^    (public|private|protected|internal)[^;{]*\(' | sort)
+
+# 2. no line of the original missing (mind the trailing newline between files)
+comm -23 <(git show HEAD:<file> | sed 's/[[:space:]]*$//' | sort) \
+         <({ for f in <new-files>; do cat "$f"; echo; done; } | sed 's/[[:space:]]*$//' | sort)
+
+# 3. [AI Context]/[Human] comment counts balance, +N for new file headers
+```
+
+Check 2 is sensitive enough to produce a false positive if the files are
+concatenated without a separating newline (`}using System;`) — that is the check
+working, not failing.
+
+### Assert on bound values, not on intermediate shape
+
+F6 shipped through 102 green tests because
+`ConfigMigrator_MigratesLegacyFlatKeys_ToNestedSections` asserted the *emitted
+JSON structure* rather than *whether the value survived binding*. It passed with
+the defect and failed the moment the defect was fixed — a test actively holding a
+bug in place.
+
+The rule for this codebase: a test must assert what the program ends up
+believing, not what an intermediate artefact looks like. Concretely — bind the
+config and assert the property, do not assert the JSON key. This matters more
+here than usual, because `Microsoft.Extensions.Configuration` **silently ignores
+keys it cannot match**, so every structural mismatch fails quietly.
+
+### And the pattern that unlocked Phase 11
+
+Phase 4.5 twice deferred extracting types out of the session classes because the
+candidates mutated session state. The unlock was simple and worth reusing:
+**return your result; let the caller write the state.** `DebugRoundtripRunner`
+returns a `DebugRoundtripResult`, `SystemInstructionTextBuilder.AppendHistoryFilesAsync`
+returns the uploaded `Part`s. The session stays the single writer of its own
+fields, and the extracted piece becomes static or constructor-injectable with no
+shared-state object needed.
 
 ---
 
