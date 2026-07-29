@@ -1,6 +1,6 @@
 # Implementation Plan — Refactoring `lec-extraction-prog`
 
-**Status:** **Phases 0–9 complete. Phase 10 substantially done, two items open.** The Spectre.Console migration covers the menus, prompts, delays, severity vocabulary and all the large session classes — `Console.Write*` went from 616 to **73**, confined to 10 low-traffic files (`ApiRetryPolicy`, `LatexToolkit`, `GcsWorkspace`, `VideoDateParser`, `ContextCacheStateManager`, `YouTubeTaskPrompt`, `VideoSegmentProducer`, `GoogleAiClientBuilder`, `PrefixCacheAnchor`). Build **0/0**, **112 tests green**. · **Still open in Phase 10: (a) regenerate `docs/ui-strings.baseline.txt` — currently 996 lines of drift, so the review diff is unusable; (b) F2, the `__EXIT__` replacement across 13 sites, untouched.** · **Pick up next: those two, then Phase 11 — code quality.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
+**Status:** **Phases 0–10 complete.** The Spectre.Console migration is finished — `Console.Write` in `src/` went from 624 call sites to **4** (input prompts in `YouTubeTaskPrompt` that pair with `ReadLine`, which belong with F2). `docs/ui-strings.baseline.txt` regenerated, drift **0**. **Phase 11 substantially advanced:** `LatexRefinementSession.cs` 1603 → 520 (+ `.Pdf.cs` 617, `.Generation.cs` 383) and `AiStudioAutoExtractionSession.cs` 1323 → 755 (+ `.Generation.cs` 305, `.PrefixCache.cs` 181), plus `YouTubeTaskRunner`, `DebugRoundtripRunner` and `SystemInstructionTextBuilder` extracted as real types. Nothing on the AI Studio path exceeds 760 lines. · **Pick up next: F2 (`__EXIT__`, 13 sites), then `RefinementOptions` for the 4 telescoping constructors, then `VertexAutoExtractionSession` (~1690 lines, untouched).** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -10,7 +10,7 @@ Independent review of the Phase 8 / 8.5 / 9 work. The build was 0/0 and the
 suite green throughout, so none of these were compile or test failures — they
 are behavioural gaps the tests did not cover.
 
-**Status: F1, F3, F5, F6, F7 closed. F2 still open (untouched). F4 reopened.**
+**Status: F1, F3, F4, F5, F6, F7 closed. F2 still open (untouched) — it is the one remaining Phase 10 item.**
 
 **F4 reopened (2026-07-29):** the baseline was regenerated to 0 drift before the
 Spectre work, then the migration changed nearly every call site without
@@ -56,9 +56,24 @@ replace it with a nullable return or a small result type, in one pass across all
 
 **Status:** **FIXED**. Added `SpeedMultiplier` to `IAutoExtractionConfig`, `AiStudioAutoExtractionConfig` (defaulting to 1.0) and wired `VideoSegmentProducer.RunAsync` to consume `config.SpeedMultiplier`. Removed the hardcoded, stranded `_playbackSpeedMultiplier` private fields from both extraction session classes.
 
-### F4 · The UI-string baseline is stale by three phases · **RESOLVED (2026-07-28)**
+### F4 · The UI-string baseline is stale by three phases · **RESOLVED (2026-07-29)**
 
-**Status:** **FIXED**. `docs/ui-strings.baseline.txt` regenerated via `tools/dump-ui-strings.sh`.
+Regenerated once before the Spectre work, then again at the end of it (`164c428`)
+once the migration was actually complete — the intermediate state showed 996
+lines of drift. Drift is now **0**.
+
+The inventory is **444 entries, down from 624** at Phase 0. That drop is
+consolidation, not lost output: 20+ variant severity spellings collapsed into
+four canonical tags, multi-line exception reports became single lines, and
+subsystem prefixes moved out of string literals into the `Ui` scope argument, so
+strings that were once distinct are now one.
+
+**Caveat, stated because it affects how much the baseline proves:** the final
+regeneration was a deliberate *bulk accept* of the completed migration, not a
+line-by-line review of 996 lines. That is defensible only because the migration
+was finished and committed, making the diff one known change rather than a
+mixture. From here the normal rule applies again — read the diff, confirm every
+change was intended, regenerate in the same commit.
 
 ### F5 · Two models worked the same uncommitted tree · **resolved**
 
