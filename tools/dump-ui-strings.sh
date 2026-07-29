@@ -18,12 +18,29 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-find . -name '*.cs' \
-    -not -path './obj/*' \
-    -not -path './bin/*' \
-    -not -path './build_test_bin/*' \
-    -not -path './tests/*' \
-    -print0 \
-  | xargs -0 grep -hoE '(Console\.(Error\.)?(Write|WriteLine)|Ui\.(Info|Warn|Error|Success|Step|Detail|Raw|RawLine|Header|Confirm|ConfirmOrBack|Select|Ask|Table)|SetupQuestionPrompt\.Ask)\(.*' \
+sources() {
+  find . -name '*.cs' \
+      -not -path './obj/*' \
+      -not -path './bin/*' \
+      -not -path './build_test_bin/*' \
+      -not -path './tests/*' \
+      -print0
+}
+
+{
+  # Qualified calls: Console.WriteLine(...) and the Ui/prompt helpers.
+  sources | xargs -0 grep -hoE '(Console\.(Error\.)?(Write|WriteLine)|Ui\.(Info|Warn|Error|Success|Step|Detail|Raw|RawLine|Header|Confirm|ConfirmOrBack|Select|Ask|Table)|SetupQuestionPrompt\.Ask)\(.*'
+
+  # Bare Write/WriteLine, reached via "using static System.Console".
+  #
+  # Both chat sessions do this, so until 2026-07-29 every user-facing string in
+  # DirectAiChatSessionAiStudio.cs and DirectAiChatSessionVertex.cs -- ~1400 lines -- was
+  # invisible to this inventory. That is precisely the code Phase 8.5b rewrites, so the
+  # characterization harness the plan relies on did not in fact cover it.
+  #
+  # Anchored to start-of-line whitespace so "sw.WriteLine(...)" and other non-console writers
+  # do not match; the leading indent is stripped so the entry matches the qualified form.
+  sources | xargs -0 grep -hoE '^[[:space:]]+(Write|WriteLine)\(.*' | sed -e 's/^[[:space:]]*//'
+} \
   | sed -e 's/[[:space:]]\+$//' \
   | sort -u

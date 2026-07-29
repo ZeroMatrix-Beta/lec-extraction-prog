@@ -315,120 +315,95 @@ public partial class DirectAiChatSessionAiStudio {
     /// [AI Context] Intercepts and executes local REPL commands (e.g., /clear, /set temp) to avoid sending them as prompts to the AI.
     /// [Human] Verarbeitet alle eingebauten /- oder Kommando-Befehle, um die Hauptschleife sauber zu halten. Returns true, wenn der Input ein Befehl war.
     /// </summary>
+    /// <summary>
+    /// [AI Context] Recognises the input with <see cref="ChatCommandParser"/> and applies it. Parsing
+    /// is separate from applying so the command surface is testable without a live session - the nine
+    /// hand-written handlers this replaces each did both, which is how <c>set thinking-budget</c> and
+    /// <c>set thinking-level</c> stayed broken: their arguments were sliced at hand-counted offsets
+    /// two and one characters short of their prefixes, so both always took the error branch.
+    /// [Human] Erkennt und führt die eingebauten Befehle aus; das Zerlegen passiert getrennt und
+    /// getestet im ChatCommandParser.
+    /// </summary>
     private async Task<bool> TryHandleBuiltInCommandsAsync(string input, List<Content> history, List<Content> initialHistory, List<Part> parts, Action<string> updatePromptText, CancellationToken cancellationToken) {
-        string normalizedInput = input.TrimStart('/');
+        var command = ChatCommandParser.Parse(input);
 
-        if (TryHandleHelpCommand(normalizedInput)) return true;
-        if (TryHandleClearCommand(normalizedInput, history, initialHistory)) return true;
-        if (TryHandleSetTempCommand(normalizedInput)) return true;
-        if (TryHandleSetTokensCommand(normalizedInput)) return true;
-        if (TryHandleSetThinkingBudgetCommand(normalizedInput)) return true;
-        if (TryHandleSetThinkingLevelCommand(normalizedInput)) return true;
-        if (TryHandleChangeKeyCommand(normalizedInput)) return true;
-        if (TryHandleSetGroundingCommand(normalizedInput)) return true;
-        if (TryHandleSetModelCommand(normalizedInput)) return true;
-        if (await TryHandleAttachCommandAsync(normalizedInput, parts, updatePromptText, cancellationToken)) return true;
+        // The parser reports a bad argument rather than throwing; the command was still recognised,
+        // so the turn is consumed either way and never reaches the model.
+        if (!command.IsValid) {
+            WriteLine($"[FEHLER] {command.Error}");
+            return true;
+        }
 
-        return false; // Not a built-in command
+        switch (command.Kind) {
+            case ChatCommandKind.Help:
+                WriteCommandHelp();
+                return true;
+
+            case ChatCommandKind.Clear:
+                history.Clear();
+                history.AddRange(initialHistory);
+                WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
+                return true;
+
+            case ChatCommandKind.SetTemperature:
+                AIParams.Temperature = command.Number;
+                WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
+                return true;
+
+            case ChatCommandKind.SetMaxTokens:
+                AIParams.MaxOutputTokens = command.Integer;
+                WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
+                return true;
+
+            case ChatCommandKind.SetThinkingBudget:
+                AIParams.ThinkingBudget = command.Integer;
+                WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
+                return true;
+
+            case ChatCommandKind.SetThinkingLevel:
+                AIParams.ThinkingLevel = command.Text;
+                WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
+                return true;
+
+            case ChatCommandKind.SetGrounding:
+                AIParams.UseGoogleSearch = command.Flag;
+                WriteLine(command.Flag
+                    ? "[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT."
+                    : "[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
+                return true;
+
+            case ChatCommandKind.ChangeApiKeyProfile:
+                ApplyApiKeyProfile(command.Integer);
+                return true;
+
+            case ChatCommandKind.SetModel:
+                ApplySetModel(command.Text);
+                return true;
+
+            case ChatCommandKind.Attach: {
+                var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(input.TrimStart('/'), cancellationToken: cancellationToken);
+
+                // Handled but failed: returning true with empty 'parts' makes the main loop skip the
+                // turn cleanly rather than sending a prompt with nothing attached.
+                if (!success) return true;
+
+                parts.AddRange(attachmentParts);
+                updatePromptText(parsedPrompt);
+                return true;
+            }
+
+            default:
+                return false; // Not a built-in command - send it to the model
+        }
     }
 
-    private bool TryHandleHelpCommand(string normalizedInput) {
-        if (!normalizedInput.Equals("help", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("commands", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("show commands", StringComparison.OrdinalIgnoreCase)) {
-            return false;
-        }
-        WriteCommandHelp();
-        return true;
-    }
-
-    private static bool TryHandleClearCommand(string normalizedInput, List<Content> history, List<Content> initialHistory) {
-        if (!normalizedInput.Equals("clear", StringComparison.OrdinalIgnoreCase) && !normalizedInput.Equals("reset", StringComparison.OrdinalIgnoreCase)) {
-            return false;
-        }
-        history.Clear();
-        history.AddRange(initialHistory);
-        WriteLine("\n[INFO] Gedächtnis gelöscht! Gemini startet komplett frisch.");
-        return true;
-    }
-
-    private bool TryHandleSetTempCommand(string normalizedInput) {
-        if (!normalizedInput.StartsWith("set temp ", StringComparison.OrdinalIgnoreCase)) return false;
-        string tempValueStr = normalizedInput[9..].Trim();
-        if (float.TryParse(tempValueStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out float newTemp) && newTemp >= 0.0f && newTemp <= 2.0f) {
-            AIParams.Temperature = newTemp;
-            WriteLine($"[INFO] Temperatur für die nächste(n) Antwort(en) auf {AIParams.Temperature:F1} gesetzt.");
-        }
-        else {
-            WriteLine($"[FEHLER] Ungültiger Temperaturwert '{tempValueStr}'. Bitte eine Zahl zwischen 0.0 und 2.0 angeben.");
-        }
-        return true;
-    }
-
-    private bool TryHandleSetTokensCommand(string normalizedInput) {
-        if (!normalizedInput.StartsWith("set tokens ", StringComparison.OrdinalIgnoreCase)) return false;
-        string tokenValueStr = normalizedInput[11..].Trim();
-        if (int.TryParse(tokenValueStr, out int newTokens) && newTokens >= 1) {
-            AIParams.MaxOutputTokens = newTokens;
-            WriteLine($"[INFO] MaxOutputTokens für die nächste(n) Antwort(en) auf {AIParams.MaxOutputTokens} gesetzt.");
-        }
-        else {
-            WriteLine($"[FEHLER] Ungültiger Token-Wert '{tokenValueStr}'. Bitte eine positive ganze Zahl angeben.");
-        }
-        return true;
-    }
-
-    private bool TryHandleSetThinkingBudgetCommand(string normalizedInput) {
-        if (!normalizedInput.StartsWith("set thinking-budget ", StringComparison.OrdinalIgnoreCase)) return false;
-        string budgetValueStr = normalizedInput[18..].Trim();
-        if (int.TryParse(budgetValueStr, out int newBudget) && newBudget >= 0) {
-            AIParams.ThinkingBudget = newBudget;
-            WriteLine($"[INFO] ThinkingBudget für die nächste(n) Antwort(en) auf {AIParams.ThinkingBudget} gesetzt (relevant für Gemini 2.5 Modelle).");
-        }
-        else {
-            WriteLine($"[FEHLER] Ungültiger Wert für ThinkingBudget '{budgetValueStr}'. Bitte eine positive ganze Zahl angeben.");
-        }
-        return true;
-    }
-
-    private bool TryHandleSetThinkingLevelCommand(string normalizedInput) {
-        if (!normalizedInput.StartsWith("set thinking-level ", StringComparison.OrdinalIgnoreCase)) return false;
-        string levelValueStr = normalizedInput[17..].Trim().ToUpper();
-        var validLevels = new[] { "MINIMAL", "LOW", "MEDIUM", "HIGH" };
-        if (validLevels.Contains(levelValueStr)) {
-            AIParams.ThinkingLevel = levelValueStr;
-            WriteLine($"[INFO] ThinkingLevel für die nächste(n) Antwort(en) auf '{AIParams.ThinkingLevel}' gesetzt (relevant für Gemini 3.x Modelle).");
-        }
-        else {
-            WriteLine($"[FEHLER] Ungültiger Wert für ThinkingLevel '{levelValueStr}'. Gültige Werte sind: MINIMAL, LOW, MEDIUM, HIGH.");
-        }
-        return true;
-    }
-
-    private bool TryHandleChangeKeyCommand(string normalizedInput) {
-        if (!MyRegex().IsMatch(normalizedInput)) return false;
-        HandleChangeKey(normalizedInput);
-        return true;
-    }
-
-    private bool TryHandleSetGroundingCommand(string normalizedInput) {
-        if (!normalizedInput.StartsWith("set grounding ", StringComparison.OrdinalIgnoreCase)) return false;
-        string val = normalizedInput[14..].Trim().ToLowerInvariant();
-        if (val == "on" || val == "true" || val == "ja" || val == "yes" || val == "1") {
-            AIParams.UseGoogleSearch = true;
-            WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) AKTIVIERT.");
-        }
-        else if (val == "off" || val == "false" || val == "nein" || val == "no" || val == "0") {
-            AIParams.UseGoogleSearch = false;
-            WriteLine("[INFO] Google Search Grounding für die nächste(n) Antwort(en) DEAKTIVIERT.");
-        }
-        else {
-            WriteLine("[FEHLER] Ungültiger Wert für grounding. Bitte 'on' oder 'off' ausgeben.");
-        }
-        return true;
-    }
-
-    private bool TryHandleSetModelCommand(string normalizedInput) {
-        if (!normalizedInput.StartsWith("set model", StringComparison.OrdinalIgnoreCase)) return false;
-        string arg = normalizedInput.Length > 9 ? normalizedInput[9..].Trim() : "";
+    /// <summary>
+    /// [AI Context] Applies the <c>set model</c> command. Keeps its interactive picker: with no
+    /// argument it lists the configured models and reads a choice, which is also the only way to
+    /// reach a freetext model name such as a Gemma build.
+    /// [Human] Wechselt das Modell; ohne Argument mit Auswahlliste.
+    /// </summary>
+    private void ApplySetModel(string arg) {
         string newModel = "";
         if (string.IsNullOrEmpty(arg)) {
             WriteLine("\nVerfügbare Modelle:");
@@ -470,18 +445,6 @@ public partial class DirectAiChatSessionAiStudio {
                 WriteLine("  [INFO] Die Änderung ist nur vorübergehend.");
             }
         }
-        return true;
-    }
-
-    private async Task<bool> TryHandleAttachCommandAsync(string normalizedInput, List<Part> parts, Action<string> updatePromptText, CancellationToken cancellationToken) {
-        if (!normalizedInput.StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) return false;
-        var (success, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync(normalizedInput, cancellationToken: cancellationToken);
-
-        if (!success) return true; // Handled, but failed. Returning true with empty 'parts' forces the main loop to cleanly skip the turn.
-
-        parts.AddRange(attachmentParts);
-        updatePromptText(parsedPrompt);
-        return true;
     }
 
     /// <summary>
@@ -742,24 +705,10 @@ public partial class DirectAiChatSessionAiStudio {
     }
 
     /// <summary>
-    /// [AI Context] Dynamically swaps the active API key profile during a session to manage quotas without restarting.
-    /// [Human] Wechselt den API-Key mitten in der Sitzung, falls das Limit für den aktuellen Key erreicht wurde.
-    /// </summary>
-    private void HandleChangeKey(string input) {
-        var match = ChangeKeyParamsRegex().Match(input);
-        if (match.Success && int.TryParse(match.Groups[1].Value, out int newProfile) && newProfile >= 0 && newProfile <= 3) {
-            ApplyApiKeyProfile(newProfile);
-        }
-        else {
-            WriteLine("[FEHLER] Bitte eine gültige Profilnummer (0, 1, 2 oder 3) angeben.");
-        }
-    }
-
-    /// <summary>
-    /// [AI Context] Rebuilds the client on the given profile's key and points the attachment handler
-    /// at it. Split out of <see cref="HandleChangeKey"/> so the menu path
-    /// (<see cref="ChangeApiKeyProfileInteractive"/>) and the typed <c>change-key N</c> command share
-    /// one implementation instead of drifting apart.
+    /// [AI Context] Dynamically swaps the active API key profile during a session to manage quotas
+    /// without restarting. Both entry points reach it here - the typed <c>change-key N</c> command
+    /// (recognised and range-checked by <see cref="ChatCommandParser"/>) and the setup menu's
+    /// <see cref="ChangeApiKeyProfileInteractive"/> - so the two cannot drift apart.
     /// [Human] Baut den Client mit dem Key des gewählten Profils neu auf.
     /// </summary>
     private void ApplyApiKeyProfile(int newProfile) {
@@ -820,9 +769,4 @@ public partial class DirectAiChatSessionAiStudio {
         }
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"^change[- ]?key\s*\d+", System.Text.RegularExpressions.RegexOptions.IgnoreCase, "de-CH")]
-    private static partial System.Text.RegularExpressions.Regex MyRegex();
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"change[- ]?key\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
-    private static partial System.Text.RegularExpressions.Regex ChangeKeyParamsRegex();
 }
