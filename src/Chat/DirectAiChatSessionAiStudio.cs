@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
-using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.Configuration;
@@ -646,36 +645,11 @@ public partial class DirectAiChatSessionAiStudio {
     /// [Human] Löscht alle Dateien im konfigurierten Google Cloud Storage Bucket. Wird beim Start (für Dateileichen) und beim Beenden (für aktuelle Uploads) aufgerufen.
     /// </summary>
     private async Task CleanupGcsBucketAsync() {
-        if (string.IsNullOrWhiteSpace(GcsBucketName) || GcsBucketName == "DEIN_BUCKET_NAME_HIER_EINTRAGEN") return;
-
+        // The free-tier guard stays here: whether this session has a bucket at all is the session's
+        // own knowledge, not the purge's. Everything below it is shared with the Vertex chat session.
         if (IsAiStudio) return; // Prevent free-tier from pinging GCS
 
-        try {
-            var storageClient = await StorageClient.CreateAsync();
-            WriteLine($"  [GCS] Prüfe Bucket '{GcsBucketName}' auf alte/temporäre Dateien...");
-            var objects = storageClient.ListObjectsAsync(GcsBucketName);
-            int count = 0;
-            await foreach (var obj in objects) {
-                await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
-                count++;
-            }
-            if (count > 0) {
-                WriteLine($"  [GCS] {count} Datei(en) erfolgreich gelöscht.");
-            }
-        }
-        catch (Exception ex) {
-            WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-            if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
-                ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
-                ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
-                WriteLine($"  [GCS Warnung] Netzwerkfehler beim Bereinigen des Buckets '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
-            }
-            else {
-                WriteLine($"  [GCS Warnung] Fehler beim Bereinigen des Buckets: {ex.Message}");
-            }
-        }
+        await GcsWorkspace.PurgeChatWorkspaceAsync(GcsBucketName, _config.VerboseConsoleOutput);
     }
 
 }

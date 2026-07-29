@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
-using Google.Cloud.Storage.V1;
 using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.Configuration;
@@ -527,47 +526,6 @@ public class DirectAiChatSessionVertex {
     /// [Human] Löscht radikal alle Dateien aus dem Cloud Bucket. Das ist bei Vertex besonders wichtig, um horrende Speicherkosten zu vermeiden!
     /// </summary>
     private async Task ForcePurgeGcsBucketAsync() {
-        if (string.IsNullOrWhiteSpace(GcsBucketName)) return;
-
-        try {
-            // StorageClient utilizes Application Default Credentials
-            var storageClient = await StorageClient.CreateAsync();
-            WriteLine($"  [GCS] Verifying Bucket '{GcsBucketName}' and purging ALL files...");
-
-            var objects = storageClient.ListObjectsAsync(GcsBucketName);
-            int count = 0;
-
-            await foreach (var obj in objects) {
-                await storageClient.DeleteObjectAsync(GcsBucketName, obj.Name);
-                count++;
-            }
-
-            if (count > 0) {
-                WriteLine($"  [GCS] Successfully deleted {count} file(s) to secure billing.");
-            }
-            else {
-                WriteLine($"  [GCS] Bucket is already empty.");
-            }
-        }
-        catch (Exception ex) {
-            WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            WriteLine($"Originaler Fehlertext: {ex.Message}");
-
-            WriteLine($"\n  --- GCS ERROR DUMP ---");
-            WriteLine($"{ex}");
-            WriteLine($"  ----------------------\n");
-
-            if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
-                ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
-                ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
-                WriteLine($"  [GCS ERROR] Netzwerkfehler beim Zugriff auf '{GcsBucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}");
-            }
-            else if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase)) {
-                WriteLine($"  [GCS ERROR] Zugriff auf Bucket '{GcsBucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}");
-            }
-            else {
-                WriteLine($"  [GCS ERROR] Failed to access or purge bucket '{GcsBucketName}': {ex.Message}");
-            }
-        }
+        await GcsWorkspace.PurgeChatWorkspaceAsync(GcsBucketName, _config.VerboseConsoleOutput);
     }
 }

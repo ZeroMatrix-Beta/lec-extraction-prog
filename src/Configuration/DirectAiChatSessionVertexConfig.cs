@@ -26,6 +26,10 @@ public class DirectAiChatSessionVertexConfig {
         @"D:\lecture-videos\d-und-a/new"
     ];
     public bool UseGoogleSearch { get; set; } = false;
+
+    /// <summary>Prints full exception objects instead of just their message. Matches the flag of the same name on the extraction configs.</summary>
+    public bool VerboseConsoleOutput { get; set; } = false;
+
     public DirectAiChatSessionVertexAIConfig AI { get; set; } = new();
 
     // Delegating properties for backward compatibility
