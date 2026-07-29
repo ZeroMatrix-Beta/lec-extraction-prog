@@ -305,10 +305,7 @@ public static class RefinementUiHelper {
 
         var refinementSession = new LatexRefinementSession(
             refinementClient,
-            refinementConfig,
-            selectedTex,
-            extractionConfig,
-            selectedAudio
+            RefinementOptions.ForFile(refinementConfig, selectedTex, extractionConfig, selectedAudio)
         );
 
         await refinementSession.StartAsync();

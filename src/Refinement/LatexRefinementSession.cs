@@ -28,44 +28,20 @@ public partial class LatexRefinementSession {
     private readonly string? _audioFilePath;
     private List<Part>? _preUploadedAudioAttachments;
 
-    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config) {
+    /// <summary>
+    /// [AI Context] One constructor, taking a <see cref="RefinementOptions"/> that names which of the
+    /// pipeline's three input modes the caller wants. The four telescoping constructors this
+    /// replaces differed only in how many of these fields they set to null.
+    /// [Human] Ein Konstruktor; was verarbeitet wird, beschreibt <see cref="RefinementOptions"/>.
+    /// </summary>
+    public LatexRefinementSession(Client client, RefinementOptions options) {
         _client = client;
-        _config = config;
-        _singleFilePathToProcess = null;
-        _multipleFilesToProcess = null;
-        _extractionConfig = null;
-        _audioFilePath = null;
-        _preUploadedAudioAttachments = null;
-    }
-
-    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess) {
-        _client = client;
-        _config = config;
-        _singleFilePathToProcess = singleFilePathToProcess;
-        _multipleFilesToProcess = null;
-        _extractionConfig = null;
-        _audioFilePath = null;
-        _preUploadedAudioAttachments = null;
-    }
-
-    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string singleFilePathToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null, List<Part>? preUploadedAudioAttachments = null) {
-        _client = client;
-        _config = config;
-        _singleFilePathToProcess = singleFilePathToProcess;
-        _multipleFilesToProcess = null;
-        _extractionConfig = extractionConfig;
-        _audioFilePath = audioFilePath;
-        _preUploadedAudioAttachments = preUploadedAudioAttachments;
-    }
-
-    public LatexRefinementSession(Client client, LatexRefinementSessionConfig config, string[] multipleFilesToProcess, IAutoExtractionConfig extractionConfig, string? audioFilePath = null, List<Part>? preUploadedAudioAttachments = null) {
-        _client = client;
-        _config = config;
-        _singleFilePathToProcess = null;
-        _multipleFilesToProcess = multipleFilesToProcess;
-        _extractionConfig = extractionConfig;
-        _audioFilePath = audioFilePath;
-        _preUploadedAudioAttachments = preUploadedAudioAttachments;
+        _config = options.Config;
+        _singleFilePathToProcess = options.SingleFilePath;
+        _multipleFilesToProcess = options.MultipleFilePaths;
+        _extractionConfig = options.ExtractionConfig;
+        _audioFilePath = options.AudioFilePath;
+        _preUploadedAudioAttachments = options.PreUploadedAudioAttachments;
     }
 
     /// <summary>

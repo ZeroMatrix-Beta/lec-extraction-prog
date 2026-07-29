@@ -919,11 +919,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             Ui.Step($"Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
             var refinementSession = new LatexRefinementSession(
                 refinementClient,
-                _latexRefinementConfig!,
-                refinementTargetFile,
-                _config,
-                audioFilePath,
-                preUploadedAudioParts);
+                RefinementOptions.ForFile(_latexRefinementConfig!, refinementTargetFile, _config, audioFilePath, preUploadedAudioParts));
 
             await refinementSession.StartAsync();
         }

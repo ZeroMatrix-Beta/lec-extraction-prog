@@ -740,11 +740,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         Ui.Step($"Starte automatischen Refinement-Prozess für die {(_config.GenerateOffsetFiles ? "offset-korrigierte " : "")}Datei...");
         var refinementSession = new LatexRefinementSession(
             state.RefinementClient ?? _client,
-            _latexRefinementConfig!,
-            refinementTargetFile,
-            _config,
-            audioFilePath,
-            preUploadedAudioParts);
+            RefinementOptions.ForFile(_latexRefinementConfig!, refinementTargetFile, _config, audioFilePath, preUploadedAudioParts));
 
         AttachmentUploader.HasJustUploaded = false;
         await refinementSession.StartAsync();
