@@ -1963,7 +1963,7 @@ Phase 8.5a Delete the in-session debug REPL  ~small   ✅ done  (93827bb)
 Phase 9    Config consolidation + migrator   ~large   ✅ done
 Phase 10   Spectre.Console UI                ~large   ✅ done
 Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
-Phase 8.5b Rebuild the Direct chat sessions  ~large   ← IN PROGRESS, 3 of ~5 increments done
+Phase 8.5b Rebuild the Direct chat sessions  ~large   ← IN PROGRESS, 4 of 5 increments done
 Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
 ```
 
@@ -2017,6 +2017,21 @@ errors. So this one lands in verifiable steps, each committed green.
   characterization harness, in exactly the files this phase rewrites. Fixed; the
   inventory went 484 → 597, all additions.
 
+4. **`ResponseStreamPrinter`** (`995ae4a`) — the ~170-line streaming body both
+   sessions carried, plus Vertex's inline request-config building (now
+   `BuildChatRequestConfig`, matching AI Studio). The twins differed in exactly
+   **two** ways, both now explicit rather than buried: AI Studio's 130-second
+   quota wait stays at its call site and is handed in as `beforeRequestAsync`;
+   and the two disagreed about printing grounding sources after an aborted turn
+   — AI Studio's suppression is kept, **a real behaviour change on the Vertex
+   path, chosen rather than inherited**. The three `_sessionTotal*` fields moved
+   into the printer, the only place they were ever read; the client is passed per
+   call, because AI Studio replaces its own on `change-key`.
+
+   *Evidence the move was faithful:* the UI-string inventory changed on exactly
+   two lines, both cosmetic (a stale comment dropped, one local renamed).
+   `[AI Context]`/`[Human]` counts went 40/27 → 43/30 — three gained, none lost.
+
 **A third harness hole, found by increment 3 and worth stating as a rule.**
 Deduplication makes the UI-string inventory *silently* lose coverage: a string
 stays visible as long as **any** copy still sits in the matched shape. Increment 2
@@ -2032,12 +2047,13 @@ grounding cases are `if/else` again in both sessions so the strings stay literal
 arguments of a `WriteLine`, and `dump-ui-strings.sh` now collects
 `ChatCommand.Error`. Inventory 597 → 599.
 
-**Remaining increments, in order:**
+**Remaining increment:**
 
-4. Extract response streaming (`StreamChatTurnAsync` / `StreamGeminiResponseAsync`)
-   into a shared `ResponseStreamPrinter`; both twins have it at ~178/164 lines.
 5. Decide the GCS-cleanup merge above, then collapse what is left of the two
-   sessions.
+   sessions. After increments 3 and 4 the twins are down to **680 + 572 lines**
+   from 792 + 638, and what is left of the divergence is setup, history preload
+   and bucket cleanup — the last of which is the decision this phase must take
+   consciously rather than by accident.
 
 Config before UI, because Phase 10's verbosity handling, `show config` command
 and menu tables all consume the new config shape — the other order means
