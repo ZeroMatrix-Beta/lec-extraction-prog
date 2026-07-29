@@ -75,6 +75,13 @@ public partial class VertexAutoExtractionSession {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
 
+        // [AI Context] Opt-in (finding F9), guarded by SupportsThinking - see the AI Studio twin.
+        // [Human] Nur wenn konfiguriert und vom Modell unterstützt.
+        if (_config.DisableThinkingDuringWarmUp && ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
+            requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
+            Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
+        }
+
         string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
 
         string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
@@ -90,12 +97,14 @@ public partial class VertexAutoExtractionSession {
         try {
             string responseText = "";
             int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
+            var usage = new UsageReport();
 
             bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                     responseText += txt;
+                    usage.Absorb(chunk.UsageMetadata);
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                         if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -117,9 +126,8 @@ public partial class VertexAutoExtractionSession {
                 if (!string.IsNullOrWhiteSpace(responseText)) {
                     Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
-                if (inputTokens > 0) {
-                    Ui.Detail($"[Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
-                }
+                // Report unconditionally: silence means "not reported", not "not charged" (F9).
+                Ui.Detail(usage.Describe($"Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}"), "Cache-Warming");
 
                 int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");

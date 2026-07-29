@@ -77,5 +77,20 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool SendDummyFileWithEachWarmUpRound { get; set; } = false;
     public int HistoryRateLimitDelaySeconds { get; set; } = 65;
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = true;
+
+    /// <summary>
+    /// [AI Context] Sends <c>ThinkingBudget = 0</c> on the cache-warming handshake. The handshake asks
+    /// the model to echo one fixed sentence, so it has nothing to reason about - but unlike the real
+    /// generation path it sets no ThinkingConfig at all today, meaning it runs at the model's default
+    /// thinking behaviour and can bill reasoning tokens for a request that needs none (finding F9).
+    ///
+    /// <para>Defaults to <c>false</c>: this is a live, paid request, and "Thinking level is not
+    /// supported" is a real error mode for some models (ApiRetryPolicy filters for that message), so
+    /// the change is opt-in until one run's reported Denk-Tokens show whether it is worth making.
+    /// The flag is ignored for models that do not support thinking at all.</para>
+    /// [Human] Schaltet das "Nachdenken" beim Cache-Warming-Handshake ab. Standardmässig aus, bis
+    /// eine echte Messung zeigt, dass es sich lohnt.
+    /// </summary>
+    public bool DisableThinkingDuringWarmUp { get; set; } = false;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

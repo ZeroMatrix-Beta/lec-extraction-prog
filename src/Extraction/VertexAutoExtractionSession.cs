@@ -567,12 +567,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 int requestOutputTokens = 0;
                 int requestCachedTokens = 0;
 
+                var usage = new UsageReport();
                 var responseStream = _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _sessionPreamble, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
                     if (cts.IsCancellationRequested) break;
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                     Ui.Raw(txt);
                     fullResponse += txt;
+                    usage.Absorb(chunk.UsageMetadata);
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                         if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -586,7 +588,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 finalInputTokens = requestInputTokens;
                 finalOutputTokens = requestOutputTokens;
                 finalCachedTokens = requestCachedTokens;
-                Ui.Detail($"[Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {(Math.Max(0, requestInputTokens - requestCachedTokens)):N0} | Output: {requestOutputTokens:N0}");
+                Ui.Detail(usage.Describe($"Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {(Math.Max(0, requestInputTokens - requestCachedTokens)):N0} | Output: {requestOutputTokens:N0}", "[Request Tokens]      "));
                 Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
 
                 success = true;
@@ -1080,6 +1082,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             int requestOutputTokens = 0;
             int requestCachedTokens = 0;
             bool callSuccess = false;
+            var usage = new UsageReport();
 
             try {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
@@ -1094,6 +1097,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                             accumulatedGrounding = metadata;
                         }
 
+                        usage.Absorb(chunk.UsageMetadata);
                         if (chunk.UsageMetadata != null) {
                             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -1109,6 +1113,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         requestInputTokens = 0;
                         requestOutputTokens = 0;
                         requestCachedTokens = 0;
+                        usage = new UsageReport();
                     }
                 );
             }
@@ -1150,11 +1155,11 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
             if (_config.VerboseConsoleOutput) {
-                Ui.Detail($"[Request Tokens]       Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0}");
+                Ui.Detail(usage.Describe($"Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0}", "[Request Tokens]      "));
                 Ui.Detail($"[Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0}");
                 Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
             } else {
-                Ui.Detail($"[Tokens] Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out");
+                Ui.Detail(usage.Describe($"Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out"));
             }
 
             fullResponse += chunkResp;

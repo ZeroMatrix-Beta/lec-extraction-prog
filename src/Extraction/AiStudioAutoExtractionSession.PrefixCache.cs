@@ -106,6 +106,15 @@ public partial class AiStudioAutoExtractionSession {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
 
+        // [AI Context] Opt-in (finding F9). Guarded by SupportsThinking because sending the field to a
+        // model that does not accept it fails the request outright - "Thinking level is not supported"
+        // is one of the messages ApiRetryPolicy explicitly refuses to treat as transient.
+        // [Human] Nur wenn konfiguriert und vom Modell unterstützt.
+        if (_config.DisableThinkingDuringWarmUp && ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
+            requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
+            Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
+        }
+
         string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
 
         bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
@@ -132,12 +141,14 @@ public partial class AiStudioAutoExtractionSession {
         try {
             string responseText = "";
             int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
+            var usage = new UsageReport();
 
             bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                     responseText += txt;
+                    usage.Absorb(chunk.UsageMetadata);
                     if (chunk.UsageMetadata != null) {
                         if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                         if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -160,9 +171,12 @@ public partial class AiStudioAutoExtractionSession {
                 if (!string.IsNullOrWhiteSpace(responseText)) {
                     Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
-                if (inputTokens > 0) {
-                    Ui.Detail($"[Tokens] Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}");
-                }
+
+                // [AI Context] Report unconditionally. The old `if (inputTokens > 0)` guard meant a
+                // response whose usage metadata never arrived printed nothing at all, and a handshake
+                // with no token line reads as free when it means "not reported" (finding F9).
+                // [Human] Immer berichten - fehlende Zahlen heissen "nicht gemeldet", nicht "kostenlos".
+                Ui.Detail(usage.Describe($"Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}"), "Cache-Warming");
 
                 int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");

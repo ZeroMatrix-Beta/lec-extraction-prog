@@ -79,5 +79,13 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string FfmpegPreset { get; set; } = "fast";
     public int RateLimitDelaySeconds { get; set; } = 130;
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] Vertex counterpart of the AI Studio flag: sends <c>ThinkingBudget = 0</c> on the
+    /// cache-warming handshake, which has one fixed sentence to echo and nothing to reason about.
+    /// Opt-in for the same reason - it is a live paid request and some models reject the field.
+    /// [Human] Schaltet das "Nachdenken" beim Cache-Warming-Handshake ab (standardmässig aus).
+    /// </summary>
+    public bool DisableThinkingDuringWarmUp { get; set; } = false;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }
