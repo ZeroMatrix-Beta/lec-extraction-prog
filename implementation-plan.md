@@ -12,7 +12,7 @@ renders as free, and `ThoughtsTokenCount` surfaced — nothing read it before), 
 `VertexAutoExtractionSession` split (1227 → 852 + 300 + 128), and the Gemma
 system-role rule extracted and pinned ahead of 8.5b.
 
-**Build 0/0 · 164 tests green · UI-string drift 0 · baseline 484 entries.**
+**Build 0/0 · 228 tests green · UI-string drift 0 · baseline 599 entries.**
 
 **Pick up next: Phase 8.5b** (rebuild the Direct chat sessions) — its prerequisite
 is done. **Phase 12 is deferred by the user.** **Two things need a real run, not
@@ -1963,7 +1963,7 @@ Phase 8.5a Delete the in-session debug REPL  ~small   ✅ done  (93827bb)
 Phase 9    Config consolidation + migrator   ~large   ✅ done
 Phase 10   Spectre.Console UI                ~large   ✅ done
 Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
-Phase 8.5b Rebuild the Direct chat sessions  ~large   ← IN PROGRESS, 2 of ~5 increments done
+Phase 8.5b Rebuild the Direct chat sessions  ~large   ← IN PROGRESS, 3 of ~5 increments done
 Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
 ```
 
@@ -1995,6 +1995,14 @@ errors. So this one lands in verifiable steps, each committed green.
 2. **`ChatCommandParser` + `ChatCommand`** (`e2b4d3a`) — the command surface,
    parsed purely and pinned by 57 tests. Wired into the AI Studio session;
    `HandleChangeKey` and its two regexes deleted.
+3. **The parser wired into `DirectAiChatSessionVertex`** (`acf266d`) — Vertex
+   carried its own copy of all nine handlers, **including both broken offsets**,
+   so the defect had been copy-pasted rather than diverged. `ApplySetModel`
+   extracted to match the AI Studio shape. Vertex's own wording is held
+   byte-identical; `change-key` stays unrecognised there, because Vertex
+   authenticates through ADC and has no API-key profile to switch. One
+   deliberate behaviour change: `set temp` / `set tokens` used to swallow an
+   invalid argument silently on Vertex and now report it, as AI Studio does.
 
 **Two defects this uncovered, both now fixed:**
 
@@ -2009,10 +2017,23 @@ errors. So this one lands in verifiable steps, each committed green.
   characterization harness, in exactly the files this phase rewrites. Fixed; the
   inventory went 484 → 597, all additions.
 
+**A third harness hole, found by increment 3 and worth stating as a rule.**
+Deduplication makes the UI-string inventory *silently* lose coverage: a string
+stays visible as long as **any** copy still sits in the matched shape. Increment 2
+moved AI Studio's grounding strings into a ternary and its six error messages
+into `ChatCommand.Error`, and the inventory did not notice — Vertex's duplicate
+literals were still holding those lines up. They vanished the moment increment 3
+converted the second copy, three commits later than the change that caused it.
+
+So: **whenever a refactor changes the *shape* in which a string reaches the user,
+check the inventory in that same commit, even if the diff is empty.** An empty
+diff proves nothing while a duplicate survives. Both holes are closed — the
+grounding cases are `if/else` again in both sessions so the strings stay literal
+arguments of a `WriteLine`, and `dump-ui-strings.sh` now collects
+`ChatCommand.Error`. Inventory 597 → 599.
+
 **Remaining increments, in order:**
 
-3. Wire the parser into `DirectAiChatSessionVertex` (same nine handlers, same two
-   broken offsets — verify before assuming they are identical).
 4. Extract response streaming (`StreamChatTurnAsync` / `StreamGeminiResponseAsync`)
    into a shared `ResponseStreamPrinter`; both twins have it at ~178/164 lines.
 5. Decide the GCS-cleanup merge above, then collapse what is left of the two
