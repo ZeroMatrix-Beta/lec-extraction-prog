@@ -24,7 +24,7 @@ public static class FileSelectionPrompt {
 
         string selectedChoice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold text-primary]Verfügbare Dateien im Quellordner:[/]")
+                .Title("[bold cyan]Verfügbare Dateien im Quellordner:[/]")
                 .PageSize(15)
                 .AddChoices(choices)
         );
@@ -82,7 +82,7 @@ public static class FileSelectionPrompt {
 
             string choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[bold text-primary]Wähle eine Option oder einen Unterordner:[/]")
+                    .Title("[bold cyan]Wähle eine Option oder einen Unterordner:[/]")
                     .PageSize(15)
                     .AddChoices(options)
             );

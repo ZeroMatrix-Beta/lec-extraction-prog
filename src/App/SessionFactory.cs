@@ -65,7 +65,7 @@ public static class SessionFactory {
         if (AppConfig.IsVertexAiEnabled) {
             var selection = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[bold text-primary]Welche API soll für die automatisierte Extraktion genutzt werden?[/]")
+                    .Title("[bold cyan]Welche API soll für die automatisierte Extraktion genutzt werden?[/]")
                     .AddChoices(
                         "1) Google AI Studio",
                         "2) Google Cloud Vertex AI",

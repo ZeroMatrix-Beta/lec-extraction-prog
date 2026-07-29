@@ -50,7 +50,7 @@ public static class RefinementUiHelper {
 
             var menuChoice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("[bold text-primary]Optionen:[/]")
+                    .Title("[bold cyan]Optionen:[/]")
                     .AddChoices(choices)
             );
 
@@ -84,7 +84,7 @@ public static class RefinementUiHelper {
                 var models = new[] { "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview" };
                 string newModel = AnsiConsole.Prompt(
                     new SelectionPrompt<string>()
-                        .Title("[bold text-primary]Wähle ein Modell:[/]")
+                        .Title("[bold cyan]Wähle ein Modell:[/]")
                         .AddChoices(models)
                 );
 
@@ -132,7 +132,7 @@ public static class RefinementUiHelper {
 
         string selectedStepChoice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold text-primary]Welchen Schritt möchtest du ausführen?[/]")
+                .Title("[bold cyan]Welchen Schritt möchtest du ausführen?[/]")
                 .AddChoices(stepOptions)
         );
 
@@ -163,7 +163,7 @@ public static class RefinementUiHelper {
         var fileChoices = texFiles.Select(f => Path.GetRelativePath(searchFolder, f)).ToArray();
         string selectedRelativeTex = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold text-primary]Wähle die .tex Datei für das Refinement:[/]")
+                .Title("[bold cyan]Wähle die .tex Datei für das Refinement:[/]")
                 .PageSize(15)
                 .AddChoices(fileChoices)
         );
@@ -181,7 +181,7 @@ public static class RefinementUiHelper {
 
                 string audioChoice = AnsiConsole.Prompt(
                     new SelectionPrompt<string>()
-                        .Title("[bold text-primary]Wähle die Audio-Datei:[/]")
+                        .Title("[bold cyan]Wähle die Audio-Datei:[/]")
                         .AddChoices(audioChoices)
                 );
 

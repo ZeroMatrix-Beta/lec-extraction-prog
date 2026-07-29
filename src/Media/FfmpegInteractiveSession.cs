@@ -135,7 +135,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
     private static string[] SelectTargetFiles(string sourceFolder) {
         var selection = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold text-primary]Dateiauswahl-Modus:[/]")
+                .Title("[bold cyan]Dateiauswahl-Modus:[/]")
                 .AddChoices(
                     "Einzelne Videodatei auswählen",
                     "Alle Videodateien im Quellordner verarbeiten (Batch-Modus)"
@@ -190,7 +190,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
 
         var selectedKey = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold text-primary]FFmpeg Konvertierungs-Dashboard:[/]")
+                .Title("[bold cyan]FFmpeg Konvertierungs-Dashboard:[/]")
                 .PageSize(12)
                 .AddChoices(choices.Keys)
         );
@@ -226,7 +226,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
         string[] presets = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow"];
         string choice = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title("[bold text-primary]Wähle Kompressions-Voreinstellung (Preset):[/]")
+                .Title("[bold cyan]Wähle Kompressions-Voreinstellung (Preset):[/]")
                 .AddChoices(presets)
         );
 
