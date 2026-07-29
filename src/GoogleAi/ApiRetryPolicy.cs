@@ -44,7 +44,7 @@ public static partial class ApiRetryPolicy {
             try {
                 if (attempt > 1) {
                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-                    Console.WriteLine($"\n[API Retry]{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zurückgesetzt...");
+                    Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zurückgesetzt...", "API Retry");
                     onRetry?.Invoke();
                 }
 
@@ -60,8 +60,7 @@ public static partial class ApiRetryPolicy {
                 return false; // User cancelled
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[Exception Caught] Type: {ex.GetType().Name}");
-                Console.WriteLine($"Original Error: {ex.Message}");
+                Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
 
                 if (IsTransientError(ex) && attempt < maxRetries) {
                     var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext);
@@ -71,7 +70,7 @@ public static partial class ApiRetryPolicy {
                     }
                 }
                 else {
-                    Console.WriteLine($"\n[API Failure] Unrecoverable error after {attempt} attempts.");
+                    Ui.Error($"Unrecoverable error after {attempt} attempts.", "API Failure");
                     throw; // Re-throw for the caller to handle
                 }
             }
@@ -94,17 +93,16 @@ public static partial class ApiRetryPolicy {
             try {
                 if (attempt > 1) {
                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-                    Console.WriteLine($"\n[API Retry]{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...");
+                    Ui.Detail($"{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...", "API Retry");
                 }
                 return await apiCall();
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
-                Console.WriteLine("\n[API] Operation cancelled by user.");
+                Ui.Warn("Operation cancelled by user.", "API");
                 return null;
             }
             catch (Exception ex) {
-                Console.WriteLine($"\n[Exception Caught] Type: {ex.GetType().Name}");
-                Console.WriteLine($"Original Error: {ex.Message}");
+                Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
 
                 if (IsTransientError(ex) && attempt < maxRetries) {
                     var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext);
@@ -114,7 +112,7 @@ public static partial class ApiRetryPolicy {
                     }
                 }
                 else {
-                    Console.WriteLine($"\n[API Failure] Unrecoverable error after {attempt} attempts.");
+                    Ui.Error($"Unrecoverable error after {attempt} attempts.", "API Failure");
                     return null;
                 }
             }
@@ -199,15 +197,15 @@ public static partial class ApiRetryPolicy {
 
         if (IsNetworkConnectionError(ex)) {
             waitTime = 300; // 5 Minuten
-            Console.WriteLine($"\n[Netzwerk-Fehler]{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.GetType().Name}: {ex.Message}).");
-            Console.WriteLine($"  Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
-            Console.WriteLine($"  --> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
+            Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.GetType().Name}: {ex.Message}).", "Netzwerk-Fehler");
+            Ui.Detail("Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+            Ui.Detail($"--> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {attempt + 1}/{maxRetries})");
             delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
             nextBackoff = currentBackoff;
         }
         else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
             waitTime = 180; // 3 Minuten
-            Console.WriteLine($"\n[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+            Ui.Warn($"{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Hohe Auslastung");
             nextBackoff = waitTime;
         }
         else {
@@ -216,17 +214,17 @@ public static partial class ApiRetryPolicy {
                 var retryMatch = MyRegex().Match(ex.Message);
                 if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                     waitTime = serverSuggestedDelay + 20;
-                    Console.WriteLine($"\n[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+                    Ui.Warn($"{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Rate Limit");
                 }
                 else {
                     waitTime = currentBackoff; // Use the initial backoff from the caller
-                    Console.WriteLine($"\n[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+                    Ui.Warn($"{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Rate Limit / Überlastung");
                 }
                 nextBackoff = waitTime;
             }
             else {
                 waitTime = currentBackoff + 30;
-                Console.WriteLine($"\n[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)");
+                Ui.Warn($"{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Rate Limit");
                 nextBackoff = waitTime;
             }
         }
