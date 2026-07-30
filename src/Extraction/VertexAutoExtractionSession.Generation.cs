@@ -21,6 +21,7 @@ namespace LectureExtraction.Extraction;
 /// - UploadSegmentAndBuildPromptAsync: Uploads one video segment and builds its dynamic prompt.
 /// - TranscribeSegmentToLatexAsync: Runs one segment through the model to LaTeX.
 /// - BuildGenerationRequestAsync: Assembles the request config and history for one segment.
+/// - BuildReferenceContextPreamble: The read-only warning introducing the preceding parts' LaTeX.
 /// - BuildPreviousTexReferenceBlockAsync: Inlines preceding .tex parts as reference context.
 /// - StreamAndCollectAsync: Streams the response, handles continuations and token accounting.
 /// [Human] Der Generierungs-Teil der Vertex-Session, aufgeteilt wie beim AI-Studio-Zwilling.
@@ -74,23 +75,32 @@ public partial class VertexAutoExtractionSession {
         if (_config.EnableImplicitPrefixCacheWarmup) {
             preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n");
         }
-        if (_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
-            Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
-            preVideoBuilder.Append(await BuildPreviousTexReferenceBlockAsync(partFile, previousTexFiles));
+        var uploadedTexParts = new List<Part>();
+        if (_config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
+            if (_config.InlinePrecedingLecTexParts) {
+                Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
+                preVideoBuilder.Append(await BuildPreviousTexReferenceBlockAsync(partFile, previousTexFiles));
+            }
+            else {
+                // [AI Context] Upload mode replaces the append-at-the-end branch this used to have: the
+                // reference text now sits in the same pre-video Part as the anchor (as on AI Studio), and
+                // only the file references move, so the request has one stable shape either way.
+                // [Human] Im Upload-Modus steht der Referenztext vor dem Video, nicht mehr am Ende.
+                preVideoBuilder.Append(BuildReferenceContextPreamble(partFile));
+                var uploaded = await PrecedingTexReferences.UploadAsync(previousTexFiles, _attachmentHandler);
+                preVideoBuilder.Append(uploaded.ReferenceText);
+                uploadedTexParts.AddRange(uploaded.Parts);
+            }
         }
         preVideoBuilder.Append(GetStaticPromptBeginning(partNumber));
         userPromptParts.Add(new Part { Text = preVideoBuilder.ToString() });
+
+        userPromptParts.AddRange(uploadedTexParts);
 
         userPromptParts.AddRange(attachmentParts);
 
         if (!string.IsNullOrWhiteSpace(parsedPrompt)) {
             userPromptParts.Add(new Part { Text = parsedPrompt });
-        }
-
-        if (!_config.InlinePrecedingLecTexParts && _config.DebugSendReferenceFile && previousTexFiles.Count > 0) {
-            Ui.Info("Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):", "Kontext");
-            string contextText = await BuildPreviousTexReferenceBlockAsync(partFile, previousTexFiles);
-            userPromptParts.Add(new Part { Text = contextText.TrimEnd() });
         }
 
         var history = new List<Content>();
@@ -141,15 +151,24 @@ public partial class VertexAutoExtractionSession {
         return (requestConfig, history);
     }
 
+    /// <summary>
+    /// [AI Context] The read-only warning that introduces the preceding parts' LaTeX, whether that
+    /// LaTeX is inlined below it or attached as uploaded file references. Split out of
+    /// BuildPreviousTexReferenceBlockAsync so the upload path can state the same rules without
+    /// inlining anything; the wording is Vertex's own and stays byte-identical either way.
+    /// [Human] Die Read-only-Warnung vor den Referenzdateien - gilt für eingebettete und hochgeladene.
+    /// </summary>
+    private static string BuildReferenceContextPreamble(string partFile) =>
+        "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
+        "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
+        "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
+        "CRITICAL RULES:\n" +
+        "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
+        $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
+        "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+
     private static async Task<string> BuildPreviousTexReferenceBlockAsync(string partFile, List<string> previousTexFiles) {
-        var builder = new System.Text.StringBuilder(
-            "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
-            "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
-            "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
-            "CRITICAL RULES:\n" +
-            "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
-            $"2. Your SOLE task is to transcribe the NEW attached video segment: `{Path.GetFileName(partFile)}`.\n" +
-            "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n");
+        var builder = new System.Text.StringBuilder(BuildReferenceContextPreamble(partFile));
         foreach (var texFile in previousTexFiles) {
             Ui.Detail($"- {Path.GetFileName(texFile)}");
             string content = await System.IO.File.ReadAllTextAsync(texFile);

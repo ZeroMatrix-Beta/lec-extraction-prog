@@ -27,12 +27,28 @@ See "Phase 10 catch-up" below.
 
 **Build 0/0 · 236 tests green · UI-string drift 0 · baseline 588 entries.**
 
-**Every phase is now closed except Phase 12, which the user deferred.** **(a) The
-back-navigation has been walked in the real app — user confirmed, 2026-07-29; F11
-is verified, not just built.** **(b) Still open, and not code: read the
-handshake's new `Denk-Tokens` figure on one real extraction, then decide
-`DisableThinkingDuringWarmUp`.** **There is no remaining optional code work — the
-`using static System.Console` catch-up the plan used to point at is done.** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
+**2026-07-30 — Phase 12 has landed, and with it every phase in this document is
+closed.** Both `InlinePrecedingLecTexParts` paths ship behind the flag, default
+`true` on both configs, so the default request is byte-unchanged. Details and the
+four deviations from the spec are recorded in `docs/deep-dive-tex-attachment-mode.md`;
+the summary is that the upload loop became one shared type
+(`src/GoogleAi/PrecedingTexReferences.cs`) rather than a twin pair, a failed
+upload falls back to inlining that file rather than dropping it, and Vertex's
+append-at-the-end branch was replaced so both backends assemble the same shape.
+**Build 0/0 · 246 tests green (10 new) · UI-string drift 0 · baseline 589 entries.**
+
+**Nothing in this plan is code work any more. Three things are the user's, and all
+three need a real, paid run:** **(a)** read the handshake's `Denk-Tokens` figure on
+one extraction, then decide `DisableThinkingDuringWarmUp`; **(b)** run one short
+video with `InlinePrecedingLecTexParts` each way and set the default from the
+measurement, not from the reasoning in the deep dive; **(c)** before either, note
+that `AiStudioAutoExtractionConfig.json` currently carries
+`"InlinePrecedingLecTexParts": false` — dead config until today, now the switch
+that turns on upload mode. It was left untouched (it is live session state), so
+the next AI Studio extraction runs in upload mode unless it is set back to `true`.
+
+**(The back-navigation has been walked in the real app — user confirmed,
+2026-07-29; F11 is verified, not just built.)** · **Deep-dive specs:** `docs/deep-dive-spectre-ui.md`, `docs/deep-dive-tex-attachment-mode.md`, `docs/deep-dive-code-quality-decomposition.md`. · **Baseline commit:** `22c83bf` · **Date:** 2026-07-26 · **Last updated:** 2026-07-29
 
 ---
 
@@ -1471,7 +1487,7 @@ itself lives in the phases named below.
 | 16 — model config sprawl, `AppConfig` dead params | → **Phase 9** |
 | 1, 2, 3, 4, 6, 15 — menu plumbing, `show config` | → **Phase 10** (Spectre `SelectionPrompt` removes most structurally) |
 | 7 — `IProgressReporter` | → **Phase 10** (superseded: Spectre `Progress`/`Status` for non-streaming phases) |
-| 10 — `InlinePrecedingLecTexParts` | → **Phase 12**, decision taken |
+| 10 — `InlinePrecedingLecTexParts` | → **Phase 12**, done 2026-07-30 |
 
 1. The main menu re-loads `AiStudioAutoExtractionConfig` on **every** loop
    iteration purely to render one status line — cache it, invalidate on edit.
@@ -1526,6 +1542,8 @@ itself lives in the phases named below.
    Priming, see `Documentation.md` §4.2) and must **not** be touched — only
    the console-printing one is noise.
 10. **`InlinePrecedingLecTexParts` is dead config on the AI Studio path.**
+    **RESOLVED (2026-07-30, Phase 12): wired up, not deleted.** The rest of this
+    item is the original finding, kept as the evidence trail.
     Found in passing during the Phase 7 rename sweep: `VertexAutoExtractionSession`
     reads it (twice, in `BuildGenerationRequestAsync`), but
     `AiStudioAutoExtractionSession` **never reads it at all** — `grep -rn
@@ -1950,9 +1968,10 @@ defaults and clamping, `ClearCollectionsRecursively`'s array contract, `Ui`
 markup escaping against LaTeX, and `RefinementOptions` equivalence against all
 4 old constructor signatures.
 
-### Phase 12 — `InlinePrecedingLecTexParts` as an upload switch · small
+### Phase 12 — `InlinePrecedingLecTexParts` as an upload switch · small · **DONE (2026-07-30)**
 
-Settles backlog item 10. **Full spec: `docs/deep-dive-tex-attachment-mode.md`.**
+Settles backlog item 10. **Full spec, and the record of what actually shipped:
+`docs/deep-dive-tex-attachment-mode.md`.**
 
 `.tex` is **already** in `AttachmentUploader.s_textExtensions`, which
 short-circuits to inline text before the mime switch is reached — so the change
@@ -1965,9 +1984,10 @@ reference that **breaks implicit prefix caching**, so `false` gives up the
 incremental `tex1…texN` prefix reuse and keeps only the dummy anchor. It does
 **not** reduce token cost; it reduces payload size and re-transmission across
 continuations, at the cost of one upload request per preceding file per part.
-Hence: ship defaulting to `true`, measure, then decide.
+Hence: ship defaulting to `true`, measure, then decide. **Shipped that way; the
+measurement is still outstanding and is the user's paid run.**
 
-Land **last and alone** — it changes what reaches a paid API.
+Landed **last and alone** — it changes what reaches a paid API.
 
 ### Suggested order
 
@@ -1979,16 +1999,16 @@ Phase 10   Spectre.Console UI                ~large   ✅ done
 Phase 11   Code quality + tests              ~medium  ✅ done  (RefinementOptions, Vertex split)
 Phase 8.5b Rebuild the Direct chat sessions  ~large   ✅ done  (5 increments)
 Phase 10c  Chat layer joins Ui + GCS merge   ~medium  ✅ done  (2026-07-29)
-Phase 12   .tex upload switch                ~small   ← deferred by the user, 2026-07-29
+Phase 12   .tex upload switch                ~small   ✅ done  (2026-07-30)
 ```
 
-**State as of 2026-07-29:** every phase is closed except Phase 12, which the user
-deferred. Findings F1–F12 are all resolved. 236 tests green, build 0/0,
-UI-string drift 0.
+**State as of 2026-07-30:** **every phase in this document is closed.** Findings
+F1–F12 are all resolved. 246 tests green, build 0/0, UI-string drift 0.
 
-**The two things that still need a real run, not more code:** walk the new
-back-navigation once (nobody has launched the app since it landed), and read the
-handshake's `Denk-Tokens` figure before deciding `DisableThinkingDuringWarmUp`.
+**What still needs a real run, not more code:** read the handshake's
+`Denk-Tokens` figure before deciding `DisableThinkingDuringWarmUp`, and run one
+short video each way before setting the `InlinePrecedingLecTexParts` default. The
+back-navigation walk-through is done (2026-07-29, user confirmed).
 
 **8.5b prerequisite was done first**, so the work could start cold:
 `ModelCapabilities.RequiresSystemInstructionInFirstUserTurn` extracts the Gemma

@@ -72,7 +72,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             string? resolvedPath = ResolveFilePath(rawName, out List<string> searchedLocations);
 
             if (resolvedPath != null) {
-                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory, cancellationToken);
+                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory, cancellationToken: cancellationToken);
                 if (loaded) {
                     anyFileLoaded = true;
                     loadedNames.Add(Path.GetFileName(resolvedPath));
@@ -140,18 +140,47 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
     }
 
     /// <summary>
-    /// [AI Context] Orchestrates the actual data transfer. 
-    /// Local text files are embedded raw as strings to save upload bandwidth. Media is pushed via Google File API or GCS buckets.
-    /// [Human] Entscheidet anhand der Dateiendung: Ist es Text, wird es direkt in den Chat kopiert. Ist es Media, wird es hochgeladen.
+    /// [AI Context] Maps a lowercase file extension to the mime type sent to Gemini, or null when the
+    /// type is unsupported. Static and side-effect-free so the mapping can be tested directly.
+    ///
+    /// <para>".tex" is present only for the <c>uploadTextAsFile</c> bypass (Phase 12): normally a .tex
+    /// file short-circuits into inline text long before this switch is reached, and the switch is only
+    /// consulted once a caller has explicitly asked for the upload path.</para>
+    /// [Human] Übersetzt die Dateiendung in den Mime-Typ. ".tex" gibt es nur für den Upload-Umweg.
     /// </summary>
-    private async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts, bool asSystemInstruction = false, string? baseDirectory = null, CancellationToken cancellationToken = default) {
+    public static string? ResolveMimeType(string extension) => extension switch {
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".webp" => "image/webp",
+        ".pdf" => "application/pdf",
+        ".mp3" => "audio/mpeg",
+        ".aac" => "audio/aac",
+        ".wav" => "audio/wav",
+        ".mp4" => "video/mp4",
+        ".tex" => "text/plain",
+        _ => null
+    };
+
+    /// <summary>
+    /// [AI Context] Orchestrates the actual data transfer.
+    /// Local text files are embedded raw as strings to save upload bandwidth. Media is pushed via Google File API or GCS buckets.
+    ///
+    /// <para><paramref name="uploadTextAsFile"/> bypasses the inline-text short-circuit so a text file
+    /// (in practice: a preceding part's .tex) travels as a File-API / GCS reference instead of being
+    /// re-transmitted as prompt text on every continuation. It deliberately loses to
+    /// <paramref name="asSystemInstruction"/>: a system instruction must stay inline text to take part
+    /// in the implicit prefix at all.</para>
+    /// [Human] Entscheidet anhand der Dateiendung: Ist es Text, wird es direkt in den Chat kopiert. Ist es Media, wird es hochgeladen.
+    /// uploadTextAsFile erzwingt den Upload auch für Textdateien - ausser in der System Instruction.
+    /// </summary>
+    public async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts, bool asSystemInstruction = false, string? baseDirectory = null, bool uploadTextAsFile = false, CancellationToken cancellationToken = default) {
         string ext = Path.GetExtension(filePath).ToLower();
         string rawDisplayPath = !string.IsNullOrEmpty(baseDirectory)
             ? Path.GetRelativePath(baseDirectory, filePath)
             : filePath;
         string displayPath = FileTreeRenderer.NormalizeRelativePath(rawDisplayPath);
 
-        if (s_textExtensions.Contains(ext)) {
+        if (s_textExtensions.Contains(ext) && (asSystemInstruction || !uploadTextAsFile)) {
             if (asSystemInstruction) {
                 Ui.Detail($"Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...", "Lokal");
                 string fileContent = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
@@ -166,17 +195,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             }
         }
 
-        string? mimeType = ext switch {
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".png" => "image/png",
-            ".webp" => "image/webp",
-            ".pdf" => "application/pdf",
-            ".mp3" => "audio/mpeg",
-            ".aac" => "audio/aac",
-            ".wav" => "audio/wav",
-            ".mp4" => "video/mp4",
-            _ => null
-        };
+        string? mimeType = ResolveMimeType(ext);
 
         if (mimeType == null) {
             Ui.Error($"Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");

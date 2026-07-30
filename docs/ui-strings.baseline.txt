@@ -310,13 +310,13 @@ Ui.Info("Lade Dateien als System Instructions hoch (dies kann einen Moment dauer
 Ui.Info("Lade History-Dateien für System Instruction ein...");
 Ui.Info("Lade History-Dateien für die Session hoch (dies kann einen Moment dauern)...");
 Ui.Info("Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
+Ui.Info("Lade folgende bereits generierte .tex-Dateien als Datei-Referenz hoch (statt sie in den Prompt einzubetten):", "Kontext");
 Ui.Info("Pipeline wird ab dem gewählten Schritt bis zum Ende (inkl. Schritt 4: PDF-Kompilierung) ausgeführt.");
 Ui.Info("Press any key to exit...");
 Ui.Info("Probe-Kompilierung erfolgreich! Keine Syntaxfehler vorhanden. Gebe diese Info an Schritt 3 weiter.");
 Ui.Info("Probe-Kompilierung meldet Syntaxfehler. Gebe das Fehlerprotokoll an Schritt 3 weiter zur Korrektur.");
 Ui.Info("Quellen (Google Search Grounding):");
 Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");
-Ui.Info("Sende folgende bereits generierte .tex-Dateien als Referenzkontext mit (am Ende angehängt):", "Kontext");
 Ui.Info("Session ended.", "System");
 Ui.Info("Starte finalen Durchlauf für Schritt 3 (Last Refinement)...");
 Ui.Info("Starte initialen Handshake-Roundtrip, um den stabilen Prompt-Anfang bei Google im impliziten Cache zu aktivieren...", "Cache-Warming");
@@ -574,6 +574,7 @@ Ui.Warn($"Preamble-Datei ({preamblePath}) nicht gefunden. Überspringe PDF-Gener
 Ui.Warn($"Prozess konnte nicht beendet werden. Art der Exception: {killEx.GetType().Name}, Fehler: {killEx.Message}", "LatexToolkit");
 Ui.Warn($"System-Instruktion nicht gefunden und übersprungen: {path}");
 Ui.Warn($"System-Prompt-Datei nicht gefunden: {SystemInstructionPath}");
+Ui.Warn($"Upload von '{previousTexFileName}' fehlgeschlagen - die Datei wird stattdessen direkt in den Prompt eingebettet.", "Kontext");
 Ui.Warn($"Video entspricht nicht dem Datums-/Wochen-Namensschema: {Path.GetFileName(videoFile)}", "AutoExtraction");
 Ui.Warn($"[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte 3 Minuten...");
 Ui.Warn($"[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");

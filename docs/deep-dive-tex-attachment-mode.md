@@ -2,6 +2,54 @@
 
 Companion to [implementation-plan.md](../implementation-plan.md) — Phase 12 (.tex upload switch).
 
+## Implemented (2026-07-30) — build 0/0, 246 tests green, UI-string drift 0
+
+Both paths ship behind the flag, which defaults to `true` on both config classes, so the default
+request is unchanged. What landed, and the four places it departs from the design below:
+
+* **`AttachmentUploader.UploadAndAttachFileAsync` is public and takes `uploadTextAsFile`.** The text
+  short-circuit is now `s_textExtensions.Contains(ext) && (asSystemInstruction || !uploadTextAsFile)`
+  — `asSystemInstruction` wins, as specified. The mime switch moved into a public static
+  `ResolveMimeType` so `.tex → text/plain` is testable; `.tex` is the only entry added, and every
+  other member of `s_textExtensions` still resolves to `null`, which is what keeps the bypass
+  unusable for `.cs`/`.json`/etc.
+* **The upload loop is one shared type, not two copies:**
+  `src/GoogleAi/PrecedingTexReferences.cs`. The backend difference (Files API vs. GCS) already lives
+  inside `AttachmentUploader`, so nothing in the loop was backend-specific — this is the plan's
+  opportunistic-extraction rule, not a step toward unifying the sessions. It returns
+  `Result(ReferenceText, Parts)` and lets each session write its own request (the Phase 4.5 rule).
+* **Deviation 1 — the read-only notice is English, not the German example below.** Every other line
+  of that prompt is English; German would have been the only German sentence the model ever reads
+  there. The decision was "restate the read-only rule and name the files", and the `e.g.` marked the
+  wording as illustrative. Shipped text: `NOTE: The LaTeX output of the preceding part(s) is attached
+  to this request as read-only reference file(s): …. The CRITICAL RULES above apply to those
+  attachments unchanged …`.
+* **Deviation 2 — a failed upload falls back to inlining that file**, with a `Ui.Warn`, and the
+  notice then names only the files that really are attached. Not in the design; added because the
+  alternative is silently dropping context the model needs to resolve `\ref{...}` into earlier
+  parts, which is the same invisible-quality-regression class the read-only decision was made to
+  avoid.
+* **Deviation 3 — Vertex's `false` branch was replaced, not just re-pointed.** It used to append the
+  whole reference block at the *end* of the user turn; it now puts the preamble + notice in the same
+  pre-video Part as the anchor and moves only the file references, so both backends assemble the
+  same shape. Its warning text was extracted verbatim into `BuildReferenceContextPreamble(partFile)`
+  and is byte-identical on the `true` path.
+* **Deviation 4 — the per-part token diagnostic stopped lying.** `LogTokenCountsAsync` labelled the
+  first Part with the names of the preceding `.tex` files; under upload mode they are no longer in
+  that Part, so the names are omitted there now.
+
+**Verification.** Check 2 below (diff the assembled request against the pre-change build) was
+satisfied by construction rather than by a dump: on the `true` path the AI Studio builder is the
+same statements in the same order with an empty `uploadedTexParts` added, and Vertex's moved
+preamble string is character-identical in the diff. Checks 1 and 4 are done. **Check 3 — one short
+video with each setting — is still open and is the user's call: it is the paid run this whole
+document defers the default to.**
+
+**One live-config trap worth knowing before that run:** `AiStudioAutoExtractionConfig.json` in the
+working tree carries `"InlinePrecedingLecTexParts": false`. That was harmless while AI Studio ignored
+the flag; it is now the switch that turns on upload mode. Left untouched — it is the user's session
+state — but the next AI Studio extraction runs in upload mode unless it is set back to `true`.
+
 ## Correction to the main plan
 
 The main plan says to *add* `".tex" => "text/plain"` to the mime switch in

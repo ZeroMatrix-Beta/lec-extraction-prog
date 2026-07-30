@@ -102,6 +102,7 @@ public partial class AiStudioAutoExtractionSession {
         var userPromptParts = new List<Part>();
 
         string staticBeginning = GetStaticPromptBeginning(partNumber);
+        var uploadedTexParts = new List<Part>();
         if (_config.DebugSendReferenceFile) {
             string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
 
@@ -109,12 +110,18 @@ public partial class AiStudioAutoExtractionSession {
             referenceContextBuilder.Append(dummyReferenceBlock);
 
             if (previousTexFiles.Count > 0) {
-                Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
-                foreach (var previousTexFile in previousTexFiles) {
-                    string previousTexFileName = Path.GetFileName(previousTexFile);
-                    Ui.Detail($"- {previousTexFileName}");
-                    string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
-                    referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
+                if (_config.InlinePrecedingLecTexParts) {
+                    Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
+                    foreach (var previousTexFile in previousTexFiles) {
+                        string previousTexFileName = Path.GetFileName(previousTexFile);
+                        Ui.Detail($"- {previousTexFileName}");
+                        string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
+                        referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
+                    }
+                } else {
+                    var uploaded = await PrecedingTexReferences.UploadAsync(previousTexFiles, _attachmentHandler);
+                    referenceContextBuilder.Append(uploaded.ReferenceText);
+                    uploadedTexParts.AddRange(uploaded.Parts);
                 }
             }
 
@@ -122,6 +129,12 @@ public partial class AiStudioAutoExtractionSession {
         } else {
             userPromptParts.Add(new Part { Text = staticBeginning });
         }
+
+        // [AI Context] Uploaded .tex references sit between the text Part and the video, never inside the
+        // text Part: splitting that Part around them would break the preamble+anchor prefix match too,
+        // costing the anchor's cache benefit for no gain (see docs/deep-dive-tex-attachment-mode.md).
+        // [Human] Hochgeladene .tex-Referenzen kommen nach dem Textblock und vor dem Video.
+        userPromptParts.AddRange(uploadedTexParts);
 
         userPromptParts.AddRange(attachmentParts);
 
@@ -148,7 +161,11 @@ public partial class AiStudioAutoExtractionSession {
             if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
                 var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
                 var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
-                string fileInfo = previousTexFiles.Count > 0
+                // [AI Context] Only name the preceding .tex files when they are actually inside this Part.
+                // Under InlinePrecedingLecTexParts=false they travel as separate file references, so listing
+                // them here would attribute their tokens to a Part that no longer contains them.
+                // [Human] Die Dateinamen nur nennen, wenn sie wirklich in diesem Textblock stecken.
+                string fileInfo = previousTexFiles.Count > 0 && _config.InlinePrecedingLecTexParts
                     ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
                     : "dummy-part0.tex";
                 Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texCount.TotalTokens}");
