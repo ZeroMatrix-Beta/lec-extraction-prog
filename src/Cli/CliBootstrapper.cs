@@ -1,6 +1,7 @@
 using System;
 using System.CommandLine;
 using System.Threading.Tasks;
+using Spectre.Console;
 using LectureExtraction.Cli.Commands;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
@@ -45,6 +46,10 @@ public static class CliBootstrapper {
         ConfigStore.SaveEnabled = context.SaveConfig;
         ConfigStore.DirectoryOverride = context.ConfigDir;
 
+        if (context.Json) {
+            RouteLoggingToStandardError();
+        }
+
         try {
             return await parseResult.InvokeAsync();
         }
@@ -71,6 +76,20 @@ public static class CliBootstrapper {
         }
     }
 
+    /// <summary>
+    /// Sends every <c>Ui</c> write to stderr, leaving stdout for the command's payload alone.
+    ///
+    /// <para>Without this, <c>--json</c> is unusable for anything that reports progress: FFmpeg's
+    /// running commentary and the JSON document land on the same stream, and no parser can read
+    /// the result. Because the whole app writes through <c>Ui</c>, redirecting Spectre's console
+    /// once here covers every subsystem.</para>
+    /// </summary>
+    private static void RouteLoggingToStandardError() {
+        AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings {
+            Out = new AnsiConsoleOutput(Console.Error)
+        });
+    }
+
     /// <summary>Exposed for tests, which assert the shape of the tree without running anything.</summary>
     public static RootCommand BuildRootCommand() {
         var root = new RootCommand(Description);
@@ -80,6 +99,7 @@ public static class CliBootstrapper {
         }
 
         root.Add(ConfigCommands.Build());
+        root.Add(MediaCommands.Build());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);

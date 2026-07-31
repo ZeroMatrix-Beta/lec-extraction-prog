@@ -15,11 +15,6 @@ public static class PlannedCommands {
         Planned("run", "Run the whole pipeline for one video or a folder: segments -> LaTeX -> refinement -> PDF.", "C5"),
         Planned("batch", "Run several videos in parallel worker processes, each with its own model and API-key profile.", "C8"),
         Planned("plan", "Report what a run would do - videos, segments, requests - without calling the API.", "C4"),
-        WithSubcommands("media", "Local FFmpeg stages. No API calls, no cost.", [
-            Planned("probe", "Report duration and streams of a video.", "C3"),
-            Planned("segment", "Compress and slice a video into overlapping segments.", "C3"),
-            Planned("audio", "Extract the mono audio track used for timestamp correction.", "C3")
-        ]),
         WithSubcommands("extract", "Transcription only - never chains into refinement.", [
             Planned("run", "Transcribe a prepared video into per-part .tex files.", "C5")
         ]),

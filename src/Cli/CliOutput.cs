@@ -12,7 +12,11 @@ namespace LectureExtraction.Cli;
 public static class CliOutput {
     private static readonly JsonSerializerOptions PayloadOptions = new() {
         WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        // Domain records (PreparedVideo and friends) are PascalCase by C# convention, while the
+        // hand-written payloads are camelCase. Without a policy the JSON contract would depend on
+        // whether a command happened to emit a record or an anonymous type.
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
     /// <summary>
