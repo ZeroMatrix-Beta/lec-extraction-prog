@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Media;
-using Spectre.Console;
 
 namespace LectureExtraction.Extraction;
 
@@ -80,34 +79,26 @@ public static class VideoBatchSelector {
     private static PromptResult<string[]> SelectIndividualVideos(string[] files) {
         // Spectre has no multi-select with a "back" entry, so an empty confirmation is read as
         // "back": ticking nothing and pressing Enter is what a user does when they want out.
-        var labels = BuildLabels(files).Select(Markup.Escape).ToArray();
+        // Labels are passed unescaped - Ui.SelectMany escapes, as every other prompt here does.
+        var choices = BuildLabels(files).Select((label, index) => (label, files[index]));
 
-        var selected = AnsiConsole.Prompt(
-            new MultiSelectionPrompt<string>()
-                .Title("[bold]Welche Videos sollen verarbeitet werden?[/]")
-                .PageSize(15)
-                .NotRequired()
-                .MoreChoicesText("[grey](Pfeiltasten für weitere Videos)[/]")
-                .InstructionsText("[grey](Leertaste zum Auswählen, Enter zum Bestätigen - nichts auswählen führt zurück)[/]")
-                .AddChoices(labels));
+        // The result already arrives in source order, so the chronological sequence survives -
+        // which matters downstream, where later parts reference earlier ones.
+        var chosen = Ui.SelectMany("Welche Videos sollen verarbeitet werden?", choices,
+            pageSize: 15,
+            moreChoicesText: "(Pfeiltasten für weitere Videos)",
+            instructionsText: "(Leertaste zum Auswählen, Enter zum Bestätigen - nichts auswählen führt zurück)");
 
-        if (selected.Count == 0) {
+        if (chosen.Count == 0) {
             Ui.Warn("Keine Videos ausgewählt.");
             return PromptResult.Back<string[]>();
         }
 
-        // Keep the chronological order of the source list rather than the order the user ticked
-        // them in - later parts reference earlier ones, so sequence matters downstream.
-        var chosen = labels.Select((label, index) => (label, index))
-                           .Where(x => selected.Contains(x.label))
-                           .Select(x => files[x.index])
-                           .ToArray();
-
-        Ui.Info($"{chosen.Length} Video(s) ausgewählt.");
+        Ui.Info($"{chosen.Count} Video(s) ausgewählt.");
         foreach (string file in chosen) {
             Ui.Detail($"- {Path.GetFileName(file)}");
         }
-        return PromptResult.FromValue(chosen);
+        return PromptResult.FromValue<string[]>([.. chosen]);
     }
 
     /// <summary>

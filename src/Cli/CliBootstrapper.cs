@@ -32,7 +32,18 @@ public static class CliBootstrapper {
             return ExitCodes.Usage;
         }
 
-        return await parseResult.InvokeAsync();
+        // Every prompt in the app now resolves through this, so installing it here is the whole of
+        // "run headlessly" - no command has to know it is running without a keyboard.
+        Ui.PromptSource = new PresetPromptSource(CliOptions.ReadContext(parseResult).AssumeYes);
+
+        try {
+            return await parseResult.InvokeAsync();
+        }
+        catch (UnattendedPromptException ex) {
+            // Distinct from a crash: the run was well-formed and simply needs one more argument.
+            Ui.Error(ex.Message, "CLI");
+            return ExitCodes.UnattendedPrompt;
+        }
     }
 
     /// <summary>

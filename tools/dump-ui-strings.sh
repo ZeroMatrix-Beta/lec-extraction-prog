@@ -35,7 +35,7 @@ sources() {
 # nothing is a legitimate state here; a clause being skipped is not.
 {
   # Qualified calls: Console.WriteLine(...) and the Ui/prompt helpers.
-  sources | xargs -0 grep -hoE '(Console\.(Error\.)?(Write|WriteLine)|Ui\.(Info|Warn|Error|Success|Step|Detail|Raw|RawLine|Header|Confirm|ConfirmOrBack|Select|Ask|Table)|SetupQuestionPrompt\.Ask)\(.*' || true
+  sources | xargs -0 grep -hoE '(Console\.(Error\.)?(Write|WriteLine)|Ui\.(Info|Warn|Error|Success|Step|Detail|Raw|RawLine|Header|Confirm|ConfirmOrBack|SelectMany|Select|Ask|Table)|SetupQuestionPrompt\.Ask)\(.*' || true
 
   # Bare Write/WriteLine, reached via "using static System.Console".
   #

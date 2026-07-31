@@ -90,6 +90,13 @@ public static class Ui {
 
     // Input
     /// <summary>
+    /// Where prompt answers come from. Defaults to the keyboard, so the interactive app behaves
+    /// exactly as before; the CLI swaps in <see cref="PresetPromptSource"/> at start-up. Assigning
+    /// this is the whole of "run headlessly" - no call site below knows which source is installed.
+    /// </summary>
+    public static IPromptSource PromptSource { get; set; } = new InteractivePromptSource();
+
+    /// <summary>
     /// [AI Context] Yes/no as an arrow-key toggle rather than a typed character.
     /// <c>AnsiConsole.Confirm</c> renders "[y/n]" and waits for a keystroke, which inherits the
     /// exact footgun Phase 8 step 3 removed: an unexpected key is silently read as "no", and on a
@@ -99,16 +106,7 @@ public static class Ui {
     /// [Human] Ja/Nein zum Durchschalten mit den Pfeiltasten statt Tastendruck - die aktuelle
     /// Auswahl ist sichtbar und eine falsche Taste kann nichts auslösen.
     /// </summary>
-    public static bool Confirm(string question, bool defaultYes = true) {
-        const string yes = "Ja";
-        const string no = "Nein";
-
-        var prompt = new SelectionPrompt<string>()
-            .Title($"[bold]{Markup.Escape(question)}[/]")
-            .AddChoices(defaultYes ? [yes, no] : [no, yes]);
-
-        return AnsiConsole.Prompt(prompt) == yes;
-    }
+    public static bool Confirm(string question, bool defaultYes = true) => PromptSource.Confirm(question, defaultYes);
 
     /// <summary>
     /// [AI Context] The two navigation entries every menu can carry. They are constants rather than
@@ -165,17 +163,8 @@ public static class Ui {
             items.Add(new SelectItem<T>(exitLabel, default, PromptOutcome.Exit));
         }
 
-        var prompt = new SelectionPrompt<SelectItem<T>>()
-            .Title($"[bold]{Markup.Escape(title)}[/]")
-            .PageSize(Math.Max(3, pageSize))
-            .UseConverter(item => Markup.Escape(item.Label))
-            .AddChoices(items);
-
-        if (moreChoicesText != null) {
-            prompt.MoreChoicesText($"[grey]{Markup.Escape(moreChoicesText)}[/]");
-        }
-
-        var selected = AnsiConsole.Prompt(prompt);
+        int chosen = PromptSource.SelectIndex(title, [.. items.Select(item => item.Label)], pageSize, moreChoicesText);
+        var selected = items[chosen];
         return new PromptResult<T>(selected.Outcome, selected.Value);
     }
 
@@ -193,6 +182,23 @@ public static class Ui {
         int pageSize = 15,
         string? moreChoicesText = null)
         => Select(title, choices.Select(c => (c, c)), allowBack, allowExit, backLabel, exitLabel, pageSize, moreChoicesText);
+
+    /// <summary>
+    /// Multi-select over labelled values, returning the picks in source order rather than tick
+    /// order. An empty result means the user ticked nothing, which every caller reads as "back" -
+    /// Spectre has no multi-select with a back entry.
+    /// </summary>
+    public static IReadOnlyList<T> SelectMany<T>(
+        string title,
+        IEnumerable<(string Label, T Value)> choices,
+        int pageSize = 15,
+        string? moreChoicesText = null,
+        string? instructionsText = null) {
+
+        var items = choices.ToList();
+        var picked = PromptSource.SelectManyIndices(title, [.. items.Select(item => item.Label)], pageSize, moreChoicesText, instructionsText);
+        return [.. picked.Select(index => items[index].Value)];
+    }
 
     /// <summary>
     /// [AI Context] <see cref="Confirm"/> with a third way out, for yes/no questions that sit in the
@@ -214,13 +220,7 @@ public static class Ui {
     /// markup and either throw or vanish.
     /// [Human] Freitext-Eingabe mit markup-sicherer Frage.
     /// </summary>
-    public static string Ask(string question, string? defaultValue = null) {
-        var prompt = new TextPrompt<string>($"[bold]{Markup.Escape(question)}[/]");
-        if (defaultValue != null) {
-            prompt.DefaultValue(defaultValue);
-        }
-        return AnsiConsole.Prompt(prompt);
-    }
+    public static string Ask(string question, string? defaultValue = null) => PromptSource.AskText(question, defaultValue);
 
     /// <summary>
     /// [AI Context] Typed free-text input with a default. The escaping is the point: several of
@@ -229,10 +229,7 @@ public static class Ui {
     /// [Human] Eingabe mit Standardwert; die Frage wird escaped, damit eckige Klammern nicht als
     /// Formatierung interpretiert werden (das führte zu Abstürzen).
     /// </summary>
-    public static T Ask<T>(string question, T defaultValue) {
-        var prompt = new TextPrompt<T>($"[bold]{Markup.Escape(question)}[/]").DefaultValue(defaultValue);
-        return AnsiConsole.Prompt(prompt);
-    }
+    public static T Ask<T>(string question, T defaultValue) => PromptSource.AskValue(question, defaultValue);
 
     // Data
     public static void Table(string title, IEnumerable<(string Key, string Value)> rows) {

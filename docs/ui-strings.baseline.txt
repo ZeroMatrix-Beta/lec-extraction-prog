@@ -266,6 +266,7 @@ Ui.Error($"{ex.Message}", "Vertex");
 Ui.Error($"{path}: {error}", "CLI");
 Ui.Error(command.Error!); // IsValid is exactly "Error == null"
 Ui.Error(error.Message, "CLI");
+Ui.Error(ex.Message, "CLI");
 Ui.Header("Interaktiver LaTeX Refinement Modus");
 Ui.Header("🎬 FFmpeg Console Video Preprocessor Dashboard");
 Ui.Header("🚀 Starte FFmpeg Konvertierungsprozess...");
@@ -424,7 +425,7 @@ Ui.Info($"Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFile
 Ui.Info($"Wrapper-Datei erstellt: {wrapperPath}");
 Ui.Info($"Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.", "Hinweis");
 Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
-Ui.Info($"{chosen.Length} Video(s) ausgewählt.");
+Ui.Info($"{chosen.Count} Video(s) ausgewählt.");
 Ui.Info($"{filePaths.Count} Datei(en){dirInfo} geladen.");
 Ui.Info($"{instructionFiles.Count} System-Instruction-Datei(en) geladen.");
 Ui.Info($"{textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
@@ -461,6 +462,7 @@ Ui.Select("Wähle eine Option oder einen Unterordner:", options, allowBack: fals
 Ui.Select($"Was soll verarbeitet werden? ({files.Length} Video(s))", [
 Ui.Select(question, choices, allowBack: true, allowExit: true);
 Ui.Select(title, choices, allowBack);
+Ui.SelectMany("Welche Videos sollen verarbeitet werden?", choices,
 Ui.Step("API-Key Profil Konfiguration (JSON)");
 Ui.Step("API-Key Profile");
 Ui.Step("Automatisierte Extraktion (AI Studio)");
