@@ -16,11 +16,11 @@ namespace LectureExtraction.Cli.Commands;
 /// </summary>
 public static class PlanCommand {
     public static readonly Option<string?> Video = new("--video") {
-        Description = "Plan a single video file."
+        Description = "A single video file to work on."
     };
 
     public static readonly Option<string?> Folder = new("--folder") {
-        Description = "Plan every .mp4 in this folder. Defaults to the configured source folder."
+        Description = "Work on every .mp4 in this folder. Defaults to the configured source folder."
     };
 
     public static readonly Option<string?> From = new("--from") {

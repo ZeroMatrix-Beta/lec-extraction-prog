@@ -547,6 +547,12 @@ Du kannst das Programm direkt in der Windows Eingabeaufforderung (`cmd`) oder de
    *Hinweis: Wenn das Programm bereits läuft oder die Executable blockiert ist, kann der Kopiervorgang fehlschlagen. Verwende in diesem Fall die unten stehende Methode.*
 
 ### Ausführen mehrerer Instanzen (Parallel)
+
+> **Veraltet.** Das Kopieren des Build-Ordners ist nicht mehr nötig: im CLI-Modus wird die
+> Konfiguration standardmäßig nicht zurückgeschrieben, und `--config-dir` isoliert sie bei
+> Bedarf pro Prozess. Siehe **[docs/cli/parallel.md](docs/cli/parallel.md)** und
+> `lecx batch`. Der folgende Abschnitt bleibt für den rein interaktiven Betrieb gültig.
+
 Du kannst mehrere Instanzen parallel laufen lassen, um verschiedene Videos zeitgleich zu verarbeiten:
 1. **Projekt einmalig bauen:**
    ```powershell

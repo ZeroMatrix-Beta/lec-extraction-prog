@@ -166,6 +166,27 @@ For more details on why cache-priming is used instead of single-prompt processin
 
 ---
 
+### ⌨️ Command Line / Kommandozeile
+
+Besides the interactive menu, the whole pipeline runs headlessly — one command per stage,
+built so a script or an AI agent can drive it. **Starting the program without arguments
+still opens the familiar menu**; arguments select the CLI.
+
+```bash
+lecx plan --folder "D:/lecture-videos/analysis2"   # what a run would do — free, no API call
+lecx run  --video "…/02-19-2026-thursday-week1-….mp4"   # the whole pipeline, one video
+lecx batch --folder "…" --workers "profile=1,profile=2" # several videos, parallel processes
+```
+
+Stages are separately runnable (`media segment`, `extract run`, `refine run`,
+`pdf compile`), config writeback is off by default so an unattended run cannot change your
+settings, and exit code `6` means *partial* success.
+
+**→ [Full CLI documentation](docs/cli/README.md)** · agents should start at
+**[docs/cli/agents.md](docs/cli/agents.md)**.
+
+---
+
 ### 📖 Detailed Documentation / Detail-Dokumentation
 
 For a deeper dive into the system's architecture, including configuration quirks (Array Merging), API constraints, multimodal tokenization differences between Gemini versions, and advanced reasoning parameters (`ThinkingBudget`, `ThinkingLevel`), please refer to the **[Detailed System Documentation](Documentation.md)**.
@@ -322,6 +343,27 @@ Wenn die Anwendung mit `[Exception Caught] Type: ServerError` (HTTP 500) stehen 
 - **Fehler überspringen:** Drücke einfach `Strg+C` während der Wartezeit (Retry Delay), um das betroffene Video-Segment sauber zu überspringen und mit der nächsten Datei weiterzumachen.
 
 Weitere Details dazu, warum wir Cache-Priming statt einzelner Riesen-Prompts nutzen, findest du in der ausführlichen Dokumentation.
+
+---
+
+### ⌨️ Kommandozeile
+
+Neben dem interaktiven Menü läuft die komplette Pipeline auch ohne Menü — ein Befehl pro
+Stufe, gebaut für Skripte und KI-Agenten. **Ohne Argumente startet weiterhin das gewohnte
+Menü**; erst Argumente wählen den CLI-Modus.
+
+```bash
+lecx plan --folder "D:/lecture-videos/analysis2"   # was ein Lauf tun würde — kostenlos
+lecx run  --video "…/02-19-2026-thursday-week1-….mp4"   # komplette Pipeline, ein Video
+lecx batch --folder "…" --workers "profile=1,profile=2" # mehrere Videos parallel
+```
+
+Die Stufen (`media segment`, `extract run`, `refine run`, `pdf compile`) sind einzeln
+ausführbar, die Konfiguration wird im CLI-Modus standardmäßig **nicht** zurückgeschrieben,
+und Exit-Code `6` bedeutet *teilweiser* Erfolg.
+
+**→ [Vollständige CLI-Dokumentation](docs/cli/README.md)** · für Agenten:
+**[docs/cli/agents.md](docs/cli/agents.md)**.
 
 ---
 
