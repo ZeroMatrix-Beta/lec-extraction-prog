@@ -3,8 +3,8 @@
 **Goal:** every stage of the pipeline runnable as a single non-interactive command, so an AI agent
 (or a script, or `cron`) can drive it — while the interactive menu keeps working untouched.
 
-**Status:** **C0, C1, C2 done** (2026-07-31) — the entry point and both seams. C3–C10 open.
-Build 0/0 · 301 tests green · UI-string drift 0 · 615 entries.
+**Status:** **C0–C5 done** (2026-07-31). C6–C10 open. `run` is built but **not yet verified against a paid run**.
+Build 0/0 · 327 tests green · UI-string drift 0 · 643 entries.
 
 ---
 
@@ -121,9 +121,9 @@ Each ends green: build 0/0, tests passing, UI-string drift reviewed. One commit 
 | **C0** | ✅ **done** — `Main(string[] args)`, command tree, read-only `config` commands | small | 26 new tests. `config set` deferred to C2 on purpose: writing today would go through the double-writing `Save` |
 | **C1** | ✅ **done** — `IPromptSource` seam | medium | **load-bearing.** `PresetPromptSource` *throws* `UnattendedPromptException(promptTitle)` naming the missing switch rather than defaulting into a wrong model. `PromptResult<T>` unchanged, so no call site moves. Scope: the ~20 CLI-reachable sites — **not** the 13 in `FfmpegInteractiveSession` (bypassed by `media`), nor `InteractiveDelay`, `AttachmentUploader:275`, `ResponseStreamPrinter:73`, which already guard on `Console.IsInputRedirected` |
 | **C2** | ✅ **done** — config seam + `config set` | small | read-only by default; `--config-dir`; must cover **both** `Save` targets |
-| **C3** | `media probe/segment/audio` | medium | free to test; settles the `--json` shape. `segment` emits `PreparedVideo` |
-| **C4** | `plan` + `--dry-run` | medium | a pure `ExtractionPlan` record: folder → files → `VideoDateParser` → segments → request count |
-| **C5** | `run` / `extract run` | large | split `StartAsync` into `StartInteractiveAsync()` and public `RunAsync(files)`. `ProcessFilesAsync` must **return** its `anyVideoFailed` flag (today it computes it and returns `void`) or exit code 6 is unreachable. **One real paid run to verify** |
+| **C3** | ✅ **done** — `media probe/segment/audio` | medium | free to test; settles the `--json` shape. `segment` emits `PreparedVideo` |
+| **C4** | ✅ **done** — `plan` + `--dry-run` | medium | a pure `ExtractionPlan` record: folder → files → `VideoDateParser` → segments → request count |
+| **C5** | ✅ **built, unverified** — `run` / `extract run` | large | split `StartAsync` into `StartInteractiveAsync()` and public `RunAsync(files)`. `ProcessFilesAsync` must **return** its `anyVideoFailed` flag (today it computes it and returns `void`) or exit code 6 is unreachable. **One real paid run to verify** |
 | **C6** | `refine run`, `pdf compile` | medium | `CompilePdfAsync` is *private*, is an instance method needing a `Client`, and its repair path calls the model — it needs a public entry and is not free |
 | **C7** | `--json` + exit codes + stderr routing | small | five writers bypass `Ui`: `VideoBatchSelector.cs:85`, `InteractiveDelay`, and four `Console.Write` in `YouTubeTaskPrompt` (17, 24, 30, 62) |
 | **C8** | `batch` | medium | supervisor only |
