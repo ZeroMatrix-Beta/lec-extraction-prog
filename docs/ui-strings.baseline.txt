@@ -181,6 +181,7 @@ Ui.Detail($"{count} temporäre Datei(en) gelöscht, um Storage-Kosten zu sparen.
 Ui.Detail($"{ex}");
 Ui.Detail($"{fullResponse.Trim()}", "Gemini Antwort");
 Ui.Detail($"{marker} [{profile.profile}] {profile.envName} — {state}");
+Ui.Detail($"{video.FileName} — {state}");
 Ui.Detail($"{videos.Length} Video(s) · {otherFiles} sonstige Datei(en) · {subDirs} Unterordner");
 Ui.Detail(e.Data, "FFmpeg STDERR");
 Ui.Detail(errorBuilder.ToString(), "FFmpeg STDERR Full Log");
@@ -226,6 +227,7 @@ Ui.Error($"Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgelade
 Ui.Error($"Bucket '{bucketName}' konnte nicht bereinigt oder erreicht werden: {ex.Message}", "GCS");
 Ui.Error($"Could not determine video duration for '{fileName}'.", "FFmpegToolkit");
 Ui.Error($"Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
+Ui.Error($"Der API-Key '{plan.ApiKeyEnvName}' ist nicht gesetzt — dieser Lauf würde scheitern.", "plan");
 Ui.Error($"Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
 Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Message}", "Abbruch");
 Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}", "Abbruch");
@@ -252,10 +254,12 @@ Ui.Error($"Konnte Kontext-Cache nicht erstellen: {ex.GetType().Name} - {ex.Messa
 Ui.Error($"Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
 Ui.Error($"Maximale Anzahl an Antigravity-Reparaturrunden ({maxRounds}) erreicht. PDF konnte nicht generiert werden.");
 Ui.Error($"Netzwerkfehler beim Zugriff auf '{bucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}", "GCS");
+Ui.Error($"No video in '{config.SourceFolder}' matches --from '{from}'.", "plan");
 Ui.Error($"Originaler Fehlertext: {ex.Message}");
 Ui.Error($"Quellordner '{sourceFolder}' existiert nicht.");
 Ui.Error($"Quellordner nicht gefunden: {_config.SourceFolder}");
 Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} spoken-clean / ~{expectedMathStroke} math-stroke, Erhalten: {actualSpokenClean} spoken-clean / {actualMathStroke} math-stroke.", "Refinement");
+Ui.Error($"Source folder not found: '{folder}'", "plan");
 Ui.Error($"The application encountered an unhandled exception and must close.\nType: {ex.GetType().Name}\nMessage: {ex.Message}\nStack Trace:\n{ex.StackTrace}", "FATAL ERROR");
 Ui.Error($"Unerwarteter Fehler bei der PDF-Generierung: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
 Ui.Error($"Unerwarteter Fehler beim Erstellen des Ordners: {ex.Message}");
@@ -264,6 +268,7 @@ Ui.Error($"Unrecoverable error after {attempt} attempts.", "API Failure");
 Ui.Error($"Upload für Teil {i + 1} fehlgeschlagen. Breche Datei ab.");
 Ui.Error($"Verlängern des Caches fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "Cache");
 Ui.Error($"Verzeichnis {searchFolder} nicht gefunden.");
+Ui.Error($"Video not found: '{single}'", "plan");
 Ui.Error($"Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.", "FFmpeg Producer");
 Ui.Error($"Zugriff auf Bucket '{bucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}", "GCS");
 Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
@@ -282,6 +287,7 @@ Ui.Error(command.Error!); // IsValid is exactly "Error == null"
 Ui.Error(error.Message, "CLI");
 Ui.Error(ex.Message, "CLI");
 Ui.Header("Interaktiver LaTeX Refinement Modus");
+Ui.Header("Plan");
 Ui.Header("🎬 FFmpeg Console Video Preprocessor Dashboard");
 Ui.Header("🚀 Starte FFmpeg Konvertierungsprozess...");
 Ui.Header($"Chat gestartet ({_activeModel} | API Profil: {_activeApiProfile})");
@@ -564,6 +570,7 @@ Ui.Success($"{inputFiles.Length} Datei(en) für die Stapelverarbeitung gefunden.
 Ui.Success($"{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}");
 Ui.Success($"{path}: {FormatScalar(before)} -> {raw}"));
 Ui.Table("Aufwand dieser Sitzung", SessionCostLedger.Summary());
+Ui.Table("Lauf", [
 Ui.Warn("API Profile sind nur für AI Studio relevant.");
 Ui.Warn("Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).", "AutoExtraction");
 Ui.Warn("Execution cancelled by user. Exiting cleanly.", "System");
@@ -607,6 +614,7 @@ Ui.Warn($"Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil er
 Ui.Warn($"Maximale Anzahl an Requests ({maxRequests}) für PDF-Fix erreicht. Breche ab.");
 Ui.Warn($"Maximale Anzahl an Requests ({maxRequests}) für dieses Refinement erreicht. Breche ab.");
 Ui.Warn($"Migration in '{fileName}' fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "ConfigMigrator");
+Ui.Warn($"No .mp4 files in '{config.SourceFolder}'.", "plan");
 Ui.Warn($"Ordner existiert nicht: {folderPath}");
 Ui.Warn($"Ordner konnte nicht gelesen werden: {ex.GetType().Name} - {ex.Message}");
 Ui.Warn($"PDF-Generierung fehlgeschlagen (Runde {round} von {maxRounds}). Sende Log und Code an Remote-Agenten...", "Antigravity Agent API");
@@ -628,3 +636,4 @@ Ui.Warn($"{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (N�
 Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zurückgesetzt...", "API Retry");
 Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.GetType().Name}: {ex.Message}).", "Netzwerk-Fehler");
 Ui.Warn($"{report.StoredEntries} Einträge gespeichert, davon {report.DuplicateEntries} Duplikate — die Liste wächst bei jedem Start.", "Config");
+Ui.Warn(warning, "plan");

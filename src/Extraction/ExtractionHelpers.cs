@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LectureExtraction.ConsoleUi;
 
@@ -9,7 +10,40 @@ namespace LectureExtraction.Extraction;
 /// <summary>
 /// [AI Context] Shared utility methods to reduce code duplication across different extraction session types.
 /// </summary>
-public static class ExtractionHelpers {
+public static partial class ExtractionHelpers {
+    /// <summary>
+    /// Strips the <c>-speed-N-compressed</c> / <c>-compressed</c> suffixes FFmpeg preprocessing
+    /// adds. This is the name of a video's output folder, and the stem every output file is built
+    /// from - so it has to be derived identically wherever it is needed. It previously existed as
+    /// two private copies (the segment producer's and each session's) plus the same two regexes
+    /// declared twice.
+    /// </summary>
+    public static string StripCompressionSuffix(string fileNameWithoutExtension) {
+        string stripped = SpeedCompressedRegex().Replace(fileNameWithoutExtension, "");
+        return CompressedRegex().Replace(stripped, "");
+    }
+
+    /// <summary>The folder a video's outputs are written to, relative to the target folder.</summary>
+    public static string ComputeOutputFolderName(string videoPath) =>
+        StripCompressionSuffix(Path.GetFileNameWithoutExtension(videoPath));
+
+    /// <summary>
+    /// The stem of the per-part <c>.tex</c> files, which carries a <c>step1-</c> prefix marking it
+    /// as the first pipeline stage's output. Note this differs from the output *folder* name, which
+    /// has no prefix - a distinction worth stating, because a caller predicting file paths from the
+    /// folder name alone would look for the wrong files.
+    /// </summary>
+    public static string ComputeTexBaseName(string videoPath) {
+        string baseName = ComputeOutputFolderName(videoPath);
+        return baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase) ? baseName : "step1-" + baseName;
+    }
+
+    [GeneratedRegex(@"-speed-[\d\.]+-compressed$", RegexOptions.IgnoreCase)]
+    private static partial Regex SpeedCompressedRegex();
+
+    [GeneratedRegex(@"-compressed$", RegexOptions.IgnoreCase)]
+    private static partial Regex CompressedRegex();
+
     public static string ResolveNonClashingTexPath(string originalPath) {
         if (!File.Exists(originalPath)) {
             return originalPath;

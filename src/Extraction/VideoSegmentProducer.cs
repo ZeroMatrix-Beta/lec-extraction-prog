@@ -29,9 +29,7 @@ public static partial class VideoSegmentProducer {
         files = [.. files.OrderBy(videoFile => VideoDateParser.Parse(videoFile).Date).ThenBy(videoFile => VideoDateParser.Parse(videoFile).WeekNumber ?? int.MaxValue).ThenBy(videoFile => videoFile)];
 
         foreach (var file in files) {
-            string baseName = Path.GetFileNameWithoutExtension(file);
-            baseName = SpeedCompressedRegex().Replace(baseName, "");
-            baseName = CompressedRegex().Replace(baseName, "");
+            string baseName = ExtractionHelpers.ComputeOutputFolderName(file);
             // Create a file-specific output folder within the main target folder
             string fileSpecificOutputFolder = Path.Combine(config.TargetFolder, baseName);
             if (!Directory.Exists(fileSpecificOutputFolder)) {

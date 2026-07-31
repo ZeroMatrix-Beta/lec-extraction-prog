@@ -100,6 +100,7 @@ public static class CliBootstrapper {
 
         root.Add(ConfigCommands.Build());
         root.Add(MediaCommands.Build());
+        root.Add(PlanCommand.Build());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);

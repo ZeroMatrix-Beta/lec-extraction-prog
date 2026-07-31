@@ -480,15 +480,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// ensures the step1- prefix, giving the stable base name used for every part/combined output file.
     /// [Human] Baut den Basisnamen für die Ausgabedateien aus dem Videodateinamen.
     /// </summary>
-    private static string ComputeBaseName(string file) {
-        string baseName = Path.GetFileNameWithoutExtension(file);
-        baseName = SpeedCompressedRegex().Replace(baseName, "");
-        baseName = CompressedRegex().Replace(baseName, "");
-        if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
-            baseName = "step1-" + baseName;
-        }
-        return baseName;
-    }
+    private static string ComputeBaseName(string file) => ExtractionHelpers.ComputeTexBaseName(file);
 
     /// <summary>
     /// [AI Context] Initializes refinementClient early because the parallel audio upload task
