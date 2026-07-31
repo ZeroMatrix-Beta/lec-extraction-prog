@@ -108,6 +108,7 @@ public static class CliBootstrapper {
         root.Add(extract);
         root.Add(RefineCommands.BuildRefine());
         root.Add(RefineCommands.BuildPdf());
+        root.Add(BatchCommand.Build());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);

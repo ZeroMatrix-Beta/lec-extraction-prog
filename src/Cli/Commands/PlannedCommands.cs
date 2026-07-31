@@ -12,7 +12,6 @@ namespace LectureExtraction.Cli.Commands;
 /// </summary>
 public static class PlannedCommands {
     public static Command[] Build() => [
-        Planned("batch", "Run several videos in parallel worker processes, each with its own model and API-key profile.", "C8"),
         Planned("ask", "Send one prompt with optional attachments and print the answer.", "C9")
     ];
 

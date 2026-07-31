@@ -120,6 +120,7 @@ Ui.Detail($"Lade '{Path.GetFileName(filePath)}' über die Google File API hoch..
 Ui.Detail($"Lese Bilddatei '{Path.GetFileName(filePath)}' für {context} ein...", "Lokal");
 Ui.Detail($"Lese Textdokument '{Path.GetFileName(filePath)}' ein...", "Lokal");
 Ui.Detail($"Lese Textdokument '{Path.GetFileName(filePath)}' für System Instruction ein...", "Lokal");
+Ui.Detail($"Logs: {logFolder}");
 Ui.Detail($"Modell:     {currentModel}");
 Ui.Detail($"Project ID: {refinementConfig.VertexProjectId}");
 Ui.Detail($"Quelle (Source): {_config.SourceFolder}");
@@ -159,6 +160,8 @@ Ui.Detail($"Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
 Ui.Detail($"Warte {fixDelay} Sekunden vor der Fortsetzung...", "Timer");
 Ui.Detail($"Warte {rateLimitDelay} Sekunden (Token Refill)...", "Rate-Limit");
 Ui.Detail($"Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
+Ui.Detail($"Worker {assignment.Index}: Profil {profile}, Modell {model} — {assignment.Videos.Count} Video(s)");
+Ui.Detail($"Worker {result.Index} (Profil {result.Profile}): {result.Videos} Video(s) — {state}");
 Ui.Detail($"Würde {Path.GetFileName(input)} in {config.NumberOfParts} Teile schneiden ({config.OverlapSeconds}s Overlap, {config.SpeedMultiplier}x).");
 Ui.Detail($"Zeitraum: {range}");
 Ui.Detail($"Ziel (Target):   {_config.TargetFolder}");
@@ -274,6 +277,7 @@ Ui.Error($"Verlängern des Caches fehlgeschlagen: {ex.GetType().Name} - {ex.Mess
 Ui.Error($"Verzeichnis {searchFolder} nicht gefunden.");
 Ui.Error($"Video not found: '{single}'", "plan");
 Ui.Error($"Vorverarbeitung für {Path.GetFileName(file)} fehlgeschlagen. Überspringe Datei.", "FFmpeg Producer");
+Ui.Error($"Worker-Prozess fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "batch");
 Ui.Error($"Zugriff auf Bucket '{bucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}", "GCS");
 Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
 Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
@@ -290,6 +294,7 @@ Ui.Error($"{path}: {writeError}", "CLI");
 Ui.Error(command.Error!); // IsValid is exactly "Error == null"
 Ui.Error(error.Message, "CLI");
 Ui.Error(ex.Message, "CLI");
+Ui.Error(specError!, "batch");
 Ui.Header("Interaktiver LaTeX Refinement Modus");
 Ui.Header("Plan");
 Ui.Header("🎬 FFmpeg Console Video Preprocessor Dashboard");
@@ -499,6 +504,7 @@ Ui.Step("Automatisierte Extraktion (Vertex AI)");
 Ui.Step("Cache-Warming Step 0: Warmup für Basis System Instruction");
 Ui.Step("Context Caching Einstellungen");
 Ui.Step("Dry run");
+Ui.Step("Ergebnis");
 Ui.Step("LaTeX Refinement - Schritt 1: Merge & Zeitstempel-Abgleich");
 Ui.Step("LaTeX Refinement - Schritt 2: Textkorrektur & Grammatik-Polishing");
 Ui.Step("LaTeX Refinement - Schritt 3: Endprüfung & Validierung");
@@ -529,6 +535,7 @@ Ui.Step($"[Gemini Consumer] Starte API-Extraktion für {Path.GetFileName(file)}"
 Ui.Step($"[Versuch {attempt}/{maxRetries}] Sende Anfrage...");
 Ui.Step($"[YouTube Consumer] Starte API-Extraktion für URL: {task.VideoUrl} ({baseName})");
 Ui.Step($"[YouTube Mode] Starte Transkription für {tasksToProcess.Count} YouTube-Video(s)...");
+Ui.Step($"{assignments.Count} Worker");
 Ui.Step(Path.GetFileName(input));
 Ui.Step(Path.GetFileName(video.SourceVideoPath));
 Ui.Step(label);
@@ -593,6 +600,7 @@ Ui.Warn("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
 Ui.Warn("Keine System Instruction-Dateien gefunden oder konfiguriert.");
 Ui.Warn("Keine URL eingegeben.", "Abbruch");
 Ui.Warn("Keine Videos ausgewählt.");
+Ui.Warn("Keine Videos zu verarbeiten.", "batch");
 Ui.Warn("Keine Videos zu verarbeiten.", name);
 Ui.Warn("LaTeX Refinement übersprungen.", "LaTeX Refinement");
 Ui.Warn("No files found in the source folder.");
@@ -645,4 +653,5 @@ Ui.Warn($"{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (N�
 Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zurückgesetzt...", "API Retry");
 Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.GetType().Name}: {ex.Message}).", "Netzwerk-Fehler");
 Ui.Warn($"{report.StoredEntries} Einträge gespeichert, davon {report.DuplicateEntries} Duplikate — die Liste wächst bei jedem Start.", "Config");
+Ui.Warn(warning, "batch");
 Ui.Warn(warning, "plan");
