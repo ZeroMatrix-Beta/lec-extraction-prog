@@ -53,9 +53,7 @@ public static class GoogleAiClientBuilder {
     /// [Human] Sucht gezielt nach einem API-Key anhand seines exakten Namens in den Umgebungsvariablen (z.B. exklusiv für das LaTeX-Refinement).
     /// </summary>
     public static string? ResolveApiKeyByName(string envVarName) {
-        string? apiKey = System.Environment.GetEnvironmentVariable(envVarName)
-                      ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
-                      ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
+        string? apiKey = LookUpApiKey(envVarName);
 
         Ui.Detail($"Verwende {envVarName}");
 
@@ -66,6 +64,19 @@ public static class GoogleAiClientBuilder {
 
         return apiKey;
     }
+
+    /// <summary>
+    /// The same three-target environment lookup as <see cref="ResolveApiKeyByName"/>, without the
+    /// console output. Reporting commands need to know *whether* a profile resolves without
+    /// announcing it or printing an error for a profile the user merely asked about.
+    /// </summary>
+    public static string? LookUpApiKey(string envVarName) =>
+        System.Environment.GetEnvironmentVariable(envVarName)
+        ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
+        ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
+
+    /// <summary>Whether a named API-key profile is present in the environment. Never returns the key.</summary>
+    public static bool IsApiKeyPresent(string envVarName) => !string.IsNullOrEmpty(LookUpApiKey(envVarName));
 
     /// <summary>
     /// [AI Context] Initializes the GenAI Client for Google Cloud Vertex AI (Enterprise API).
