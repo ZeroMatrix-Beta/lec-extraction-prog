@@ -263,7 +263,7 @@ public static class RefinementUiHelper {
     /// so stepping back and choosing differently cannot leave a stale flag enabled.
     /// [Human] Setzt die Enabled-Flags aus der Schritt-Auswahl - immer vollständig, nie inkrementell.
     /// </summary>
-    private static void ApplyStepSelection(LatexRefinementSessionConfig refinementConfig, string stepChoice, bool runToEnd) {
+    public static void ApplyStepSelection(LatexRefinementSessionConfig refinementConfig, string stepChoice, bool runToEnd) {
         bool all = stepChoice == "4";
 
         refinementConfig.Step1MergeAndTimestamp.Enabled = all || stepChoice == "1";
@@ -284,7 +284,7 @@ public static class RefinementUiHelper {
         }
     }
 
-    private static async Task RunRefinementAsync(LatexRefinementSessionConfig refinementConfig, IAutoExtractionConfig extractionConfig, string selectedTex, string? selectedAudio) {
+    public static async Task RunRefinementAsync(LatexRefinementSessionConfig refinementConfig, IAutoExtractionConfig? extractionConfig, string selectedTex, string? selectedAudio) {
         Client refinementClient;
         if (refinementConfig.UseVertex && AppConfig.IsVertexAiEnabled) {
             refinementClient = GoogleAiClientBuilder.BuildVertexClient(

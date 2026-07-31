@@ -196,6 +196,7 @@ Ui.Detail(usage.Describe($"Total Prompt: {requestInputTokens:N0} | Gecacht: {req
 Ui.Detail(usage.Describe($"Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshPromptTokens:N0} | Output: {usage.CandidateTokens:N0}", "[Request Tokens]      "));
 Ui.Error("'ffmpeg' konnte nicht gefunden werden. Bitte stellen Sie sicher, dass FFmpeg installiert und im System-PATH konfiguriert ist.", "FFmpeg error");
 Ui.Error("'ffprobe' konnte nicht gefunden werden. Bitte stellen Sie sicher, dass FFmpeg (inkl. ffprobe) installiert und im System-PATH konfiguriert ist.", "ffprobe");
+Ui.Error("--step must be 1, 2 or 3.", "refine");
 Ui.Error("Antigravity Agent Response enthielt kein `output_text` Feld und in den `steps` wurde kein Text gefunden.");
 Ui.Error("Beim Refinement ist ein Fehler aufgetreten oder der Vorgang wurde abgebrochen.", "Refinement");
 Ui.Error("Das Modell hat eine komplett leere Antwort zurückgegeben (z.B. wegen MALFORMED_RESPONSE oder Safety-Filtern).");
@@ -220,6 +221,8 @@ Ui.Error("Upload in GCS nach mehreren Versuchen fehlgeschlagen.");
 Ui.Error("Upload über File API endgültig fehlgeschlagen.");
 Ui.Error($"'{name}' is not implemented yet (planned for phase {phase}). Run 'lecx config --help' for what works today.", "CLI");
 Ui.Error($"'{path}' must name a section and a property, e.g. AiStudioAutoExtractionConfig.CurrentModel.", "CLI");
+Ui.Error($".tex file not found: '{tex}'", "pdf");
+Ui.Error($".tex file not found: '{tex}'", "refine");
 Ui.Error($"Antigravity Agent API Aufruf fehlgeschlagen: {response.StatusCode} - {responseBody}");
 Ui.Error($"Antigravity Agent benötigt einen gültigen API-Key in der Umgebungsvariable '{envVarName}'.");
 Ui.Error($"Auch Fix-Versuch #{roundNumber} konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
@@ -445,6 +448,8 @@ Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. �
 Ui.Info($"Warte auf Abschluss der parallelen Audio-Extraktion für {Path.GetFileName(file)}, da das Refinement diese benötigt...", "AutoExtraction");
 Ui.Info($"Wrapper-Datei erstellt: {wrapperPath}");
 Ui.Info($"Würde Audio aus {Path.GetFileName(input)} nach {target} extrahieren."));
+Ui.Info($"Würde {(step == null ? "die komplette Pipeline" : $"Schritt {step}")} auf {Path.GetFileName(tex)} anwenden."));
+Ui.Info($"Würde {Path.GetFileName(tex)} kompilieren (AI-Reparatur: {config.PdfCompilation.MaxFixRounds} Runden)."));
 Ui.Info($"Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.", "Hinweis");
 Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
 Ui.Info($"{chosen.Count} Video(s) ausgewählt.");

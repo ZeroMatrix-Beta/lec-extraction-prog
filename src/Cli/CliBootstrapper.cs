@@ -106,6 +106,8 @@ public static class CliBootstrapper {
         var extract = new Command("extract", "Transcription only - never chains into refinement.");
         extract.Add(RunCommand.Build(chainRefinement: false, "run", "Transcribe videos into per-part .tex files."));
         root.Add(extract);
+        root.Add(RefineCommands.BuildRefine());
+        root.Add(RefineCommands.BuildPdf());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);

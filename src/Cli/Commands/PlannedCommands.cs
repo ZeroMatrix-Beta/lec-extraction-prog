@@ -13,12 +13,6 @@ namespace LectureExtraction.Cli.Commands;
 public static class PlannedCommands {
     public static Command[] Build() => [
         Planned("batch", "Run several videos in parallel worker processes, each with its own model and API-key profile.", "C8"),
-        WithSubcommands("refine", "LaTeX refinement steps 1-3 over an existing .tex.", [
-            Planned("run", "Merge, polish and validate a .tex file.", "C6")
-        ]),
-        WithSubcommands("pdf", "PDF compilation (step 4).", [
-            Planned("compile", "Compile a .tex to PDF, optionally with the AI repair loop.", "C6")
-        ]),
         Planned("ask", "Send one prompt with optional attachments and print the answer.", "C9")
     ];
 
