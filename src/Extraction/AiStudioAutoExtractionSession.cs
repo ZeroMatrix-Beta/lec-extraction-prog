@@ -77,10 +77,45 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
     /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     /// </summary>
-    public async Task StartAsync() {
+    /// <summary>
+    /// [AI Context] How recently a part's .tex must have been written for it to be reused instead
+    /// of re-requested. Was a hardcoded 2 hours on <c>VideoProcessingState</c> with no way to reach
+    /// it, which made it the most expensive invisible constant here: a batch retried after the
+    /// window lapsed silently re-bought every part it had already paid for. Still 2 hours by
+    /// default, so the interactive run is unchanged.
+    /// [Human] Wie alt eine bereits erzeugte .tex-Datei sein darf, um wiederverwendet zu werden.
+    /// </summary>
+    public TimeSpan ResumeWindow { get; init; } = TimeSpan.FromHours(2);
+
+    /// <summary>
+    /// [AI Context] Non-interactive entry point: process exactly these files and report whether
+    /// every one succeeded. This is what <see cref="StartAsync"/> reaches after its mode menu has
+    /// chosen a file list, exposed directly so the CLI can supply that list as arguments instead.
+    /// Both paths run identical code from here down; the menu is the only difference.
+    /// [Human] Einstiegspunkt ohne Menü: verarbeitet genau die übergebenen Dateien.
+    /// </summary>
+    /// <returns>false if any file failed, so a caller can report partial success.</returns>
+    public async Task<bool> RunAsync(IReadOnlyList<string> files) {
+        if (!PrepareWorkspace()) return false;
+        if (files.Count == 0) {
+            Ui.Info("Keine Dateien ausgewählt.");
+            return true;
+        }
+
+        if (!await EnsureSessionSetupAsync()) return false;
+        return await ProcessFilesAsync([.. files]);
+    }
+
+    /// <summary>
+    /// [AI Context] Validates the source folder and settles the target folder, which defaults to a
+    /// subfolder of the source. Shared by the interactive and headless entry points so they cannot
+    /// disagree about where output lands.
+    /// [Human] Prüft den Quellordner und legt den Zielordner fest.
+    /// </summary>
+    private bool PrepareWorkspace() {
         if (!Directory.Exists(_config.SourceFolder)) {
             Ui.Error($"Quellordner nicht gefunden: {_config.SourceFolder}");
-            return;
+            return false;
         }
 
         // If no specific target folder is provided in config, create one inside the source folder.
@@ -90,6 +125,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         if (!Directory.Exists(_config.TargetFolder)) {
             Directory.CreateDirectory(_config.TargetFolder);
+        }
+
+        return true;
+    }
+
+    public async Task StartAsync() {
+        if (!PrepareWorkspace()) {
+            return;
         }
 
         Ui.Step("Automatisierte Extraktion (AI Studio)");
@@ -154,15 +197,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// [AI Context] Core initialization routine before batch processing. Loads system instructions and pre-warms the model context with attachments.
     /// [Human] Lädt die System-Instruktionen und die Historie hoch, bevor die eigentliche Video-Verarbeitung startet.
     /// </summary>
-    private async Task SetupContextAndProcessAsync(string[] files) {
-        if (files == null || files.Length == 0) {
-            Ui.Info("Keine Dateien ausgewählt.");
-            return;
-        }
-
-        if (!await EnsureSessionSetupAsync()) return;
-        await ProcessFilesAsync(files);
-    }
+    private async Task SetupContextAndProcessAsync(string[] files) => await RunAsync(files);
 
     public async Task<bool> EnsureSessionSetupAsync() {
         // --- Phase 1: Load System Instruction text from disk (if not already loaded) ---
@@ -408,7 +443,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// Uses System.Threading.Channels to run FFmpeg processing in the background (Producer) while Gemini processes chunks sequentially (Consumer), maximizing hardware and API throughput.
     /// [Human] Das asynchrone Fließband: FFmpeg bereitet Videos im Hintergrund vor, während Gemini sie der Reihe nach abarbeitet.
     /// </summary>
-    private async Task ProcessFilesAsync(string[] videoFilesToProcess) {
+    /// <returns>
+    /// false if any file failed. The interactive path only prints this, but an unattended caller
+    /// needs it in the exit status - a batch that transcribed four videos and failed the fifth is
+    /// neither success nor failure.
+    /// </returns>
+    private async Task<bool> ProcessFilesAsync(string[] videoFilesToProcess) {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
         videoFilesToProcess = [.. videoFilesToProcess.OrderBy(videoFile => VideoDateParser.Parse(videoFile).Date).ThenBy(videoFile => VideoDateParser.Parse(videoFile).WeekNumber ?? int.MaxValue).ThenBy(videoFile => videoFile)];
 
@@ -439,6 +479,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         else {
             Ui.Success("Batch-Verarbeitung vollständig und fehlerfrei abgeschlossen!", "AutoExtraction");
         }
+
+        return !anyVideoFailed;
     }
 
     /// <summary>
@@ -536,7 +578,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private sealed class VideoProcessingState(string baseName, AudioTrackExtractor audioTrackExtractor) {
         public readonly string BaseName = baseName;
         public readonly AudioTrackExtractor AudioTrackExtractor = audioTrackExtractor;
-        public readonly TimeSpan CacheDuration = TimeSpan.FromHours(2);
         public readonly List<string> GeneratedTexFiles = [];
         public string FullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
         public string FullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
@@ -563,7 +604,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
             Ui.Step($"Verarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
             // Check if the .tex file already exists and is not older than 2 hours
-            if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= state.CacheDuration) {
+            if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= ResumeWindow) {
                 Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.", "Resume");
                 string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
                 state.GeneratedTexFiles.Add(targetPartPath);

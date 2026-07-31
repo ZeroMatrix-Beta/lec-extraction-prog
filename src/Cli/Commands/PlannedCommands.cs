@@ -12,11 +12,7 @@ namespace LectureExtraction.Cli.Commands;
 /// </summary>
 public static class PlannedCommands {
     public static Command[] Build() => [
-        Planned("run", "Run the whole pipeline for one video or a folder: segments -> LaTeX -> refinement -> PDF.", "C5"),
         Planned("batch", "Run several videos in parallel worker processes, each with its own model and API-key profile.", "C8"),
-        WithSubcommands("extract", "Transcription only - never chains into refinement.", [
-            Planned("run", "Transcribe a prepared video into per-part .tex files.", "C5")
-        ]),
         WithSubcommands("refine", "LaTeX refinement steps 1-3 over an existing .tex.", [
             Planned("run", "Merge, polish and validate a .tex file.", "C6")
         ]),

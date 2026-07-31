@@ -227,6 +227,7 @@ Ui.Error($"Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgelade
 Ui.Error($"Bucket '{bucketName}' konnte nicht bereinigt oder erreicht werden: {ex.Message}", "GCS");
 Ui.Error($"Could not determine video duration for '{fileName}'.", "FFmpegToolkit");
 Ui.Error($"Der API-Key '{envVarName}' wurde in den Umgebungsvariablen nicht gefunden.");
+Ui.Error($"Der API-Key '{plan.ApiKeyEnvName}' (Profil {plan.ApiKeyProfile}) ist nicht gesetzt.", name);
 Ui.Error($"Der API-Key '{plan.ApiKeyEnvName}' ist nicht gesetzt — dieser Lauf würde scheitern.", "plan");
 Ui.Error($"Der Dateityp '{ext}' von '{Path.GetFileName(filePath)}' wird nicht unterstützt.");
 Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Message}", "Abbruch");
@@ -450,6 +451,7 @@ Ui.Info($"{chosen.Count} Video(s) ausgewählt.");
 Ui.Info($"{filePaths.Count} Datei(en){dirInfo} geladen.");
 Ui.Info($"{instructionFiles.Count} System-Instruction-Datei(en) geladen.");
 Ui.Info($"{path}: {FormatScalar(before)} -> {raw} (dry run, nothing written)"));
+Ui.Info($"{plan.VideoCount} Video(s), {plan.PendingRequests} offene Anfrage(n). Nichts ausgeführt (--dry-run)."));
 Ui.Info($"{textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
 Ui.Info($"Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...", "Cache-Warming");
 Ui.Info($"Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...", "Cache-Warming");
@@ -569,6 +571,7 @@ Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combine
 Ui.Success($"{inputFiles.Length} Datei(en) für die Stapelverarbeitung gefunden.");
 Ui.Success($"{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}");
 Ui.Success($"{path}: {FormatScalar(before)} -> {raw}"));
+Ui.Table("Aufwand dieser Sitzung", SessionCostLedger.Summary()));
 Ui.Table("Aufwand dieser Sitzung", SessionCostLedger.Summary());
 Ui.Table("Lauf", [
 Ui.Warn("API Profile sind nur für AI Studio relevant.");
@@ -585,6 +588,7 @@ Ui.Warn("Keine Dateien zur Verarbeitung ausgewählt. Breche ab.");
 Ui.Warn("Keine System Instruction-Dateien gefunden oder konfiguriert.");
 Ui.Warn("Keine URL eingegeben.", "Abbruch");
 Ui.Warn("Keine Videos ausgewählt.");
+Ui.Warn("Keine Videos zu verarbeiten.", name);
 Ui.Warn("LaTeX Refinement übersprungen.", "LaTeX Refinement");
 Ui.Warn("No files found in the source folder.");
 Ui.Warn("Operation cancelled by user.", "API");
