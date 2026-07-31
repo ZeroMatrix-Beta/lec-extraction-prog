@@ -709,3 +709,21 @@ Die Klasse `ApiRetryPolicy` kapselt alle Aufrufe an die Google API und behandelt
 - **Hohe Auslastung (HTTP 503):** Wenn der Server überlastet ist ("high demand"), initiiert die Anwendung einen harten 3-Minuten-Backoff.
 - **Linearer Backoff:** Für allgemeine 500er Fehler verwendet die Anwendung einen linearen Backoff (z. B. 45s, 75s, 105s) bis zu 8 Mal.
 - **Interaktiver Skip:** Während jeder Wartezeit kann der Benutzer `Enter` drücken, um einen sofortigen Retry zu erzwingen, oder `Ctrl+C`, um die Verzögerung abzubrechen. Das Abbrechen der Verzögerung bricht den aktuellen Video-Chunk ab und bewegt den Batch-Prozessor sicher zur nächsten Datei, ohne dass die Anwendung abstürzt.
+
+---
+
+## 9. Offene Messungen (Einstellungen, die noch nicht empirisch belegt sind)
+
+Zwei Schalter sind implementiert und getestet, aber ihr Default beruht auf
+Überlegung, nicht auf Messung. Beide lassen sich nur in einem echten
+(kostenpflichtigen) Extraktionslauf beantworten:
+
+- **`DisableThinkingDuringWarmUp`** — Beim Warm-up-Handshake die `Denk-Tokens`
+  in der Ausgabe ablesen und danach entscheiden, ob Thinking dort abgeschaltet
+  gehört.
+- **`InlinePrecedingLecTexParts`** — Ein kurzes Video je einmal mit `true`
+  (Inline) und `false` (Upload) laufen lassen und den Default aus dem
+  gemessenen Token-/Zeitverbrauch setzen.
+
+Hinweis: `AiStudioAutoExtractionConfig.json` steht derzeit auf
+`"InlinePrecedingLecTexParts": false`, also auf Upload-Modus.

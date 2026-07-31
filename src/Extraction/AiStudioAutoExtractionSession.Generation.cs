@@ -132,7 +132,7 @@ public partial class AiStudioAutoExtractionSession {
 
         // [AI Context] Uploaded .tex references sit between the text Part and the video, never inside the
         // text Part: splitting that Part around them would break the preamble+anchor prefix match too,
-        // costing the anchor's cache benefit for no gain (see docs/deep-dive-tex-attachment-mode.md).
+        // costing the anchor's cache benefit for no gain.
         // [Human] Hochgeladene .tex-Referenzen kommen nach dem Textblock und vor dem Video.
         userPromptParts.AddRange(uploadedTexParts);
 
