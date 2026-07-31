@@ -78,6 +78,7 @@ Ui.Detail("🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (
 Ui.Detail($"   - {Path.GetFileName(filesToProcess[i])}");
 Ui.Detail($"   ... und {filesToProcess.Length - 5} weitere.");
 Ui.Detail($"  vorkonfiguriert: {folder}");
+Ui.Detail($"'{fileName}' nicht gespeichert (Konfiguration ist schreibgeschützt).", "AppConfig");
 Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texCount.TotalTokens}");
 Ui.Detail($"- Video-Token: {videoCount.TotalTokens}");
 Ui.Detail($"- {Path.GetFileName(file)}");
@@ -264,6 +265,8 @@ Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
 Ui.Error($"{ex.GetType().Name}: {ex.Message}", "Debug Roundtrip");
 Ui.Error($"{ex.Message}", "Vertex");
 Ui.Error($"{path}: {error}", "CLI");
+Ui.Error($"{path}: {readError}", "CLI");
+Ui.Error($"{path}: {writeError}", "CLI");
 Ui.Error(command.Error!); // IsValid is exactly "Error == null"
 Ui.Error(error.Message, "CLI");
 Ui.Error(ex.Message, "CLI");
@@ -428,6 +431,7 @@ Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in d
 Ui.Info($"{chosen.Count} Video(s) ausgewählt.");
 Ui.Info($"{filePaths.Count} Datei(en){dirInfo} geladen.");
 Ui.Info($"{instructionFiles.Count} System-Instruction-Datei(en) geladen.");
+Ui.Info($"{path}: {FormatScalar(before)} -> {raw} (dry run, nothing written)"));
 Ui.Info($"{textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
 Ui.Info($"Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...", "Cache-Warming");
 Ui.Info($"Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...", "Cache-Warming");
@@ -543,6 +547,7 @@ Ui.Success($"Teildatei gespeichert unter: {targetPartPath}");
 Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
 Ui.Success($"{inputFiles.Length} Datei(en) für die Stapelverarbeitung gefunden.");
 Ui.Success($"{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}");
+Ui.Success($"{path}: {FormatScalar(before)} -> {raw}"));
 Ui.Table("Aufwand dieser Sitzung", SessionCostLedger.Summary());
 Ui.Warn("API Profile sind nur für AI Studio relevant.");
 Ui.Warn("Batch-Verarbeitung mit Fehlern abgeschlossen (einige Dateien wurden abgebrochen).", "AutoExtraction");

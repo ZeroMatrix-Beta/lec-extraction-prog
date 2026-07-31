@@ -2,6 +2,7 @@ using System;
 using System.CommandLine;
 using System.Threading.Tasks;
 using LectureExtraction.Cli.Commands;
+using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 
 namespace LectureExtraction.Cli;
@@ -32,9 +33,17 @@ public static class CliBootstrapper {
             return ExitCodes.Usage;
         }
 
+        var context = CliOptions.ReadContext(parseResult);
+
         // Every prompt in the app now resolves through this, so installing it here is the whole of
         // "run headlessly" - no command has to know it is running without a keyboard.
-        Ui.PromptSource = new PresetPromptSource(CliOptions.ReadContext(parseResult).AssumeYes);
+        Ui.PromptSource = new PresetPromptSource(context.AssumeYes);
+
+        // Off unless asked for: the pipeline calls ConfigLoader.Save at several points during a
+        // normal run, and an unattended caller must not change what the interactive user comes
+        // back to. `config set` re-enables it for its own write, where changing config is the ask.
+        ConfigStore.SaveEnabled = context.SaveConfig;
+        ConfigStore.DirectoryOverride = context.ConfigDir;
 
         try {
             return await parseResult.InvokeAsync();

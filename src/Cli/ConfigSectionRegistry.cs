@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using System.Reflection;
 using LectureExtraction.Configuration;
 
@@ -42,6 +43,67 @@ public static class ConfigSectionRegistry {
         TryResolve(sectionName, out var type)
             ? Load(type)
             : throw new ArgumentException($"Unknown config section '{sectionName}'.", nameof(sectionName));
+
+    /// <summary>Persists one section through the ordinary <c>ConfigLoader</c> save path.</summary>
+    public static void Save(Type sectionType, object config) {
+        var loaderType = typeof(ConfigLoader<>).MakeGenericType(sectionType);
+        var save = loaderType.GetMethod("Save", BindingFlags.Public | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"ConfigLoader<{sectionType.Name}>.Save not found.");
+
+        save.Invoke(null, [config]);
+    }
+
+    /// <summary>
+    /// Sets a dotted path from its text form. Only scalars are supported: an array or a nested
+    /// object has no unambiguous single-value spelling on a command line, and guessing one (comma
+    /// splitting, JSON fragments) would make <c>config set</c> the wrong tool for editing a list.
+    /// </summary>
+    public static bool TryWritePath(object root, string dottedPath, string rawValue, out string? error) {
+        error = null;
+
+        string[] segments = dottedPath.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        object? current = root;
+
+        for (int i = 0; i < segments.Length - 1; i++) {
+            var step = current?.GetType().GetProperty(segments[i], BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (step == null) {
+                error = $"'{segments[i]}' is not a property of {current?.GetType().Name}.";
+                return false;
+            }
+            current = step.GetValue(current);
+        }
+
+        string leafName = segments[^1];
+        var leaf = current?.GetType().GetProperty(leafName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (leaf == null) {
+            error = $"'{leafName}' is not a property of {current?.GetType().Name}.";
+            return false;
+        }
+
+        if (!leaf.CanWrite) {
+            error = $"'{leafName}' is read-only.";
+            return false;
+        }
+
+        var target = Nullable.GetUnderlyingType(leaf.PropertyType) ?? leaf.PropertyType;
+        if (target.IsArray || (!target.IsPrimitive && !target.IsEnum && target != typeof(string) && target != typeof(decimal))) {
+            error = $"'{leafName}' is a {target.Name}; only scalar values can be set from the command line.";
+            return false;
+        }
+
+        try {
+            object converted = target.IsEnum
+                ? Enum.Parse(target, rawValue, ignoreCase: true)
+                : Convert.ChangeType(rawValue, target, CultureInfo.InvariantCulture);
+            leaf.SetValue(current, converted);
+        }
+        catch (Exception ex) {
+            error = $"cannot convert '{rawValue}' to {target.Name} ({ex.GetType().Name}: {ex.Message}).";
+            return false;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Walks a dotted property path such as <c>Paths.SourceFolder</c>. The flat delegating

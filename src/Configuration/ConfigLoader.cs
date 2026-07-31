@@ -15,7 +15,7 @@ namespace LectureExtraction.Configuration;
 public static class ConfigLoader<T> where T : class, new() {
     public static T Load(string? sectionName = null) {
         sectionName ??= typeof(T).Name;
-        var basePath = AppDomain.CurrentDomain.BaseDirectory;
+        var basePath = ConfigStore.ResolveDirectory();
         string fileName = $"{typeof(T).Name}.json";
         string filePath = Path.Combine(basePath, fileName);
 
@@ -103,12 +103,27 @@ public static class ConfigLoader<T> where T : class, new() {
     }
 
     public static void Save(T config) {
-        var basePath = AppDomain.CurrentDomain.BaseDirectory;
         string fileName = $"{typeof(T).Name}.json";
+
+        if (!ConfigStore.SaveEnabled) {
+            // Silence here would be worse than noise: a caller who expected a setting to stick
+            // needs to know why it did not.
+            Ui.Detail($"'{fileName}' nicht gespeichert (Konfiguration ist schreibgeschützt).", "AppConfig");
+            return;
+        }
+
+        var basePath = ConfigStore.ResolveDirectory();
         string filePath = Path.Combine(basePath, fileName);
 
         string jsonString = SerializePreservingComments(filePath, config);
         File.WriteAllText(filePath, jsonString);
+
+        // The second write keeps the working copy beside the executable's copy in step when the
+        // app is started with `dotnet run` from the repository root. An explicit --config-dir is a
+        // statement about *which* copy is authoritative, so it suppresses the mirror.
+        if (!string.IsNullOrWhiteSpace(ConfigStore.DirectoryOverride)) {
+            return;
+        }
 
         try {
             string currentDirFile = Path.Combine(Directory.GetCurrentDirectory(), fileName);

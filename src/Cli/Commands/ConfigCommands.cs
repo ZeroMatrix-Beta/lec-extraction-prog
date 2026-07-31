@@ -20,6 +20,7 @@ public static class ConfigCommands {
         var config = new Command("config", "Inspect the configuration the pipeline would run with.");
         config.Add(BuildList());
         config.Add(BuildGet());
+        config.Add(BuildSet());
         config.Add(BuildModels());
         config.Add(BuildProfiles());
         config.Add(BuildFolders());
@@ -81,6 +82,64 @@ public static class ConfigCommands {
             }
 
             CliOutput.Payload(context, new { key = path, value }, () => Ui.RawLine(FormatScalar(value)));
+            return ExitCodes.Success;
+        });
+        return command;
+    }
+
+    private static Command BuildSet() {
+        var key = new Argument<string>("key") {
+            Description = "Dotted path, e.g. AiStudioAutoExtractionConfig.CurrentModel."
+        };
+        var value = new Argument<string>("value") { Description = "The new value." };
+
+        var command = new Command("set", "Write a single configuration value.") { key, value };
+        command.SetAction(parseResult => {
+            var context = CliOptions.ReadContext(parseResult);
+            string path = parseResult.GetValue(key) ?? "";
+            string raw = parseResult.GetValue(value) ?? "";
+
+            string[] segments = path.Split('.', 2, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length < 2) {
+                Ui.Error($"'{path}' must name a section and a property, e.g. AiStudioAutoExtractionConfig.CurrentModel.", "CLI");
+                return ExitCodes.Usage;
+            }
+
+            if (!ConfigSectionRegistry.TryResolve(segments[0], out var sectionType)) {
+                return UnknownSection(segments[0]);
+            }
+
+            object root = ConfigSectionRegistry.Load(sectionType);
+            if (!ConfigSectionRegistry.TryReadPath(root, segments[1], out object? before, out string? readError)) {
+                Ui.Error($"{path}: {readError}", "CLI");
+                return ExitCodes.Usage;
+            }
+
+            if (!ConfigSectionRegistry.TryWritePath(root, segments[1], raw, out string? writeError)) {
+                Ui.Error($"{path}: {writeError}", "CLI");
+                return ExitCodes.Usage;
+            }
+
+            if (context.DryRun) {
+                CliOutput.Payload(context, new { key = path, before, after = raw, written = false },
+                    () => Ui.Info($"{path}: {FormatScalar(before)} -> {raw} (dry run, nothing written)"));
+                return ExitCodes.Success;
+            }
+
+            // Writing config is this command's entire purpose, so it does not additionally require
+            // --save-config; that flag exists to stop a *run* from persisting changes as a side
+            // effect. The scope is deliberately narrow - one value, then back to read-only.
+            bool previous = ConfigStore.SaveEnabled;
+            ConfigStore.SaveEnabled = true;
+            try {
+                ConfigSectionRegistry.Save(sectionType, root);
+            }
+            finally {
+                ConfigStore.SaveEnabled = previous;
+            }
+
+            CliOutput.Payload(context, new { key = path, before, after = raw, written = true },
+                () => Ui.Success($"{path}: {FormatScalar(before)} -> {raw}"));
             return ExitCodes.Success;
         });
         return command;
