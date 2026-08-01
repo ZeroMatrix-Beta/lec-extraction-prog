@@ -56,6 +56,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     private int _sessionTotalInputTokens = 0;
     private int _sessionTotalOutputTokens = 0;
     private int _sessionTotalCachedTokens = 0;
+    private int _lastWarmupInputTokens = 0;
     // [AI Context] Active Google Cloud Context Cache resource name if caching is active.
     private string? _cachedContentName = null;
 
@@ -98,8 +99,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         // "Zurück" leaves the session.
         while (true) {
             var choice = Ui.Select("Modus auswählen:", [
-                ("1) 🚀 Alle Videos im Quellordner konvertieren (Standard)", ExtractionMode.AllVideos),
-                ("2) 🎬 Einzelnes Video auswählen und konvertieren", ExtractionMode.SingleVideo),
+                ("1) 🎬 Einzelnes Video auswählen und konvertieren", ExtractionMode.SingleVideo),
+                ("2) 🚀 Alle Videos im Quellordner konvertieren (Standard)", ExtractionMode.AllVideos),
                 ("3) 📺 YouTube-Video transkribieren", ExtractionMode.YouTube)
             ], backLabel: "4) 🚪 Abbrechen / Zurück");
 
@@ -148,6 +149,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         try {
             if (!await EnsureSessionSetupAsync()) return;
+            if (_config.OnlyDoWarmUp) {
+                Ui.Success("WarmUp & Context Setup abgeschlossen (OnlyDoWarmUp = true). Beende Session ohne Videoextraktion.", "Cache-Warming");
+                return;
+            }
             await ProcessFilesAsync(files);
         }
         finally {

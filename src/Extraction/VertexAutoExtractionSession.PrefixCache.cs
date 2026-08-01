@@ -94,6 +94,20 @@ public partial class VertexAutoExtractionSession {
             new() { Role = "user", Parts = warmupParts }
         };
 
+        // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs
+        try {
+            var warmupContents = new List<Content>();
+            if (requestConfig.SystemInstruction != null) warmupContents.Add(requestConfig.SystemInstruction);
+            warmupContents.AddRange(pingContent);
+            var counted = await _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents);
+            int totalToks = counted.TotalTokens ?? 0;
+            int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
+            Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
+        }
+        catch (Exception countEx) {
+            Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+        }
+
         try {
             string responseText = "";
             int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
@@ -122,12 +136,14 @@ public partial class VertexAutoExtractionSession {
                 _sessionTotalOutputTokens += outputTokens;
                 _sessionTotalCachedTokens += cachedTokens;
 
+                int newlyAdded = cachedTokens > 0 ? Math.Max(0, inputTokens - cachedTokens) : (_lastWarmupInputTokens > 0 ? Math.Max(0, inputTokens - _lastWarmupInputTokens) : freshTokens);
+                _lastWarmupInputTokens = inputTokens;
+
                 Ui.Success("Handshake erfolgreich.", "Cache-Warming");
                 if (!string.IsNullOrWhiteSpace(responseText)) {
                     Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
-                // Report unconditionally: silence means "not reported", not "not charged" (F9).
-                Ui.Detail(usage.Describe($"Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}"), "Cache-Warming");
+                Ui.Info(usage.Describe($"[Warmup Tokens] Neu dazugekommen: {newlyAdded:N0} | Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Output: {outputTokens:N0}"), "Tokens");
 
                 int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");

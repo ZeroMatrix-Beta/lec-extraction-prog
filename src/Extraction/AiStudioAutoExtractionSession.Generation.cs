@@ -59,7 +59,7 @@ public partial class AiStudioAutoExtractionSession {
     public async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
-        await LogTokenCountsAsync(attachmentParts, history, previousTexFiles);
+        await LogTokenCountsAsync(requestConfig, attachmentParts, history, previousTexFiles, partNumber);
 
         string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
         if (previousTexFiles.Count > 0) {
@@ -149,33 +149,35 @@ public partial class AiStudioAutoExtractionSession {
         return (requestConfig, history);
     }
 
-    private async Task LogTokenCountsAsync(List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles) {
-        if (!_config.VerboseConsoleOutput) return;
+    private async Task LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
         try {
-            Ui.Detail("Berechne Token-Anzahl für die einzelnen Bestandteile...", "Token-Analyse");
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
             var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
-            Ui.Detail($"- Video-Token: {videoCount.TotalTokens}");
+            int vidToks = videoCount.TotalTokens ?? 0;
 
-            var userPromptParts = history[^1].Parts;
-            if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
-                var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
-                var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
-                // [AI Context] Only name the preceding .tex files when they are actually inside this Part.
-                // Under InlinePrecedingLecTexParts=false they travel as separate file references, so listing
-                // them here would attribute their tokens to a Part that no longer contains them.
-                // [Human] Die Dateinamen nur nennen, wenn sie wirklich in diesem Textblock stecken.
-                string fileInfo = previousTexFiles.Count > 0 && _config.InlinePrecedingLecTexParts
-                    ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
-                    : "dummy-part0.tex";
-                Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texCount.TotalTokens}");
+            var allContentsForCount = new List<Content>();
+            if (requestConfig.SystemInstruction != null) allContentsForCount.Add(requestConfig.SystemInstruction);
+            allContentsForCount.AddRange(history);
+
+            var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, allContentsForCount);
+            int promptToks = totalCount.TotalTokens ?? 0;
+            Ui.Info($"[Part {partNumber} Prompt] Total Prompt-Tokens (ganzer Prompt): {promptToks:N0} (Video: {vidToks:N0} Tokens)", "Tokens");
+
+            if (_config.VerboseConsoleOutput) {
+                var userPromptParts = history[^1].Parts;
+                if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
+                    var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
+                    var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
+                    int texToks = texCount.TotalTokens ?? 0;
+                    string fileInfo = previousTexFiles.Count > 0 && _config.InlinePrecedingLecTexParts
+                        ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
+                        : "dummy-part0.tex";
+                    Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texToks:N0}");
+                }
             }
-
-            var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, history);
-            Ui.Detail($"-> Gesamt-Token in History (Video + Kontext + Prompt): {totalCount.TotalTokens}");
         }
         catch (Exception ex) {
-            Ui.Warn($"Fehler beim Zählen der Token: {ex.Message}", "Token-Analyse");
+            Ui.Warn($"Fehler beim Zählen der Prompt-Token: [Exception gefangen] {ex.GetType().Name}: {ex.Message}", "Token-Analyse");
         }
     }
 
@@ -272,12 +274,10 @@ public partial class AiStudioAutoExtractionSession {
             int freshPartTokens = Math.Max(0, interactionInputTokens - interactionCachedTokens);
             int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
+            Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0}"), "Tokens");
             if (_config.VerboseConsoleOutput) {
-                Ui.Detail(usage.Describe($"Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0}", "[Request Tokens]      "));
                 Ui.Detail($"[Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0}");
                 Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
-            } else {
-                Ui.Detail(usage.Describe($"Request: {requestInputTokens:N0} in ({requestCachedTokens:N0} gecacht) / {requestOutputTokens:N0} out | Session: {_sessionTotalInputTokens:N0} in / {_sessionTotalOutputTokens:N0} out"));
             }
 
             fullResponse += chunkResp;

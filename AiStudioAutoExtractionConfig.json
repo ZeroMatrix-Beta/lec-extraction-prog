@@ -1,69 +1,7 @@
 {
   "EnableParallelFileUploads": false,
   "CreateLogFiles": true,
-  "ActiveApiProfile": 3,
-  "AiStudioApiKeyEnvNames": [
-    "API_KEY-automated-content-extraction",
-    "API_KEY-ai-studio-test-project-1",
-    "API_KEY-ai-studio-test-project-2",
-    "API_KEY-ai-studio-test-project-3"
-  ],
-  "SourceFolder": "D:\\lecture-videos\\analysis2",
-  "PredefinedSourceFolders": [
-    "D:\\lecture-videos\\analysis2",
-    "D:\\lecture-videos\\grundstrukturen",
-    "D:\\lecture-videos\\d-und-a",
-    "D:\\lecture-videos\\information-security-2024"
-  ],
-  "TargetFolder": "",
-  "SystemInstructionPaths": [
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-syntax-rules.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-theorem-family.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-spoken-clean.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-math-stroke.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-tikz.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-conventions.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-hierarchy.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-environment-usage.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-spoken-clean-structuring.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-proof-structuring.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-formula-formatting.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-typography-notation.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-list-enumeration.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-tikz-patterns.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-worked-examples.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-example-scenarios.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-anti-patterns.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-audio-fidelity.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-fallback-strategy.md",
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-compilation-errors.md"
-  ],
-  "HistoryPreloadPaths": [
-    "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
-  ],
-  "LogFolder": "D:\\gemini-logs",
-  "Temperature": 0.36,
-  "TopP": 0.95,
-  "TopK": 40,
-  "MaxOutputTokens": 65535,
-  "Model": [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3-flash-preview",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash"
-  ],
   "UseChosenModelForRestOfPipeline": true,
-  "CurrentModelIndex": 0,
-  "ThinkingBudget": 32765,
-  "ThinkingLevel": "HIGH",
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "InlineHistoryImages": true,
@@ -71,7 +9,7 @@
   "MergeSystemInstructionAndFirstHistoryBatch": true,
   "MergeAllConsecutiveHistoryBatches": false,
   "DebugSendReferenceFile": true,
-  "InlinePrecedingLecTexParts": false,
+  "InlinePrecedingLecTexParts": true,
   "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
@@ -81,20 +19,17 @@
   "UseGoogleSearch": false,
   "FfmpegPreset": "fast",
   "VideoPartDelaySeconds": 135,
-  "SystemInstructionDelaySeconds": 120,
+  "SystemInstructionDelaySeconds": 130,
   "FileActivationDelaySeconds": 140,
   "VideoUploadTimeoutSeconds": 360,
   "VideoUploadMaxRetries": 3,
-  "SendDummyFileWithEachWarmUpRound": true,
-  "HistoryRateLimitDelaySeconds": 120,
+  "SendDummyFileWithEachWarmUpRound": false,
+  "HistoryRateLimitDelaySeconds": 360,
+  "OnlyDoWarmUp": true,
   "YouTubeTasks": [],
   "ApiKey": {
     "ActiveProfile": 3,
     "EnvNames": [
-      "API_KEY-automated-content-extraction",
-      "API_KEY-ai-studio-test-project-1",
-      "API_KEY-ai-studio-test-project-2",
-      "API_KEY-ai-studio-test-project-3",
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
       "API_KEY-ai-studio-test-project-2",
@@ -104,10 +39,6 @@
   "Paths": {
     "SourceFolder": "D:\\lecture-videos\\analysis2",
     "PredefinedSourceFolders": [
-      "D:\\lecture-videos\\analysis2",
-      "D:\\lecture-videos\\grundstrukturen",
-      "D:\\lecture-videos\\d-und-a",
-      "D:\\lecture-videos\\information-security-2024",
       "D:\\lecture-videos\\analysis2",
       "D:\\lecture-videos\\grundstrukturen",
       "D:\\lecture-videos\\d-und-a",
@@ -121,61 +52,37 @@
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-syntax-rules.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-theorem-family.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-spoken-clean.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-math-stroke.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-tikz.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",
+      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments"
+      /* <- include folder*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-syntax-rules.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-theorem-family.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-spoken-clean.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-math-stroke.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-tikz.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",*/,
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-conventions.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-hierarchy.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-environment-usage.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-spoken-clean-structuring.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-proof-structuring.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-formula-formatting.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-typography-notation.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-list-enumeration.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-tikz-patterns.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-worked-examples.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-example-scenarios.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-anti-patterns.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-audio-fidelity.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-fallback-strategy.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-compilation-errors.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-syntax-rules.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-theorem-family.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-spoken-clean.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-math-stroke.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-tikz.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-conventions.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-hierarchy.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-environment-usage.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-spoken-clean-structuring.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-proof-structuring.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-formula-formatting.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-typography-notation.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-list-enumeration.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-tikz-patterns.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-worked-examples.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-example-scenarios.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-anti-patterns.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-audio-fidelity.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-fallback-strategy.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-compilation-errors.md"
+      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples"
+      /* <- include folder*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-conventions.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-hierarchy.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-environment-usage.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-spoken-clean-structuring.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-proof-structuring.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-formula-formatting.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-typography-notation.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-list-enumeration.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-tikz-patterns.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-worked-examples.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-example-scenarios.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-anti-patterns.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-audio-fidelity.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-fallback-strategy.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-compilation-errors.md"*/
     ],
     "HistoryPreloadPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history",
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
     ]
   },
@@ -193,16 +100,12 @@
       "gemini-3.5-flash",
       "gemini-3-flash-preview",
       "gemini-3.5-flash-lite",
-      "gemini-2.5-flash",
-      "gemini-3.6-flash",
-      "gemini-3.5-flash",
-      "gemini-3-flash-preview",
-      "gemini-3.5-flash-lite",
       "gemini-2.5-flash"
     ],
     "CurrentIndex": 0
   },
   "SpeedMultiplier": 1.0,
-  "VerboseConsoleOutput": false,
-  "EnableImplicitPrefixCacheWarmup": true
+  "VerboseConsoleOutput": true,
+  "EnableImplicitPrefixCacheWarmup": true,
+  "DisableThinkingDuringWarmUp": false
 }

@@ -19,5 +19,6 @@ public interface IAutoExtractionConfig {
     bool DebugSendReferenceFile { get; }
     bool InlinePrecedingLecTexParts { get; }
     bool VerboseConsoleOutput { get; }
+    bool OnlyDoWarmUp { get; }
 }
 

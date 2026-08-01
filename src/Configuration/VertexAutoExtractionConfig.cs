@@ -87,5 +87,12 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     /// [Human] Schaltet das "Nachdenken" beim Cache-Warming-Handshake ab (standardmässig aus).
     /// </summary>
     public bool DisableThinkingDuringWarmUp { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] Vertex counterpart of the AI Studio flag: stops session after history loading,
+    /// system instruction setup, and prefix cache warming without extracting video files.
+    /// [Human] Wenn true, führt die Session nur das Laden der System Instructions & den Cache-Warmup durch und beendet sich dann ohne Videoextraktion (für Debugzwecke).
+    /// </summary>
+    public bool OnlyDoWarmUp { get; set; } = false;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

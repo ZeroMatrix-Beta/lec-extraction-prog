@@ -28,7 +28,7 @@ public static partial class FileTreeRenderer {
         if (!string.IsNullOrEmpty(baseDir)) {
             Ui.Info($"📁 {baseDir}");
         }
-        RenderVirtualTreeNode(root, "      ", showRelativePath: false, line => Ui.Detail(line));
+        RenderVirtualTreeNode(root, "      ", showRelativePath: false, line => Ui.Info(line));
     }
 
     public static string? FindCommonBaseDirectory(List<string> allPaths) {

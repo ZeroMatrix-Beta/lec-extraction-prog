@@ -42,7 +42,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     ];
 
 
-    private Client _client = client;
+    private readonly Client _client = client;
     private readonly AiStudioAutoExtractionConfig _config = config;
     private readonly AttachmentUploader _attachmentHandler = attachmentHandler;
     private readonly SessionLogger _sessionLogger = sessionLogger;
@@ -57,6 +57,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     private int _sessionTotalOutputTokens = 0;
     private int _sessionTotalCachedTokens = 0;
     private int _sessionMaxFreshTokens = 0;
+    private int _lastWarmupInputTokens = 0;
 
     /// <summary>
     /// [AI Context] Read-only preamble text placed before reference_context blocks in the user-turn.
@@ -103,6 +104,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         }
 
         if (!await EnsureSessionSetupAsync()) return false;
+        if (_config.OnlyDoWarmUp) {
+            Ui.Success("WarmUp & Context Setup abgeschlossen (OnlyDoWarmUp = true). Beende Session ohne Videoextraktion.", "Cache-Warming");
+            return true;
+        }
         return await ProcessFilesAsync([.. files]);
     }
 
@@ -158,8 +163,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         // what "back" from the branch means. Only "Zurück" leaves the session.
         while (true) {
             var choice = Ui.Select("Modus auswählen:", [
-                ("1) 🚀 Alle Videos im Quellordner konvertieren (Standard)", ExtractionMode.AllVideos),
-                ("2) 🎬 Einzelnes Video auswählen und konvertieren", ExtractionMode.SingleVideo),
+                ("1) 🎬 Einzelnes Video auswählen und konvertieren", ExtractionMode.SingleVideo),
+                ("2) 🚀 Alle Videos im Quellordner konvertieren (Standard)", ExtractionMode.AllVideos),
                 ("3) 📺 YouTube-Video transkribieren", ExtractionMode.YouTube)
             ], backLabel: "4) 🚪 Abbrechen / Zurück");
 

@@ -26,23 +26,23 @@ public static class MainMenu {
             Ui.Detail($"Aktives AI Studio Profil für Auto-Extraktion: {autoExtProfileDisplay}");
             Ui.Blank();
 
-            string choice1 = "1) 🌐 Google AI Studio (API Key / Developer Endpoints)";
-            string choice2 = AppConfig.IsVertexAiEnabled
-                ? "2) ☁️ Google Cloud Vertex AI (Enterprise)"
-                : "2) ☁️ Google Cloud Vertex AI [DEAKTIVIERT - Kostenschutz]";
-            string choice3 = "3) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)";
-            string choice4 = "4) 🚀 Automatisierte Content-Extraktion & Verarbeitung";
+            string choice1 = "1) 🚀 Automatisierte Content-Extraktion & Verarbeitung";
+            string choice2 = "2) 🌐 Google AI Studio (API Key / Developer Endpoints)";
+            string choice3 = AppConfig.IsVertexAiEnabled
+                ? "3) ☁️ Google Cloud Vertex AI (Enterprise)"
+                : "3) ☁️ Google Cloud Vertex AI [DEAKTIVIERT - Kostenschutz]";
+            string choice4 = "4) 🎬 FFmpeg Interactive Manager (Lokale Audio/Video-Verarbeitung)";
             string choice5 = "5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)";
             string choice6 = "6) ⚙️ Quellordner (Source Folders) verwalten & ändern";
             string choice7 = "7) 🔑 API-Key Profile (AI Studio & Refinement) verwalten & ändern";
-            var choices = new List<string> { choice1 };
+            var choices = new List<string> { choice1, choice2 };
             if (AppConfig.IsVertexAiEnabled) {
-                choices.Add(choice2);
+                choices.Add(choice3);
             }
-            choices.AddRange([choice3, choice4, choice5, choice6, choice7]);
+            choices.AddRange([choice4, choice5, choice6, choice7]);
 
             if (!AppConfig.IsVertexAiEnabled) {
-                Ui.Detail("  " + choice2);
+                Ui.Detail("  " + choice3);
             }
 
             // The main menu is the root of the navigation, so its "back" is leaving the program.
@@ -63,16 +63,16 @@ public static class MainMenu {
             SessionCostLedger.Reset();
 
             if (selection == choice1) {
+                await SessionFactory.RunAutoExtractionAsync();
+            }
+            else if (selection == choice2) {
                 await SessionFactory.RunDirectAiStudioChatAsync();
             }
-            else if (selection == choice2 && AppConfig.IsVertexAiEnabled) {
+            else if (selection == choice3 && AppConfig.IsVertexAiEnabled) {
                 await SessionFactory.RunDirectVertexChatAsync();
             }
-            else if (selection == choice3) {
-                await SessionFactory.RunFfmpegSessionAsync();
-            }
             else if (selection == choice4) {
-                await SessionFactory.RunAutoExtractionAsync();
+                await SessionFactory.RunFfmpegSessionAsync();
             }
             else if (selection == choice5) {
                 await SessionFactory.RunLatexRefinementAsync();

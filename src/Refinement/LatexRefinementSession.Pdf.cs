@@ -534,7 +534,7 @@ public partial class LatexRefinementSession {
         return false;
     }
 
-    private async Task<bool> CallAntiGravityAgentAsync(System.Net.Http.HttpClient httpClient, string finalTexFile, string logContent) {
+    private static async Task<bool> CallAntiGravityAgentAsync(System.Net.Http.HttpClient httpClient, string finalTexFile, string logContent) {
         string finalFileName = Path.GetFileName(finalTexFile);
         string currentLatexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
 

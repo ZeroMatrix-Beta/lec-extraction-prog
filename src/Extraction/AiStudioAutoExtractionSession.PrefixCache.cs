@@ -75,7 +75,12 @@ public partial class AiStudioAutoExtractionSession {
             }
 
             if (shouldSendHandshake) {
-                if (!await PrimePrefixCacheAsync(historyBatchDelay, includeDummyPart0: isLastBatch)) return false;
+                // [AI Context] If MergeSystemInstructionAndFirstHistoryBatch is active, the first batch
+                // logically represents the combined "system instruction + first history" round, so the
+                // SystemInstructionDelaySeconds (not HistoryRateLimitDelaySeconds) should apply.
+                bool isFirstMergedBatch = _config.MergeSystemInstructionAndFirstHistoryBatch && batchIndex == 0;
+                int batchDelay = isFirstMergedBatch ? systemInstructionDelay : historyBatchDelay;
+                if (!await PrimePrefixCacheAsync(batchDelay, includeDummyPart0: isLastBatch)) return false;
             } else {
                 Ui.Info($"Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...", "Cache-Warming");
             }
@@ -98,7 +103,7 @@ public partial class AiStudioAutoExtractionSession {
             Temperature = _config.Temperature,
             TopP = _config.TopP,
             TopK = _config.TopK,
-            MaxOutputTokens = 100
+            MaxOutputTokens = _config.MaxOutputTokens
         };
 
         var sysParts = GetValidSystemInstructionParts();
@@ -106,17 +111,38 @@ public partial class AiStudioAutoExtractionSession {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
 
-        // [AI Context] Opt-in (finding F9). Guarded by SupportsThinking because sending the field to a
-        // model that does not accept it fails the request outright - "Thinking level is not supported"
-        // is one of the messages ApiRetryPolicy explicitly refuses to treat as transient.
-        // [Human] Nur wenn konfiguriert und vom Modell unterstützt.
-        if (_config.DisableThinkingDuringWarmUp && ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
-            requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
-            Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
+        // [AI Context] ThinkingConfig is built with the same model-specific logic as BuildGenerationRequestAsync
+        // so that the warmup handshake uses a bit-identical GenerateContentConfig — which is a prerequisite
+        // for Google's implicit prefix cache to produce a hit on the real Part-1 request.
+        // DisableThinkingDuringWarmUp=true overrides to ThinkingBudget=0 (opt-in, see finding F9).
+        // [Human] Gleiche Thinking-Konfiguration wie Part 1+, damit der Warmup-Prefix gecacht wird.
+        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
+            if (_config.DisableThinkingDuringWarmUp) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
+                Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
+            } else {
+                bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
+                if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
+                    requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
+                } else if (_config.ThinkingBudget.HasValue) {
+                    int budget = _config.ThinkingBudget.Value;
+                    if (budget > 32768) budget = 32768;
+                    requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
+                }
+            }
         }
 
-        string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
+        // [AI Context] The handshake text is explicitly phrased to suppress any content generation:
+        // - No video or media is attached — the system instruction's processing rules do not apply.
+        // - The model must ONLY echo the acknowledgement string, nothing else.
+        string handshakeText = $"""[Cache-Warming Handshake] This is a technical warmup request to pre-fill the implicit prefix cache (on Google AI Studio servers). No video, audio, or any other media file is attached to this request — the lecture extraction instructions in the system instruction are therefore NOT applicable and must NOT be executed. Do not generate any LaTeX, summaries, or content of any kind. Please acknowledge receipt with exactly this string and nothing else: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'""";
 
+        // [AI Context] Prefix-consistency rule: include dummy-part0.tex only when the system instruction
+        // is COMPLETE (includeDummyPart0=true, i.e. last history batch or single-shot warmup). Intermediate
+        // batches have a partial system instruction that cannot produce a cache hit for Part-1 anyway, so
+        // sending the dummy there wastes ~4500 tokens with zero cache benefit.
+        // SendDummyFileWithEachWarmUpRound=true overrides to always send (debugging/testing aid).
+        // [Human] Dummy nur beim letzten Handshake (vollständige Sys-Instruction), sonst Tokenverbrauch ohne Nutzen.
         bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
         List<Part> warmupParts;
         if (shouldIncludeDummy) {
@@ -137,6 +163,23 @@ public partial class AiStudioAutoExtractionSession {
             }
         };
 
+        // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs
+        try {
+            var warmupContents = new List<Content>();
+            if (requestConfig.SystemInstruction != null) warmupContents.Add(requestConfig.SystemInstruction);
+            warmupContents.AddRange(pingContent);
+            var counted = await _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents);
+            int totalToks = counted.TotalTokens ?? 0;
+            int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
+            Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
+        }
+        catch (Exception countEx) {
+            Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+            // [AI Context] Even when CountTokens fails (e.g. network outage), display the last known
+            // total so the user always sees a token count line before the actual generate request.
+            string lastKnown = _lastWarmupInputTokens > 0 ? $"{_lastWarmupInputTokens:N0}" : "unbekannt";
+            Ui.Info($"[Warmup Request] Token-Zählung nicht verfügbar (Netzwerkfehler). Letzter bekannter Total-Prompt: {lastKnown} Tokens (zzgl. neuer Batch)", "Tokens");
+        }
 
         try {
             string responseText = "";
@@ -167,16 +210,15 @@ public partial class AiStudioAutoExtractionSession {
                 _sessionTotalCachedTokens += cachedTokens;
                 _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
 
+                int newlyAdded = cachedTokens > 0 ? Math.Max(0, inputTokens - cachedTokens) : (_lastWarmupInputTokens > 0 ? Math.Max(0, inputTokens - _lastWarmupInputTokens) : freshTokens);
+                _lastWarmupInputTokens = inputTokens;
+
                 Ui.Success("Handshake erfolgreich.", "Cache-Warming");
                 if (!string.IsNullOrWhiteSpace(responseText)) {
                     Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
 
-                // [AI Context] Report unconditionally. The old `if (inputTokens > 0)` guard meant a
-                // response whose usage metadata never arrived printed nothing at all, and a handshake
-                // with no token line reads as free when it means "not reported" (finding F9).
-                // [Human] Immer berichten - fehlende Zahlen heissen "nicht gemeldet", nicht "kostenlos".
-                Ui.Detail(usage.Describe($"Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Frisch: {freshTokens:N0} | Output: {outputTokens:N0}"), "Cache-Warming");
+                Ui.Info(usage.Describe($"[Warmup Tokens] Neu dazugekommen: {newlyAdded:N0} | Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Output: {outputTokens:N0}"), "Tokens");
 
                 int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");

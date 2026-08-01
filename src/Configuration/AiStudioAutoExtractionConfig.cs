@@ -92,5 +92,12 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     /// eine echte Messung zeigt, dass es sich lohnt.
     /// </summary>
     public bool DisableThinkingDuringWarmUp { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] If true, the session will perform history loading, system instruction setup,
+    /// and prefix cache warming, then stop before video processing starts (used for debugging handshakes).
+    /// [Human] Wenn true, führt die Session nur das Laden der System Instructions & den Cache-Warmup durch und beendet sich dann ohne Videoextraktion (für Debugzwecke).
+    /// </summary>
+    public bool OnlyDoWarmUp { get; set; } = false;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
 }

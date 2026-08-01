@@ -133,10 +133,10 @@ Supporting modules that ensure reliability and clean modularization.
 
 #### 🚀 5. Main Menu Workflow (`App/MainMenu.cs`)
 Upon starting the application, you are presented with 7 operational modes:
-1. **Google AI Studio Chat:** Interactive developer endpoint session.
-2. **Vertex AI Chat:** Interactive enterprise endpoint session (disabled by default — see `IsVertexAiEnabled` in `appsettings.json`).
-3. **FFmpeg Manager:** Manual, local video optimization utility.
-4. **Automated Content Extraction:** The batch processing pipeline.
+1. **Automated Content Extraction:** The batch processing pipeline.
+2. **Google AI Studio Chat:** Interactive developer endpoint session.
+3. **Vertex AI Chat:** Interactive enterprise endpoint session (disabled by default — see `IsVertexAiEnabled` in `appsettings.json`).
+4. **FFmpeg Manager:** Manual, local video optimization utility.
 5. **LaTeX Refinement:** Post-processing merger for generated transcripts.
 6. **Source Folders:** Inspect/update source folders across all session profiles.
 7. **API Key Profiles:** Inspect/update the active API-key profile per session type.
@@ -159,6 +159,7 @@ Upon starting the application, you are presented with 7 operational modes:
 
 If the application gets stuck with `[Exception Caught] Type: ServerError` (HTTP 500), it means the Google backend crashed while processing your specific prompt or video chunk.
 - **Do not use "Thinking" with Flash Models:** Combining `gemini-3.5-flash` with a high `ThinkingBudget` and a 30-minute video chunk is highly unstable. Switch to a "Pro" model (e.g., `gemini-2.5-pro` or `gemini-3.1-pro-preview`) if you want to use reasoning.
+- **ThinkingConfig during Warm-Up:** By default, the warm-up handshake uses the **same `ThinkingConfig`** as the actual Part-1 request so the Google implicit prefix-cache slot matches. If that wastes tokens, set `DisableThinkingDuringWarmUp: true` to force `ThinkingBudget = 0` for the handshake only.
 - **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` embeds history files and images directly into the System Instruction via XML framing and InlineData. While much more stable, massive history payloads can still exceed API limits.
 - **Skip the Error:** Press `Ctrl+C` during a retry delay to gracefully skip the corrupted video chunk and proceed to the next file.
 
@@ -313,10 +314,10 @@ Ergänzende Module für Stabilität, Logging und saubere Modularisierung.
 
 #### 🚀 5. Hauptmenü Workflow (`App/MainMenu.cs`)
 Beim Start der Anwendung stehen 7 Betriebsmodi zur Verfügung:
-1. **Google AI Studio Chat:** Interaktive Chat-Sitzung (Developer Endpoint).
-2. **Vertex AI Chat:** Interaktive Chat-Sitzung (Enterprise Endpoint, standardmäßig deaktiviert — siehe `IsVertexAiEnabled` in `appsettings.json`).
-3. **FFmpeg Manager:** Lokale, manuelle Video-Optimierung.
-4. **Automated Content Extraction:** Die vollautomatisierte Batch-Pipeline.
+1. **Automated Content Extraction:** Die vollautomatisierte Batch-Pipeline.
+2. **Google AI Studio Chat:** Interaktive Chat-Sitzung (Developer Endpoint).
+3. **Vertex AI Chat:** Interaktive Chat-Sitzung (Enterprise Endpoint, standardmäßig deaktiviert — siehe `IsVertexAiEnabled` in `appsettings.json`).
+4. **FFmpeg Manager:** Lokale, manuelle Video-Optimierung.
 5. **LaTeX Refinement:** Post-Processing, um die generierten Transkripte zu verschmelzen.
 6. **Quellordner:** Quellordner über alle Sitzungsprofile hinweg ansehen/ändern.
 7. **API-Key Profile:** Das aktive API-Key-Profil pro Sitzungstyp ansehen/ändern.

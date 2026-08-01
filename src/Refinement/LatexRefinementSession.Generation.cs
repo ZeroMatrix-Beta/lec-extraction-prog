@@ -27,7 +27,7 @@ namespace LectureExtraction.Refinement;
 /// </summary>
 public partial class LatexRefinementSession {
 
-    private async Task<string> ResolveSystemInstructionTextAsync(RefinementStepConfig stepConfig) {
+    private static async Task<string> ResolveSystemInstructionTextAsync(RefinementStepConfig stepConfig) {
         string systemInstructionText = "";
         if (stepConfig.SystemInstructionPaths != null && stepConfig.SystemInstructionPaths.Length > 0) {
             Ui.Info("Folgende System-Instruktionen sind konfiguriert:", "LaTeX Refinement");
@@ -180,7 +180,7 @@ public partial class LatexRefinementSession {
         }
     }
 
-    private (int ExpectedSpokenClean, int ExpectedMathStroke) ComputeExpectedStructuralCounts(List<Content> history) {
+    private static (int ExpectedSpokenClean, int ExpectedMathStroke) ComputeExpectedStructuralCounts(List<Content> history) {
         int expectedSpokenClean = 0;
         int expectedMathStroke = 0;
         try {

@@ -144,6 +144,29 @@ Whenever an auto-extraction session boots, the application computes a unified MD
 ---
 
 
+## 4.4 Implicit Prefix Cache Warm-Up (`PrimePrefixCacheAsync`)
+
+Google AI Studio uses a **server-side implicit prefix cache**: if consecutive API requests share an identical prefix (System Instruction + early user-turn text), Google reuses the tokenized representation instead of re-processing it. This can cut prompt-processing cost and latency significantly for each video part in a multi-part lecture.
+
+### How the Warm-Up Works
+Before the first video is uploaded, `AiStudioAutoExtractionSession.WarmUpWithBatchedHistoryAsync` sends one or more lightweight "handshake" requests that contain only the System Instruction (and history batches, if `LoadHistoryIntoSystemInstruction = true`). This forces Google to tokenize the full instruction set and place it into the implicit cache while FFmpeg is still cutting the video in the background.
+
+### Batch Handshake Strategy
+When history is split across multiple batches (`HistoryBatchCount > 1`), the warm-up sends one handshake per batch, each time extending the System Instruction with the next batch:
+- **Intermediate batches** have an incomplete System Instruction → they can never produce a cache hit for Part 1 (different prefix). These handshakes still pre-exercise Google's tokenization pipeline for those partial prefixes.
+- **Last batch** has the complete System Instruction, identical to what Part 1 will use → only this handshake can produce an actual cache hit.
+
+### Dummy File (`dummy-part0.tex`) & `PrefixCacheAnchor`
+Part 1 always includes a `<reference_context file="part0.tex">` block (a synthetic LaTeX stub) in the user turn. To make the warm-up prefix bit-identical to Part 1, the last handshake also includes this block. `PrefixCacheAnchor.LoadPrefixCacheAnchorText()` loads `dummy-part0.tex` from disk once and caches it in memory for all subsequent calls.
+
+**`SendDummyFileWithEachWarmUpRound`** (config flag): when set to `true`, the dummy block is sent with *every* handshake (not just the last). With `InlinePrecedingLecTexParts: false` the user-turn text is otherwise identical across all parts, so this setting maximizes the chance that even intermediate batches match a future request. Default: `false` (token-saving mode — only the last batch gets the dummy).
+
+### ThinkingConfig Consistency
+The `GenerateContentConfig` sent during warm-up uses the **same `ThinkingConfig`** as the actual Part-1 request (same `ThinkingBudget` / `ThinkingLevel` / model-specific routing). A mismatch would create a different cache bucket key, causing a cache miss. Use `DisableThinkingDuringWarmUp: true` to force `ThinkingBudget = 0` for the handshake only (saves thinking-tokens during warm-up at the cost of a guaranteed cache miss for that round).
+
+---
+
+
 ## 4.5 Authentication Setup
 
 Depending on which environment you are targeting, the application requires different authentication setups.
@@ -500,6 +523,29 @@ Wann immer eine Auto-Extraktions-Session startet, berechnet die Anwendung eine M
 ---
 
 
+## 4.4 Impliziter Prefix-Cache Warm-Up (`PrimePrefixCacheAsync`)
+
+Google AI Studio nutzt einen **serverseitigen impliziten Prefix-Cache**: Wenn aufeinanderfolgende API-Anfragen denselben Präfix teilen (System Instruction + früher User-Turn-Text), verarbeitet Google die tokenisierte Darstellung nicht neu. Das spart bei jedem Video-Part erheblich Prompt-Verarbeitungskosten und Latenz.
+
+### Wie der Warm-Up funktioniert
+Bevor das erste Video hochgeladen wird, sendet `AiStudioAutoExtractionSession.WarmUpWithBatchedHistoryAsync` einen oder mehrere leichte "Handshake"-Requests, die nur die System Instruction (und ggf. History-Batches) enthalten. Das zwingt Google, den vollständigen Instruktionssatz zu tokenisieren und in den impliziten Cache zu legen, während FFmpeg das Video noch schneidet.
+
+### Batch-Handshake-Strategie
+Wenn die History auf mehrere Batches aufgeteilt ist (`HistoryBatchCount > 1`), sendet der Warm-Up pro Batch einen Handshake, der die System Instruction jeweils um den nächsten Batch erweitert:
+- **Intermediäre Batches** haben eine unvollständige System Instruction → sie können keinen Cache-Hit für Part 1 produzieren (anderer Präfix). Diese Handshakes trainieren jedoch trotzdem die Google-Tokenisierungs-Pipeline für diese Teilzustände.
+- **Letzter Batch** hat die vollständige System Instruction, identisch zu Part 1 → nur dieser Handshake kann einen echten Cache-Hit erzeugen.
+
+### Dummy-Datei (`dummy-part0.tex`) & `PrefixCacheAnchor`
+Part 1 enthält immer einen `<reference_context file="part0.tex">`-Block (ein synthetischer LaTeX-Stub) im User-Turn. Damit der Warm-Up-Präfix bit-identisch zu Part 1 ist, enthält der letzte Handshake denselben Block. `PrefixCacheAnchor.LoadPrefixCacheAnchorText()` lädt `dummy-part0.tex` einmalig vom Disk und hält ihn im Speicher für alle weiteren Aufrufe.
+
+**`SendDummyFileWithEachWarmUpRound`** (Config-Flag): Bei `true` wird der Dummy-Block mit *jedem* Handshake gesendet (nicht nur dem letzten). Mit `InlinePrecedingLecTexParts: false` ist der User-Turn-Text für alle Parts identisch strukturiert, daher maximiert dieses Flag die Cache-Hit-Wahrscheinlichkeit auch für intermediäre Batches. Default: `false` (Token-Sparmodus — nur der letzte Batch erhält den Dummy).
+
+### ThinkingConfig-Konsistenz
+Die `GenerateContentConfig` im Warm-Up verwendet dieselbe **`ThinkingConfig`** wie die echte Part-1-Anfrage (gleiches `ThinkingBudget` / `ThinkingLevel` / modellspezifisches Routing). Ein Unterschied würde einen anderen Cache-Bucket-Key erzeugen und einen Cache-Miss verursachen. Mit `DisableThinkingDuringWarmUp: true` wird für den Handshake `ThinkingBudget = 0` erzwungen (spart Denk-Tokens im Warm-Up, auf Kosten eines garantierten Cache-Misses für diese Runde).
+
+---
+
+
 ## 4.5 Authentifizierungs-Setup
 
 Je nachdem, welche Umgebung du anvisierst, erfordert die Anwendung unterschiedliche Authentifizierungs-Setups.
@@ -726,10 +772,15 @@ Zwei Schalter sind implementiert und getestet, aber ihr Default beruht auf
 
 - **`DisableThinkingDuringWarmUp`** — Beim Warm-up-Handshake die `Denk-Tokens`
   in der Ausgabe ablesen und danach entscheiden, ob Thinking dort abgeschaltet
-  gehört.
+  gehört. *Aktueller Default: `false` (Thinking wie bei Part 1).*
+
+- **`SendDummyFileWithEachWarmUpRound`** — Mit `InlinePrecedingLecTexParts: false`
+  ist der User-Turn-Text aller Parts strukturell identisch, daher könnten auch
+  intermediäre Batch-Handshakes von einem Cache-Slot profitieren. Ob der
+  Mehrverbrauch an Tokens sich durch die höhere Cache-Trefferrate amortisiert,
+  ist nicht gemessen. *Aktueller Default: `false` (Dummy nur beim letzten Batch).*
+
 - **`InlinePrecedingLecTexParts`** — Ein kurzes Video je einmal mit `true`
   (Inline) und `false` (Upload) laufen lassen und den Default aus dem
   gemessenen Token-/Zeitverbrauch setzen.
-
-Hinweis: `AiStudioAutoExtractionConfig.json` steht derzeit auf
-`"InlinePrecedingLecTexParts": false`, also auf Upload-Modus.
+  *Aktueller Config-Wert: `false` (Upload-Modus).*
