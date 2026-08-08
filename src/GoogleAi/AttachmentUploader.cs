@@ -203,11 +203,11 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
         }
 
         if (ext is ".jpg" or ".jpeg" or ".png" or ".webp") {
-            // [AI Context] Inline images when: (a) used as system instruction (always), or (b) _inlineImages flag is set.
+            // [AI Context] Inline images when the _inlineImages flag is set.
             // Inline blobs are part of the stable request prefix and enable Google's implicit prefix caching.
             // File API URIs are external references that break prefix caching.
-            // [Human] Bilder werden als Blob eingebettet, wenn sie in der System Instruction sind ODER InlineHistoryImages=true ist.
-            if (asSystemInstruction || _inlineImages) {
+            // [Human] Bilder werden als Blob eingebettet, wenn InlineHistoryImages=true ist.
+            if (_inlineImages) {
                 string context = asSystemInstruction ? "Inline System Instruction" : "Inline History/Prefix-Cache";
                 Ui.Detail($"Lese Bilddatei '{Path.GetFileName(filePath)}' für {context} ein...", "Lokal");
                 byte[] imageBytes = await System.IO.File.ReadAllBytesAsync(filePath, cancellationToken);

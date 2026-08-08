@@ -414,8 +414,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var sysParts = new List<Part>();
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
         if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            var validParts = _historyParts.Where(p => p.FileData == null);
-            sysParts.AddRange(validParts);
+            sysParts.AddRange(_historyParts);
         }
         return sysParts;
     }

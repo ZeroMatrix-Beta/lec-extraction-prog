@@ -5,10 +5,14 @@
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "InlineHistoryImages": true,
-  "HistoryBatchCount": 3,
+  "HistoryBatchCount": 5,
   "MergeSystemInstructionAndFirstHistoryBatch": true,
-  "MergeAllConsecutiveHistoryBatches": false,
+  "MergeAllConsecutiveHistoryBatches": true,
+  /*
+  * Reference Files:
+  */
   "DebugSendReferenceFile": true,
+  "SendDummyFileWithEachWarmUpRound": true,
   "InlinePrecedingLecTexParts": true,
   "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
@@ -21,14 +25,13 @@
   "VideoPartDelaySeconds": 135,
   "SystemInstructionDelaySeconds": 130,
   "FileActivationDelaySeconds": 140,
-  "VideoUploadTimeoutSeconds": 360,
+  "VideoUploadTimeoutSeconds": 150,
   "VideoUploadMaxRetries": 3,
-  "SendDummyFileWithEachWarmUpRound": false,
-  "HistoryRateLimitDelaySeconds": 360,
+  "HistoryRateLimitDelaySeconds": 180,
   "OnlyDoWarmUp": true,
   "YouTubeTasks": [],
   "ApiKey": {
-    "ActiveProfile": 3,
+    "ActiveProfile": 2,
     "EnvNames": [
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
@@ -62,7 +65,7 @@
       /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",*/,
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",*/ ,
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples"
       /* <- include folder*/
@@ -102,7 +105,7 @@
       "gemini-3.5-flash-lite",
       "gemini-2.5-flash"
     ],
-    "CurrentIndex": 0
+    "CurrentIndex": 1
   },
   "SpeedMultiplier": 1.0,
   "VerboseConsoleOutput": true,

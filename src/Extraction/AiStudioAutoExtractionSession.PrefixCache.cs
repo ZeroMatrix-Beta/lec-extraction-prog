@@ -47,8 +47,9 @@ public partial class AiStudioAutoExtractionSession {
 
         // Step 0: Optionally warm up base system instruction before adding history
         if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
-            Ui.Step("Cache-Warming Step 0: Warmup für Basis System Instruction");
-            if (!await PrimePrefixCacheAsync(systemInstructionDelay, includeDummyPart0: false)) return false;
+            Console.WriteLine();
+            Ui.Step("Cache-Warming Schritt 0: Warmup für Basis System Instruction");
+            if (!await PrimePrefixCacheAsync(systemInstructionDelay, includeDummyPart0: false, stepLabel: "Schritt 0")) return false;
         } else {
             Ui.Info($"Überspringe separaten Warmup & Wartezeit ({systemInstructionDelay}s) für Basis System Instruction (wird mit erstem Batch vereint)...", "Cache-Warming");
         }
@@ -58,7 +59,8 @@ public partial class AiStudioAutoExtractionSession {
             var (batchLabel, batchFiles) = batches[batchIndex];
             bool isLastBatch = batchIndex == batches.Count - 1;
 
-            Ui.Step($"Cache-Warming Step {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in System Instruction");
+            Console.WriteLine();
+            Ui.Step($"Cache-Warming Schritt {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in System Instruction");
 
             // Append this batch's files to the growing system instruction text
             var batchBuilder = new System.Text.StringBuilder();
@@ -80,7 +82,8 @@ public partial class AiStudioAutoExtractionSession {
                 // SystemInstructionDelaySeconds (not HistoryRateLimitDelaySeconds) should apply.
                 bool isFirstMergedBatch = _config.MergeSystemInstructionAndFirstHistoryBatch && batchIndex == 0;
                 int batchDelay = isFirstMergedBatch ? systemInstructionDelay : historyBatchDelay;
-                if (!await PrimePrefixCacheAsync(batchDelay, includeDummyPart0: isLastBatch)) return false;
+                string stepLabel = $"Schritt {batchIndex + 1}/{batches.Count}";
+                if (!await PrimePrefixCacheAsync(batchDelay, includeDummyPart0: isLastBatch, stepLabel: stepLabel)) return false;
             } else {
                 Ui.Info($"Überspringe Handshake & Wartezeit ({historyBatchDelay}s) für Batch '{batchLabel}' (wird mit dem nächsten Batch vereint)...", "Cache-Warming");
             }
@@ -96,8 +99,9 @@ public partial class AiStudioAutoExtractionSession {
     /// before heavy video processing begins, preventing Quota Errors and ensuring high cache hits.
     /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
     /// </summary>
-    private async Task<bool> PrimePrefixCacheAsync(int? customDelay = null, bool includeDummyPart0 = false) {
-        Ui.Info("Starte initialen Handshake-Roundtrip, um die System Instruction bei Google im impliziten Cache zu aktivieren...", "Cache-Warming");
+    private async Task<bool> PrimePrefixCacheAsync(int? customDelay = null, bool includeDummyPart0 = false, string stepLabel = "") {
+        string stepPrefix = string.IsNullOrEmpty(stepLabel) ? "" : $"[{stepLabel}] ";
+        Ui.Info($"Starte initialen Handshake-Roundtrip {stepPrefix}um die System Instruction bei Google im impliziten Cache zu aktivieren...", "Cache-Warming");
 
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
@@ -171,14 +175,16 @@ public partial class AiStudioAutoExtractionSession {
             var counted = await _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents);
             int totalToks = counted.TotalTokens ?? 0;
             int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
-            Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
+            string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
+            Ui.Info($"{prefix} Voraussichtlich NEU zu berechnen: {estNew:N0} | Total Prompt: {totalToks:N0}", "Tokens");
         }
         catch (Exception countEx) {
             Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
             // [AI Context] Even when CountTokens fails (e.g. network outage), display the last known
             // total so the user always sees a token count line before the actual generate request.
             string lastKnown = _lastWarmupInputTokens > 0 ? $"{_lastWarmupInputTokens:N0}" : "unbekannt";
-            Ui.Info($"[Warmup Request] Token-Zählung nicht verfügbar (Netzwerkfehler). Letzter bekannter Total-Prompt: {lastKnown} Tokens (zzgl. neuer Batch)", "Tokens");
+            string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
+            Ui.Info($"{prefix} Token-Zählung nicht verfügbar. Letzter bekannter Total-Prompt: {lastKnown} (zzgl. neuer Batch)", "Tokens");
         }
 
         try {
@@ -213,12 +219,14 @@ public partial class AiStudioAutoExtractionSession {
                 int newlyAdded = cachedTokens > 0 ? Math.Max(0, inputTokens - cachedTokens) : (_lastWarmupInputTokens > 0 ? Math.Max(0, inputTokens - _lastWarmupInputTokens) : freshTokens);
                 _lastWarmupInputTokens = inputTokens;
 
-                Ui.Success("Handshake erfolgreich.", "Cache-Warming");
+                Ui.Success($"Handshake {stepPrefix}erfolgreich.", "Cache-Warming");
                 if (!string.IsNullOrWhiteSpace(responseText)) {
                     Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
 
-                Ui.Info(usage.Describe($"[Warmup Tokens] Neu dazugekommen: {newlyAdded:N0} | Total Prompt: {inputTokens:N0} | Gecacht: {cachedTokens:N0} | Output: {outputTokens:N0}"), "Tokens");
+                string caller = $"Tatsächlich NEU berechnet: {freshTokens:N0} | Gecacht: {cachedTokens:N0} | Total Prompt: {inputTokens:N0} | Output: {outputTokens:N0}";
+                string tag = string.IsNullOrEmpty(stepLabel) ? "[Warmup Result]" : $"[{stepLabel}]";
+                Ui.Info(usage.Describe(caller, tag).TrimStart(), "Tokens");
 
                 int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");

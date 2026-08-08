@@ -44,16 +44,19 @@ internal static partial class JsonCommentPreserver {
     /// [Human] Ein Kommentar, der direkt in einem JSON-Objekt stand (nicht in einem Array),
     /// zusammen mit der Stelle, an der er nach dem Neu-Serialisieren wieder eingefügt werden muss.
     /// </summary>
-    internal readonly record struct AnchoredComment(IReadOnlyList<string> ContainerPath, string? BeforePropertyKey, IReadOnlyList<string> CommentLines);
+    internal readonly record struct AnchoredComment(IReadOnlyList<string> ContainerPath, string? BeforePropertyKey, IReadOnlyList<string> CommentLines, string? InlineComment = null);
 
     [GeneratedRegex("""^(?<indent>\s*)"(?<key>(?:[^"\\]|\\.)*)"\s*:\s*(?<rest>.*)$""")]
     private static partial Regex PropertyDeclarationLineRegex();
 
-    [GeneratedRegex(@"^\s*[}\]],?\s*$")]
+    [GeneratedRegex(@"^\s*[}\]],?\s*(?<inlineComment>//.*|/\*.*\*/)?\s*$")]
     private static partial Regex ContainerClosingLineRegex();
 
     [GeneratedRegex(@"^\s*(//.*|/\*.*\*/)\s*$")]
     private static partial Regex CommentOnlyLineRegex();
+
+    [GeneratedRegex(@"^(?<val>(?:""(?:[^""\\]|\\.)*""|[^""])*?)(?<comma>,?)\s*(?<inlineComment>//.*|/\*.*\*/)$")]
+    private static partial Regex InlineCommentRegex();
 
     /// <summary>
     /// [AI Context] The whole round-trip in one call: takes the original file text and the
@@ -138,18 +141,37 @@ internal static partial class JsonCommentPreserver {
         var suppressedStack = new Stack<bool>();
         bool suppressed = false;
         var pendingComments = new List<string>();
+        bool inBlockComment = false;
 
         foreach (string rawLine in originalJson.Split('\n')) {
             string line = rawLine.TrimEnd('\r');
+
+            if (inBlockComment) {
+                if (!suppressed) pendingComments.Add(line.Trim());
+                if (line.Contains("*/")) inBlockComment = false;
+                continue;
+            }
 
             if (CommentOnlyLineRegex().IsMatch(line)) {
                 if (!suppressed) pendingComments.Add(line.Trim());
                 continue;
             }
 
-            if (ContainerClosingLineRegex().IsMatch(line)) {
-                if (!suppressed && pendingComments.Count > 0) {
-                    anchors.Add(new AnchoredComment(pathStack.Reverse().ToList(), null, [.. pendingComments]));
+            if (line.TrimStart().StartsWith("/*") && !line.Contains("*/")) {
+                inBlockComment = true;
+                if (!suppressed) pendingComments.Add(line.Trim());
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(line)) {
+                continue;
+            }
+
+            var closingMatch = ContainerClosingLineRegex().Match(line);
+            if (closingMatch.Success) {
+                string? inlineComment = closingMatch.Groups["inlineComment"].Success ? closingMatch.Groups["inlineComment"].Value : null;
+                if (!suppressed && (pendingComments.Count > 0 || inlineComment != null)) {
+                    anchors.Add(new AnchoredComment([.. pathStack.Reverse()], null, [.. pendingComments], inlineComment));
                 }
                 pendingComments.Clear();
                 if (pathStack.Count > 0) pathStack.Pop();
@@ -162,8 +184,15 @@ internal static partial class JsonCommentPreserver {
                 string key = propertyMatch.Groups["key"].Value;
                 string rest = propertyMatch.Groups["rest"].Value.TrimEnd();
 
-                if (!suppressed && pendingComments.Count > 0) {
-                    anchors.Add(new AnchoredComment(pathStack.Reverse().ToList(), key, [.. pendingComments]));
+                string? inlineComment = null;
+                var inlineMatch = InlineCommentRegex().Match(rest);
+                if (inlineMatch.Success) {
+                    rest = inlineMatch.Groups["val"].Value + inlineMatch.Groups["comma"].Value;
+                    inlineComment = inlineMatch.Groups["inlineComment"].Value;
+                }
+
+                if (!suppressed && (pendingComments.Count > 0 || inlineComment != null)) {
+                    anchors.Add(new AnchoredComment([.. pathStack.Reverse()], key, [.. pendingComments], inlineComment));
                 }
                 pendingComments.Clear();
 
@@ -199,11 +228,18 @@ internal static partial class JsonCommentPreserver {
         for (int i = 0; i < lines.Count; i++) {
             string line = lines[i].TrimEnd('\r');
 
-            if (ContainerClosingLineRegex().IsMatch(line)) {
+            var closingMatch = ContainerClosingLineRegex().Match(line);
+            if (closingMatch.Success) {
                 var currentPath = pathStack.Reverse().ToList();
                 int matchIndex = anchors.FindIndex(a => a.BeforePropertyKey is null && PathsEqual(a.ContainerPath, currentPath));
                 if (matchIndex >= 0) {
-                    i += InsertCommentLines(lines, i, line, anchors[matchIndex].CommentLines);
+                    var anchor = anchors[matchIndex];
+                    if (anchor.CommentLines.Count > 0) {
+                        i += InsertCommentLines(lines, i, line, anchor.CommentLines);
+                    }
+                    if (anchor.InlineComment != null) {
+                        lines[i] = lines[i] + " " + anchor.InlineComment;
+                    }
                     anchors.RemoveAt(matchIndex);
                 }
                 if (pathStack.Count > 0) pathStack.Pop();
@@ -218,7 +254,13 @@ internal static partial class JsonCommentPreserver {
 
                 int matchIndex = anchors.FindIndex(a => a.BeforePropertyKey == key && PathsEqual(a.ContainerPath, currentPath));
                 if (matchIndex >= 0) {
-                    i += InsertCommentLines(lines, i, line, anchors[matchIndex].CommentLines);
+                    var anchor = anchors[matchIndex];
+                    if (anchor.CommentLines.Count > 0) {
+                        i += InsertCommentLines(lines, i, line, anchor.CommentLines);
+                    }
+                    if (anchor.InlineComment != null) {
+                        lines[i] = lines[i] + " " + anchor.InlineComment;
+                    }
                     anchors.RemoveAt(matchIndex);
                 }
 
