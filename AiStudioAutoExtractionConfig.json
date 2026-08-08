@@ -5,9 +5,9 @@
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "InlineHistoryImages": true,
-  "HistoryBatchCount": 5,
+  "HistoryBatchCount": 7,
   "MergeSystemInstructionAndFirstHistoryBatch": true,
-  "MergeAllConsecutiveHistoryBatches": true,
+  "MergeAllConsecutiveHistoryBatches": false,
   /*
   * Reference Files:
   */
@@ -27,11 +27,11 @@
   "FileActivationDelaySeconds": 140,
   "VideoUploadTimeoutSeconds": 150,
   "VideoUploadMaxRetries": 3,
-  "HistoryRateLimitDelaySeconds": 180,
+  "HistoryRateLimitDelaySeconds": 190,
   "OnlyDoWarmUp": true,
   "YouTubeTasks": [],
   "ApiKey": {
-    "ActiveProfile": 2,
+    "ActiveProfile": 3,
     "EnvNames": [
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
