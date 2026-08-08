@@ -100,6 +100,10 @@ public partial class AiStudioAutoExtractionSession {
         }
 
         var userPromptParts = new List<Part>();
+        
+        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+            userPromptParts.AddRange(_historyParts);
+        }
 
         string staticBeginning = GetStaticPromptBeginning(partNumber);
         var uploadedTexParts = new List<Part>();

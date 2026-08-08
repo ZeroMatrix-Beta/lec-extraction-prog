@@ -210,10 +210,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (!await TryLoadSystemInstructionWithHistoryAsync()) return false;
         }
 
-        // --- Phase 2: Load history as multi-turn preamble (if not handled via System Instruction above) ---
-        if (!_historyWasLoaded) {
-            await LoadHistoryAsMultiTurnPreambleAsync();
-        }
+        // --- Phase 2: Removed. History is always loaded via Phase 1 now (TryLoadSystemInstructionWithHistoryAsync) ---
 
         // --- Phase 3: Finalize session setup (logging, debug roundtrip) ---
         InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
@@ -272,17 +269,17 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         // Optionally resolve history files that will be merged into the system instruction
         List<string> historyFilesForSystemInstruction = [];
-        bool shouldMergeHistory = _config.LoadHistoryIntoSystemInstruction && !_historyWasLoaded;
-        if (shouldMergeHistory) {
+        bool shouldLoadHistory = !_historyWasLoaded;
+        if (shouldLoadHistory) {
             historyFilesForSystemInstruction = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
             if (historyFilesForSystemInstruction.Count > 0) {
-                Ui.Info("Folgende Dateien sind als History konfiguriert (werden aber direkt in die System Instruction geladen):");
+                Ui.Info("Folgende Dateien sind als History konfiguriert:");
                 FileTreeRenderer.PrintFileTree(historyFilesForSystemInstruction, _config.VerboseConsoleOutput);
             }
         }
 
         // Ask user for confirmation
-        string confirmPrompt = shouldMergeHistory && historyFilesForSystemInstruction.Count > 0
+        string confirmPrompt = shouldLoadHistory && historyFilesForSystemInstruction.Count > 0
             ? "System Instructions und History laden?"
             : "System Instructions laden?";
         if (!Ui.Confirm(confirmPrompt, true)) {
@@ -292,120 +289,44 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         // Determine common base for relative path display
         var allPathsForBaseResolution = new List<string>(resolvedInstructionFiles);
-        if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
+        if (shouldLoadHistory && historyFilesForSystemInstruction.Count > 0) {
             allPathsForBaseResolution.AddRange(historyFilesForSystemInstruction);
         }
         string? commonBase = FileTreeRenderer.FindCommonBaseDirectory(allPathsForBaseResolution);
 
         // Build the system instruction text from the instruction files
         string instructionText = await SystemInstructionTextBuilder.BuildAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase, _config.VerboseConsoleOutput);
+        _systemInstructionText = instructionText;
 
-        // If history should be merged into system instruction, do so now
-        if (shouldMergeHistory && historyFilesForSystemInstruction.Count > 0) {
-            _systemInstructionText = instructionText;
-
+        // If there is history to load, process it (batched or single-shot)
+        if (shouldLoadHistory && historyFilesForSystemInstruction.Count > 0) {
             if (_config.HistoryBatchCount > 0) {
                 if (_config.EnableImplicitPrefixCacheWarmup && !await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
             } else {
-                // Load all history files into the system instruction at once (non-batched)
-                Ui.Info("Lade History-Textdateien direkt in den System-Instruction-Text ein (einmaliges Paket)...");
-                var instructionBuilder = new System.Text.StringBuilder(instructionText);
-                _historyParts.AddRange(await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
-                    historyFilesForSystemInstruction, instructionBuilder, commonBase, _attachmentHandler, _config.VerboseConsoleOutput));
-                _systemInstructionText = instructionBuilder.ToString();
+                // Load all history files at once (non-batched)
+                Ui.Info("Lade History-Dateien auf einmal (einmaliges Paket)...");
+                var batchBuilder = new System.Text.StringBuilder();
+                var loadedParts = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
+                    historyFilesForSystemInstruction, batchBuilder, commonBase, _attachmentHandler, _config.VerboseConsoleOutput);
+                
+                if (_config.LoadHistoryIntoSystemInstruction) {
+                    _systemInstructionText += batchBuilder.ToString();
+                    _historyParts.AddRange(loadedParts);
+                } else {
+                    _historyParts.Add(new Part { Text = batchBuilder.ToString() });
+                    _historyParts.AddRange(loadedParts);
+                }
+
                 if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
             }
 
             _historyWasLoaded = true;
         } else {
-            _systemInstructionText = instructionText;
             if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
         }
 
-        Ui.Success("System Instructions erfolgreich geladen.");
+        Ui.Success("System Instructions und History erfolgreich geladen.");
         return true;
-    }
-
-
-    /// <summary>
-    /// [AI Context] Loads history files as multi-turn preamble entries (not into system instruction).
-    /// This is the alternative path used when LoadHistoryIntoSystemInstruction is false.
-    /// Files are uploaded via AttachmentUploader and stored as acknowledged turns in _sessionPreamble.
-    /// [Human] Lädt History-Dateien als Multi-Turn-Preamble (nicht in die System Instruction).
-    /// </summary>
-    private async Task LoadHistoryAsMultiTurnPreambleAsync() {
-        var resolvedHistoryFiles = HistoryFileResolver.ResolveHistoryFiles(_config.HistoryPreloadPaths);
-        if (resolvedHistoryFiles.Count == 0) return;
-
-        Ui.Info("Folgende History-Dateien wurden in den konfigurierten Pfaden gefunden:");
-        FileTreeRenderer.PrintFileTree(resolvedHistoryFiles, _config.VerboseConsoleOutput);
-
-        string confirmPrompt = _config.LoadHistoryIntoSystemInstruction
-            ? "Sollen diese Dateien als System Instructions hochgeladen werden?"
-            : "Sollen diese Dateien als History geladen und für die Session hochgeladen werden?";
-        if (!Ui.Confirm(confirmPrompt, true)) {
-            Ui.Warn("History-Dateien wurden vom Benutzer nicht geladen.");
-            return;
-        }
-
-        if (_config.LoadHistoryIntoSystemInstruction) {
-            Ui.Info("Lade Dateien als System Instructions hoch (dies kann einen Moment dauern)...");
-            string quotedFileList = string.Join(", ", resolvedHistoryFiles.Select(p => $"\"{p}\""));
-            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{quotedFileList}\"", _config.LoadHistoryIntoSystemInstruction);
-            if (uploadSuccess && uploadedParts.Count > 0) {
-                _historyParts.AddRange(uploadedParts);
-                _historyWasLoaded = true;
-                Ui.Info("Dateien erfolgreich hochgeladen und werden in die System Instruction eingebunden.");
-                if (_config.EnableImplicitPrefixCacheWarmup) {
-                    await PrimePrefixCacheAsync(includeDummyPart0: true);
-                }
-            } else {
-                Ui.Error("Einige oder alle History-Dateien konnten nicht hochgeladen werden.");
-            }
-            return;
-        }
-
-        // Non-system-instruction path: upload as multi-turn batches
-        List<(string Label, List<string> Files)> historyBatches = _config.HistoryBatchCount > 1
-            ? HistoryFileResolver.GroupHistoryFilesByTopLevelSubfolder(resolvedHistoryFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount)
-            : [("(alle)", resolvedHistoryFiles)];
-
-        if (_config.HistoryBatchCount > 1) {
-            Ui.Detail($"History-Batching: Aufgeteilt in {historyBatches.Count} Batch(es) (konfiguriert: {_config.HistoryBatchCount}).");
-        }
-
-        bool allBatchesSucceeded = true;
-        for (int batchIndex = 0; batchIndex < historyBatches.Count; batchIndex++) {
-            var (batchLabel, batchFiles) = historyBatches[batchIndex];
-            bool isLastBatch = batchIndex == historyBatches.Count - 1;
-
-            Ui.Info($"History-Batch {batchIndex + 1}/{historyBatches.Count}: '{batchLabel}' ({batchFiles.Count} Datei(en)) wird hochgeladen...");
-
-            string quotedBatchFiles = string.Join(", ", batchFiles.Select(p => $"\"{p}\""));
-            var (uploadSuccess, _, uploadedParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach {quotedBatchFiles}", false);
-
-            if (uploadSuccess && uploadedParts.Count > 0) {
-                _historyParts.AddRange(uploadedParts);
-                _historyWasLoaded = true;
-                Ui.Info($"History-Batch {batchIndex + 1}/{historyBatches.Count} erfolgreich geladen ({uploadedParts.Count} Part(s)).");
-
-                if (!isLastBatch) {
-                    int interBatchDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 120;
-                    Ui.Detail($"Inter-Batch-Pause: {interBatchDelay}s vor nächstem Batch...");
-                    await InteractiveDelay.SmartDelayAsync(interBatchDelay, $"Warte zwischen Batch {batchIndex + 1} und {batchIndex + 2}...");
-                }
-            } else {
-                Ui.Error($"Batch {batchIndex + 1}/{historyBatches.Count} konnte nicht hochgeladen werden.");
-                allBatchesSucceeded = false;
-                break;
-            }
-        }
-
-        if (allBatchesSucceeded && _historyWasLoaded) {
-            int tokenRefillDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-            Ui.Detail($"Warte {tokenRefillDelay} Sekunden (Token Refill) nach History-Upload...");
-            await InteractiveDelay.SmartDelayAsync(tokenRefillDelay, "Warte auf Token-Refill nach History-Acknowledgment...");
-        }
     }
 
 

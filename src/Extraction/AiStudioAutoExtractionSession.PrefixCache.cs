@@ -60,13 +60,21 @@ public partial class AiStudioAutoExtractionSession {
             bool isLastBatch = batchIndex == batches.Count - 1;
 
             Console.WriteLine();
-            Ui.Step($"Cache-Warming Schritt {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in System Instruction");
+            string dest = _config.LoadHistoryIntoSystemInstruction ? "System Instruction" : "User Prompt";
+            Ui.Step($"Cache-Warming Schritt {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in {dest}");
 
-            // Append this batch's files to the growing system instruction text
+            // Append this batch's files to the growing system instruction text or history parts
             var batchBuilder = new System.Text.StringBuilder();
-            _historyParts.AddRange(await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
-                batchFiles, batchBuilder, commonBase, _attachmentHandler));
-            _systemInstructionText += batchBuilder.ToString();
+            var loadedParts = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
+                batchFiles, batchBuilder, commonBase, _attachmentHandler);
+            
+            if (_config.LoadHistoryIntoSystemInstruction) {
+                _historyParts.AddRange(loadedParts);
+                _systemInstructionText += batchBuilder.ToString();
+            } else {
+                _historyParts.Add(new Part { Text = batchBuilder.ToString() });
+                _historyParts.AddRange(loadedParts);
+            }
 
             bool shouldSendHandshake = true;
             if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch) {
@@ -148,16 +156,19 @@ public partial class AiStudioAutoExtractionSession {
         // SendDummyFileWithEachWarmUpRound=true overrides to always send (debugging/testing aid).
         // [Human] Dummy nur beim letzten Handshake (vollständige Sys-Instruction), sonst Tokenverbrauch ohne Nutzen.
         bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
-        List<Part> warmupParts;
+        List<Part> warmupParts = [];
+        
+        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+            warmupParts.AddRange(_historyParts);
+        }
+
         if (shouldIncludeDummy) {
             string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
 
-            warmupParts = [
-                new Part { Text = ReferenceContextPreamble + dummyReferenceBlock + GetStaticPromptBeginning(1) },
-                new Part { Text = handshakeText }
-            ];
+            warmupParts.Add(new Part { Text = ReferenceContextPreamble + dummyReferenceBlock + GetStaticPromptBeginning(1) });
+            warmupParts.Add(new Part { Text = handshakeText });
         } else {
-            warmupParts = [new Part { Text = handshakeText }];
+            warmupParts.Add(new Part { Text = handshakeText });
         }
 
         var pingContent = new List<Content> {
