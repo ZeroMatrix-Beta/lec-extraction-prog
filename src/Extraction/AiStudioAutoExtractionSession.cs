@@ -298,13 +298,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string instructionText = await SystemInstructionTextBuilder.BuildAsync(resolvedInstructionFiles, historyFilesForSystemInstruction, commonBase, _config.VerboseConsoleOutput);
         _systemInstructionText = instructionText;
 
-        // If there is history to load, process it (batched or single-shot)
+        // If there is history to load, process it via WarmUpWithBatchedHistoryAsync
         if (shouldLoadHistory && historyFilesForSystemInstruction.Count > 0) {
-            if (_config.HistoryBatchCount > 0) {
-                if (_config.EnableImplicitPrefixCacheWarmup && !await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
+            if (_config.EnableImplicitPrefixCacheWarmup) {
+                if (!await WarmUpWithBatchedHistoryAsync(historyFilesForSystemInstruction, commonBase)) return false;
             } else {
-                // Load all history files at once (non-batched)
-                Ui.Info("Lade History-Dateien auf einmal (einmaliges Paket)...");
+                // If warmup is disabled, load history files directly into session state without API handshakes
+                Ui.Info("Lade History-Dateien direkt in den Session-Zustand (Warmup deaktiviert)...");
                 var batchBuilder = new System.Text.StringBuilder();
                 var loadedParts = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
                     historyFilesForSystemInstruction, batchBuilder, commonBase, _attachmentHandler, _config.VerboseConsoleOutput);
@@ -316,8 +316,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     _historyParts.Add(new Part { Text = batchBuilder.ToString() });
                     _historyParts.AddRange(loadedParts);
                 }
-
-                if (_config.EnableImplicitPrefixCacheWarmup && !await PrimePrefixCacheAsync(includeDummyPart0: true)) return false;
             }
 
             _historyWasLoaded = true;

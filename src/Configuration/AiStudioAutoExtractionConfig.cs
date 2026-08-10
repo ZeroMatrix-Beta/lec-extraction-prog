@@ -79,6 +79,26 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = true;
 
     /// <summary>
+    /// [AI Context] When true, the informational CountTokensAsync call before each cache-warming
+    /// handshake is skipped entirely. CountTokensAsync may consume input tokens against the same
+    /// Free-Tier quota as GenerateContent; skipping it saves quota budget at the cost of losing the
+    /// "Voraussichtlich NEU zu berechnen" preview line (the actual token counts still appear in the
+    /// UsageMetadata of the GenerateContent response).
+    /// [Human] Überspringt den CountTokens-Aufruf vor jedem Warmup-Handshake. Spart Quota-Budget,
+    /// aber die Vorab-Token-Anzeige entfällt.
+    /// </summary>
+    public bool SkipTokenCountingDuringWarmUp { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] Initial backoff in seconds when a CountTokensAsync call hits a 429 quota error
+    /// during cache warming. Lower values (e.g. 20) are fine when quota pressure is low; set to
+    /// 60–65 defensively when running many batches on the Free Tier to let the per-minute window clear.
+    /// Only relevant when SkipTokenCountingDuringWarmUp is false.
+    /// [Human] Wartezeit in Sekunden beim ersten 429-Retry des CountTokens-Aufrufs.
+    /// </summary>
+    public int CountTokensRetryBackoffSeconds { get; set; } = 20;
+
+    /// <summary>
     /// [AI Context] Sends <c>ThinkingBudget = 0</c> on the cache-warming handshake. The handshake asks
     /// the model to echo one fixed sentence, so it has nothing to reason about - but unlike the real
     /// generation path it sets no ThinkingConfig at all today, meaning it runs at the model's default

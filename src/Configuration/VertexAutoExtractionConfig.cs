@@ -81,6 +81,20 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = false;
 
     /// <summary>
+    /// [AI Context] Vertex counterpart: skips the informational CountTokensAsync call before each
+    /// cache-warming handshake. See AI Studio config for full rationale.
+    /// [Human] Überspringt den CountTokens-Aufruf vor jedem Warmup-Handshake.
+    /// </summary>
+    public bool SkipTokenCountingDuringWarmUp { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] Vertex counterpart: initial backoff in seconds for CountTokensAsync 429 retries.
+    /// See AI Studio config for full rationale.
+    /// [Human] Wartezeit in Sekunden beim ersten 429-Retry des CountTokens-Aufrufs.
+    /// </summary>
+    public int CountTokensRetryBackoffSeconds { get; set; } = 20;
+
+    /// <summary>
     /// [AI Context] Vertex counterpart of the AI Studio flag: sends <c>ThinkingBudget = 0</c> on the
     /// cache-warming handshake, which has one fixed sentence to echo and nothing to reason about.
     /// Opt-in for the same reason - it is a live paid request and some models reject the field.

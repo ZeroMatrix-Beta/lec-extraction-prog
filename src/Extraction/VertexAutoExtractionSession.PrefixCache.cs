@@ -94,18 +94,29 @@ public partial class VertexAutoExtractionSession {
             new() { Role = "user", Parts = warmupParts }
         };
 
-        // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs
-        try {
-            var warmupContents = new List<Content>();
-            if (requestConfig.SystemInstruction != null) warmupContents.Add(requestConfig.SystemInstruction);
-            warmupContents.AddRange(pingContent);
-            var counted = await _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents);
-            int totalToks = counted.TotalTokens ?? 0;
-            int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
-            Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
-        }
-        catch (Exception countEx) {
-            Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+        // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs.
+        // IMPORTANT: CountTokensAsync itself may consume input tokens against the same Free-Tier quota
+        // as GenerateContent, so this call is wrapped with retry to prevent exhausting the token
+        // budget mid-count and causing an immediate 429 on the subsequent GenerateContent request.
+        // SkipTokenCountingDuringWarmUp=true skips this block entirely to conserve quota budget.
+        if (!_config.SkipTokenCountingDuringWarmUp) {
+            try {
+                var warmupContents = new List<Content>();
+                if (requestConfig.SystemInstruction != null) warmupContents.Add(requestConfig.SystemInstruction);
+                warmupContents.AddRange(pingContent);
+                int backoff = _config.CountTokensRetryBackoffSeconds > 0 ? _config.CountTokensRetryBackoffSeconds : 20;
+                var counted = await ApiRetryPolicy.ExecuteWithRetryAsync(
+                    () => _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents),
+                    maxRetries: 8,
+                    initialBackoff: backoff,
+                    retryContext: "CountTokens Warmup");
+                int totalToks = counted?.TotalTokens ?? 0;
+                int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
+                Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
+            }
+            catch (Exception countEx) {
+                Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+            }
         }
 
         try {
@@ -149,6 +160,9 @@ public partial class VertexAutoExtractionSession {
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");
                 await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
                 return true;
+            } else {
+                Ui.Warn($"Cache-Warming Handshake abgebrochen oder fehlgeschlagen.", "Cache-Warming");
+                return false;
             }
         }
         catch (Exception ex) {
@@ -157,6 +171,6 @@ public partial class VertexAutoExtractionSession {
             Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
         }
-        return true;
+        return false;
     }
 }

@@ -160,7 +160,7 @@ Upon starting the application, you are presented with 7 operational modes:
 If the application gets stuck with `[Exception Caught] Type: ServerError` (HTTP 500), it means the Google backend crashed while processing your specific prompt or video chunk.
 - **Do not use "Thinking" with Flash Models:** Combining `gemini-3.5-flash` with a high `ThinkingBudget` and a 30-minute video chunk is highly unstable. Switch to a "Pro" model (e.g., `gemini-2.5-pro` or `gemini-3.1-pro-preview`) if you want to use reasoning.
 - **ThinkingConfig during Warm-Up:** By default, the warm-up handshake uses the **same `ThinkingConfig`** as the actual Part-1 request so the Google implicit prefix-cache slot matches. If that wastes tokens, set `DisableThinkingDuringWarmUp: true` to force `ThinkingBudget = 0` for the handshake only.
-- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` embeds history files and images directly into the System Instruction via XML framing and InlineData. While much more stable, massive history payloads can still exceed API limits.
+- **Do not overload the System Instruction:** Setting `LoadHistoryIntoSystemInstruction` to `true` embeds history files and images directly into the System Instruction via XML framing and InlineData. While much more stable, massive history payloads can still exceed API limits. If you encounter issues, set it to `false` so the history is batched into the User Prompt instead.
 - **Skip the Error:** Press `Ctrl+C` during a retry delay to gracefully skip the corrupted video chunk and proceed to the next file.
 
 For more details on why cache-priming is used instead of single-prompt processing, see the Documentation.
@@ -340,7 +340,7 @@ Beim Start der Anwendung stehen 7 Betriebsmodi zur Verfügung:
 
 Wenn die Anwendung mit `[Exception Caught] Type: ServerError` (HTTP 500) stehen bleibt, bedeutet das meist, dass das Google-Backend bei einem spezifischen Prompt oder Video-Segment ins Stocken geraten ist:
 - **Kein "Thinking" bei Flash-Modellen:** Die Kombination aus `gemini-3.5-flash` mit einem hohen `ThinkingBudget` und 30 Minuten langen Videos ist instabil. Wechsle für intensives Reasoning lieber auf ein "Pro"-Modell (z. B. `gemini-2.5-pro` oder `gemini-3.1-pro-preview`).
-- **System Instructions nicht überladen:** Wenn `LoadHistoryIntoSystemInstruction` auf `true` gesetzt ist, werden Historie und Bilder direkt eingebettet. Das läuft generell stabil, aber zu riesige Payloads können die API-Limits überschreiten.
+- **System Instructions nicht überladen:** Wenn `LoadHistoryIntoSystemInstruction` auf `true` gesetzt ist, werden Historie und Bilder direkt eingebettet. Das läuft generell stabil, aber zu riesige Payloads können die API-Limits überschreiten. Falls Instabilitäten auftreten, setze es auf `false`, damit die History stattdessen gestaffelt in den User-Prompt geladen wird.
 - **Fehler überspringen:** Drücke einfach `Strg+C` während der Wartezeit (Retry Delay), um das betroffene Video-Segment sauber zu überspringen und mit der nächsten Datei weiterzumachen.
 
 Weitere Details dazu, warum wir Cache-Priming statt einzelner Riesen-Prompts nutzen, findest du in der ausführlichen Dokumentation.

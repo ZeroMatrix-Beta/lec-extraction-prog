@@ -63,7 +63,13 @@ public partial class AiStudioAutoExtractionSession {
             string dest = _config.LoadHistoryIntoSystemInstruction ? "System Instruction" : "User Prompt";
             Ui.Step($"Cache-Warming Schritt {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in {dest}");
 
-            // Append this batch's files to the growing system instruction text or history parts
+            // [AI Context] If LoadHistoryIntoSystemInstruction is false, we append to _historyParts instead. 
+            // The logic below seamlessly supports MergeSystemInstructionAndFirstHistoryBatch = true: 
+            // Step 0 is skipped above, and right here in batchIndex 0 we populate the first history parts 
+            // into the User Prompt. When PrimePrefixCacheAsync is called below, it sends both the base 
+            // System Instruction AND the first User Prompt history batch in the very first HTTP request, 
+            // warming them both up together perfectly.
+            // [Human] Fügt den Text entweder an die System Instruction oder die User-Message an.
             var batchBuilder = new System.Text.StringBuilder();
             var loadedParts = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
                 batchFiles, batchBuilder, commonBase, _attachmentHandler);
@@ -77,6 +83,13 @@ public partial class AiStudioAutoExtractionSession {
             }
 
             bool shouldSendHandshake = true;
+            
+            // [AI Context] Free-Tier Quota Protection: If a user configures many batches (e.g. 7), sending a 
+            // handshake for every single batch means the cumulative token count sent across all requests 
+            // easily exceeds 1.5 million tokens. This triggers the 'generate_content_free_tier_input_token_count' 
+            // quota limit. By merging consecutive batches in pairs (skipping every second handshake), 
+            // we drastically reduce the total tokens consumed during warmup while still building the cache.
+            // [Human] Verhindert, dass durch zu viele Handshakes das Token-Limit des Free-Tiers gesprengt wird.
             if (_config.MergeAllConsecutiveHistoryBatches && !isLastBatch) {
                 int pairingStart = _config.MergeSystemInstructionAndFirstHistoryBatch ? 1 : 0;
                 if (batchIndex >= pairingStart && (batchIndex - pairingStart) % 2 == 0) {
@@ -158,6 +171,9 @@ public partial class AiStudioAutoExtractionSession {
         bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
         List<Part> warmupParts = [];
         
+        // [AI Context] When LoadHistoryIntoSystemInstruction is false, the history resides in the User Message.
+        // We prepend it here to ensure the exact same token sequence is sent during the warmup handshakes 
+        // as will be sent during the actual video generation request, ensuring a perfect prefix match.
         if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
             warmupParts.AddRange(_historyParts);
         }
@@ -178,24 +194,37 @@ public partial class AiStudioAutoExtractionSession {
             }
         };
 
-        // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs
-        try {
-            var warmupContents = new List<Content>();
-            if (requestConfig.SystemInstruction != null) warmupContents.Add(requestConfig.SystemInstruction);
-            warmupContents.AddRange(pingContent);
-            var counted = await _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents);
-            int totalToks = counted.TotalTokens ?? 0;
-            int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
-            string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
-            Ui.Info($"{prefix} Voraussichtlich NEU zu berechnen: {estNew:N0} | Total Prompt: {totalToks:N0}", "Tokens");
-        }
-        catch (Exception countEx) {
-            Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
-            // [AI Context] Even when CountTokens fails (e.g. network outage), display the last known
-            // total so the user always sees a token count line before the actual generate request.
-            string lastKnown = _lastWarmupInputTokens > 0 ? $"{_lastWarmupInputTokens:N0}" : "unbekannt";
-            string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
-            Ui.Info($"{prefix} Token-Zählung nicht verfügbar. Letzter bekannter Total-Prompt: {lastKnown} (zzgl. neuer Batch)", "Tokens");
+        // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs.
+        // IMPORTANT: CountTokensAsync itself may consume input tokens against the same Free-Tier quota
+        // (generate_content_free_tier_input_token_count) as GenerateContent. Therefore it is wrapped
+        // in ExecuteWithRetryAsync so that a 429 quota error during token counting is retried with
+        // proper backoff — preventing a situation where CountTokens succeeds but the subsequent
+        // GenerateContent fails immediately because the token budget was already exhausted by counting.
+        // SkipTokenCountingDuringWarmUp=true skips this block entirely to conserve quota budget.
+        if (!_config.SkipTokenCountingDuringWarmUp) {
+            try {
+                var warmupContents = new List<Content>();
+                if (requestConfig.SystemInstruction != null) warmupContents.Add(requestConfig.SystemInstruction);
+                warmupContents.AddRange(pingContent);
+                int backoff = _config.CountTokensRetryBackoffSeconds > 0 ? _config.CountTokensRetryBackoffSeconds : 20;
+                var counted = await ApiRetryPolicy.ExecuteWithRetryAsync(
+                    () => _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents),
+                    maxRetries: 8,
+                    initialBackoff: backoff,
+                    retryContext: $"CountTokens {stepLabel}");
+                int totalToks = counted?.TotalTokens ?? 0;
+                int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
+                string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
+                Ui.Info($"{prefix} Voraussichtlich NEU zu berechnen: {estNew:N0} | Total Prompt: {totalToks:N0}", "Tokens");
+            }
+            catch (Exception countEx) {
+                Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+                // [AI Context] Even when CountTokens fails after all retries (e.g. network outage), display
+                // the last known total so the user always sees a token count line before the actual generate request.
+                string lastKnown = _lastWarmupInputTokens > 0 ? $"{_lastWarmupInputTokens:N0}" : "unbekannt";
+                string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
+                Ui.Info($"{prefix} Token-Zählung nicht verfügbar. Letzter bekannter Total-Prompt: {lastKnown} (zzgl. neuer Batch)", "Tokens");
+            }
         }
 
         try {
@@ -243,6 +272,9 @@ public partial class AiStudioAutoExtractionSession {
                 Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");
                 await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
                 return true;
+            } else {
+                Ui.Warn($"Cache-Warming Handshake {stepPrefix}abgebrochen oder fehlgeschlagen.", "Cache-Warming");
+                return false;
             }
         }
         catch (Exception ex) {
@@ -251,6 +283,6 @@ public partial class AiStudioAutoExtractionSession {
             Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
         }
-        return true;
+        return false;
     }
 }

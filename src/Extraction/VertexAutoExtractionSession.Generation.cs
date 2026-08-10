@@ -182,23 +182,31 @@ public partial class VertexAutoExtractionSession {
     private async Task LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
         try {
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
-            var videoCount = await _client.Models.CountTokensAsync(_config.CurrentModel, videoContents);
-            int vidToks = videoCount.TotalTokens ?? 0;
+            // [AI Context] CountTokensAsync counts against the same Free-Tier quota as GenerateContent,
+            // so all calls here are wrapped with retry to avoid exhausting the token budget mid-count.
+            var videoCount = await ApiRetryPolicy.ExecuteWithRetryAsync(
+                () => _client.Models.CountTokensAsync(_config.CurrentModel, videoContents),
+                maxRetries: 8, initialBackoff: 20, retryContext: $"CountTokens Part {partNumber} (video)");
+            int vidToks = videoCount?.TotalTokens ?? 0;
 
             var allContentsForCount = new List<Content>();
             if (requestConfig.SystemInstruction != null) allContentsForCount.Add(requestConfig.SystemInstruction);
             allContentsForCount.AddRange(history);
 
-            var totalCount = await _client.Models.CountTokensAsync(_config.CurrentModel, allContentsForCount);
-            int promptToks = totalCount.TotalTokens ?? 0;
+            var totalCount = await ApiRetryPolicy.ExecuteWithRetryAsync(
+                () => _client.Models.CountTokensAsync(_config.CurrentModel, allContentsForCount),
+                maxRetries: 8, initialBackoff: 20, retryContext: $"CountTokens Part {partNumber} (total)");
+            int promptToks = totalCount?.TotalTokens ?? 0;
             Ui.Info($"[Part {partNumber} Prompt] Total Prompt-Tokens (ganzer Prompt): {promptToks:N0} (Video: {vidToks:N0} Tokens)", "Tokens");
 
             if (_config.VerboseConsoleOutput) {
                 var userPromptParts = history[^1].Parts;
                 if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
                     var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
-                    var texCount = await _client.Models.CountTokensAsync(_config.CurrentModel, texContents);
-                    int texToks = texCount.TotalTokens ?? 0;
+                    var texCount = await ApiRetryPolicy.ExecuteWithRetryAsync(
+                        () => _client.Models.CountTokensAsync(_config.CurrentModel, texContents),
+                        maxRetries: 8, initialBackoff: 20, retryContext: $"CountTokens Part {partNumber} (tex)");
+                    int texToks = texCount?.TotalTokens ?? 0;
                     string fileInfo = previousTexFiles.Count > 0 && _config.InlinePrecedingLecTexParts
                         ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
                         : "dummy-part0.tex";
