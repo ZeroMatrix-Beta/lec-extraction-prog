@@ -22,6 +22,7 @@ public static class ConfigMigrator {
     private static readonly (string Section, string[] LegacyKeys)[] MigratedSections = [
         ("Generation", ["Temperature", "TopP", "TopK", "MaxOutputTokens", "ThinkingBudget", "ThinkingLevel"]),
         ("ModelSelection", ["Model", "CurrentModelIndex"]),
+        ("ContextCaching", ["UseContextCaching", "ContextCachingMinutes", "ContextCachingIncrementMinutes", "ContextCachingMinimumRemainingMinutes"]),
         ("ContextCache", ["UseContextCaching", "ContextCachingMinutes", "ContextCachingIncrementMinutes", "ContextCachingMinimumRemainingMinutes"]),
         ("Endpoint", ["ProjectId", "Location", "GcsBucketName"]),
         ("ApiKey", ["ActiveApiProfile", "AiStudioApiKeyEnvNames"]),
@@ -168,6 +169,72 @@ public static class ConfigMigrator {
             }
         }
 
+        // 8. Refinement Step Backend Parameters (for LatexRefinementSessionConfig)
+        if (configType == null || configType == typeof(LatexRefinementSessionConfig)) {
+            string[] steps = ["Step1MergeAndTimestamp", "Step2SpeechRefinement", "Step3LastRefinement"];
+            foreach (var step in steps) {
+                if (root[step] is JObject stepObj) {
+                    if (stepObj["AiStudio"] is JObject aiStudio) {
+                        migratedAny |= MigrateBackendParameters(aiStudio);
+                    }
+                    if (stepObj["Vertex"] is JObject vertex) {
+                        migratedAny |= MigrateBackendParameters(vertex);
+                    }
+                }
+            }
+        }
+
+        return migratedAny;
+    }
+
+    /// <summary>
+    /// [AI Context] Migrates legacy flat properties in a BackendParameters object (Generation, ModelSelection, ContextCaching)
+    /// and drops legacy flat keys once the structured section exists.
+    /// [Human] Migriert alte flache Eigenschaften in einem BackendParameters-Objekt und entfernt alte Schlüssel.
+    /// </summary>
+    private static bool MigrateBackendParameters(JObject backend) {
+        bool migratedAny = false;
+
+        migratedAny |= RemoveMigratedLegacyKeys(backend);
+        migratedAny |= DeduplicateSetLikeArrays(backend);
+
+        if (backend["Generation"] == null) {
+            var gen = new JObject();
+            migratedAny |= MovePropertyIfExists(backend, "Temperature", gen, "Temperature");
+            migratedAny |= MovePropertyIfExists(backend, "TopP", gen, "TopP");
+            migratedAny |= MovePropertyIfExists(backend, "TopK", gen, "TopK");
+            migratedAny |= MovePropertyIfExists(backend, "MaxOutputTokens", gen, "MaxOutputTokens");
+            migratedAny |= MovePropertyIfExists(backend, "ThinkingBudget", gen, "ThinkingBudget");
+            migratedAny |= MovePropertyIfExists(backend, "ThinkingLevel", gen, "ThinkingLevel");
+            if (gen.Count > 0) {
+                backend["Generation"] = gen;
+            }
+        }
+
+        if (backend["ModelSelection"] == null && backend["Model"] is JArray legacyModelArray) {
+            var modelObj = new JObject {
+                ["Available"] = legacyModelArray.DeepClone()
+            };
+            if (backend["CurrentModelIndex"] != null) {
+                modelObj["CurrentIndex"] = backend["CurrentModelIndex"]!.DeepClone();
+                backend.Remove("CurrentModelIndex");
+            }
+            backend.Remove("Model");
+            backend["ModelSelection"] = modelObj;
+            migratedAny = true;
+        }
+
+        if (backend["ContextCaching"] == null && backend["ContextCache"] == null) {
+            var cache = new JObject();
+            migratedAny |= MovePropertyIfExists(backend, "UseContextCaching", cache, "Enabled");
+            migratedAny |= MovePropertyIfExists(backend, "ContextCachingMinutes", cache, "Minutes");
+            migratedAny |= MovePropertyIfExists(backend, "ContextCachingIncrementMinutes", cache, "IncrementMinutes");
+            migratedAny |= MovePropertyIfExists(backend, "ContextCachingMinimumRemainingMinutes", cache, "MinimumRemainingMinutes");
+            if (cache.Count > 0) {
+                backend["ContextCaching"] = cache;
+            }
+        }
+
         return migratedAny;
     }
 
@@ -212,7 +279,8 @@ public static class ConfigMigrator {
     /// </summary>
     private static bool DeduplicateSetLikeArrays(JObject root) {
         return Deduplicate(root["Paths"] as JObject, "PredefinedSourceFolders")
-             | Deduplicate(root["ApiKey"] as JObject, "EnvNames");
+             | Deduplicate(root["ApiKey"] as JObject, "EnvNames")
+             | Deduplicate(root["ModelSelection"] as JObject, "Available");
 
         static bool Deduplicate(JObject? section, string key) {
             if (section?[key] is not JArray array || array.Count == 0) return false;

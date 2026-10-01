@@ -188,4 +188,63 @@ public class ConfigMigratorTests {
         Assert.Null(root["Paths"]);
         Assert.Equal(@"D:\refine\in", root["SourceFolder"]?.ToString());
     }
+
+    [Fact]
+    public void LatexRefinementBackendParameters_MigratesFlatKeys_AndDeduplicatesAvailableModels() {
+        string jsonWithLegacyAndDuplicates = """
+            {
+              "Step1MergeAndTimestamp": {
+                "AiStudio": {
+                  "Temperature": 0.4,
+                  "Model": [
+                    "gemini-3.8-flash",
+                    "gemini-3.7-flash"
+                  ],
+                  "Generation": {
+                    "Temperature": 0.4
+                  },
+                  "ModelSelection": {
+                    "Available": [
+                      "gemini-3.8-flash",
+                      "gemini-3.7-flash",
+                      "gemini-3.8-flash",
+                      "gemini-3.7-flash"
+                    ],
+                    "CurrentIndex": 0
+                  }
+                }
+              }
+            }
+            """;
+
+        var root = JObject.Parse(jsonWithLegacyAndDuplicates);
+        bool migrated = ConfigMigrator.Migrate(root, typeof(LatexRefinementSessionConfig));
+        Assert.True(migrated);
+
+        var aiStudio = (JObject)root["Step1MergeAndTimestamp"]!["AiStudio"]!;
+        Assert.Null(aiStudio["Model"]);
+        Assert.Null(aiStudio["Temperature"]);
+
+        var available = (JArray)aiStudio["ModelSelection"]!["Available"]!;
+        Assert.Equal(2, available.Count);
+        Assert.Equal("gemini-3.8-flash", available[0].ToString());
+        Assert.Equal("gemini-3.7-flash", available[1].ToString());
+
+        var config = MigrateAndBind<LatexRefinementSessionConfig>(jsonWithLegacyAndDuplicates);
+        Assert.Equal(2, config.Step1MergeAndTimestamp.AiStudio.ModelSelection.Available.Length);
+        Assert.Equal("gemini-3.8-flash", config.Step1MergeAndTimestamp.AiStudio.ModelSelection.Available[0]);
+        Assert.Equal("gemini-3.7-flash", config.Step1MergeAndTimestamp.AiStudio.ModelSelection.Available[1]);
+    }
+
+    [Fact]
+    public void ModelSelection_Available_DeduplicatesPreservingOrder() {
+        var selection = new ModelSelection {
+            Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.7-flash"]
+        };
+
+        Assert.Equal(3, selection.Available.Length);
+        Assert.Equal("gemini-3.8-flash", selection.Available[0]);
+        Assert.Equal("gemini-3.7-flash", selection.Available[1]);
+        Assert.Equal("gemini-3.6-flash", selection.Available[2]);
+    }
 }

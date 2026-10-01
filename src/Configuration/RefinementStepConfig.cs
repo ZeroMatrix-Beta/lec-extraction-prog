@@ -7,6 +7,6 @@ public class RefinementStepConfig {
     public string[] SystemInstructionPaths { get; set; } = [];
     public string[] HistoryPreloadPaths { get; set; } = [];
 
-    public BackendParameters AiStudio { get; set; } = new BackendParameters { Model = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] };
-    public BackendParameters Vertex { get; set; } = new BackendParameters { Model = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] };
+    public BackendParameters AiStudio { get; set; } = new() { ModelSelection = new() { Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] } };
+    public BackendParameters Vertex { get; set; } = new() { ModelSelection = new() { Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] } };
 }

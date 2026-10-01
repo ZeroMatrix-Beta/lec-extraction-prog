@@ -31,7 +31,7 @@
   "OnlyDoWarmUp": true,
   "YouTubeTasks": [],
   "ApiKey": {
-    "ActiveProfile": 3,
+    "ActiveProfile": 0,
     "EnvNames": [
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
@@ -106,7 +106,7 @@
       "gemini-3.5-flash-lite",
       "gemini-2.5-flash"
     ],
-    "CurrentIndex": 2
+    "CurrentIndex": 0
   },
   "SpeedMultiplier": 1.0,
   "VerboseConsoleOutput": true,

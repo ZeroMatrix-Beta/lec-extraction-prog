@@ -144,4 +144,31 @@ public class ConfigLegacyKeyCleanupTests {
 
         Assert.False(ConfigMigrator.Migrate(root, typeof(AiStudioAutoExtractionConfig)));
     }
+
+    [Fact]
+    public void Repeated_migration_of_LatexRefinementSessionConfig_does_not_grow_available_models() {
+        var root = JObject.Parse("""
+        {
+          "Step1MergeAndTimestamp": {
+            "AiStudio": {
+              "Model": [ "gemini-3.8-flash", "gemini-3.7-flash" ],
+              "ModelSelection": {
+                "Available": [ "gemini-3.8-flash", "gemini-3.7-flash" ],
+                "CurrentIndex": 0
+              }
+            }
+          }
+        }
+        """);
+
+        for (int launch = 0; launch < 5; launch++) {
+            ConfigMigrator.Migrate(root, typeof(LatexRefinementSessionConfig));
+        }
+
+        var aiStudio = (JObject)root["Step1MergeAndTimestamp"]!["AiStudio"]!;
+        Assert.Null(aiStudio["Model"]);
+        var available = (JArray)aiStudio["ModelSelection"]!["Available"]!;
+        Assert.Equal(2, available.Count);
+        Assert.Equal(["gemini-3.8-flash", "gemini-3.7-flash"], available.Select(t => t.Value<string>()));
+    }
 }

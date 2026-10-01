@@ -6,6 +6,7 @@ namespace LectureExtraction.Tests;
 /// Characterization tests for <see cref="VideoDateParser"/>. These pin the *current* behaviour
 /// of the filename parser so that moving and renaming it during the refactor cannot change it.
 /// </summary>
+[Collection(ConsoleTestCollection.Name)]
 public class VideoDateParserTests {
     [Theory]
     // MM-DD-YYYY, the format the main-menu warning text advertises.

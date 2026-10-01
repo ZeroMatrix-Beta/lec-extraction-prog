@@ -9,7 +9,13 @@ namespace LectureExtraction.Configuration;
 /// [Human] Modellauswahl-Konfiguration mit automatischer Bereichsprüfung für das aktive Modell.
 /// </summary>
 public class ModelSelection {
-    public string[] Available { get; set; } = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"];
+    private string[] _available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"];
+
+    public string[] Available {
+        get => _available;
+        set => _available = Deduplicate(value);
+    }
+
     public int CurrentIndex { get; set; } = 0;
 
     [JsonIgnore]
@@ -34,5 +40,17 @@ public class ModelSelection {
             Available = [.. list];
             CurrentIndex = Available.Length - 1;
         }
+    }
+
+    private static string[] Deduplicate(string[]? items) {
+        if (items == null || items.Length == 0) return [];
+        HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
+        List<string> result = new(items.Length);
+        foreach (var item in items) {
+            if (!string.IsNullOrWhiteSpace(item) && seen.Add(item)) {
+                result.Add(item);
+            }
+        }
+        return [.. result];
     }
 }
