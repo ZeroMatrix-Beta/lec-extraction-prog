@@ -15,6 +15,8 @@ public static class HistoryFileResolver {
         ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff", ".heic", ".heif", ".svg"
     };
 
+    private static readonly string[] s_ignoredPrefixes = ["deleted-", "delted-", "ignore-", "ignored-"];
+
     /// <summary>
     /// [AI Context] Determines whether a file path points to an image/picture based on its extension.
     /// [Human] Prüft anhand der Dateiendung, ob es sich um eine Bilddatei handelt.
@@ -25,18 +27,27 @@ public static class HistoryFileResolver {
     }
 
     /// <summary>
-    /// [AI Context] Determines whether a file is marked as deleted/non-montage (prefixed with "deleted-").
+    /// [AI Context] Determines whether a file is marked as ignored/deleted/non-montage (prefixed with
+    /// "deleted-", "delted-", "ignore-", or "ignored-").
     /// In token-optimized prompt directories, montage pictures are included while individual
-    /// non-montage pictures are marked with a preceding "deleted-" prefix to exclude them
+    /// non-montage pictures are marked with an ignore/delete prefix to exclude them
     /// from system instructions sent to Gemini.
-    /// [Human] Prüft, ob eine Datei als gelöscht markiert ist (Präfix "deleted-"). Nicht-Montage-Bilder
-    /// mit diesem Präfix werden nicht in die System Instruction übernommen, um Tokens zu sparen.
+    /// [Human] Prüft, ob eine Datei als ignoriert oder gelöscht markiert ist (Präfix "deleted-", "delted-", "ignore-" oder "ignored-").
+    /// Nicht-Montage-Bilder mit diesem Präfix werden nicht in die System Instruction übernommen, um Tokens zu sparen.
     /// </summary>
-    public static bool IsDeletedPromptFile(string filePath) {
+    public static bool IsIgnoredPromptFile(string filePath) {
         if (string.IsNullOrWhiteSpace(filePath)) return false;
         string fileName = Path.GetFileName(filePath);
-        return fileName.StartsWith("deleted-", StringComparison.OrdinalIgnoreCase);
+        foreach (var prefix in s_ignoredPrefixes) {
+            if (fileName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
     }
+
+    /// <summary>
+    /// Backward-compatible alias for <see cref="IsIgnoredPromptFile"/>.
+    /// </summary>
+    public static bool IsDeletedPromptFile(string filePath) => IsIgnoredPromptFile(filePath);
 
     /// <summary>
     /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths,

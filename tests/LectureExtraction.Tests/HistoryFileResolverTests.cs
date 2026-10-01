@@ -42,18 +42,24 @@ public class HistoryFileResolverTests {
     [InlineData("deleted-figure.webp", true)]
     [InlineData("deleted-draft.md", true)]
     [InlineData("deleted-....png", true)]
+    [InlineData("delted-slide1.png", true)]
+    [InlineData("DELTED-whiteboard.jpg", true)]
+    [InlineData("ignore-slide2.png", true)]
+    [InlineData("IGNORE-diagram.png", true)]
+    [InlineData("ignored-notes.md", true)]
     [InlineData("montage-slide1.png", false)]
     [InlineData("slide1.png", false)]
     [InlineData("environments.md", false)]
     [InlineData("transcription.md", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
-    public void IsDeletedPromptFile_identifies_deleted_prefix(string? path, bool expected) {
+    public void IsIgnoredPromptFile_identifies_all_ignore_prefixes(string? path, bool expected) {
+        Assert.Equal(expected, HistoryFileResolver.IsIgnoredPromptFile(path!));
         Assert.Equal(expected, HistoryFileResolver.IsDeletedPromptFile(path!));
     }
 
     [Fact]
-    public void ResolveHistoryFiles_excludes_files_with_deleted_prefix() {
+    public void ResolveHistoryFiles_excludes_files_with_deleted_and_ignore_prefixes() {
         AnsiConsole.Console = new TestConsole();
         string tempDir = Path.Combine(Path.GetTempPath(), $"hist_test_{Path.GetRandomFileName()}");
         Directory.CreateDirectory(tempDir);
@@ -61,13 +67,15 @@ public class HistoryFileResolverTests {
         try {
             string montageImg = Path.Combine(tempDir, "montage-board.png");
             string deletedImg1 = Path.Combine(tempDir, "deleted-board1.png");
-            string deletedImg2 = Path.Combine(tempDir, "deleted-board2.jpg");
+            string deltedImg = Path.Combine(tempDir, "delted-board2.jpg");
+            string ignoreImg = Path.Combine(tempDir, "ignore-board3.png");
             string notesMd = Path.Combine(tempDir, "lecture-notes.md");
             string deletedNotes = Path.Combine(tempDir, "deleted-old-notes.md");
 
             File.WriteAllText(montageImg, "dummy png");
             File.WriteAllText(deletedImg1, "dummy png");
-            File.WriteAllText(deletedImg2, "dummy jpg");
+            File.WriteAllText(deltedImg, "dummy jpg");
+            File.WriteAllText(ignoreImg, "dummy png");
             File.WriteAllText(notesMd, "# Notes");
             File.WriteAllText(deletedNotes, "# Old Notes");
 
@@ -77,7 +85,8 @@ public class HistoryFileResolverTests {
             Assert.Contains(montageImg, resolved);
             Assert.Contains(notesMd, resolved);
             Assert.DoesNotContain(deletedImg1, resolved);
-            Assert.DoesNotContain(deletedImg2, resolved);
+            Assert.DoesNotContain(deltedImg, resolved);
+            Assert.DoesNotContain(ignoreImg, resolved);
             Assert.DoesNotContain(deletedNotes, resolved);
         }
         finally {

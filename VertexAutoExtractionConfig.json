@@ -10,6 +10,7 @@
   ],
   "TargetFolder": "",
   "SystemInstructionPaths": [
+    /* Stating directory folders (e.g. "...\\environments") is supported; files can also be listed individually for deterministic order. */
     "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\transcription.md",
     "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments.md",
     "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments\\environments-syntax-rules.md",
