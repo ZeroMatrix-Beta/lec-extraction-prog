@@ -473,10 +473,14 @@ public class DirectAiChatSessionVertex {
 
         foreach (var path in HistoryPreloadPaths.Where(p => !string.IsNullOrWhiteSpace(p))) {
             if (System.IO.File.Exists(path)) {
-                allHistoryFiles.Add(Path.GetFullPath(path));
+                if (!Extraction.HistoryFileResolver.IsDeletedPromptFile(path)) {
+                    allHistoryFiles.Add(Path.GetFullPath(path));
+                }
             }
             else if (Directory.Exists(path)) {
-                allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+                allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
+                    .Where(f => !Extraction.HistoryFileResolver.IsDeletedPromptFile(f))
+                    .Select(f => Path.GetFullPath(f)));
             }
             else {
                 notFoundPaths.Add(path);

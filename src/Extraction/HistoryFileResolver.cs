@@ -11,18 +11,51 @@ namespace LectureExtraction.Extraction;
 /// into concrete file lists, and groups them into batches for chunked loading.
 /// </summary>
 public static class HistoryFileResolver {
+    private static readonly HashSet<string> s_imageExtensions = new(StringComparer.OrdinalIgnoreCase) {
+        ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff", ".heic", ".heif", ".svg"
+    };
+
     /// <summary>
-    /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths.
+    /// [AI Context] Determines whether a file path points to an image/picture based on its extension.
+    /// [Human] Prüft anhand der Dateiendung, ob es sich um eine Bilddatei handelt.
+    /// </summary>
+    public static bool IsPictureFile(string filePath) {
+        if (string.IsNullOrWhiteSpace(filePath)) return false;
+        return s_imageExtensions.Contains(Path.GetExtension(filePath));
+    }
+
+    /// <summary>
+    /// [AI Context] Determines whether a file is marked as deleted/non-montage (prefixed with "deleted-").
+    /// In token-optimized prompt directories, montage pictures are included while individual
+    /// non-montage pictures are marked with a preceding "deleted-" prefix to exclude them
+    /// from system instructions sent to Gemini.
+    /// [Human] Prüft, ob eine Datei als gelöscht markiert ist (Präfix "deleted-"). Nicht-Montage-Bilder
+    /// mit diesem Präfix werden nicht in die System Instruction übernommen, um Tokens zu sparen.
+    /// </summary>
+    public static bool IsDeletedPromptFile(string filePath) {
+        if (string.IsNullOrWhiteSpace(filePath)) return false;
+        string fileName = Path.GetFileName(filePath);
+        return fileName.StartsWith("deleted-", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths,
+    /// filtering out non-montage pictures and other files marked with "deleted-".
     /// </summary>
     public static List<string> ResolveHistoryFiles(string[] paths) {
         List<string> allHistoryFiles = [];
         if (paths == null) return allHistoryFiles;
 
         foreach (var path in paths.Where(p => !string.IsNullOrWhiteSpace(p))) {
-            if (File.Exists(path))
-                allHistoryFiles.Add(Path.GetFullPath(path));
-            else if (Directory.Exists(path))
-                allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).Select(f => Path.GetFullPath(f)));
+            if (File.Exists(path)) {
+                if (!IsDeletedPromptFile(path))
+                    allHistoryFiles.Add(Path.GetFullPath(path));
+            }
+            else if (Directory.Exists(path)) {
+                allHistoryFiles.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
+                    .Where(f => !IsDeletedPromptFile(f))
+                    .Select(f => Path.GetFullPath(f)));
+            }
             else
                 Ui.Warn($"HistoryPreloadPath nicht gefunden (weder Datei noch Ordner): {path}");
         }

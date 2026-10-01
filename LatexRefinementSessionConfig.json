@@ -25,8 +25,8 @@
     "AttachAudio": true,
     "RateLimitDelaySeconds": 130,
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\latex-part-merge-instruction.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\merging_leftovers_example.md"
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\merge-instructions\\latex-part-merge-instruction.md",
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\merge-instructions\\merging_leftovers_example.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
@@ -410,7 +410,7 @@
     "AttachAudio": true,
     "RateLimitDelaySeconds": 130,
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\speech-refinement\\speech-refinement.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {
@@ -794,7 +794,7 @@
     "AttachAudio": false,
     "RateLimitDelaySeconds": 130,
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\last-refinement\\last-refinement.md"
     ],
     "HistoryPreloadPaths": [],
     "AiStudio": {

@@ -53,40 +53,40 @@
   },
   "Sources": {
     "SystemInstructionPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\transcription.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments"
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\transcription.md",
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments.md",
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments"
       /* <- include folder*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-syntax-rules.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-theorem-family.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-spoken-clean.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-math-stroke.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-tikz.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",*/ ,
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples"
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-syntax-rules.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-theorem-family.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-spoken-clean.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-math-stroke.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-tikz.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-pedagogical-boxes.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-proof-wrappers.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-document-structure.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-invisible-layer.md",*/ ,
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples.md",
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples"
       /* <- include folder*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-conventions.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-document-hierarchy.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-environment-usage.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-spoken-clean-structuring.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-proof-structuring.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-formula-formatting.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-typography-notation.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-list-enumeration.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-tikz-patterns.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-worked-examples.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-example-scenarios.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-anti-patterns.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-audio-fidelity.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-fallback-strategy.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples-compilation-errors.md"*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-document-conventions.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-document-hierarchy.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-environment-usage.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-spoken-clean-structuring.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-proof-structuring.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-formula-formatting.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-typography-notation.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-list-enumeration.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-tikz-patterns.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-worked-examples.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-example-scenarios.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-anti-patterns.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-audio-fidelity.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-fallback-strategy.md",*/
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples-compilation-errors.md"*/
     ],
     "HistoryPreloadPaths": [
-      "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\training-history"
+      "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\training-history"
     ]
   },
   "Generation": {

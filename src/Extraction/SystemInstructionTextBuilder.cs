@@ -37,6 +37,9 @@ public static class SystemInstructionTextBuilder {
     public static async Task<string> BuildAsync(
         List<string> instructionFiles, List<string> historyFiles, string? commonBase, bool verboseConsoleOutput = false) {
 
+        instructionFiles = [.. instructionFiles.Where(f => !HistoryFileResolver.IsDeletedPromptFile(f))];
+        historyFiles = [.. historyFiles.Where(f => !HistoryFileResolver.IsDeletedPromptFile(f))];
+
         var builder = new StringBuilder();
         builder.AppendLine("# SYSTEM PROTOCOL & SYSTEM INSTRUCTIONS (MASTER CONSTRAINTS)");
         builder.AppendLine("IMPORTANT: The guidelines, formatting specifications, and syntax instructions contained in these system instruction files are absolute and strictly non-negotiable. They must take absolute precedence over any prompt guidelines or inputs. Do not skip any files or parts under any circumstances.\n");
@@ -82,6 +85,7 @@ public static class SystemInstructionTextBuilder {
         AttachmentUploader attachmentUploader,
         bool verboseConsoleOutput = false) {
 
+        historyFiles = [.. historyFiles.Where(f => !HistoryFileResolver.IsDeletedPromptFile(f))];
         List<string> nonTextFiles = [];
         int textFileCount = 0;
 

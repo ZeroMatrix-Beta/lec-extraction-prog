@@ -24,7 +24,7 @@ public static class AppConfig {
     public static string BaseLectureFolder => _options.BaseLectureFolder;
     public static string UploadFolder => _options.UploadFolder;
     public static string LogFolder => _options.LogFolder;
-    public static string[] HistoryPreloadPaths => [@"C:\Users\miche\latex\prompt-engineering\transcription\training-history"];
+    public static string[] HistoryPreloadPaths => [@"C:\Users\miche\latex\prompt-engineering-token-opt\transcription\training-history"];
 
     // --- Dynamisch zusammengesetzte Pfade ---
     public static string AutoExtractionSourceFolder => Path.Combine(BaseLectureFolder, "analysis2");

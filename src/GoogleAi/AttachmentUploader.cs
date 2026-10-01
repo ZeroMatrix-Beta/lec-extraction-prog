@@ -72,6 +72,10 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             string? resolvedPath = ResolveFilePath(rawName, out List<string> searchedLocations);
 
             if (resolvedPath != null) {
+                if (asSystemInstruction && LectureExtraction.Extraction.HistoryFileResolver.IsDeletedPromptFile(resolvedPath)) {
+                    Ui.Detail($"Überspringe als gelöscht markierte Datei '{Path.GetFileName(resolvedPath)}' für System Instruction.", "Token-Opt");
+                    continue;
+                }
                 bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory, cancellationToken: cancellationToken);
                 if (loaded) {
                     anyFileLoaded = true;
@@ -174,6 +178,11 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
     /// uploadTextAsFile erzwingt den Upload auch für Textdateien - ausser in der System Instruction.
     /// </summary>
     public async Task<bool> UploadAndAttachFileAsync(string filePath, List<Part> parts, bool asSystemInstruction = false, string? baseDirectory = null, bool uploadTextAsFile = false, CancellationToken cancellationToken = default) {
+        if (asSystemInstruction && LectureExtraction.Extraction.HistoryFileResolver.IsDeletedPromptFile(filePath)) {
+            Ui.Detail($"Überspringe als gelöscht markierte Datei '{Path.GetFileName(filePath)}' für System Instruction.", "Token-Opt");
+            return true;
+        }
+
         string ext = Path.GetExtension(filePath).ToLower();
         string rawDisplayPath = !string.IsNullOrEmpty(baseDirectory)
             ? Path.GetRelativePath(baseDirectory, filePath)
