@@ -12,7 +12,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public ApiKeyProfile ApiKey { get; set; } = new();
     public WorkspacePaths Paths { get; set; } = new() {
         SourceFolder = @"D:\lecture-videos\grundstrukturen",
-        LogFolder = @"D:\gemini-logs"
+        LogFolder = @"C:\Users\miche\gemini-logs"
     };
     public ContextSources Sources { get; set; } = new() {
         HistoryPreloadPaths = [@"C:\Users\miche\latex\prompt-engineering-token-opt\transcription\training-history"]

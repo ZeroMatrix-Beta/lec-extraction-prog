@@ -43,7 +43,7 @@
   "HistoryPreloadPaths": [
     "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\training-history"
   ],
-  "LogFolder": "D:\\gemini-logs",
+  "LogFolder": "C:\\Users\\miche\\gemini-logs",
   "Model": [
     "gemini-3.8-flash",
     "gemini-3.7-flash",

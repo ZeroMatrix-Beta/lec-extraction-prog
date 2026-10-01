@@ -13,7 +13,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public WorkspacePaths Paths { get; set; } = new() {
         SourceFolder = @"D:\lecture-videos\d-und-a\new",
         TargetFolder = @"D:\lecture-videos\d-und-a\extracted",
-        LogFolder = @"D:\gemini-logs"
+        LogFolder = @"C:\Users\miche\gemini-logs"
     };
     public ContextSources Sources { get; set; } = new() {
         HistoryPreloadPaths = AppConfig.HistoryPreloadPaths

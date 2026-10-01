@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 
+using LectureExtraction.ConsoleUi;
+
 namespace LectureExtraction.Infrastructure;
 
 /// <summary>
@@ -22,26 +24,75 @@ public class SessionLogger(SessionLoggerConfig config) {
         _currentSessionDateSuffix = GetFormattedDateString(DateTime.Now);
 
         if (!string.IsNullOrWhiteSpace(_logFolderPath)) {
-            // [AI Context] Scans the designated log directory for existing "folder-X-" prefixes.
-            // Dynamically extracts the numeric index (X) to generate a monotonically increasing session ID, ensuring no logs are overwritten.
-            if (!Directory.Exists(_logFolderPath)) {
-                Directory.CreateDirectory(_logFolderPath);
+            string effectiveLogPath = _logFolderPath;
+            try {
+                if (!Directory.Exists(effectiveLogPath)) {
+                    Directory.CreateDirectory(effectiveLogPath);
+                }
             }
-
-            int maxIndex = 0;
-            foreach (var dir in Directory.GetDirectories(_logFolderPath)) {
-                string dirName = Path.GetFileName(dir);
-                if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase)) {
-                    string[] dirParts = dirName.Split('-');
-                    if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int parsedIndex)) {
-                        if (parsedIndex > maxIndex) maxIndex = parsedIndex;
+            catch (Exception ex) {
+                Ui.Warn($"Log-Verzeichnis '{effectiveLogPath}' konnte nicht erstellt werden: {ex.GetType().Name} - {ex.Message}. Versuche Fallback.", "SessionLogger");
+                effectiveLogPath = ResolveFallbackLogFolder();
+                if (!string.IsNullOrWhiteSpace(effectiveLogPath) && !Directory.Exists(effectiveLogPath)) {
+                    try {
+                        Directory.CreateDirectory(effectiveLogPath);
+                    }
+                    catch (Exception fallbackEx) {
+                        Ui.Warn($"Fallback-Log-Verzeichnis '{effectiveLogPath}' konnte nicht erstellt werden: {fallbackEx.GetType().Name} - {fallbackEx.Message}. Logging deaktiviert.", "SessionLogger");
+                        effectiveLogPath = "";
                     }
                 }
             }
 
-            int folderIndex = maxIndex + 1;
-            _currentSessionLogPath = Path.Combine(_logFolderPath, $"folder-{folderIndex}-{_currentSessionDateSuffix}");
-            Directory.CreateDirectory(_currentSessionLogPath);
+            if (!string.IsNullOrWhiteSpace(effectiveLogPath)) {
+                try {
+                    int maxIndex = 0;
+                    foreach (var dir in Directory.GetDirectories(effectiveLogPath)) {
+                        string dirName = Path.GetFileName(dir);
+                        if (dirName.StartsWith("folder-", StringComparison.OrdinalIgnoreCase)) {
+                            string[] dirParts = dirName.Split('-');
+                            if (dirParts.Length >= 2 && int.TryParse(dirParts[1], out int parsedIndex)) {
+                                if (parsedIndex > maxIndex) maxIndex = parsedIndex;
+                            }
+                        }
+                    }
+
+                    int folderIndex = maxIndex + 1;
+                    _currentSessionLogPath = Path.Combine(effectiveLogPath, $"folder-{folderIndex}-{_currentSessionDateSuffix}");
+                    Directory.CreateDirectory(_currentSessionLogPath);
+                }
+                catch (Exception ex) {
+                    Ui.Warn($"Session-Log-Ordner konnte nicht erstellt werden: {ex.GetType().Name} - {ex.Message}. Logging deaktiviert.", "SessionLogger");
+                    _currentSessionLogPath = "";
+                }
+            }
+        }
+    }
+
+    private static string ResolveFallbackLogFolder() {
+        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrWhiteSpace(userProfile)) {
+            string userLogs = Path.Combine(userProfile, "gemini-logs");
+            try {
+                if (Directory.Exists(userLogs)) return userLogs;
+                Directory.CreateDirectory(userLogs);
+                return userLogs;
+            }
+            catch (Exception ex) {
+                Ui.Warn($"Konnte Fallback '{userLogs}' nicht erstellen: {ex.GetType().Name} - {ex.Message}. Versuche System-Laufwerk...", "SessionLogger");
+            }
+        }
+
+        string systemDrive = Path.GetPathRoot(Environment.SystemDirectory) ?? "C:\\";
+        string primaryCandidate = Path.Combine(systemDrive, "gemini-logs");
+        try {
+            if (Directory.Exists(primaryCandidate)) return primaryCandidate;
+            Directory.CreateDirectory(primaryCandidate);
+            return primaryCandidate;
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Konnte Fallback '{primaryCandidate}' nicht erstellen: {ex.GetType().Name} - {ex.Message}. Versuche Arbeitsverzeichnis...", "SessionLogger");
+            return Path.Combine(Directory.GetCurrentDirectory(), "gemini-logs");
         }
     }
 
@@ -53,11 +104,14 @@ public class SessionLogger(SessionLoggerConfig config) {
     private string GetChatLogFilePath() => !string.IsNullOrWhiteSpace(_currentSessionLogPath) ? Path.Combine(_currentSessionLogPath, "chat_log.md") : "chat_log.md";
 
     public async Task LogSessionSetupAsync() {
+        if (string.IsNullOrWhiteSpace(_currentSessionLogPath)) return;
         string setupLog = $"\n=== Neue Chat-Sitzung ({DateTime.Now}) ===\n- System Prompt geladen: {_loadedSystemInstruction}\n- History geladen: {_loadedHistory}\n---\n";
         await File.AppendAllTextAsync(GetChatLogFilePath(), setupLog);
     }
 
     public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName, int inputTokens = 0, int outputTokens = 0, int cachedTokens = 0) {
+        if (string.IsNullOrWhiteSpace(_currentSessionLogPath)) return;
+
         // Markdown Verlauf mitprotokollieren
         string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
         int freshTokens = Math.Max(0, inputTokens - cachedTokens);

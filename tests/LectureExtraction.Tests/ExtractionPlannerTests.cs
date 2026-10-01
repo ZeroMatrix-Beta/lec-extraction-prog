@@ -13,6 +13,7 @@ namespace LectureExtraction.Tests;
 /// how many parts can be reused - plus the warnings that catch an expensive mistake before it is
 /// made.
 /// </summary>
+[Collection(ConsoleTestCollection.Name)]
 public class ExtractionPlannerTests : IDisposable {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "lecx-plan-" + Guid.NewGuid().ToString("N"));
 

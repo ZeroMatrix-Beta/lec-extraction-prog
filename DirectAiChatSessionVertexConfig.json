@@ -3,7 +3,7 @@
   "Location": "global",
   "UploadFolder": "D:\\gemini-upload-folder",
   "HistoryPreloadPaths": [],
-  "LogFolder": "D:\\gemini-logs",
+  "LogFolder": "C:\\Users\\miche\\gemini-logs",
   "GcsBucketName": "vertex-ai-experiments-upload-bucket-us",
   "SystemInstructionPath": "",
   "IncludePaths": [

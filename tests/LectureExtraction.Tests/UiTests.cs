@@ -13,14 +13,19 @@ public class UiTests {
     [InlineData(@"\begin{itemize}\item[a] x")]
     [InlineData("[FEHLER] literal in payload")]
     public void Raw_and_severity_helpers_never_mangle_latex(string s) {
+        var previous = AnsiConsole.Console;
         var console = new TestConsole();
         AnsiConsole.Console = console;
+        try {
+            Ui.Raw(s);
+            Assert.Equal(s, console.Output);
 
-        Ui.Raw(s);
-        Assert.Equal(s, console.Output);
-
-        console.Clear();
-        Ui.Info(s);
-        Assert.Contains(s, console.Output);
+            console.Clear();
+            Ui.Info(s);
+            Assert.Contains(s, console.Output);
+        }
+        finally {
+            AnsiConsole.Console = previous;
+        }
     }
 }

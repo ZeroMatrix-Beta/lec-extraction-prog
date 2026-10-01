@@ -49,7 +49,7 @@
       "D:\\lecture-videos\\information-security-2024"
     ],
     "TargetFolder": "",
-    "LogFolder": "D:\\gemini-logs",
+    "LogFolder": "C:\\Users\\miche\\gemini-logs",
     "UploadFolder": ""
   },
   "Sources": {
@@ -66,7 +66,7 @@
       /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-pedagogical-boxes.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-proof-wrappers.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-document-structure.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-invisible-layer.md",*/,
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-invisible-layer.md",*/ ,
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples.md",
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples"
       /* <- include folder*/

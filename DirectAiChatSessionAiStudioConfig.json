@@ -2,7 +2,7 @@
   "ActiveApiProfile": 0,
   "UploadFolder": "D:\\gemini-upload-folder",
   "HistoryPreloadPaths": [],
-  "LogFolder": "D:\\gemini-logs",
+  "LogFolder": "C:\\Users\\miche\\gemini-logs",
   "GcsBucketName": "biran-linalg-source-material",
   "SystemInstructionPath": "C:\\Users\\miche\\latex\\directors-cut-analysis2\\gemini.md",
   "IncludePaths": [

@@ -4,7 +4,7 @@ namespace LectureExtraction.Configuration;
 public class AppConfigOptions {
     public string BaseLectureFolder { get; set; } = @"D:\lecture-videos";
     public string UploadFolder { get; set; } = @"D:\gemini-upload-folder";
-    public string LogFolder { get; set; } = @"D:\gemini-logs";
+    public string LogFolder { get; set; } = @"C:\Users\miche\gemini-logs";
     public string[] HistoryPreloadPaths { get; set; } = [];
     public string SystemInstructionPath { get; set; } = @"";
     public string VertexProjectId { get; set; } = "vertex-ai-experiments-494320";
