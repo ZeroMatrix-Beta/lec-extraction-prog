@@ -135,6 +135,7 @@ public static class ConfigurationPrompts {
             for (int i = 0; i < availableModels.Length; i++) {
                 choices.Add(($"{i + 1}) {availableModels[i]}", availableModels[i]));
             }
+            choices.Add(($"{availableModels.Length + 1}) ✍️ Modellname manuell eingeben", ""));
 
             // Back here returns to the confirm question above rather than out of the prompt - the
             // user who lands in this list by answering "Nein" needs a way to take that back.
@@ -142,6 +143,11 @@ public static class ConfigurationPrompts {
             if (!selection.IsValue || selection.Value == null) continue;
 
             string newModel = selection.Value;
+            if (string.IsNullOrEmpty(newModel)) {
+                newModel = Ui.Ask("Bitte Modellnamen eingeben:").Trim();
+                if (string.IsNullOrWhiteSpace(newModel)) continue;
+            }
+
             Ui.Info($"Neues Modell ausgewählt: {newModel}");
 
             if (onModelChanged != null) {
