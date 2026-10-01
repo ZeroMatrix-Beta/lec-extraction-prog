@@ -21,6 +21,8 @@ namespace LectureExtraction.Chat;
 /// </summary> 
 public partial class DirectAiChatSessionAiStudio {
     public static readonly string[] AvailableModels = [
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3-flash-preview",

@@ -35,6 +35,8 @@ namespace LectureExtraction.Extraction;
 /// </summary>
 public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) : IYouTubeTranscriptionHost {
     public static readonly string[] AvailableModels = [
+        "gemini-3.8-flash",
+        "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3-flash-preview",

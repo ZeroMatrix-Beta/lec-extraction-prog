@@ -24,6 +24,8 @@ public class ModelCapabilitiesTests {
 
     [Theory]
     [InlineData("gemma-4-12b-it")]
+    [InlineData("gemini-3.8-flash")]
+    [InlineData("gemini-3.7-flash")]
     [InlineData("gemini-3.6-flash")]
     [InlineData("gemini-2.5-pro")]
     [InlineData("")]
@@ -49,6 +51,8 @@ public class ModelCapabilitiesTests {
 
     [Theory]
     [InlineData("gemini-2.5-pro", true)]
+    [InlineData("gemini-3.8-flash", true)]
+    [InlineData("gemini-3.7-flash", true)]
     [InlineData("gemini-3.6-flash", true)]
     [InlineData("gemini-2.0-flash-thinking", true)]
     [InlineData("gemini-2.0-flash", false)]

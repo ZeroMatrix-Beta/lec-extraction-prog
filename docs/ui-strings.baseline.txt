@@ -491,7 +491,7 @@ Ui.Select("Welchen Schritt möchtest du ausführen?", [
 Ui.Select("Wähle Kompressions-Voreinstellung (Preset):", presets);
 Ui.Select("Wähle die .tex Datei für das Refinement:", fileChoices, pageSize: 15);
 Ui.Select("Wähle die Audio-Datei:", choices);
-Ui.Select("Wähle ein Modell:", ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"]);
+Ui.Select("Wähle ein Modell:", ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"]);
 Ui.Select("Wähle eine Option oder einen Unterordner:", options, allowBack: false, pageSize: 15);
 Ui.Select($"Was soll verarbeitet werden? ({files.Length} Video(s))", [
 Ui.Select(question, choices, allowBack: true, allowExit: true);
