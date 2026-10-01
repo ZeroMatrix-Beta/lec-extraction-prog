@@ -87,6 +87,23 @@ public class ConfigStoreTests : IDisposable {
         Assert.True(ConfigStore.SaveEnabled);
         Assert.Null(ConfigStore.DirectoryOverride);
     }
+
+    [Fact]
+    public void Load_SyncsFromCurrentDirectory_WhenCurrentDirectoryIsNewer() {
+        ConfigStore.Reset();
+        string fileName = $"{nameof(FfmpegSessionConfig)}.json";
+        string outputDirFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+        string currentDirFile = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+
+        if (File.Exists(outputDirFile) && File.Exists(currentDirFile)) {
+            File.SetLastWriteTimeUtc(outputDirFile, DateTime.UtcNow.AddMinutes(-10));
+            File.SetLastWriteTimeUtc(currentDirFile, DateTime.UtcNow);
+
+            var loaded = ConfigLoader<FfmpegSessionConfig>.Load();
+            Assert.NotNull(loaded);
+            Assert.True(File.GetLastWriteTimeUtc(outputDirFile) >= File.GetLastWriteTimeUtc(currentDirFile));
+        }
+    }
 }
 
 /// <summary>Covers the scalar conversion behind <c>config set</c>.</summary>

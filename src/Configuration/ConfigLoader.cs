@@ -19,6 +19,22 @@ public static class ConfigLoader<T> where T : class, new() {
         string fileName = $"{typeof(T).Name}.json";
         string filePath = Path.Combine(basePath, fileName);
 
+        // When running from repo root (e.g. dotnet run), sync from current directory if that copy is newer
+        if (string.IsNullOrWhiteSpace(ConfigStore.DirectoryOverride)) {
+            string currentDirFile = Path.Combine(Directory.GetCurrentDirectory(), fileName);
+            if (!string.Equals(Path.GetFullPath(filePath), Path.GetFullPath(currentDirFile), StringComparison.OrdinalIgnoreCase)
+                && File.Exists(currentDirFile)) {
+                if (!File.Exists(filePath) || File.GetLastWriteTimeUtc(currentDirFile) > File.GetLastWriteTimeUtc(filePath)) {
+                    try {
+                        File.Copy(currentDirFile, filePath, overwrite: true);
+                    }
+                    catch (Exception ex) {
+                        Ui.Warn($"Konnte '{fileName}' aus Arbeitsverzeichnis nicht synchronisieren: {ex.GetType().Name} - {ex.Message}");
+                    }
+                }
+            }
+        }
+
         // Run JSON migrator on disk file if legacy flat keys exist
         if (File.Exists(filePath)) {
             try {

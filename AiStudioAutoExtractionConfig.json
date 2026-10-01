@@ -5,9 +5,9 @@
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "InlineHistoryImages": true,
-  "HistoryBatchCount": 3,
-  "MergeSystemInstructionAndFirstHistoryBatch": true,
-  "MergeAllConsecutiveHistoryBatches": true,
+  "HistoryBatchCount": 1,
+  "MergeSystemInstructionAndFirstHistoryBatch": false,
+  "MergeAllConsecutiveHistoryBatches": false,
   /*
   * Reference Files:
   */
@@ -108,7 +108,7 @@
       "gemini-3.5-flash-lite",
       "gemini-2.5-flash"
     ],
-    "CurrentIndex": 0
+    "CurrentIndex": 3
   },
   "SpeedMultiplier": 1.0,
   "VerboseConsoleOutput": true,
