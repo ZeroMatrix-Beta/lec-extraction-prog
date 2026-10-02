@@ -16,6 +16,13 @@ namespace LectureExtraction.GoogleAi;
 /// </summary>
 public static partial class ApiRetryPolicy {
     /// <summary>
+    /// [AI Context] Global default delay in seconds when the model returns a "high demand" error.
+    /// Defaults to 180 seconds (3 minutes). Can be overridden globally or via the <c>highDemandDelay</c> parameter.
+    /// [Human] Standard-Wartezeit in Sekunden bei hoher Modellauslastung ("high demand").
+    /// </summary>
+    public static int DefaultHighDemandDelaySeconds { get; set; } = 180;
+
+    /// <summary>
     /// [AI Context] Executes a streaming API call with a robust retry mechanism.
     /// On each retry, the optional <paramref name="onRetry"/> callback is invoked BEFORE the new attempt
     /// so callers can reset their accumulation buffers (e.g. <c>chunkResp = ""</c>) to prevent the
@@ -30,6 +37,7 @@ public static partial class ApiRetryPolicy {
     /// <param name="initialBackoff">Initial delay in seconds for the first retry.</param>
     /// <param name="retryContext">Human-readable label printed in retry log messages.</param>
     /// <param name="onRetry">Optional callback invoked before every retry (attempt > 1). Use it to clear accumulation buffers.</param>
+    /// <param name="highDemandDelay">Optional delay in seconds when the model is in high demand; falls back to DefaultHighDemandDelaySeconds if unspecified.</param>
     /// <returns>True if the stream completed successfully, false if it was cancelled. Throws on unrecoverable errors.</returns>
     public static async Task<bool> ExecuteStreamWithRetryAsync(
         Func<IAsyncEnumerable<GenerateContentResponse>> streamFactory,
@@ -38,7 +46,8 @@ public static partial class ApiRetryPolicy {
         int maxRetries = 8,
         int initialBackoff = 130,
         string retryContext = "",
-        Action? onRetry = null) {
+        Action? onRetry = null,
+        int? highDemandDelay = null) {
         int backoff = initialBackoff;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
@@ -65,7 +74,7 @@ public static partial class ApiRetryPolicy {
                 Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
 
                 if (IsTransientError(ex) && attempt < maxRetries) {
-                    var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext);
+                    var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext, highDemandDelay);
                     backoff = NewBackoff;
                     if (!WaitSuccess) {
                         return false; // User cancelled the wait
@@ -88,7 +97,8 @@ public static partial class ApiRetryPolicy {
         Func<Task<T>> apiCall,
         int maxRetries = 8,
         int initialBackoff = 45,
-        string retryContext = "") where T : class {
+        string retryContext = "",
+        int? highDemandDelay = null) where T : class {
         int backoff = initialBackoff;
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
@@ -108,7 +118,7 @@ public static partial class ApiRetryPolicy {
                 Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
 
                 if (IsTransientError(ex) && attempt < maxRetries) {
-                    var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext);
+                    var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext, highDemandDelay);
                     backoff = NewBackoff;
                     if (!WaitSuccess) {
                         return null; // User cancelled the wait
@@ -191,7 +201,13 @@ public static partial class ApiRetryPolicy {
     /// On subsequent failures, increases wait time linearly by 30 seconds.
     /// [Human] Wenn die API überlastet ist oder das Netzwerk abgreißt, berechnet diese Methode, wie lange wir warten müssen.
     /// </summary>
-    private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(Exception ex, int attempt, int maxRetries, int currentBackoff, string retryContext) {
+    private static async Task<(bool WaitSuccess, int NewBackoff)> HandleBackoffAsync(
+        Exception ex,
+        int attempt,
+        int maxRetries,
+        int currentBackoff,
+        string retryContext,
+        int? highDemandDelay = null) {
         int waitTime;
         int nextBackoff;
 
@@ -207,8 +223,15 @@ public static partial class ApiRetryPolicy {
             nextBackoff = currentBackoff;
         }
         else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
-            waitTime = 180; // 3 Minuten
-            Ui.Warn($"{contextMsg} Das Modell ist stark nachgefragt. Warte pauschal 3 Minuten... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Hohe Auslastung");
+            int highDemandWait = highDemandDelay.HasValue && highDemandDelay.Value > 0
+                ? highDemandDelay.Value
+                : DefaultHighDemandDelaySeconds;
+            if (highDemandWait <= 0) highDemandWait = 180;
+            waitTime = highDemandWait;
+            string timeDesc = highDemandWait % 60 == 0 && highDemandWait > 0
+                ? (highDemandWait == 60 ? "1 Minute" : $"{highDemandWait / 60} Minuten")
+                : $"{highDemandWait} Sekunden";
+            Ui.Warn($"{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Hohe Auslastung");
             nextBackoff = waitTime;
         }
         else {

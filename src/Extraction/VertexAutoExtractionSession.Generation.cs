@@ -272,7 +272,8 @@ public partial class VertexAutoExtractionSession {
                         requestOutputTokens = 0;
                         requestCachedTokens = 0;
                         usage = new UsageReport();
-                    }
+                    },
+                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null
                 );
             }
             catch (Exception ex) {

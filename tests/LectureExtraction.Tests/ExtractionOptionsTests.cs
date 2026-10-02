@@ -32,7 +32,7 @@ public class ExtractionOptionsTests {
 
         ExtractionOptions.Apply(config, Parse("media", "probe", "--input", "x.mp4"));
 
-        Assert.Equal(3, config.NumberOfParts);
+        Assert.Equal(3, (int)config.NumberOfParts);
         Assert.Equal(180, config.OverlapSeconds);
         Assert.Equal(1.0, config.SpeedMultiplier);
         Assert.Equal("fast", config.FfmpegPreset);
@@ -47,8 +47,18 @@ public class ExtractionOptionsTests {
 
         ExtractionOptions.Apply(config, Parse("media", "segment", "--input", "x.mp4", "--parts", "5", "--overlap", "90"));
 
-        Assert.Equal(5, config.NumberOfParts);
+        Assert.Equal(5, (int)config.NumberOfParts);
         Assert.Equal(90, config.OverlapSeconds);
+    }
+
+    [Fact]
+    public void Apply_OverridesTheSegmentGeometry_WithAuto() {
+        var config = ConfigWithKnownValues();
+
+        ExtractionOptions.Apply(config, Parse("media", "segment", "--input", "x.mp4", "--parts", "auto"));
+
+        Assert.True(config.NumberOfParts.IsAuto);
+        Assert.Equal(NumberOfParts.Auto, config.NumberOfParts);
     }
 
     [Fact]

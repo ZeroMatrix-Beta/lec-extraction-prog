@@ -28,4 +28,10 @@ public class UiTests {
             AnsiConsole.Console = previous;
         }
     }
+
+    [Fact]
+    public async Task SmartDelayAsync_ZeroSeconds_ReturnsTrueImmediately() {
+        bool result = await InteractiveDelay.SmartDelayAsync(0);
+        Assert.True(result);
+    }
 }

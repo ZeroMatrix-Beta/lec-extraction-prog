@@ -70,7 +70,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public bool GenerateAudioFile { get; set; } = true;
     public bool GoIntoLatexRefinement { get; set; } = true;
     public bool UseChosenModelForRestOfPipeline { get; set; } = true;
-    public int NumberOfParts { get; set; } = 3;
+    public NumberOfParts NumberOfParts { get; set; } = 3;
     public int OverlapSeconds { get; set; } = 180;
     public bool CreateLogFiles { get; set; } = true;
     public bool EnableParallelFileUploads { get; set; } = true;
@@ -79,6 +79,13 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public string FfmpegPreset { get; set; } = "fast";
     public int RateLimitDelaySeconds { get; set; } = 130;
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] Vertex counterpart: delay in seconds when the model returns a "high demand" error.
+    /// Defaults to 180 seconds (3 minutes) if unspecified, or can be configured to e.g. 64 seconds.
+    /// [Human] Wartezeit in Sekunden, wenn das Modell überlastet ist ("high demand").
+    /// </summary>
+    public int HighDemandDelaySeconds { get; set; } = 180;
 
     /// <summary>
     /// [AI Context] Vertex counterpart: skips the informational CountTokensAsync call before each

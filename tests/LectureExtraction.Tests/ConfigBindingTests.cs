@@ -183,6 +183,19 @@ public class ConfigBindingTests {
         Assert.Equal("gemma-2-9b", selection.Available[2]);
         Assert.Equal("gemma-2-9b", selection.Current);
     }
+
+    [Fact]
+    public void HighDemandDelaySeconds_DefaultsAndBindsCorrectly() {
+        var aiStudioDefault = new AiStudioAutoExtractionConfig();
+        Assert.Equal(180, aiStudioDefault.HighDemandDelaySeconds);
+
+        var vertexDefault = new VertexAutoExtractionConfig();
+        Assert.Equal(180, vertexDefault.HighDemandDelaySeconds);
+
+        LectureExtraction.GoogleAi.ApiRetryPolicy.DefaultHighDemandDelaySeconds = 64;
+        Assert.Equal(64, LectureExtraction.GoogleAi.ApiRetryPolicy.DefaultHighDemandDelaySeconds);
+        LectureExtraction.GoogleAi.ApiRetryPolicy.DefaultHighDemandDelaySeconds = 180;
+    }
 }
 
 

@@ -6,7 +6,7 @@ public interface IAutoExtractionConfig {
     bool UseChosenModelForRestOfPipeline { get; }
     bool GenerateOffsetFiles { get; }
     bool GenerateAudioFile { get; }
-    int NumberOfParts { get; }
+    NumberOfParts NumberOfParts { get; }
     int OverlapSeconds { get; }
     string SourceFolder { get; }
     string[] PredefinedSourceFolders { get; }
@@ -20,5 +20,6 @@ public interface IAutoExtractionConfig {
     bool InlinePrecedingLecTexParts { get; }
     bool VerboseConsoleOutput { get; }
     bool OnlyDoWarmUp { get; }
+    int HighDemandDelaySeconds { get; }
 }
 

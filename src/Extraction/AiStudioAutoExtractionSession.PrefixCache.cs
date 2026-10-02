@@ -211,7 +211,8 @@ public partial class AiStudioAutoExtractionSession {
                     () => _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents),
                     maxRetries: 8,
                     initialBackoff: backoff,
-                    retryContext: $"CountTokens {stepLabel}");
+                    retryContext: $"CountTokens {stepLabel}",
+                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null);
                 int totalToks = counted?.TotalTokens ?? 0;
                 int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
                 string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
@@ -246,7 +247,8 @@ public partial class AiStudioAutoExtractionSession {
                     await Task.CompletedTask;
                 },
                 cancellationToken: CancellationToken.None,
-                retryContext: "Cache-Warming Handshake"
+                retryContext: "Cache-Warming Handshake",
+                highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null
             );
 
             if (success) {

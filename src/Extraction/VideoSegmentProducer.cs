@@ -47,6 +47,7 @@ public static partial class VideoSegmentProducer {
             var cachedParts = Directory.GetFiles(tmpFolderForFile, $"{baseName}-part*.mp4").ToList();
 
             double fullOriginalVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(file); // Get original video duration
+            int expectedParts = config.NumberOfParts.Resolve(fullOriginalVideoDuration);
             TimeSpan cacheDuration = TimeSpan.FromHours(48); // Set cache duration to 48 hours (2 days)
             bool useCache = false;
 
@@ -66,7 +67,7 @@ public static partial class VideoSegmentProducer {
                         }
                     }
 
-                    if (cachedParts.Count == config.NumberOfParts && allFilesValid) {
+                    if (cachedParts.Count == expectedParts && allFilesValid) {
                         useCache = true;
                     }
                     else {
@@ -94,7 +95,7 @@ public static partial class VideoSegmentProducer {
                     string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{speed.ToString(CultureInfo.InvariantCulture)}-compressed.mp4");
                     speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                 }
-                double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (config.NumberOfParts - 1) * config.OverlapSeconds) / config.NumberOfParts : 0;
+                double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (expectedParts - 1) * config.OverlapSeconds) / expectedParts : 0;
                 var cachedPartsWithTimes = new List<VideoSegment>();
                 for (int i = 0; i < cachedParts.Count; i++) {
                     double startTime = (segmentLengthForCached > 0 && i > 0) ? i * (segmentLengthForCached - config.OverlapSeconds) : 0;
@@ -126,8 +127,8 @@ public static partial class VideoSegmentProducer {
             }
 
             Ui.Blank();
-            Ui.Detail($"Starte Splitting für {Path.GetFileName(videoToSplit)} in {config.NumberOfParts} Teile ({config.OverlapSeconds}s Overlap)...", "FFmpeg Producer");
-            var rawPartsWithTimes = await FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: config.NumberOfParts, overlapSeconds: config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: config.FfmpegPreset);
+            Ui.Detail($"Starte Splitting für {Path.GetFileName(videoToSplit)} in {expectedParts} Teile ({config.OverlapSeconds}s Overlap)...", "FFmpeg Producer");
+            var rawPartsWithTimes = await FfmpegToolkit.ProcessSplitVideoAsync(videoToSplit, tmpFolderForFile, parts: expectedParts, overlapSeconds: config.OverlapSeconds, downmixToMono: false, streamCopy: true, overwrite: true, preset: config.FfmpegPreset);
 
             if (rawPartsWithTimes.Count > 0) {
                 List<VideoSegment> safePartsWithTimes = [];

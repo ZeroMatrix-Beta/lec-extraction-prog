@@ -54,10 +54,12 @@ public static class MediaCommands {
             var lecture = VideoDateParser.Parse(input);
             var info = new FileInfo(input);
 
+            int resolvedParts = config.NumberOfParts.Resolve(duration);
+
             // The same geometry the splitter uses, so a caller can see the segment count and the
             // request count that follows from it before committing to a run.
             double segmentLength = duration > 0
-                ? (duration + ((config.NumberOfParts - 1) * config.OverlapSeconds)) / config.NumberOfParts
+                ? (duration + ((resolvedParts - 1) * config.OverlapSeconds)) / resolvedParts
                 : 0;
 
             var payload = new {
@@ -71,7 +73,7 @@ public static class MediaCommands {
                     weekday = lecture.WeekdayEnglish
                 },
                 segments = new {
-                    count = config.NumberOfParts,
+                    count = resolvedParts,
                     overlapSeconds = config.OverlapSeconds,
                     estimatedLengthSeconds = Math.Round(segmentLength, 2)
                 }
@@ -82,7 +84,7 @@ public static class MediaCommands {
                 Ui.Detail($"Dauer:     {TimeSpan.FromSeconds(Math.Max(0, duration)):hh\\:mm\\:ss} ({duration:F1}s)");
                 Ui.Detail($"Größe:     {info.Length / 1024.0 / 1024.0:F1} MB");
                 Ui.Detail($"Vorlesung: {(lecture.IsValid ? lecture.GetFormattedContext() : "kein erkanntes Datums-/Wochen-Schema")}");
-                Ui.Detail($"Segmente:  {config.NumberOfParts} x ~{segmentLength:F0}s ({config.OverlapSeconds}s Overlap)");
+                Ui.Detail($"Segmente:  {resolvedParts} x ~{segmentLength:F0}s ({config.OverlapSeconds}s Overlap)");
             });
 
             // A duration of -1 means ffprobe could not read the file at all - a caller scripting
@@ -112,17 +114,19 @@ public static class MediaCommands {
             EnsureTargetFolder(config, input);
 
             if (context.DryRun) {
+                double duration = await FfmpegToolkit.GetVideoDurationAsync(input);
+                int parts = config.NumberOfParts.Resolve(duration);
                 CliOutput.Payload(context, new {
                     file = Path.GetFullPath(input),
                     targetFolder = config.TargetFolder,
-                    parts = config.NumberOfParts,
+                    parts = parts,
                     overlapSeconds = config.OverlapSeconds,
                     speed = config.SpeedMultiplier,
                     preset = config.FfmpegPreset,
                     wouldRun = true
                 }, () => {
                     Ui.Step("Dry run");
-                    Ui.Detail($"Würde {Path.GetFileName(input)} in {config.NumberOfParts} Teile schneiden ({config.OverlapSeconds}s Overlap, {config.SpeedMultiplier}x).");
+                    Ui.Detail($"Würde {Path.GetFileName(input)} in {parts} Teile schneiden ({config.OverlapSeconds}s Overlap, {config.SpeedMultiplier}x).");
                     Ui.Detail($"Ziel: {config.TargetFolder}");
                 });
                 return ExitCodes.Success;

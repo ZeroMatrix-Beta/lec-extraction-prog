@@ -60,7 +60,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool GenerateAudioFile { get; set; } = true;
     public bool GoIntoLatexRefinement { get; set; } = true;
     public bool UseChosenModelForRestOfPipeline { get; set; } = true;
-    public int NumberOfParts { get; set; } = 3;
+    public NumberOfParts NumberOfParts { get; set; } = 3;
     public int OverlapSeconds { get; set; } = 180;
     public bool CreateLogFiles { get; set; } = true;
     public bool EnableParallelFileUploads { get; set; } = true;
@@ -77,6 +77,13 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool SendDummyFileWithEachWarmUpRound { get; set; } = false;
     public int HistoryRateLimitDelaySeconds { get; set; } = 65;
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = true;
+
+    /// <summary>
+    /// [AI Context] Delay in seconds when the model returns a "high demand" error (HTTP 503 / RESOURCE_EXHAUSTED).
+    /// Defaults to 180 seconds (3 minutes) if unspecified, or can be set to e.g. 64 seconds.
+    /// [Human] Wartezeit in Sekunden, wenn das Modell überlastet ist ("high demand").
+    /// </summary>
+    public int HighDemandDelaySeconds { get; set; } = 180;
 
     /// <summary>
     /// [AI Context] When true, the informational CountTokensAsync call before each cache-warming

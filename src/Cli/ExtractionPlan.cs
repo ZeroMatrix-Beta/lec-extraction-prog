@@ -121,7 +121,7 @@ public static class ExtractionPlanner {
             ApiKeyResolves: GoogleAiClientBuilder.IsApiKeyPresent(envName),
             SourceFolder: config.SourceFolder,
             TargetFolder: targetFolder,
-            SegmentsPerVideo: config.NumberOfParts,
+            SegmentsPerVideo: config.NumberOfParts.Resolve(),
             OverlapSeconds: config.OverlapSeconds,
             SpeedMultiplier: config.SpeedMultiplier,
             RefinementFollows: config.GoIntoLatexRefinement,
@@ -142,14 +142,15 @@ public static class ExtractionPlanner {
         string outputFolder = Path.Combine(targetFolder, ExtractionHelpers.ComputeOutputFolderName(video));
         string texBaseName = ExtractionHelpers.ComputeTexBaseName(video);
 
+        int segmentCount = config.NumberOfParts.Resolve();
         return new PlannedVideo(
             FileName: Path.GetFileName(video),
             Path: Path.GetFullPath(video),
             NameMatchesSchema: lecture.IsValid,
             LectureDate: lecture.Date == DateTime.MinValue ? null : lecture.Date.ToString("yyyy-MM-dd"),
             WeekNumber: lecture.WeekNumber,
-            SegmentCount: config.NumberOfParts,
-            ResumableSegments: force ? 0 : CountResumableSegments(outputFolder, texBaseName, config.NumberOfParts, resumeWindowHours),
+            SegmentCount: segmentCount,
+            ResumableSegments: force ? 0 : CountResumableSegments(outputFolder, texBaseName, segmentCount, resumeWindowHours),
             OutputFolder: outputFolder);
     }
 

@@ -109,7 +109,8 @@ public partial class VertexAutoExtractionSession {
                     () => _client.Models.CountTokensAsync(_config.CurrentModel, warmupContents),
                     maxRetries: 8,
                     initialBackoff: backoff,
-                    retryContext: "CountTokens Warmup");
+                    retryContext: "CountTokens Warmup",
+                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null);
                 int totalToks = counted?.TotalTokens ?? 0;
                 int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
                 Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
@@ -138,7 +139,8 @@ public partial class VertexAutoExtractionSession {
                     await Task.CompletedTask;
                 },
                 cancellationToken: CancellationToken.None,
-                retryContext: "Cache-Warming Handshake"
+                retryContext: "Cache-Warming Handshake",
+                highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null
             );
 
             if (success) {

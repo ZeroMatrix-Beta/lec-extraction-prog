@@ -67,6 +67,10 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
     /// [Human] Bereitet die Session vor: Prüft Ordner, warnt bei falschen Dateinamen (wichtig für die chronologische Sortierung) und lädt History/System-Prompt hoch.
     /// </summary>
     public async Task StartAsync() {
+        if (_config.HighDemandDelaySeconds > 0) {
+            ApiRetryPolicy.DefaultHighDemandDelaySeconds = _config.HighDemandDelaySeconds;
+        }
+
         if (!Directory.Exists(_config.SourceFolder)) {
             Ui.Error($"Quellordner nicht gefunden: {_config.SourceFolder}");
             return;
@@ -519,8 +523,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         delayMessage = "Warte auf Wiederherstellung der Internetverbindung...";
                     }
                     else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
-                        waitTime = 180;
-                        Ui.Warn($"[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte 3 Minuten...");
+                        int highDemandWait = _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : 180;
+                        waitTime = highDemandWait;
+                        string timeDesc = highDemandWait % 60 == 0 && highDemandWait > 0
+                            ? (highDemandWait == 60 ? "1 Minute" : $"{highDemandWait / 60} Minuten")
+                            : $"{highDemandWait}s";
+                        Ui.Warn($"[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}...");
                         backoff = waitTime;
                     }
                     else if (attempt == 1) {
@@ -807,7 +815,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
             if (_latexRefinementConfig != null) {
                 _latexRefinementConfig.UseVertex = AppConfig.IsVertexAiEnabled;
-                if (_config.NumberOfParts <= 1) {
+                if (!_config.NumberOfParts.IsAuto && (int)_config.NumberOfParts <= 1) {
                     Ui.Info($"NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.", "AutoExtraction");
                     _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
                 }

@@ -373,7 +373,7 @@ If the application gets stuck in a retry-loop with an `Internal error encountere
 
 The `ApiRetryPolicy` class wraps all calls to the Google API and handles transient errors gracefully:
 - **Rate Limits (HTTP 429):** If the API returns a `retryDelay`, the application parses it and waits exactly that long plus a 20-second buffer.
-- **High Demand (HTTP 503):** If the server is overloaded ("high demand"), the application initiates a hard 3-minute backoff.
+- **High Demand (HTTP 503):** If the server is overloaded ("high demand"), the application initiates a backoff (configurable via `HighDemandDelaySeconds`, defaulting to 3 minutes / 180 seconds if unspecified).
 - **Linear Backoff:** For general 500 errors, the application uses a linear backoff (e.g., 45s, 75s, 105s) up to 8 times.
 - **Interactive Skip:** During any waiting period, the user can press `Enter` to force an immediate retry, or `Ctrl+C` to cancel the delay. Canceling the delay aborts the current video chunk and safely moves the batch processor to the next file without crashing the application.
 
@@ -758,7 +758,7 @@ Wenn die Anwendung in einer Retry-Schleife mit einem `Internal error encountered
 
 Die Klasse `ApiRetryPolicy` kapselt alle Aufrufe an die Google API und behandelt transiente Fehler anmutig:
 - **Ratenlimits (HTTP 429):** Wenn die API ein `retryDelay` zurückgibt, parst die Anwendung dies und wartet genau so lange plus einen Puffer von 20 Sekunden.
-- **Hohe Auslastung (HTTP 503):** Wenn der Server überlastet ist ("high demand"), initiiert die Anwendung einen harten 3-Minuten-Backoff.
+- **Hohe Auslastung (HTTP 503):** Wenn der Server überlastet ist ("high demand"), initiiert die Anwendung einen Backoff (konfigurierbar über `HighDemandDelaySeconds`, standardmäßig 3 Minuten / 180 Sekunden).
 - **Linearer Backoff:** Für allgemeine 500er Fehler verwendet die Anwendung einen linearen Backoff (z. B. 45s, 75s, 105s) bis zu 8 Mal.
 - **Interaktiver Skip:** Während jeder Wartezeit kann der Benutzer `Enter` drücken, um einen sofortigen Retry zu erzwingen, oder `Ctrl+C`, um die Verzögerung abzubrechen. Das Abbrechen der Verzögerung bricht den aktuellen Video-Chunk ab und bewegt den Batch-Prozessor sicher zur nächsten Datei, ohne dass die Anwendung abstürzt.
 

@@ -86,7 +86,15 @@ public static class ConfigSectionRegistry {
         }
 
         var target = Nullable.GetUnderlyingType(leaf.PropertyType) ?? leaf.PropertyType;
-        if (target.IsArray || (!target.IsPrimitive && !target.IsEnum && target != typeof(string) && target != typeof(decimal))) {
+        var converter = System.ComponentModel.TypeDescriptor.GetConverter(target);
+        bool isSupportedScalar = target.IsPrimitive
+            || target.IsEnum
+            || target == typeof(string)
+            || target == typeof(decimal)
+            || target == typeof(NumberOfParts)
+            || converter.CanConvertFrom(typeof(string));
+
+        if (target.IsArray || !isSupportedScalar) {
             error = $"'{leafName}' is a {target.Name}; only scalar values can be set from the command line.";
             return false;
         }
@@ -94,7 +102,9 @@ public static class ConfigSectionRegistry {
         try {
             object converted = target.IsEnum
                 ? Enum.Parse(target, rawValue, ignoreCase: true)
-                : Convert.ChangeType(rawValue, target, CultureInfo.InvariantCulture);
+                : (target == typeof(NumberOfParts)
+                    ? NumberOfParts.Parse(rawValue)
+                    : Convert.ChangeType(rawValue, target, CultureInfo.InvariantCulture));
             leaf.SetValue(current, converted);
         }
         catch (Exception ex) {

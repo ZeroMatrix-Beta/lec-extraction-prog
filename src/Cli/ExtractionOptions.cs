@@ -14,8 +14,8 @@ public static class ExtractionOptions {
         Description = "Target folder for the produced files. Defaults to the configured target folder."
     };
 
-    public static readonly Option<int?> Parts = new("--parts") {
-        Description = "Number of overlapping segments to split into."
+    public static readonly Option<string?> Parts = new("--parts") {
+        Description = "Number of overlapping segments to split into (positive integer or 'auto')."
     };
 
     public static readonly Option<int?> Overlap = new("--overlap") {
@@ -48,8 +48,10 @@ public static class ExtractionOptions {
             config.TargetFolder = System.IO.Path.GetFullPath(target);
         }
 
-        if (parseResult.GetValue(Parts) is int parts) {
-            config.NumberOfParts = parts;
+        if (parseResult.GetValue(Parts) is string partsRaw && !string.IsNullOrWhiteSpace(partsRaw)) {
+            if (NumberOfParts.TryParse(partsRaw, out var parts)) {
+                config.NumberOfParts = parts;
+            }
         }
 
         if (parseResult.GetValue(Overlap) is int overlap) {

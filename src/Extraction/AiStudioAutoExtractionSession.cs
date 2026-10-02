@@ -134,6 +134,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Directory.CreateDirectory(_config.TargetFolder);
         }
 
+        if (_config.HighDemandDelaySeconds > 0) {
+            ApiRetryPolicy.DefaultHighDemandDelaySeconds = _config.HighDemandDelaySeconds;
+        }
+
         return true;
     }
 
@@ -462,7 +466,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         if (_latexRefinementConfig != null) {
             _latexRefinementConfig.UseVertex = false;
-            if (_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
+            if (!_config.NumberOfParts.IsAuto && (int)_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
                 Ui.Info($"NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.", "AutoExtraction");
                 _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
             }
@@ -510,7 +514,6 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         public bool FileProcessingSuccess = true;
         public Task<SegmentUpload>? PendingVideoUploadTask;
         public Task<List<Part>>? PendingAudioUploadTask;
-        public Task? RateLimitDelayTask;
         public Client? RefinementClient;
     }
 
@@ -552,6 +555,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             if (_config.EnableParallelFileUploads && state.PendingVideoUploadTask != null) {
                 Ui.Info($"Nutze im Hintergrund bereits hochgeladenes Video für Teil {i + 1}...", "Pre-Upload");
                 uploadTask = state.PendingVideoUploadTask;
+                state.PendingVideoUploadTask = null;
             }
             else {
                 uploadTask = UploadSegmentAndBuildPromptAsync(safePartPath, i + 1, partsWithTimes.Count, file, fullOriginalVideoDuration);
@@ -567,10 +571,19 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
             state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
 
-            if (state.RateLimitDelayTask != null) {
-                Ui.Detail("Warte auf Freigabe des vorherigen Timers...", "Rate-Limit");
-                await state.RateLimitDelayTask;
-                state.RateLimitDelayTask = null;
+            if (i > 0) {
+                int rateLimitDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
+                double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
+                if (secondsSinceLastGen < rateLimitDelay && !InteractiveDelay.IsInSmartDelay) {
+                    int waitRemaining = (int)Math.Ceiling(rateLimitDelay - secondsSinceLastGen);
+                    if (waitRemaining > 0) {
+                        Ui.Detail($"Warte verbleibende {waitRemaining} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...", "Rate-Limit & Quota");
+                        if (!await InteractiveDelay.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token Refill)...")) {
+                            state.FileProcessingSuccess = false;
+                            break;
+                        }
+                    }
+                }
             }
 
             // If EnableParallelFileUploads is enabled, start pre-uploading the next part (or the audio file if this is the last part) while Gemini processes the current part.
@@ -605,16 +618,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
 
             segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles);
+            InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             state.FileTotalTokens += segmentTranscript.Usage;
 
-            if (i + 1 < partsWithTimes.Count) {
-                state.RateLimitDelayTask = Task.Run(async () => {
-                    int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-                    Ui.Detail($"Warte {delay} Sekunden vor dem nächsten Videoteil, um API-Limits zu schonen...", "Timer");
-                    await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...");
-                });
-            }
             int partFreshTokens = segmentTranscript.Usage.Fresh;
 
             if (!string.IsNullOrWhiteSpace(segmentTranscript.LatexBody)) {

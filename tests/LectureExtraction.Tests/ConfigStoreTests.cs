@@ -121,7 +121,16 @@ public class ConfigWritePathTests {
         var config = new AiStudioAutoExtractionConfig();
 
         Assert.True(ConfigSectionRegistry.TryWritePath(config, "NumberOfParts", "7", out _));
-        Assert.Equal(7, config.NumberOfParts);
+        Assert.Equal(7, (int)config.NumberOfParts);
+    }
+
+    [Fact]
+    public void TryWritePath_SetsAuto() {
+        var config = new AiStudioAutoExtractionConfig();
+
+        Assert.True(ConfigSectionRegistry.TryWritePath(config, "NumberOfParts", "auto", out _));
+        Assert.True(config.NumberOfParts.IsAuto);
+        Assert.Equal(NumberOfParts.Auto, config.NumberOfParts);
     }
 
     [Fact]
