@@ -56,13 +56,35 @@ public static partial class FileTreeRenderer {
             baseDir = FindCommonBaseDirectory(filePaths);
         }
 
+        // [AI Context] This text goes into every Gemini request, so it is a flat list of relative
+        // paths: the box-drawing tree, the emoji icons and the repeated file names of the console
+        // view cost ~2k tokens per request and tell the model nothing the paths do not.
         var root = BuildVirtualTree(filePaths, baseDir);
         var sb = new System.Text.StringBuilder();
         if (!string.IsNullOrEmpty(baseDir)) {
-            sb.AppendLine($"  📁 {baseDir}");
+            sb.AppendLine($"Root: {baseDir}");
         }
-        RenderVirtualTreeNode(root, "      ", showRelativePath: true, line => sb.AppendLine(line));
+        RenderFlatPathList(root, line => sb.AppendLine(line));
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// [AI Context] Writes one "- ./relative/path" line per file, in the same order as the tree
+    /// view (files before folders, each level sorted by name).
+    /// </summary>
+    private static void RenderFlatPathList(VirtualTreeNode node, Action<string> writeLine) {
+        var children = node.Children.Values
+            .OrderBy(c => c.IsDirectory ? 1 : 0)
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var child in children) {
+            if (child.IsDirectory) {
+                RenderFlatPathList(child, writeLine);
+            }
+            else {
+                writeLine($"- {child.RelativePath ?? child.Name}");
+            }
+        }
     }
 
     /// <summary>
