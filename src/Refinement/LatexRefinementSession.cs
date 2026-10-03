@@ -237,7 +237,7 @@ public partial class LatexRefinementSession {
         if (audioAttached) {
             var round1Parts = new List<Part>();
             string round1Prompt = $"Here is the combined .tex file to process. It was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
-                                  (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"\nExpected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
+                                  (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"\nExpected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `speech` block!)\n\n") +
                                   "Please acknowledge you have read it. I will provide the audio file and final merge instructions in the next round.";
             round1Parts.Add(new Part { Text = round1Prompt });
             foreach (var file in inputFiles) {
@@ -253,7 +253,7 @@ public partial class LatexRefinementSession {
             var round2Parts = new List<Part>();
             round2Parts.AddRange(audioParts);
             string round2Prompt = $"Here is the generated audio file. The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
-                                  $"The `spoken-clean` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `spoken-clean` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio. Please perform the merge and timestamp correction according to the system instructions.";
+                                  $"The `speech` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `speech` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio. Please perform the merge and timestamp correction according to the system instructions.";
             round2Parts.Add(new Part { Text = round2Prompt });
 
             history.Add(new Content { Role = "user", Parts = round2Parts });
@@ -266,7 +266,7 @@ public partial class LatexRefinementSession {
             string promptText = "Here is the combined file with all the offset parts together. " +
                                 $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
                                 $"The actual audio/lecture length is roughly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
-                                (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `spoken-clean` block!)\n\n") +
+                                (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `speech` block!)\n\n") +
                                 "Important: Since no audio file is attached, the timestamps in subsequent parts have already been pre-adjusted to global lecture time. Please eliminate redundant overlapping blocks at the part seams and only fix timestamps that look completely out of order or severely broken across boundaries. Otherwise, trust and preserve the existing pre-calibrated timestamps.";
             parts.Add(new Part { Text = promptText });
             foreach (var file in inputFiles) {
@@ -320,18 +320,18 @@ public partial class LatexRefinementSession {
 
         if (audioAttached && audioParts.Count > 0) {
             var round1Parts = new List<Part> {
-                new() { Text = "Here is the current merged LaTeX document (.tex file) to process. Please read and internalize the entire document structure, including all math containers, equations, and `spoken-clean` blocks. Please acknowledge that you have read it. I will provide the audio file and speech refinement instructions in the next round." },
+                new() { Text = "Here is the current merged LaTeX document (.tex file) to process. Please read and internalize the entire document structure, including all math containers, equations, and `speech` blocks. Please acknowledge that you have read it. I will provide the audio file and speech refinement instructions in the next round." },
                 new() { Text = $"<input_tex name=\"{Path.GetFileName(inputFile)}\">\n{content}\n</input_tex>" }
             };
 
             List<Content> history = [
                 new() { Role = "user", Parts = round1Parts },
-                new() { Role = "model", Parts = [new Part { Text = "Understood. I have read the complete LaTeX document and internalized all mathematical structures, formulas, timestamps, and `spoken-clean` environments. I will preserve all math, timestamps, and LaTeX structure exactly as they are. I am ready for the audio file to listen to the speech and refine the spoken text inside the `spoken-clean` environments." }] }
+                new() { Role = "model", Parts = [new Part { Text = "Understood. I have read the complete LaTeX document and internalized all mathematical structures, formulas, timestamps, and `speech` environments. I will preserve all math, timestamps, and LaTeX structure exactly as they are. I am ready for the audio file to listen to the speech and refine the spoken text inside the `speech` environments." }] }
             ];
 
             var round2Parts = new List<Part>();
             round2Parts.AddRange(audioParts);
-            round2Parts.Add(new Part { Text = "Here is the lecture audio file. Please listen to the audio carefully and refine the text strictly inside the `spoken-clean` environments to fix any transcription, word choice, or grammatical errors according to the system instructions. Do not alter any mathematical formulas, equations, or timestamps. Output only the refined LaTeX code." });
+            round2Parts.Add(new Part { Text = "Here is the lecture audio file. Please listen to the audio carefully and refine the text strictly inside the `speech` environments to fix any transcription, word choice, or grammatical errors according to the system instructions. Do not alter any mathematical formulas, equations, or timestamps. Output only the refined LaTeX code." });
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Ui.Info("Verwende Multi-Turn-Struktur für Schritt 2 (Simulation von Text-Dokument + Audio-Refinement).", "Step 2");
@@ -340,7 +340,7 @@ public partial class LatexRefinementSession {
         }
         else {
             var parts = new List<Part> {
-                new() { Text = "Please refine the text strictly in between the `spoken-clean` environments according to the system instructions. Do not alter the math or the timestamps." },
+                new() { Text = "Please refine the text strictly in between the `speech` environments according to the system instructions. Do not alter the math or the timestamps." },
                 new() { Text = $"<input_tex>\n{content}\n</input_tex>" }
             };
             AttachmentUploader.HasJustUploaded = false;
@@ -410,11 +410,11 @@ public partial class LatexRefinementSession {
             int minExpectedMath = (int)(expectedMathStroke * 0.6);
 
             if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
-                Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} spoken-clean / ~{expectedMathStroke} math-stroke, Erhalten: {actualSpokenClean} spoken-clean / {actualMathStroke} math-stroke.", "Refinement");
+                Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} speech / ~{expectedMathStroke} content, Erhalten: {actualSpokenClean} speech / {actualMathStroke} content.", "Refinement");
                 return null;
             }
             else {
-                Ui.Detail($"Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} spoken-clean, {actualMathStroke}/{expectedMathStroke} math-stroke.", "Refinement");
+                Ui.Detail($"Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} speech, {actualMathStroke}/{expectedMathStroke} content.", "Refinement");
             }
         }
 
@@ -485,10 +485,11 @@ public partial class LatexRefinementSession {
         return name;
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{spoken-clean\}")]
+    // `speech` and `content` since the environment rename; the old names still count, for older output.
+    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{(?:speech|spoken-clean)\}")]
     private static partial System.Text.RegularExpressions.Regex SpokenCleanRegex();
 
-    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{math-stroke\}")]
+    [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{(?:content|math-stroke)\}")]
     private static partial System.Text.RegularExpressions.Regex MathStrokeRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\\begin\{document\}|\\end\{document\}", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]

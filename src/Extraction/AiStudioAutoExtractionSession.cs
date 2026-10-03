@@ -356,11 +356,11 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         string s = "Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.\n\n" +
                    "<context_and_parameters>\n" +
                    "IMPORTANT: The System Instructions (System Prompt) contain the absolute rules, syntax specifications, and constraints for the lecture transcription and MUST be followed strictly. The parameters below specify details for this video fragment:\n\n" +
-                   "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts (i.e. do not try to fix the cut). Focus solely on transcribing this fragment as it is. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'math-stroke' environments to preserve logical flow.</parameter>\n";
+                   "<parameter name=\"merging_and_scope\">Do NOT attempt to merge the current part with the previous parts (i.e. do not try to fix the cut). Focus solely on transcribing this fragment as it is. As specified in the System Instructions, keep mathematical derivations and explanations self-contained and grouped within 'content' environments to preserve logical flow.</parameter>\n";
         if (partNumber != 1) {
             s += "<parameter name=\"segment_start\">\n" +
                  "1. Start the transcription EXACTLY where the audio begins in this specific video segment, even if it is mid-sentence. Do not attempt to reconstruct the beginning of the sentence from the previous context, and do not perform any overlap correction.\n" +
-                 "2. If the previous part ended in the middle of an environment (like a `proof`, `short-proof`, or `math-stroke`), you MUST logically continue that environment in this part (e.g., start with `\\begin{proof}` or `\\begin{math-stroke}` if the professor is still doing the proof/derivation). However, you must still transcribe the spoken words exactly from where this new video segment begins.\n" +
+                 "2. If the previous part ended in the middle of an environment (like a `proofWrapper`, `proof`, or `content`), you MUST logically continue that environment in this part (e.g., start with `\\begin{proofWrapper}` or `\\begin{content}` if the professor is still doing the proof/derivation). However, you must still transcribe the spoken words exactly from where this new video segment begins.\n" +
                  "</parameter>\n";
         }
         return s;

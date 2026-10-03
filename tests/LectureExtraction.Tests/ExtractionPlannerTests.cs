@@ -189,3 +189,15 @@ public class ExtractionHelpersNamingTests {
                      ExtractionHelpers.ComputeTexBaseName("lecture.mp4"));
     }
 }
+
+/// <summary>The durations the per-part prompt announces; the hour used to be dropped.</summary>
+public class ExtractionHelpersDurationTests {
+    [Theory]
+    [InlineData(1979, "32 minutes and 59 seconds (00:32:59)")]               // algebra-1 week 2, part 1
+    [InlineData(5450.88, "1 hour, 30 minutes and 50 seconds (01:30:50)")]    // the whole lecture, was "30 minutes and 50 seconds"
+    [InlineData(7261, "2 hours, 1 minute and 1 second (02:01:01)")]
+    [InlineData(59, "0 minutes and 59 seconds (00:00:59)")]
+    public void FormatDurationForPrompt_KeepsTheHours(double seconds, string expected) {
+        Assert.Equal(expected, ExtractionHelpers.FormatDurationForPrompt(seconds));
+    }
+}

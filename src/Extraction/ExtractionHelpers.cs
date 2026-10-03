@@ -38,6 +38,22 @@ public static partial class ExtractionHelpers {
         return baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase) ? baseName : "step1-" + baseName;
     }
 
+    /// <summary>
+    /// A duration as the per-part prompt states it: in words plus the HH:MM:SS form the
+    /// transcript's timestamps use, e.g. "32 minutes and 59 seconds (00:32:59)". The prompt used
+    /// to format <see cref="TimeSpan.Minutes"/>, the minutes *component*, so a 1:30:50 lecture
+    /// was announced as "30 minutes and 50 seconds" - and Gemini took that as the end of the video.
+    /// </summary>
+    public static string FormatDurationForPrompt(double seconds) {
+        TimeSpan t = TimeSpan.FromSeconds(Math.Floor(seconds));
+        int hours = (int)t.TotalHours;
+        static string Unit(int n, string unit) => $"{n} {unit}{(n == 1 ? "" : "s")}";
+        string words = hours > 0
+            ? $"{Unit(hours, "hour")}, {Unit(t.Minutes, "minute")} and {Unit(t.Seconds, "second")}"
+            : $"{Unit(t.Minutes, "minute")} and {Unit(t.Seconds, "second")}";
+        return $"{words} ({hours:D2}:{t.Minutes:D2}:{t.Seconds:D2})";
+    }
+
     [GeneratedRegex(@"-speed-[\d\.]+-compressed$", RegexOptions.IgnoreCase)]
     private static partial Regex SpeedCompressedRegex();
 

@@ -197,7 +197,7 @@ public partial class LatexRefinementSession {
             expectedSpokenClean = SpokenCleanRegex().Count(allInputText);
             expectedMathStroke = MathStrokeRegex().Count(allInputText);
             if (expectedSpokenClean > 0 || expectedMathStroke > 0) {
-                Ui.Info($"Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x spoken-clean und {expectedMathStroke}x math-stroke Blöcke im Output.");
+                Ui.Info($"Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x speech und {expectedMathStroke}x content Blöcke im Output.");
             }
         }
         catch { }

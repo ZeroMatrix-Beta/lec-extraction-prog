@@ -1,3 +1,28 @@
+% =====================================================================
+%  SHORT-NAME ENVIRONMENT VOCABULARY
+%  Converted in place on 2026-10-03 with convert() from the prompt repo's
+%  tools/make-preamble.py. This file is the real one: edit it directly.
+%
+%  Renamed from the hyphenated originals because a hyphen forces a token
+%  split: `math-stroke` costs 3 tokens where `content` costs 1. Across the
+%  prompt and the generated output this is worth ~5,300 tokens per run.
+%
+%    spoken-clean         -> speech        math-stroke          -> content
+%    student-interaction  -> student       explanation-of-steps -> steps
+%    didactic-insight     -> insight       meta-note            -> note
+%    nice-box             -> overview      color-box            -> highlight
+%    lecture-break        -> pause
+%    short-proof          -> proof         proof                -> proofWrapper
+%    ai-note              -> aiNote
+%    ai-*-invisible-content -> hidden  (all three collapsed into one)
+%
+%  `student` rather than `question`: \newtheorem{question} already exists,
+%  and the clash would have resolved silently to the wrong environment.
+%
+%  Content written against the OLD names still compiles here, through the
+%  compatibility aliases at the end of this file.
+% =====================================================================
+
 \documentclass[11pt,a4paper]{report}
 
 % ==========================================
@@ -28,6 +53,8 @@
 
 \usepackage{amsmath, amssymb, amsthm, mathtools, environ, etoolbox} 
 \usepackage{booktabs}
+\usepackage{listings} % code listings (lstlisting)
+\usepackage{capt-of}  % \captionof for figures outside floats
 \usepackage{fontawesome5}
 \usepackage[dvipsnames, x11names]{xcolor}
 
@@ -342,6 +369,10 @@ bookmarksopen=true
 \usepackage{tikz}
 \usetikzlibrary{calc, arrows.meta, positioning, 3d, shapes.geometric, decorations.pathreplacing, patterns, shadows}
 \usetikzlibrary{fit}
+\usetikzlibrary{arrows} % legacy arrow tips (stealth', right hook, ...) alongside arrows.meta
+\usetikzlibrary{babel}  % keeps ngerman's active " from breaking TikZ/tikz-cd labels ("f")
+\usetikzlibrary{angles, quotes, intersections} % pic {right angle}, "label" syntax, name intersections (Stage 1 rules assume them)
+\usepackage{tikz-cd}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage{titlesec}
@@ -405,6 +436,7 @@ bookmarksopen=true
 \newtheorem{axioms}[theorem]{Axiome}
 \newtheorem{property}[theorem]{Eigenschaft}
 \newtheorem{principle}[theorem]{Prinzip}
+\newtheorem{fact}[theorem]{Fakt}
 \newtheorem{claim}[theorem]{Behauptung}
 \newtheorem{remark}[theorem]{Bemerkung}
 \newtheorem{notation}[theorem]{Notation}
@@ -428,6 +460,7 @@ bookmarksopen=true
 \newtheorem*{axioms*}{Axiome}
 \newtheorem*{property*}{Eigenschaft}
 \newtheorem*{principle*}{Prinzip}
+\newtheorem*{fact*}{Fakt}
 \newtheorem*{claim*}{Behauptung}
 \newtheorem*{remark*}{Bemerkung}
 \newtheorem*{notation*}{Notation}
@@ -448,6 +481,8 @@ bookmarksopen=true
 \Crefname{property}{Eigenschaft}{Eigenschaften}
 \crefname{principle}{Prinzip}{Prinzipien}
 \Crefname{principle}{Prinzip}{Prinzipien}
+\crefname{fact}{Fakt}{Fakten}
+\Crefname{fact}{Fakt}{Fakten}
 \crefname{claim}{Behauptung}{Behauptungen}
 \Crefname{claim}{Behauptung}{Behauptungen}
 \crefname{remark}{Bemerkung}{Bemerkungen}
@@ -472,7 +507,7 @@ bookmarksopen=true
 % ==========================================
 
 % 1. Clean Spoken Protocol
-\newtcolorbox{spoken-clean}[1][]{
+\newtcolorbox{speech}[1][]{
 enhanced,
 frame hidden,
 colback=EnvSpokenBg,
@@ -490,7 +525,7 @@ breakable
 }
 
 % 2. AI Stroke-by-Stroke Note
-\newtcolorbox{nice-box}[1][]{
+\newtcolorbox{overview}[1][]{
 enhanced,
 colback=white,
 boxrule=0.5pt,
@@ -516,7 +551,7 @@ breakable
 }
 
 % 3. Best Teacher / Didactic Insight
-\newtcolorbox{didactic-insight}[1][Didaktisches Konzept]{
+\newtcolorbox{insight}[1][Didaktisches Konzept]{
 enhanced,
 arc=3mm,
 frame hidden,
@@ -535,7 +570,7 @@ breakable
 }
 
 % 4a. Modular Visual Blackboard Replication Box
-\NewTColorBox{color-box}{ m o }{
+\NewTColorBox{highlight}{ m o }{
 enhanced,
 colback=white,
 colupper=black,
@@ -647,7 +682,7 @@ code={
 \NewFormulaBox{red-formula}{BrickRed}{BrickRed!30}
 
 % 5. Mathematical Setup (Stroke-by-Stroke)
-\NewTColorBox{math-stroke}{ O{} }{
+\NewTColorBox{content}{ O{} }{
 enhanced,
 frame hidden,
 colback=white,
@@ -670,7 +705,7 @@ code={
 }
 
 % 6. Meta-Note
-\newtcolorbox{meta-note}[1][Administrative Metanote]{
+\newtcolorbox{note}[1][Administrative Metanote]{
 enhanced,
 frame hidden,
 colback=white,
@@ -688,7 +723,7 @@ breakable
 }
 
 % 7. AI Observational Note
-\newtcolorbox{ai-note}[1][KI-Notiz]{
+\newtcolorbox{aiNote}[1][KI-Notiz]{
 enhanced,
 colback=EnvAIBg,
 dynamic shadow,
@@ -708,7 +743,7 @@ breakable
 }
 
 % 8. Student Question, Student Interaction, or Common Confusion.
-\newtcolorbox{student-interaction}[1][Studentische Interaktion]{
+\newtcolorbox{student}[1][Studentische Interaktion]{
 enhanced,
 frame hidden,
 colback=EnvStudentBg,
@@ -726,7 +761,7 @@ breakable
 }
 
 % 9. Explanation of Steps
-\newenvironment{explanation-of-steps}[1][Erklärung]{
+\newenvironment{steps}[1][Erklärung]{
 \par\vspace{1ex}\noindent\textbf{\textcolor{ExplanationIconColor}{\faListUl\ \ #1:}}
 }{
 \par\vspace{1ex}
@@ -745,7 +780,7 @@ breakable
 \makeatletter
 
 % SHORT PROOF 
-\newenvironment{short-proof}[1][Beweis]{
+\renewenvironment{proof}[1][Beweis]{
     \par\addvspace{2ex plus 0.5ex minus 0.2ex}
     \insideprooftrue 
     \noindent\textcolor{ProofTint}{\faPenNib}\hspace{0.5em}%
@@ -759,7 +794,7 @@ breakable
 }
 
 % LONG PROOF 
-\renewenvironment{proof}[1][Beweis]{
+\newenvironment{proofWrapper}[1][Beweis]{
     \par\addvspace{3.5ex plus 1ex minus .2ex}
     \insideprooftrue 
     \noindent\makebox[0pt][r]{\textcolor{ProofTint}{\faPenNib}\hspace{10pt}}%
@@ -776,7 +811,7 @@ breakable
 \makeatother
 
 % 13. Lecture Break
-\newtcolorbox{lecture-break}[1][Vorlesungspause]{
+\newtcolorbox{pause}[1][Vorlesungspause]{
 enhanced,
 frame hidden,
 colback=white,
@@ -797,14 +832,7 @@ breakable
 % ==========================================
 % INVISIBLE LAYER & FALLBACK ENVIRONMENTS
 % ==========================================
-\NewEnviron{ai-tikz-planner-invisible-content}{}
-\NewEnviron{ai-type-check-invisible-content}{}
-\NewEnviron{ai-proof-skeleton-invisible-content}{}
-\NewEnviron{ai-example-invisible-content}[1][]{}
-\NewEnviron{ai-discard-invisible-content}[1][]{}
-\NewEnviron{ai-retroactive-patch}[1][]{}
-\NewEnviron{ai-global-state-checkpoint-invisible-content}{}
-\NewEnviron{ai-global-state-checkpoint}{}
+\NewEnviron{hidden}{}  % all AI scratchpads: plans, checkpoints, sketches
 
 % Data Integrity Fallbacks
 \newcommand{\NewFallbackBox}[1]{
@@ -906,3 +934,64 @@ breakable
 \titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 \titlespacing*{\subsection}{0pt}{3ex plus 1ex minus .2ex}{1.2ex plus .2ex}
 \titlespacing*{\subsubsection}{0pt}{2.5ex plus 1ex minus .2ex}{1ex plus .2ex}
+
+
+% =====================================================================
+%  BACKWARD COMPATIBILITY (ACTIVE)
+%
+%  Lets .tex files written against the OLD vocabulary compile against this
+%  preamble, so existing lecture output does not have to be migrated.
+%  Delete this block once every .tex file uses the new names.
+%
+%  These are \let aliases rather than re-declared environments on purpose:
+%  the alias inherits the target's argument signature and default title
+%  exactly, so nothing here can drift out of sync with the definitions
+%  above. Re-stating "[1][Erklaerung]" by hand would silently change the
+%  rendered default the moment the real definition changed.
+% =====================================================================
+\makeatletter
+\newcommand{\AliasEnv}[2]{%
+  \expandafter\let\csname #1\expandafter\endcsname\csname #2\endcsname
+  \expandafter\let\csname end#1\expandafter\endcsname\csname end#2\endcsname
+}
+\makeatother
+
+\AliasEnv{spoken-clean}{speech}
+\AliasEnv{math-stroke}{content}
+\AliasEnv{student-interaction}{student}
+\AliasEnv{explanation-of-steps}{steps}
+\AliasEnv{didactic-insight}{insight}
+\AliasEnv{meta-note}{note}
+\AliasEnv{nice-box}{overview}
+\AliasEnv{color-box}{highlight}
+\AliasEnv{lecture-break}{pause}
+\AliasEnv{ai-note}{aiNote}
+
+%  CAVEAT -- the one thing aliasing cannot paper over.
+%  The swap gave `proof` to the SHORT form (it is the common case, 63 uses
+%  against 19). Old files use `proof` for the LONG form and `short-proof`
+%  for the short one, so `proof` means opposite things in the two
+%  vocabularies and no single preamble can serve both.
+%  `short-proof` is aliased to the new `proof`, which is correct. Old
+%  `\begin{proof}` therefore renders with the short-proof heading --
+%  slightly smaller, no hanging icon. It still compiles, still reads
+%  "Beweis", still emits Q.E.D. Cosmetic only, and it disappears as soon
+%  as the file is migrated.
+\AliasEnv{short-proof}{proof}
+
+%  Scratchpads: all of these swallow their body, so an empty definition is
+%  exactly equivalent to aliasing them to `hidden`.
+\NewEnviron{ai-tikz-planner-invisible-content}{}
+\NewEnviron{ai-proof-skeleton-invisible-content}{}
+\NewEnviron{ai-global-state-checkpoint-invisible-content}{}
+\NewEnviron{ai-retroactive-patch}[1][]{}
+\NewEnviron{ai-global-state-checkpoint}{}
+
+%  NOT merged into `hidden`, deliberately: the fallback boxes below are
+%  \newtcolorbox, not \NewEnviron -- they RENDER, as red warning panels. They
+%  exist to surface OCR failures, off-camera state and modality conflicts for a
+%  human to see. Making them invisible would silently swallow exactly the
+%  content they were created to raise. They keep their own names and stay
+%  visible: ai-logical-gap, ai-generation-loop-fallback, ai-raw-ocr-fallback,
+%  ai-phonetic-dump, ai-modality-conflict, ai-off-camera-state,
+%  ai-async-board-update, ai-kinetic-emphasis.

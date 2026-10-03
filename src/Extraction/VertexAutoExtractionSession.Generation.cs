@@ -33,11 +33,8 @@ public partial class VertexAutoExtractionSession {
         string weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown";
 
         double partDurationSeconds = await FfmpegToolkit.GetVideoDurationAsync(partFile);
-        TimeSpan t = TimeSpan.FromSeconds(partDurationSeconds);
-        string durationString = string.Format("{0:D2} minutes and {1:D2} seconds", t.Minutes, t.Seconds);
-
-        TimeSpan fullVideoTime = TimeSpan.FromSeconds(fullOriginalVideoDuration);
-        string fullDurationString = string.Format("{0:D2} minutes and {1:D2} seconds", fullVideoTime.Minutes, fullVideoTime.Seconds);
+        string durationString = ExtractionHelpers.FormatDurationForPrompt(partDurationSeconds);
+        string fullDurationString = ExtractionHelpers.FormatDurationForPrompt(fullOriginalVideoDuration);
 
         string dateMetadata = partNumber == 1
             ? $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({weekday}), and week number ({dateInfo.WeekInfo ?? "N/A"}) are important metadata since this is part 1 of the lecture."
@@ -46,8 +43,8 @@ public partial class VertexAutoExtractionSession {
         string prompt =
             $"<parameter name=\"lecture_metadata\">{dateMetadata}</parameter>\n" +
             $"<parameter name=\"source_video\">You must transcribe the video attachment named `{Path.GetFileName(partFile)}` verbatim according to the system instructions. Ensure you transcribe every single spoken word up to the very last second of the video, even if it cuts off mid-sentence.</parameter>\n" +
-            $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long. The duration of the entire lecture video is {fullDurationString}.</parameter>\n" +
-            $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'spoken-clean' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'spoken-clean' block perfectly matches the segment length ({durationString}).</parameter>\n" +
+            $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long; that is the value for `% End of the video`. For context only, the whole lecture, of which this segment is one part, runs {fullDurationString}; never use that number for a timestamp.</parameter>\n" +
+            $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'speech' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'speech' block perfectly matches the segment length ({durationString}).</parameter>\n" +
             "</context_and_parameters>";
 
         var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");

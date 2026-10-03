@@ -134,7 +134,7 @@ Ui.Detail($"Starte Cleanup: Lösche temporäre Dateien im Bucket '{bucketName}'.
 Ui.Detail($"Starte PDF-Kompilierung für {fileName}...", "LatexToolkit");
 Ui.Detail($"Starte Splitting für {Path.GetFileName(videoToSplit)} in {config.NumberOfParts} Teile ({config.OverlapSeconds}s Overlap)...", "FFmpeg Producer");
 Ui.Detail($"Starte Vorverarbeitung für {Path.GetFileName(file)} ({speed}x Speed, 1 FPS, Mono)...", "FFmpeg Producer");
-Ui.Detail($"Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} spoken-clean, {actualMathStroke}/{expectedMathStroke} math-stroke.", "Refinement");
+Ui.Detail($"Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} speech, {actualMathStroke}/{expectedMathStroke} content.", "Refinement");
 Ui.Detail($"Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
 Ui.Detail($"Suchanfragen: {string.Join(", ", grounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
 Ui.Detail($"Time Range: Start={startTimeSeconds ?? 0}s, Duration={durationSeconds?.ToString() ?? "Remainder"}s");
@@ -265,7 +265,7 @@ Ui.Error($"No video in '{config.SourceFolder}' matches --from '{from}'.", "plan"
 Ui.Error($"Originaler Fehlertext: {ex.Message}");
 Ui.Error($"Quellordner '{sourceFolder}' existiert nicht.");
 Ui.Error($"Quellordner nicht gefunden: {_config.SourceFolder}");
-Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} spoken-clean / ~{expectedMathStroke} math-stroke, Erhalten: {actualSpokenClean} spoken-clean / {actualMathStroke} math-stroke.", "Refinement");
+Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} speech / ~{expectedMathStroke} content, Erhalten: {actualSpokenClean} speech / {actualMathStroke} content.", "Refinement");
 Ui.Error($"Source folder not found: '{folder}'", "plan");
 Ui.Error($"The application encountered an unhandled exception and must close.\nType: {ex.GetType().Name}\nMessage: {ex.Message}\nStack Trace:\n{ex.StackTrace}", "FATAL ERROR");
 Ui.Error($"Unerwarteter Fehler bei der PDF-Generierung: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
@@ -435,7 +435,7 @@ Ui.Info($"Starte gestaffeltes Cache-Warming für System Instruction + History in
 Ui.Info($"Starte parallele Audio-Extraktion im Hintergrund für {Path.GetFileName(sourceVideoPath)}...", "FFmpeg");
 Ui.Info($"Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...", "Pre-Upload");
 Ui.Info($"Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...", "Pre-Upload");
-Ui.Info($"Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x spoken-clean und {expectedMathStroke}x math-stroke Blöcke im Output.");
+Ui.Info($"Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x speech und {expectedMathStroke}x content Blöcke im Output.");
 Ui.Info($"System Instruction geladen: {relPath}");
 Ui.Info($"System Instruction geladen: {relativePath}");
 Ui.Info($"System Instruction vollständig auf Festplatte geloggt unter: {dumpPath}", "LOG");

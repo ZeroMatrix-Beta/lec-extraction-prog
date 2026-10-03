@@ -36,6 +36,25 @@ public class LatexTimestampHelperTests {
     }
 
     [Fact]
+    public void AdjustTimestamps_ShiftsASpeechRange() {
+        // Week-1 part 2 of algebra-1: the part starts at 1201 s of the lecture.
+        string input = "\\begin{speech}[00:00:00 - 00:02:24]";
+
+        string shifted = LatexTimestampAdjuster.AdjustTimestamps(input, 1201);
+
+        Assert.Equal("\\begin{speech}[00:20:01 - 00:22:25]", shifted);
+    }
+
+    [Fact]
+    public void AdjustTimestamps_ShiftsOldAndNewNamesInTheSameText() {
+        string input = "\\begin{spoken-clean}[00:00:10 - 00:00:20]\n\\begin{speech}[00:00:20 - 00:00:30]";
+
+        string shifted = LatexTimestampAdjuster.AdjustTimestamps(input, 60);
+
+        Assert.Equal("\\begin{spoken-clean}[00:01:10 - 00:01:20]\n\\begin{speech}[00:01:20 - 00:01:30]", shifted);
+    }
+
+    [Fact]
     public void AdjustTimestamps_CarriesSecondsIntoMinutes() {
         string input = "\\begin{spoken-clean}[00:00:50 - 00:01:10]";
 
