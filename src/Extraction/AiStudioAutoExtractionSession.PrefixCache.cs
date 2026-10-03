@@ -168,7 +168,8 @@ public partial class AiStudioAutoExtractionSession {
         // sending the dummy there wastes ~4500 tokens with zero cache benefit.
         // SendDummyFileWithEachWarmUpRound=true overrides to always send (debugging/testing aid).
         // [Human] Dummy nur beim letzten Handshake (vollständige Sys-Instruction), sonst Tokenverbrauch ohne Nutzen.
-        bool shouldIncludeDummy = (_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound;
+        bool shouldIncludeDummy = _config.SendDummyFileDuringTranscription
+            && ((_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound);
         List<Part> warmupParts = [];
         
         // [AI Context] When LoadHistoryIntoSystemInstruction is false, the history resides in the User Message.
@@ -184,6 +185,9 @@ public partial class AiStudioAutoExtractionSession {
             warmupParts.Add(new Part { Text = ReferenceContextPreamble + dummyReferenceBlock + GetStaticPromptBeginning(1) });
             warmupParts.Add(new Part { Text = handshakeText });
         } else {
+            if (includeDummyPart0) {
+                warmupParts.Add(new Part { Text = GetStaticPromptBeginning(1) });
+            }
             warmupParts.Add(new Part { Text = handshakeText });
         }
 

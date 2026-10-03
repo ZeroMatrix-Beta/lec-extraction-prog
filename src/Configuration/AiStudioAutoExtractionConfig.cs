@@ -54,6 +54,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool InlineHistoryImages { get; set; } = true;
     public int HistoryBatchCount { get; set; } = 0;
     public bool DebugSendReferenceFile { get; set; } = true;
+    public bool SendDummyFileDuringTranscription { get; set; } = true;
     public bool InlinePrecedingLecTexParts { get; set; } = true;
     public bool DebugHelloRoundtrip { get; set; } = false;
     public bool VerboseConsoleOutput { get; set; } = false;

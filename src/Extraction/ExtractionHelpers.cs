@@ -24,8 +24,19 @@ public static partial class ExtractionHelpers {
     }
 
     /// <summary>The folder a video's outputs are written to, relative to the target folder.</summary>
-    public static string ComputeOutputFolderName(string videoPath) =>
-        StripCompressionSuffix(Path.GetFileNameWithoutExtension(videoPath));
+    public static string ComputeOutputFolderName(string videoPath) {
+        string name = Path.GetFileNameWithoutExtension(videoPath);
+        // [AI Context] Windows users frequently end up with double extensions (e.g. video.mp4.mp4) when
+        // 'Hide extensions for known file types' is enabled in Explorer and they manually add .mp4.
+        while (name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".avi", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".mov", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".webm", StringComparison.OrdinalIgnoreCase)) {
+            name = Path.GetFileNameWithoutExtension(name);
+        }
+        return StripCompressionSuffix(name);
+    }
 
     /// <summary>
     /// The stem of the per-part <c>.tex</c> files, which carries a <c>step1-</c> prefix marking it

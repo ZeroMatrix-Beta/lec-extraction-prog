@@ -456,22 +456,29 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         }
 
         Ui.Step($"Warte auf Bestätigung der History von {_config.CurrentModel}...");
-        int backoff = 45;
+        int initialBackoff = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 45;
+        int backoff = initialBackoff;
         int maxRetries = 10;
         bool success = false;
         string fullResponse = "";
         int finalInputTokens = 0;
         int finalOutputTokens = 0;
         int finalCachedTokens = 0;
+        int consecutiveFailuresWithoutProgress = 0;
+        bool isRetry = false;
 
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        while (consecutiveFailuresWithoutProgress < maxRetries) {
+            int currentAttempt = consecutiveFailuresWithoutProgress + 1;
+            int chunksReceivedThisAttempt = 0;
             fullResponse = "";
             using var cts = new CancellationTokenSource();
             void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
             Console.CancelKeyPress += cancelHandler;
 
             try {
-                if (attempt > 1) Ui.Step($"[Versuch {attempt}/{maxRetries}] Sende Anfrage...");
+                if (isRetry) {
+                    Ui.Step($"[Versuch {currentAttempt}/{maxRetries}] Sende Anfrage...");
+                }
 
                 int requestInputTokens = 0;
                 int requestOutputTokens = 0;
@@ -481,6 +488,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 var responseStream = _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _sessionPreamble, requestConfig);
                 await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
                     if (cts.IsCancellationRequested) break;
+                    chunksReceivedThisAttempt++;
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                     Ui.Raw(txt);
                     fullResponse += txt;
@@ -511,49 +519,61 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             catch (Exception ex) {
                 Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
                 bool isOverloaded = ApiRetryPolicy.IsTransientError(ex);
-                if (isOverloaded && attempt < maxRetries) {
-                    int waitTime;
-                    string contextMsg = " [History Bestätigung]";
-                    string delayMessage = "Still waiting for the acknowledgment / processing...";
-
-                    if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
-                        waitTime = 300;
-                        Ui.Warn($"[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
-                        Ui.Info("Keine Panik! Du hast jetzt 300 Sekunden Zeit, um deine Verbindung zu reparieren...");
-                        delayMessage = "Warte auf Wiederherstellung der Internetverbindung...";
-                    }
-                    else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
-                        int highDemandWait = _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : 180;
-                        waitTime = highDemandWait;
-                        string timeDesc = highDemandWait % 60 == 0 && highDemandWait > 0
-                            ? (highDemandWait == 60 ? "1 Minute" : $"{highDemandWait / 60} Minuten")
-                            : $"{highDemandWait}s";
-                        Ui.Warn($"[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}...");
-                        backoff = waitTime;
-                    }
-                    else if (attempt == 1) {
-                        var retryMatch = MyRegex().Match(ex.Message);
-                        if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-                            waitTime = serverSuggestedDelay + 20;
-                            Ui.Warn($"[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime}s...");
-                        }
-                        else {
-                            waitTime = backoff;
-                            Ui.Warn($"[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime}s...");
-                        }
-                        backoff = waitTime;
+                if (isOverloaded) {
+                    bool madeProgress = chunksReceivedThisAttempt > 0 || fullResponse.Length > 0;
+                    if (madeProgress) {
+                        Ui.Info("Fortschritt während des Streams erkannt: Wiederholungs-Zähler wird auf 0 zurückgesetzt.", "API Retry");
+                        consecutiveFailuresWithoutProgress = 0;
+                        backoff = initialBackoff;
                     }
                     else {
-                        backoff += 30;
-                        waitTime = backoff;
-                        Ui.Warn($"[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime}s...");
+                        consecutiveFailuresWithoutProgress++;
                     }
-                    if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { break; }
+
+                    if (consecutiveFailuresWithoutProgress < maxRetries) {
+                        int waitTime;
+                        string contextMsg = " [History Bestätigung]";
+                        string delayMessage = "Still waiting for the acknowledgment / processing...";
+
+                        if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
+                            waitTime = 300;
+                            Ui.Warn($"[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
+                            Ui.Info("Keine Panik! Du hast jetzt 300 Sekunden Zeit, um deine Verbindung zu reparieren...");
+                            delayMessage = "Warte auf Wiederherstellung der Internetverbindung...";
+                        }
+                        else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
+                            int highDemandWait = _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : 180;
+                            waitTime = highDemandWait;
+                            string timeDesc = highDemandWait % 60 == 0 && highDemandWait > 0
+                                ? (highDemandWait == 60 ? "1 Minute" : $"{highDemandWait / 60} Minuten")
+                                : $"{highDemandWait}s";
+                            Ui.Warn($"[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}...");
+                            backoff = waitTime;
+                        }
+                        else if (madeProgress || consecutiveFailuresWithoutProgress <= 1) {
+                            var retryMatch = MyRegex().Match(ex.Message);
+                            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
+                                waitTime = serverSuggestedDelay + 20;
+                                Ui.Warn($"[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime}s... (Versuch {(madeProgress ? 1 : consecutiveFailuresWithoutProgress + 1)}/{maxRetries})");
+                            }
+                            else {
+                                waitTime = backoff;
+                                Ui.Warn($"[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime}s... (Versuch {(madeProgress ? 1 : consecutiveFailuresWithoutProgress + 1)}/{maxRetries})");
+                            }
+                            backoff = waitTime;
+                        }
+                        else {
+                            backoff += 30;
+                            waitTime = backoff;
+                            Ui.Warn($"[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime}s... (Versuch {consecutiveFailuresWithoutProgress + 1}/{maxRetries})");
+                        }
+                        if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { break; }
+                        isRetry = true;
+                        continue;
+                    }
                 }
-                else {
-                    Ui.Error("Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
-                    break;
-                }
+                Ui.Error("Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
+                break;
             }
             finally {
                 Console.CancelKeyPress -= cancelHandler;

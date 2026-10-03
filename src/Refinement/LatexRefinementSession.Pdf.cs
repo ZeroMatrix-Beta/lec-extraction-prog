@@ -191,9 +191,13 @@ public partial class LatexRefinementSession {
                     System.IO.File.Delete(precheckLogPath);
                 }
             }
-            string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
-            if (System.IO.File.Exists(cleanPdfPath)) {
-                System.IO.File.Delete(cleanPdfPath);
+            // Keep the clean PDF if compilation succeeded so the user has the PDF from the speech refinement stage;
+            // only clean it up if compilation failed.
+            if (!compilationSuccess) {
+                string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
+                if (System.IO.File.Exists(cleanPdfPath)) {
+                    System.IO.File.Delete(cleanPdfPath);
+                }
             }
         }
         catch (Exception ex) {
@@ -413,8 +417,11 @@ public partial class LatexRefinementSession {
                       await Task.CompletedTask;
                   },
                   cancellationToken: cts.Token,
+                  initialBackoff: fixDelay,
                   retryContext: outputFileName,
-                  onRetry: () => { chunkResp = ""; }
+                  onRetry: () => { chunkResp = ""; },
+                  highDemandDelay: fixDelay,
+                  resumeOnPartialProgress: true
                 );
             }
             catch (Exception ex) {
@@ -451,7 +458,7 @@ public partial class LatexRefinementSession {
                 break;
             }
 
-            string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
+            string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
                 "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Just print the very next character.";
 
@@ -463,6 +470,12 @@ public partial class LatexRefinementSession {
             if (!await InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 break;
             }
+
+            if (!string.IsNullOrWhiteSpace(chunkResp)) {
+                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "PDF-Fix");
+                currentRequest = 0;
+            }
+
             currentRequest++;
         }
 

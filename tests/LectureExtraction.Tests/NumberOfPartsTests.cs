@@ -158,6 +158,26 @@ public class NumberOfPartsTests {
         Assert.Equal(4, fixedParts.FixedParts);
     }
 
+    [Fact]
+    public void ExtractionConfigs_Deserialize_SendDummyFileDuringTranscription() {
+        string json = """
+        {
+            "NumberOfParts": "auto",
+            "SendDummyFileDuringTranscription": false
+        }
+        """;
+
+        var aiConfig = JsonConvert.DeserializeObject<AiStudioAutoExtractionConfig>(json);
+        Assert.NotNull(aiConfig);
+        Assert.True(aiConfig.NumberOfParts.IsAuto);
+        Assert.False(aiConfig.SendDummyFileDuringTranscription);
+
+        var vertexConfig = JsonConvert.DeserializeObject<VertexAutoExtractionConfig>(json);
+        Assert.NotNull(vertexConfig);
+        Assert.True(vertexConfig.NumberOfParts.IsAuto);
+        Assert.False(vertexConfig.SendDummyFileDuringTranscription);
+    }
+
     private sealed class DummyConfig {
         public NumberOfParts Parts { get; set; } = 3;
     }

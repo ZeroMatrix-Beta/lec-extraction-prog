@@ -84,11 +84,14 @@ public partial class VertexAutoExtractionSession {
 
         string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
 
-        string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
-        var warmupParts = new List<Part> {
-            new() { Text = dummyReferenceBlock + GetStaticPromptBeginning(1) },
-            new() { Text = handshakeText }
-        };
+        var warmupParts = new List<Part>();
+        if (_config.SendDummyFileDuringTranscription) {
+            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
+            warmupParts.Add(new() { Text = dummyReferenceBlock + GetStaticPromptBeginning(1) });
+        } else {
+            warmupParts.Add(new() { Text = GetStaticPromptBeginning(1) });
+        }
+        warmupParts.Add(new() { Text = handshakeText });
 
         var pingContent = new List<Content> {
             new() { Role = "user", Parts = warmupParts }

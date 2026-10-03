@@ -47,21 +47,32 @@ public static partial class ApiRetryPolicy {
         int initialBackoff = 130,
         string retryContext = "",
         Action? onRetry = null,
-        int? highDemandDelay = null) {
+        int? highDemandDelay = null,
+        bool resumeOnPartialProgress = false,
+        int minCharactersToResume = 100) {
         int backoff = initialBackoff;
+        int consecutiveFailuresWithoutProgress = 0;
+        bool isRetry = false;
 
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+        while (consecutiveFailuresWithoutProgress < maxRetries) {
+            int currentAttempt = consecutiveFailuresWithoutProgress + 1;
+            int chunksReceivedThisAttempt = 0;
+            long charactersReceivedThisAttempt = 0;
+
             try {
-                if (attempt > 1) {
+                if (isRetry) {
                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-                    Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {attempt}/{maxRetries}). Puffer wird zurückgesetzt...", "API Retry");
+                    Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {currentAttempt}/{maxRetries}). Puffer wird zurückgesetzt...", "API Retry");
                     onRetry?.Invoke();
                 }
 
-                SessionCostLedger.RecordRequest(isGeneration: true, attempt);
+                SessionCostLedger.RecordRequest(isGeneration: true, currentAttempt);
                 var responseStream = streamFactory();
                 await foreach (var chunk in responseStream.WithCancellation(cancellationToken)) {
                     if (cancellationToken.IsCancellationRequested) break;
+                    chunksReceivedThisAttempt++;
+                    string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                    charactersReceivedThisAttempt += text.Length;
                     await onChunkReceived(chunk);
                 }
 
@@ -71,19 +82,49 @@ public static partial class ApiRetryPolicy {
                 return false; // User cancelled
             }
             catch (Exception ex) {
-                Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
+                if (IsTransientError(ex)) {
+                    bool madeProgress = chunksReceivedThisAttempt > 0 || charactersReceivedThisAttempt > 0;
+                    if (resumeOnPartialProgress && charactersReceivedThisAttempt >= minCharactersToResume) {
+                        string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
+                        Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.GetType().Name}: {ex.Message}).", "Stream Unterbrochen");
+                        Ui.Info($"Da bereits {charactersReceivedThisAttempt:N0} Zeichen empfangen wurden, wird der Text behalten und nahtlos per 'Continue' fortgesetzt.", "Auto-Resume");
+                        return true;
+                    }
 
-                if (IsTransientError(ex) && attempt < maxRetries) {
-                    var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, attempt, maxRetries, backoff, retryContext, highDemandDelay);
-                    backoff = NewBackoff;
-                    if (!WaitSuccess) {
-                        return false; // User cancelled the wait
+                    Ui.Warn($"{ex.GetType().Name}: {ex.Message}", "API");
+
+                    if (madeProgress) {
+                        Ui.Info("Fortschritt während des Streams erkannt: Wiederholungs-Zähler wird auf 0 zurückgesetzt.", "API Retry");
+                        consecutiveFailuresWithoutProgress = 0;
+                        backoff = initialBackoff;
+                    }
+                    else {
+                        consecutiveFailuresWithoutProgress++;
+                    }
+
+                    if (consecutiveFailuresWithoutProgress < maxRetries) {
+                        var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(
+                            ex,
+                            madeProgress ? 0 : consecutiveFailuresWithoutProgress,
+                            maxRetries,
+                            backoff,
+                            retryContext,
+                            highDemandDelay
+                        );
+                        backoff = NewBackoff;
+                        if (!WaitSuccess) {
+                            return false; // User cancelled the wait
+                        }
+                        isRetry = true;
+                        continue;
                     }
                 }
                 else {
-                    Ui.Error($"Unrecoverable error after {attempt} attempts.", "API Failure");
-                    throw; // Re-throw for the caller to handle
+                    Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
                 }
+
+                Ui.Error($"Unrecoverable error after {consecutiveFailuresWithoutProgress + 1} attempts.", "API Failure");
+                throw; // Re-throw for the caller to handle
             }
         }
         return false; // All retries failed
@@ -192,7 +233,13 @@ public static partial class ApiRetryPolicy {
                msg.Contains("QuotaFailure", StringComparison.OrdinalIgnoreCase) ||
                msg.Contains("RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase) ||
                msg.Contains("Too Many Requests", StringComparison.OrdinalIgnoreCase) ||
-               msg.Contains("high demand", StringComparison.OrdinalIgnoreCase);
+               msg.Contains("high demand", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("Incomplete JSON", StringComparison.OrdinalIgnoreCase) ||
+               exStr.Contains("Incomplete JSON", StringComparison.OrdinalIgnoreCase) ||
+               msg.Contains("ended prematurely", StringComparison.OrdinalIgnoreCase) ||
+               exStr.Contains("ended prematurely", StringComparison.OrdinalIgnoreCase) ||
+               ex is System.Text.Json.JsonException ||
+               ex.InnerException is System.Text.Json.JsonException;
     }
 
     /// <summary>
@@ -234,9 +281,19 @@ public static partial class ApiRetryPolicy {
             Ui.Warn($"{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Hohe Auslastung");
             nextBackoff = waitTime;
         }
+        else if (ex.Message.Contains("Incomplete JSON", StringComparison.OrdinalIgnoreCase) ||
+                 ex.ToString().Contains("Incomplete JSON", StringComparison.OrdinalIgnoreCase) ||
+                 ex.Message.Contains("ended prematurely", StringComparison.OrdinalIgnoreCase) ||
+                 ex.ToString().Contains("ended prematurely", StringComparison.OrdinalIgnoreCase) ||
+                 ex is System.Text.Json.JsonException ||
+                 ex.InnerException is System.Text.Json.JsonException) {
+            waitTime = 20;
+            Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.GetType().Name}: {ex.Message}). Warte {waitTime}s vor erneutem Versuch... (Versuch {attempt + 1}/{maxRetries}) (Oder drücke Enter für sofortigen Retry)", "Stream Unterbrochen");
+            nextBackoff = 30;
+        }
         else {
             // On the very first failure, check for a server-suggested delay.
-            if (attempt == 1) {
+            if (attempt <= 1) {
                 var retryMatch = MyRegex().Match(ex.Message);
                 if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                     waitTime = serverSuggestedDelay + 20;

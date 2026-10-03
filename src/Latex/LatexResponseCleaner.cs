@@ -45,6 +45,6 @@ public static partial class LatexResponseCleaner {
     [GeneratedRegex(@"```\r?\n?")]
     private static partial Regex CodeBlockRegex();
 
-    [GeneratedRegex(@"(?im)^[ \t]*(?:\*|_|%)*[ \t]*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video)\s*complete[^\r\n]*\r?\n?")]
+    [GeneratedRegex(@"(?im)^[ \t]*(?:\*|_|%)*[ \t]*\[(?:SYSTEM|AI-MODEL)[^\]]*\][^\r\n]*(?:Segment|Video|Refinement)\s*complete[^\r\n]*\r?\n?")]
     private static partial Regex SystemMessageRegex();
 }

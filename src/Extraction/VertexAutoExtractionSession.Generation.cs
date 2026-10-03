@@ -71,7 +71,7 @@ public partial class VertexAutoExtractionSession {
         var userPromptParts = new List<Part>();
 
         var preVideoBuilder = new System.Text.StringBuilder();
-        if (_config.EnableImplicitPrefixCacheWarmup) {
+        if (_config.EnableImplicitPrefixCacheWarmup && _config.SendDummyFileDuringTranscription) {
             preVideoBuilder.Append($"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n");
         }
         var uploadedTexParts = new List<Part>();
@@ -198,15 +198,22 @@ public partial class VertexAutoExtractionSession {
 
             if (_config.VerboseConsoleOutput) {
                 var userPromptParts = history[^1].Parts;
-                if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
+                bool hasDummy = _config.EnableImplicitPrefixCacheWarmup && _config.SendDummyFileDuringTranscription;
+                bool hasPreviousParts = _config.DebugSendReferenceFile && previousTexFiles.Count > 0;
+                if ((hasDummy || hasPreviousParts) && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
                     var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
                     var texCount = await ApiRetryPolicy.ExecuteWithRetryAsync(
                         () => _client.Models.CountTokensAsync(_config.CurrentModel, texContents),
                         maxRetries: 8, initialBackoff: 20, retryContext: $"CountTokens Part {partNumber} (tex)");
                     int texToks = texCount?.TotalTokens ?? 0;
-                    string fileInfo = previousTexFiles.Count > 0 && _config.InlinePrecedingLecTexParts
-                        ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
-                        : "dummy-part0.tex";
+                    string fileInfo;
+                    if (hasDummy && hasPreviousParts && _config.InlinePrecedingLecTexParts) {
+                        fileInfo = $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+                    } else if (hasDummy) {
+                        fileInfo = "dummy-part0.tex";
+                    } else {
+                        fileInfo = $"{previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+                    }
                     Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texToks:N0}");
                 }
             }
@@ -270,7 +277,8 @@ public partial class VertexAutoExtractionSession {
                         requestCachedTokens = 0;
                         usage = new UsageReport();
                     },
-                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null
+                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
+                    resumeOnPartialProgress: true
                 );
             }
             catch (Exception ex) {
@@ -347,6 +355,11 @@ public partial class VertexAutoExtractionSession {
             if (!await InteractiveDelay.SmartDelayAsync(150, "Warte auf Fortsetzung (Sicherheits-Puffer)...")) {
                 Ui.Info("Warten durch Benutzer abgebrochen.");
                 break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(chunkResp)) {
+                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "AutoExtraction");
+                currentRequest = 0;
             }
 
             currentRequest++;

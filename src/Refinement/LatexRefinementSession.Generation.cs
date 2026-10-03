@@ -263,13 +263,16 @@ public partial class LatexRefinementSession {
                       await Task.CompletedTask;
                   },
                   cancellationToken: cts.Token,
+                  initialBackoff: rateLimitDelay,
                   retryContext: outputFileName,
                   onRetry: () => {
                       chunkResp = "";
                       totalInputTokens = 0;
                       totalOutputTokens = 0;
                       totalCachedTokens = 0;
-                  }
+                  },
+                  highDemandDelay: rateLimitDelay,
+                  resumeOnPartialProgress: true
                 );
             }
             catch (Exception ex) {
@@ -311,7 +314,7 @@ public partial class LatexRefinementSession {
             }
 
             bool closedBlock = chunkResp.TrimEnd().EndsWith("```");
-            string continuePrompt = $"[IMPORTANT] Your response was cut short due to token limits. Your last output ended with:\n\n" +
+            string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
                 "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Do not open a new ```latex block, do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
 
@@ -329,6 +332,11 @@ public partial class LatexRefinementSession {
             if (!await InteractiveDelay.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 Ui.Warn("Warten durch Benutzer abgebrochen.");
                 break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(chunkResp)) {
+                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "Refinement");
+                currentRequest = 0;
             }
 
             currentRequest++;

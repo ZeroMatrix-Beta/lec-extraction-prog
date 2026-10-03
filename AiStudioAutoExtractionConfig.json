@@ -12,18 +12,21 @@
   * Reference Files:
   */
   "DebugSendReferenceFile": true,
+  "SendDummyFileDuringTranscription": true,
   "SendDummyFileWithEachWarmUpRound": true,
   "InlinePrecedingLecTexParts": true,
   "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 3, //or "auto"
+  "NumberOfParts": 2,
+  //or "auto"
   "OverlapSeconds": 240,
   "GoogleVideoFps": 0.25,
   "UseGoogleSearch": false,
-  "FfmpegPreset": "fast",
+  "FfmpegPreset": "ultrafast",
+  // Options: "ultrafast" (fastest, 2-4x speedup), "veryfast", "fast", "medium"
   // "VideoPartDelaySeconds": 135,
-  "VideoPartDelaySeconds": 64,
+  "VideoPartDelaySeconds": 74,
   // "SystemInstructionDelaySeconds": 130,
   "SystemInstructionDelaySeconds": 64,
   // "FileActivationDelaySeconds": 140,
@@ -37,7 +40,7 @@
   "OnlyDoWarmUp": false,
   "YouTubeTasks": [],
   "ApiKey": {
-    "ActiveProfile": 0,
+    "ActiveProfile": 2,
     "EnvNames": [
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
@@ -114,7 +117,7 @@
       "gemini-3.5-flash-lite",
       "gemini-2.5-flash"
     ],
-    "CurrentIndex": 3
+    "CurrentIndex": 0
   },
   "SpeedMultiplier": 1.0,
   "VerboseConsoleOutput": true,

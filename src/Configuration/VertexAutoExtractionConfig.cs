@@ -65,6 +65,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public bool GenerateOffsetFiles { get; set; } = true;
     public bool LoadHistoryIntoSystemInstruction { get; set; } = false;
     public bool DebugSendReferenceFile { get; set; } = true;
+    public bool SendDummyFileDuringTranscription { get; set; } = true;
     public bool InlinePrecedingLecTexParts { get; set; } = true;
     public bool VerboseConsoleOutput { get; set; } = false;
     public bool GenerateAudioFile { get; set; } = true;

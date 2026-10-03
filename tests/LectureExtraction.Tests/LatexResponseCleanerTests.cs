@@ -46,6 +46,8 @@ public class LatexResponseCleanerTests {
     [InlineData("\\section{A}\n**[SYSTEM] Segment complete.**")]
     [InlineData("\\section{A}\n%[AI-MODEL] Video complete")]
     [InlineData("\\section{A}\n   [SYSTEM] segment  COMPLETE now")]
+    [InlineData("\\section{A}\n% [SYSTEM] Refinement complete")]
+    [InlineData("\\section{A}\n[SYSTEM] Refinement complete")]
     public void CleanLatexResponse_StripsCompletionChatter(string raw) {
         Assert.Equal("\\section{A}", LatexResponseCleaner.CleanLatexResponse(raw));
     }

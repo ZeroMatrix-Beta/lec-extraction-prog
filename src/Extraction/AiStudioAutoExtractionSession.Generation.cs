@@ -109,28 +109,37 @@ public partial class AiStudioAutoExtractionSession {
         string staticBeginning = GetStaticPromptBeginning(partNumber);
         var uploadedTexParts = new List<Part>();
         if (_config.DebugSendReferenceFile) {
-            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
+            bool hasDummy = _config.SendDummyFileDuringTranscription;
+            bool hasPreviousParts = previousTexFiles.Count > 0;
 
-            var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
-            referenceContextBuilder.Append(dummyReferenceBlock);
+            if (hasDummy || hasPreviousParts) {
+                var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
 
-            if (previousTexFiles.Count > 0) {
-                if (_config.InlinePrecedingLecTexParts) {
-                    Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
-                    foreach (var previousTexFile in previousTexFiles) {
-                        string previousTexFileName = Path.GetFileName(previousTexFile);
-                        Ui.Detail($"- {previousTexFileName}");
-                        string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
-                        referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
-                    }
-                } else {
-                    var uploaded = await PrecedingTexReferences.UploadAsync(previousTexFiles, _attachmentHandler);
-                    referenceContextBuilder.Append(uploaded.ReferenceText);
-                    uploadedTexParts.AddRange(uploaded.Parts);
+                if (hasDummy) {
+                    string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
+                    referenceContextBuilder.Append(dummyReferenceBlock);
                 }
-            }
 
-            userPromptParts.Add(new Part { Text = referenceContextBuilder.ToString() + staticBeginning });
+                if (hasPreviousParts) {
+                    if (_config.InlinePrecedingLecTexParts) {
+                        Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
+                        foreach (var previousTexFile in previousTexFiles) {
+                            string previousTexFileName = Path.GetFileName(previousTexFile);
+                            Ui.Detail($"- {previousTexFileName}");
+                            string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
+                            referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
+                        }
+                    } else {
+                        var uploaded = await PrecedingTexReferences.UploadAsync(previousTexFiles, _attachmentHandler);
+                        referenceContextBuilder.Append(uploaded.ReferenceText);
+                        uploadedTexParts.AddRange(uploaded.Parts);
+                    }
+                }
+
+                userPromptParts.Add(new Part { Text = referenceContextBuilder.ToString() + staticBeginning });
+            } else {
+                userPromptParts.Add(new Part { Text = staticBeginning });
+            }
         } else {
             userPromptParts.Add(new Part { Text = staticBeginning });
         }
@@ -176,15 +185,22 @@ public partial class AiStudioAutoExtractionSession {
 
             if (_config.VerboseConsoleOutput) {
                 var userPromptParts = history[^1].Parts;
-                if (_config.DebugSendReferenceFile && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
+                bool hasDummy = _config.SendDummyFileDuringTranscription;
+                bool hasPreviousParts = previousTexFiles.Count > 0;
+                if (_config.DebugSendReferenceFile && (hasDummy || hasPreviousParts) && userPromptParts != null && userPromptParts.Count > 0 && !string.IsNullOrEmpty(userPromptParts[0].Text)) {
                     var texContents = new List<Content> { new() { Role = "user", Parts = [userPromptParts[0]] } };
                     var texCount = await ApiRetryPolicy.ExecuteWithRetryAsync(
                         () => _client.Models.CountTokensAsync(_config.CurrentModel, texContents),
                         maxRetries: 8, initialBackoff: 20, retryContext: $"CountTokens Part {partNumber} (tex)");
                     int texToks = texCount?.TotalTokens ?? 0;
-                    string fileInfo = previousTexFiles.Count > 0 && _config.InlinePrecedingLecTexParts
-                        ? $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}"
-                        : "dummy-part0.tex";
+                    string fileInfo;
+                    if (hasDummy && hasPreviousParts && _config.InlinePrecedingLecTexParts) {
+                        fileInfo = $"dummy-part0.tex + {previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+                    } else if (hasDummy) {
+                        fileInfo = "dummy-part0.tex";
+                    } else {
+                        fileInfo = $"{previousTexFiles.Count} Datei(en): {string.Join(", ", previousTexFiles.Select(Path.GetFileName))}";
+                    }
                     Ui.Detail($"- Inlined Kontext ({fileInfo}) Token: {texToks:N0}");
                 }
             }
@@ -248,7 +264,8 @@ public partial class AiStudioAutoExtractionSession {
                         requestCachedTokens = 0;
                         usage = new UsageReport();
                     },
-                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null
+                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
+                    resumeOnPartialProgress: true
                 );
             }
             catch (Exception ex) {
@@ -326,6 +343,11 @@ public partial class AiStudioAutoExtractionSession {
             if (!await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
                 Ui.Info("Warten durch Benutzer abgebrochen.");
                 break;
+            }
+
+            if (!string.IsNullOrWhiteSpace(chunkResp)) {
+                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "AutoExtraction");
+                currentRequest = 0;
             }
 
             currentRequest++;

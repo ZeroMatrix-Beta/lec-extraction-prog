@@ -17,6 +17,7 @@ public interface IAutoExtractionConfig {
     YouTubeTranscriptionTask[] YouTubeTasks { get; }
     string FfmpegPreset { get; }
     bool DebugSendReferenceFile { get; }
+    bool SendDummyFileDuringTranscription { get; }
     bool InlinePrecedingLecTexParts { get; }
     bool VerboseConsoleOutput { get; }
     bool OnlyDoWarmUp { get; }

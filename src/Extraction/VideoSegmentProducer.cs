@@ -41,6 +41,8 @@ public static partial class VideoSegmentProducer {
                 Directory.CreateDirectory(tmpFolderForFile);
             }
 
+            string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{speed.ToString(CultureInfo.InvariantCulture)}-compressed.mp4");
+
             // Audio extraction was moved to the Consumer loop to run in parallel with API calls
 
             // Removed dateStr from filename pattern for caching to work across days for 2-hour window
@@ -92,7 +94,6 @@ public static partial class VideoSegmentProducer {
                 }
                 else {
                     // Otherwise, it was the output of ProcessGeneralVideoAsync that was cached.
-                    string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{speed.ToString(CultureInfo.InvariantCulture)}-compressed.mp4");
                     speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(expectedProcessedVideoPath);
                 }
                 double segmentLengthForCached = (speedVideoDuration > 0) ? (speedVideoDuration + (expectedParts - 1) * config.OverlapSeconds) / expectedParts : 0;
@@ -107,14 +108,22 @@ public static partial class VideoSegmentProducer {
                 continue;
             }
 
-            // Determine if the file is already in a "compressed" format
+            // Determine if the file is already in a "compressed" format or already processed in tmp
             bool isPreCompressed = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
+            bool isProcessedVideoCached = System.IO.File.Exists(expectedProcessedVideoPath) &&
+                new FileInfo(expectedProcessedVideoPath).Length > 1024 &&
+                (DateTime.Now - new FileInfo(expectedProcessedVideoPath).LastWriteTime) <= cacheDuration;
 
             string? videoToSplit;
             if (isPreCompressed) {
                 Ui.Blank();
                 Ui.Detail($"{Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...", "FFmpeg Producer");
                 videoToSplit = file; // Use the original file directly for splitting
+            }
+            else if (isProcessedVideoCached) {
+                Ui.Blank();
+                Ui.Detail($"Bereits vorverarbeitetes Video in tmp gefunden ({Path.GetFileName(expectedProcessedVideoPath)}). Überspringe Vorverarbeitung, starte direkt Splitting...", "FFmpeg Producer");
+                videoToSplit = expectedProcessedVideoPath;
             }
             else {
                 Ui.Blank();

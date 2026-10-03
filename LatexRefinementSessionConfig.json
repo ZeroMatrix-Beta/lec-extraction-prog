@@ -7,7 +7,7 @@
     "API_KEY-ai-studio-test-project-2",
     "API_KEY-ai-studio-test-project-3"
   ],
-  "AiStudioActiveApiProfile": 3,
+  "AiStudioActiveApiProfile": 0,
   "VertexProjectId": "vertex-ai-experiments-494320",
   "VertexLocation": "global",
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
@@ -23,7 +23,7 @@
   "Step1MergeAndTimestamp": {
     "Enabled": true,
     "AttachAudio": true,
-    "RateLimitDelaySeconds": 130,
+    "RateLimitDelaySeconds": 64,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\merge-instructions\\latex-part-merge-instruction.md",
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\merge-instructions\\merging_leftovers_example.md"
@@ -46,7 +46,7 @@
           "gemini-3.5-flash",
           "gemini-3-flash-preview"
         ],
-        "CurrentIndex": 3
+        "CurrentIndex": 0
       },
       "ContextCaching": {
         "Enabled": true,
@@ -85,7 +85,7 @@
   "Step2SpeechRefinement": {
     "Enabled": true,
     "AttachAudio": true,
-    "RateLimitDelaySeconds": 130,
+    "RateLimitDelaySeconds": 64,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\speech-refinement\\speech-refinement.md"
     ],
@@ -107,7 +107,7 @@
           "gemini-3.5-flash",
           "gemini-3-flash-preview"
         ],
-        "CurrentIndex": 3
+        "CurrentIndex": 0
       },
       "ContextCaching": {
         "Enabled": false,
@@ -146,7 +146,7 @@
   "Step3LastRefinement": {
     "Enabled": true,
     "AttachAudio": true,
-    "RateLimitDelaySeconds": 130,
+    "RateLimitDelaySeconds": 64,
     "SystemInstructionPaths": [
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\last-refinement\\last-refinement.md"
     ],
@@ -168,7 +168,7 @@
           "gemini-3.5-flash",
           "gemini-3-flash-preview"
         ],
-        "CurrentIndex": 3
+        "CurrentIndex": 0
       },
       "ContextCaching": {
         "Enabled": false,

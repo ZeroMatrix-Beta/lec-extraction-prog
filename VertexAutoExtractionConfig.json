@@ -62,6 +62,7 @@
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "DebugSendReferenceFile": true,
+  "SendDummyFileDuringTranscription": false,
   "InlinePrecedingLecTexParts": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
@@ -75,6 +76,7 @@
   "EnableParallelFileUploads": false,
   "GoogleVideoFps": 0.25,
   "UseGoogleSearch": false,
-  "FfmpegPreset": "fast",
+  "FfmpegPreset": "ultrafast",
+  // Options: "ultrafast" (fastest, 2-4x speedup), "veryfast", "fast", "medium"
   "YouTubeTasks": []
 }

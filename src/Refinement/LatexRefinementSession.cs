@@ -155,8 +155,8 @@ public partial class LatexRefinementSession {
                 Ui.Info("Probe-Kompilierung meldet Syntaxfehler. Gebe das Fehlerprotokoll an Schritt 3 weiter zur Korrektur.");
             }
 
-            // [AI Context] Clean up temporary test-compile files (pdf, aux, log, out, toc, wrapper tex, precheck log)
-            // so they do not clutter the output directory before final Step 4 PDF generation.
+            // [AI Context] Clean up temporary test-compile helper files (aux, log, out, toc, wrapper tex, precheck log)
+            // while preserving the successfully generated PDF from the speech refinement stage.
             CleanupPrecheckFiles(targetFolder, currentFiles[0], "step3-precheck", alreadyCompiles);
 
             Ui.Info("Starte finalen Durchlauf für Schritt 3 (Last Refinement)...");
@@ -399,22 +399,39 @@ public partial class LatexRefinementSession {
         await DumpPromptLogAsync(history, systemInstructionText, targetOutputFolder, outputFileName);
         var (expectedSpokenClean, expectedMathStroke) = ComputeExpectedStructuralCounts(history);
 
+        int totalInputLength = 0;
+        foreach (var msg in history.Where(c => c.Role == "user")) {
+            if (msg.Parts != null) {
+                foreach (var p in msg.Parts) {
+                    if (!string.IsNullOrEmpty(p.Text)) {
+                        totalInputLength += p.Text.Length;
+                    }
+                }
+            }
+        }
+
         var (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens) =
             await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName);
 
-        if (!string.IsNullOrEmpty(fullResponseText) && (expectedSpokenClean > 0 || expectedMathStroke > 0)) {
-            int actualSpokenClean = SpokenCleanRegex().Count(fullResponseText);
-            int actualMathStroke = MathStrokeRegex().Count(fullResponseText);
+        if (!string.IsNullOrEmpty(fullResponseText)) {
+            if (expectedSpokenClean > 0 || expectedMathStroke > 0) {
+                int actualSpokenClean = SpokenCleanRegex().Count(fullResponseText);
+                int actualMathStroke = MathStrokeRegex().Count(fullResponseText);
 
-            int minExpectedSpoken = (int)(expectedSpokenClean * 0.6);
-            int minExpectedMath = (int)(expectedMathStroke * 0.6);
+                int minExpectedSpoken = (int)(expectedSpokenClean * 0.6);
+                int minExpectedMath = (int)(expectedMathStroke * 0.6);
 
-            if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
-                Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} speech / ~{expectedMathStroke} content, Erhalten: {actualSpokenClean} speech / {actualMathStroke} content.", "Refinement");
-                return null;
+                if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
+                    Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} speech / ~{expectedMathStroke} content, Erhalten: {actualSpokenClean} speech / {actualMathStroke} content.", "Refinement");
+                    return null;
+                }
+                else {
+                    Ui.Detail($"Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} speech, {actualMathStroke}/{expectedMathStroke} content.", "Refinement");
+                }
             }
-            else {
-                Ui.Detail($"Structural Integrity Verified: {actualSpokenClean}/{expectedSpokenClean} speech, {actualMathStroke}/{expectedMathStroke} content.", "Refinement");
+            else if (totalInputLength > 1000 && fullResponseText.Length < totalInputLength * 0.25) {
+                Ui.Error($"SILENT TRUNCATION DETECTED! Eingabe: ~{totalInputLength:N0} Zeichen, Erhalten: nur {fullResponseText.Length:N0} Zeichen.", "Refinement");
+                return null;
             }
         }
 
@@ -481,6 +498,15 @@ public partial class LatexRefinementSession {
         }
         if (name.EndsWith("-offset", StringComparison.OrdinalIgnoreCase)) {
             name = name[..^"-offset".Length];
+        }
+        if (name.EndsWith("-all", StringComparison.OrdinalIgnoreCase)) {
+            name = name[..^"-all".Length];
+        }
+        while (name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".avi", StringComparison.OrdinalIgnoreCase) ||
+               name.EndsWith(".mov", StringComparison.OrdinalIgnoreCase)) {
+            name = Path.GetFileNameWithoutExtension(name);
         }
         return name;
     }

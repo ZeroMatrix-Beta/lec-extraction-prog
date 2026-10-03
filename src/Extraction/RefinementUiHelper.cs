@@ -63,9 +63,18 @@ public static class RefinementUiHelper {
                         break; // ask for a folder again rather than dropping the user to the main menu
                     }
 
-                    texFiles = [.. Directory.GetFiles(searchFolder, "*.tex", SearchOption.AllDirectories)
-                                            .OrderBy(f => Path.GetDirectoryName(f))
-                                            .ThenBy(f => Path.GetFileName(f))];
+                    var allTexFiles = Directory.GetFiles(searchFolder, "*.tex", SearchOption.AllDirectories);
+                    texFiles = [.. allTexFiles
+                                    .Where(f => {
+                                        var parts = Path.GetRelativePath(searchFolder, f).Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                                        return !Array.Exists(parts, p => string.Equals(p, "old", StringComparison.OrdinalIgnoreCase)) &&
+                                               !Array.Exists(parts, p => string.Equals(p, "tmp", StringComparison.OrdinalIgnoreCase));
+                                    })
+                                    .OrderByDescending(File.GetLastWriteTime)];
+
+                    if (texFiles.Length == 0 && allTexFiles.Length > 0) {
+                        texFiles = [.. allTexFiles.OrderByDescending(File.GetLastWriteTime)];
+                    }
 
                     if (texFiles.Length == 0) {
                         Ui.Warn($"Keine passenden .tex Dateien in {searchFolder} oder den Unterordnern gefunden.");
