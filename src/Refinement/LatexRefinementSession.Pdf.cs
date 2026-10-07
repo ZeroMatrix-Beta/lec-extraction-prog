@@ -90,7 +90,7 @@ public partial class LatexRefinementSession {
             if (success) {
                 Ui.Success($"PDF erfolgreich erstellt im Zielordner: {targetFolder}");
 
-                string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
+                string compiledPdfPath = Path.ChangeExtension(wrapperPath, ".pdf");
                 if (System.IO.File.Exists(compiledPdfPath)) {
                     string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
                     System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
@@ -113,17 +113,8 @@ public partial class LatexRefinementSession {
             else {
                 Ui.Error($"Fehler bei der PDF-Generierung. Protokoll gespeichert in: {logPath}");
 
-                // Preserve original files before any repair attempts
-                string origTexPath = Path.Combine(targetFolder, $"{inputBaseName}-orig.tex");
-                if (!System.IO.File.Exists(origTexPath) && System.IO.File.Exists(finalTexFile)) {
-                    System.IO.File.Copy(finalTexFile, origTexPath, true);
-                    Ui.Info($"Originales LaTeX gesichert unter: {Path.GetFileName(origTexPath)}");
-                }
-                string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
-                if (System.IO.File.Exists(compiledPdfPath)) {
-                    string origPdfPath = Path.Combine(targetFolder, $"{inputBaseName}-orig.pdf");
-                    System.IO.File.Copy(compiledPdfPath, origPdfPath, true);
-                    Ui.Info($"Partielles/ursprüngliches PDF gesichert unter: {Path.GetFileName(origPdfPath)}");
+                if (allowRetryOnFailure) {
+                    BackupBeforeRepair(targetFolder, inputBaseName, finalTexFile, Path.ChangeExtension(wrapperPath, ".pdf"));
                 }
 
                 CleanupHelperFiles(targetFolder, finalTexFile, false);
@@ -136,29 +127,25 @@ public partial class LatexRefinementSession {
                     int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
                     if (maxRounds <= 0) maxRounds = 1;
 
-                    string currentBodyTex = await System.IO.File.ReadAllTextAsync(finalTexFile);
+                    string originalBodyTex = await System.IO.File.ReadAllTextAsync(finalTexFile);
+                    string currentBodyTex = originalBodyTex;
                     string currentLog = logContent;
                     bool anyRoundSucceeded = false;
 
                     for (int round = 1; round <= maxRounds; round++) {
                         Ui.Step($"Starte Reparatur-Runde {round} von {maxRounds}...", "AI PDF Fix Loop");
 
-                        bool roundSuccess = await TryRepairFailedPdfBuildAsync(preambleText, currentBodyTex, currentLog, baseName, targetFolder, round);
+                        var (roundSuccess, candidateBody, candidateLog) = await TryRepairFailedPdfBuildAsync(preambleText, originalBodyTex, currentBodyTex, currentLog, baseName, targetFolder, round);
 
                         if (roundSuccess) {
                             anyRoundSucceeded = true;
                             break;
                         }
 
-                        if (round < maxRounds) {
-                            string nextTryFile = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{round}.tex");
-                            string nextLogFile = Path.Combine(targetFolder, $"compile-log-step5-last_try{round}.txt");
-                            if (System.IO.File.Exists(nextTryFile)) {
-                                currentBodyTex = await System.IO.File.ReadAllTextAsync(nextTryFile);
-                            }
-                            if (System.IO.File.Exists(nextLogFile)) {
-                                currentLog = await System.IO.File.ReadAllTextAsync(nextLogFile);
-                            }
+                        // A rejected or empty answer leaves the input as it was, so the next round retries it.
+                        if (candidateBody != null) {
+                            currentBodyTex = candidateBody;
+                            currentLog = candidateLog ?? currentLog;
                         }
                     }
 
@@ -175,6 +162,67 @@ public partial class LatexRefinementSession {
             Ui.Error($"Unerwarteter Fehler bei der PDF-Generierung: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
             return false;
         }
+    }
+
+    /// <summary>
+    /// [AI Context] Saves the document as it was before a repair run touches it: the .tex and the
+    /// partial PDF pdflatex left behind. The first backup is <c>-orig</c>; a later run with a
+    /// different text gets <c>-orig2</c>, <c>-orig3</c>, ... so an earlier original is never
+    /// overwritten (the Antigravity path replaces the .tex with its fix), and a .tex and .pdf with
+    /// the same suffix always belong together.
+    /// [Human] Sichert LaTeX und Teil-PDF vor der Reparatur, ohne frühere Sicherungen zu überschreiben.
+    /// </summary>
+    private static void BackupBeforeRepair(string targetFolder, string inputBaseName, string finalTexFile, string compiledPdfPath) {
+        try {
+            string currentTex = System.IO.File.ReadAllText(finalTexFile);
+            for (int n = 1; ; n++) {
+                string suffix = n == 1 ? "-orig" : $"-orig{n}";
+                string texPath = Path.Combine(targetFolder, inputBaseName + suffix + ".tex");
+                if (System.IO.File.Exists(texPath)) {
+                    if (System.IO.File.ReadAllText(texPath) == currentTex) {
+                        return; // this exact version is already backed up, with its PDF
+                    }
+                    continue;
+                }
+
+                System.IO.File.WriteAllText(texPath, currentTex);
+                Ui.Info($"Originales LaTeX vor der Reparatur gesichert unter: {Path.GetFileName(texPath)}");
+                if (System.IO.File.Exists(compiledPdfPath)) {
+                    string pdfPath = Path.ChangeExtension(texPath, ".pdf");
+                    System.IO.File.Copy(compiledPdfPath, pdfPath, true);
+                    Ui.Info($"Teil-PDF vor der Reparatur gesichert unter: {Path.GetFileName(pdfPath)}");
+                }
+                return;
+            }
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Sicherung vor der Reparatur fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Whether a repaired LaTeX body may replace the original. "It compiles" cannot see
+    /// the dangerous failure: a repair that dropped half the lecture compiles fine. So the candidate
+    /// must keep at least 80% of the original's length and 90% of its speech and content blocks.
+    /// [Human] Prüft, ob eine Reparatur das Original ersetzen darf (nicht deutlich kürzer, keine fehlenden Blöcke).
+    /// </summary>
+    public static bool IsSafeRepairReplacement(string original, string candidate, out string reason) {
+        if (candidate.Length < original.Length * 0.8) {
+            reason = $"Die Reparatur ist deutlich kürzer als das Original ({candidate.Length:N0} statt {original.Length:N0} Zeichen).";
+            return false;
+        }
+
+        int originalSpeech = SpokenCleanRegex().Count(original);
+        int originalContent = MathStrokeRegex().Count(original);
+        int candidateSpeech = SpokenCleanRegex().Count(candidate);
+        int candidateContent = MathStrokeRegex().Count(candidate);
+        if (candidateSpeech < originalSpeech * 0.9 || candidateContent < originalContent * 0.9) {
+            reason = $"In der Reparatur fehlen Blöcke ({candidateSpeech}/{originalSpeech} speech, {candidateContent}/{originalContent} content).";
+            return false;
+        }
+
+        reason = "";
+        return true;
     }
 
     private static void CleanupPrecheckFiles(string targetFolder, string finalTexFile, string stepPrefix, bool compilationSuccess = true) {
@@ -281,7 +329,10 @@ public partial class LatexRefinementSession {
         return sb.ToString();
     }
 
-    private async Task<bool> TryRepairFailedPdfBuildAsync(string preambleText, string failedBodyTex, string compileLog, string baseName, string targetFolder, int roundNumber = 1) {
+    /// <returns>Success, plus the candidate body and its compile log for the next round; both null when the
+    /// answer was empty or rejected, so the next round retries the same input.</returns>
+    private async Task<(bool Success, string? CandidateBody, string? CandidateLog)> TryRepairFailedPdfBuildAsync(
+        string preambleText, string originalBodyTex, string failedBodyTex, string compileLog, string baseName, string targetFolder, int roundNumber = 1) {
         Ui.Step($"Schritt 4 Retry: PDF LaTeX Fix (-final-attempt, Runde #{roundNumber})", "LaTeX Fix");
         BackendParameters backendParams = _config.UseVertex ? _config.Step3LastRefinement.Vertex : _config.Step3LastRefinement.AiStudio;
 
@@ -342,6 +393,13 @@ public partial class LatexRefinementSession {
             }
             bodyOnlyText = DocumentTagsRegex().Replace(bodyOnlyText, "").Trim();
 
+            if (!IsSafeRepairReplacement(originalBodyTex, bodyOnlyText, out string rejectReason)) {
+                string rejectedPath = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{roundNumber}-rejected.tex");
+                await System.IO.File.WriteAllTextAsync(rejectedPath, bodyOnlyText);
+                Ui.Error($"Fix-Versuch #{roundNumber} verworfen: {rejectReason} Gespeichert unter: {Path.GetFileName(rejectedPath)}");
+                return (false, null, null);
+            }
+
             string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
             await System.IO.File.WriteAllTextAsync(noPreamblePath, bodyOnlyText);
             Ui.Info($"Gefixte LaTeX-Datei (Versuch #{roundNumber}) gespeichert unter: {noPreamblePath}");
@@ -361,9 +419,9 @@ public partial class LatexRefinementSession {
 
             if (retrySuccess) {
                 Ui.Success($"PDF erfolgreich im Fix-Versuch #{roundNumber} (step5) erstellt: {targetFolder}");
-                string compiledPdfPath = Path.Combine(targetFolder, standaloneFileName.Replace(".tex", ".pdf"));
+                string compiledPdfPath = Path.ChangeExtension(standalonePath, ".pdf");
                 if (System.IO.File.Exists(compiledPdfPath)) {
-                    string cleanPdfPath = Path.Combine(targetFolder, noPreambleFileName.Replace(".tex", ".pdf"));
+                    string cleanPdfPath = Path.ChangeExtension(noPreamblePath, ".pdf");
                     System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
                     Ui.Info($"PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
 
@@ -371,16 +429,16 @@ public partial class LatexRefinementSession {
                     System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
                     Ui.Info($"Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
                 }
-                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName), true);
-                return true;
+                CleanupHelperFiles(targetFolder, noPreamblePath, true);
+                return (true, bodyOnlyText, retryLogContent);
             }
             else {
                 Ui.Error($"Auch Fix-Versuch #{roundNumber} konnte das PDF nicht fehlerfrei kompilieren. Log in: {retryLogPath}");
-                CleanupHelperFiles(targetFolder, Path.Combine(targetFolder, noPreambleFileName), false);
-                return false;
+                CleanupHelperFiles(targetFolder, noPreamblePath, false);
+                return (false, bodyOnlyText, retryLogContent);
             }
         }
-        return false;
+        return (false, null, null);
     }
 
     private async Task<string> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName) {
@@ -494,12 +552,9 @@ public partial class LatexRefinementSession {
             return false;
         }
 
+        // CompilePdfAsync has already backed up the original (-orig.tex / -orig.pdf) before calling this.
         string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
-        string origTexPath = Path.Combine(targetFolder, $"{inputBaseName}-orig.tex");
-        if (!System.IO.File.Exists(origTexPath) && System.IO.File.Exists(finalTexFile)) {
-            System.IO.File.Copy(finalTexFile, origTexPath, true);
-            Ui.Info($"Originales LaTeX vor Reparatur gesichert unter: {Path.GetFileName(origTexPath)}");
-        }
+        string originalTex = await System.IO.File.ReadAllTextAsync(finalTexFile);
 
         using var httpClient = new System.Net.Http.HttpClient();
         httpClient.Timeout = TimeSpan.FromMinutes(20);
@@ -519,6 +574,15 @@ public partial class LatexRefinementSession {
 
             string tryTexFileName = $"{inputBaseName}-try{round}.tex";
             string tryTexPath = Path.Combine(targetFolder, tryTexFileName);
+
+            if (!IsSafeRepairReplacement(originalTex, fixedLatex, out string rejectReason)) {
+                // Keep it for inspection, but never compile or promote it; the next round retries the previous input.
+                string rejectedPath = Path.Combine(targetFolder, $"{inputBaseName}-try{round}-rejected.tex");
+                await System.IO.File.WriteAllTextAsync(rejectedPath, fixedLatex);
+                Ui.Error($"Reparatur aus Runde {round} verworfen: {rejectReason} Gespeichert unter: {Path.GetFileName(rejectedPath)}");
+                continue;
+            }
+
             await System.IO.File.WriteAllTextAsync(tryTexPath, fixedLatex);
             Ui.Info($"Reparierte Version (Runde {round}) gespeichert unter: {tryTexFileName}");
 
@@ -536,7 +600,7 @@ public partial class LatexRefinementSession {
             string tryLogPath = Path.Combine(targetFolder, tryLogFileName);
             await System.IO.File.WriteAllTextAsync(tryLogPath, logContent);
 
-            string compiledPdfPath = tryWrapperPath.Replace(".tex", ".pdf");
+            string compiledPdfPath = Path.ChangeExtension(tryWrapperPath, ".pdf");
             if (System.IO.File.Exists(compiledPdfPath)) {
                 string tryPdfPath = Path.Combine(targetFolder, $"{inputBaseName}-try{round}.pdf");
                 System.IO.File.Copy(compiledPdfPath, tryPdfPath, true);
@@ -619,71 +683,9 @@ Please return the fully corrected contents of `{candidateFileName}` inside a ```
                 return null;
             }
 
-            using var doc = System.Text.Json.JsonDocument.Parse(responseBody);
-            string agentOutput = "";
-            if (doc.RootElement.TryGetProperty("output_text", out var outputTextElement) && outputTextElement.ValueKind == System.Text.Json.JsonValueKind.String) {
-                agentOutput = outputTextElement.GetString() ?? "";
-            }
-
-            if (string.IsNullOrWhiteSpace(agentOutput) && doc.RootElement.TryGetProperty("steps", out var stepsElement) && stepsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
-                var sb = new System.Text.StringBuilder();
-                foreach (var step in stepsElement.EnumerateArray()) {
-                    string stepType = "";
-                    if (step.TryGetProperty("type", out var typeElem) && typeElem.ValueKind == System.Text.Json.JsonValueKind.String) {
-                        stepType = typeElem.GetString() ?? "";
-                    }
-
-                    // CRITICAL: Skip internal thought steps entirely!
-                    // In v1beta/interactions, step.type == 'thought' contains 'summary' with reasoning thoughts,
-                    // NOT LaTeX output!
-                    if (stepType.Equals("thought", StringComparison.OrdinalIgnoreCase)) {
-                        continue;
-                    }
-
-                    // 1. Check for content array (standard model_output in modern Interactions API)
-                    if (step.TryGetProperty("content", out var contentElement) && contentElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
-                        foreach (var part in contentElement.EnumerateArray()) {
-                            if (part.TryGetProperty("text", out var txtElem) && txtElem.ValueKind == System.Text.Json.JsonValueKind.String) {
-                                sb.AppendLine(txtElem.GetString());
-                            }
-                        }
-                    }
-                    // 2. Check for parts array
-                    else if (step.TryGetProperty("parts", out var partsElement) && partsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
-                        foreach (var part in partsElement.EnumerateArray()) {
-                            if (part.TryGetProperty("text", out var txtElem) && txtElem.ValueKind == System.Text.Json.JsonValueKind.String) {
-                                sb.AppendLine(txtElem.GetString());
-                            }
-                        }
-                    }
-                    // 3. Check for direct text property
-                    else if (step.TryGetProperty("text", out var directTextElem) && directTextElem.ValueKind == System.Text.Json.JsonValueKind.String) {
-                        sb.AppendLine(directTextElem.GetString());
-                    }
-                }
-                agentOutput = sb.ToString();
-            }
-
-            // Fallback: check for outputs array
-            if (string.IsNullOrWhiteSpace(agentOutput) && doc.RootElement.TryGetProperty("outputs", out var outputsElement) && outputsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
-                var sb = new System.Text.StringBuilder();
-                foreach (var outItem in outputsElement.EnumerateArray()) {
-                    if (outItem.TryGetProperty("text", out var txtElem) && txtElem.ValueKind == System.Text.Json.JsonValueKind.String) {
-                        sb.AppendLine(txtElem.GetString());
-                    }
-                }
-                agentOutput = sb.ToString();
-            }
-
+            string agentOutput = AntigravityResponseParser.ExtractText(responseBody);
             if (string.IsNullOrWhiteSpace(agentOutput)) {
-                Ui.Error("Antigravity Agent Response enthielt keinen verwertbaren Text (kein model_output/output_text).");
-                return null;
-            }
-
-            // Safety guard: reject if thought summaries somehow leaked into the output
-            if (agentOutput.Contains("**Analyzing the Error**") || agentOutput.Contains("**Examining the Brackets**") ||
-                agentOutput.StartsWith("I'm currently focused on", StringComparison.OrdinalIgnoreCase)) {
-                Ui.Error("Antigravity Agent lieferte Denkprozess-Fragmente anstelle von LaTeX-Code. Verwerfe Antwort.");
+                Ui.Error("Antigravity Agent Response enthielt keinen verwertbaren Text (kein output_text / keine Antwort-Schritte).");
                 return null;
             }
 

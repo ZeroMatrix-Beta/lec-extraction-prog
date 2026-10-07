@@ -220,7 +220,7 @@ public partial class LatexRefinementSession {
                 }
                 else {
                     var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "",
-                        fileActivationDelaySeconds: _config.Step1MergeAndTimestamp.RateLimitDelaySeconds);
+                        fileActivationDelaySeconds: _config.Step1MergeAndTimestamp.RateLimitDelaySeconds > 0 ? _config.Step1MergeAndTimestamp.RateLimitDelaySeconds : 130);
                     var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                     if (success) {
                         audioParts.AddRange(attached);
@@ -302,7 +302,7 @@ public partial class LatexRefinementSession {
             }
             else {
                 var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "",
-                    fileActivationDelaySeconds: _config.Step2SpeechRefinement.RateLimitDelaySeconds);
+                    fileActivationDelaySeconds: _config.Step2SpeechRefinement.RateLimitDelaySeconds > 0 ? _config.Step2SpeechRefinement.RateLimitDelaySeconds : 130);
                 var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                 if (success) {
                     audioParts.AddRange(attached);
