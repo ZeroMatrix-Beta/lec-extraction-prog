@@ -22,5 +22,6 @@ public interface IAutoExtractionConfig {
     bool VerboseConsoleOutput { get; }
     bool OnlyDoWarmUp { get; }
     int HighDemandDelaySeconds { get; }
+    int MaxContinueRequests { get; }
 }
 

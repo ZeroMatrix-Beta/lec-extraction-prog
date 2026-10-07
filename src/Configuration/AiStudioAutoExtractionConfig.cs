@@ -87,6 +87,13 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public int HighDemandDelaySeconds { get; set; } = 180;
 
     /// <summary>
+    /// [AI Context] Upper bound on requests per video part, the first one included. Each continue
+    /// re-sends the video, so this caps the cost of a part whose model never says "Video complete".
+    /// [Human] Maximale Anzahl Requests pro Videoteil (inkl. Continue-Anfragen).
+    /// </summary>
+    public int MaxContinueRequests { get; set; } = 15;
+
+    /// <summary>
     /// [AI Context] When true, the informational CountTokensAsync call before each cache-warming
     /// handshake is skipped entirely. CountTokensAsync may consume input tokens against the same
     /// Free-Tier quota as GenerateContent; skipping it saves quota budget at the cost of losing the

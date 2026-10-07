@@ -385,8 +385,7 @@ public partial class LatexRefinementSession {
 
     private async Task<string> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName) {
         string fullResponseText = "";
-        int currentRequest = 1;
-        int maxRequests = 5;
+        var budget = new ContinueBudget(_config.Step3LastRefinement?.MaxContinueRequests ?? 10);
         int emptyResponseRetries = 0;
 
         using var cts = new CancellationTokenSource();
@@ -407,7 +406,7 @@ public partial class LatexRefinementSession {
             }
             AttachmentUploader.HasJustUploaded = false;
 
-            Ui.Info($"Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...", "API");
+            Ui.Info($"Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...", "API");
 
             string chunkResp = "";
             bool callSuccess = false;
@@ -458,8 +457,8 @@ public partial class LatexRefinementSession {
             bool isComplete = chunkResp.Contains("% [SYSTEM] Refinement complete", StringComparison.OrdinalIgnoreCase);
             if (isComplete) break;
 
-            if (currentRequest >= maxRequests) {
-                Ui.Warn($"Maximale Anzahl an Requests ({maxRequests}) für PDF-Fix erreicht. Breche ab.");
+            if (!budget.TryContinue(chunkResp, out string stopReason)) {
+                Ui.Warn($"{stopReason} Breche den PDF-Fix ab.");
                 break;
             }
 
@@ -475,13 +474,6 @@ public partial class LatexRefinementSession {
             if (!await InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                 break;
             }
-
-            if (!string.IsNullOrWhiteSpace(chunkResp)) {
-                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "PDF-Fix");
-                currentRequest = 0;
-            }
-
-            currentRequest++;
         }
 
         Console.CancelKeyPress -= CancelHandler;

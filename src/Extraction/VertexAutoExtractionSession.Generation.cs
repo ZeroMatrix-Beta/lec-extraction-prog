@@ -225,8 +225,7 @@ public partial class VertexAutoExtractionSession {
 
     private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext) {
         string fullResponse = "";
-        int currentRequest = 1;
-        int maxRequestsPerPart = 6;
+        var budget = new ContinueBudget(_config.MaxContinueRequests);
         int interactionInputTokens = 0;
         int interactionOutputTokens = 0;
         int interactionCachedTokens = 0;
@@ -237,7 +236,7 @@ public partial class VertexAutoExtractionSession {
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
-            Ui.Step($"Sende Anfrage für Part {partNumber} an Vertex AI ({_config.CurrentModel}) (Request {currentRequest}/{maxRequestsPerPart})...");
+            Ui.Step($"Sende Anfrage für Part {partNumber} an Vertex AI ({_config.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...");
             GroundingMetadata? accumulatedGrounding = null;
             string chunkResp = "";
             int requestInputTokens = 0;
@@ -332,8 +331,8 @@ public partial class VertexAutoExtractionSession {
 
             if (videoComplete) break;
 
-            if (currentRequest >= maxRequestsPerPart) {
-                Ui.Warn($"Maximale Anzahl an Requests ({maxRequestsPerPart}) für diesen Teil erreicht ({partFile}). Breche ab.");
+            if (!budget.TryContinue(chunkResp, out string stopReason)) {
+                Ui.Warn($"{stopReason} Breche diesen Teil ab ({partFile}).");
                 break;
             }
 
@@ -356,13 +355,6 @@ public partial class VertexAutoExtractionSession {
                 Ui.Info("Warten durch Benutzer abgebrochen.");
                 break;
             }
-
-            if (!string.IsNullOrWhiteSpace(chunkResp)) {
-                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "AutoExtraction");
-                currentRequest = 0;
-            }
-
-            currentRequest++;
         }
 
         Console.CancelKeyPress -= cancelHandler;

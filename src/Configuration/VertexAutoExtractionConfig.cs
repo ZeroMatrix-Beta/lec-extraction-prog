@@ -89,6 +89,13 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public int HighDemandDelaySeconds { get; set; } = 180;
 
     /// <summary>
+    /// [AI Context] Upper bound on requests per video part, the first one included. Each continue
+    /// re-sends the video, so this caps the cost of a part whose model never says "Video complete".
+    /// [Human] Maximale Anzahl Requests pro Videoteil (inkl. Continue-Anfragen).
+    /// </summary>
+    public int MaxContinueRequests { get; set; } = 15;
+
+    /// <summary>
     /// [AI Context] Vertex counterpart: skips the informational CountTokensAsync call before each
     /// cache-warming handshake. See AI Studio config for full rationale.
     /// [Human] Überspringt den CountTokens-Aufruf vor jedem Warmup-Handshake.

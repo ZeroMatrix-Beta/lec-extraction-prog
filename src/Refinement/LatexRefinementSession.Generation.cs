@@ -213,8 +213,7 @@ public partial class LatexRefinementSession {
         int totalCachedTokens = 0;
 
         string fullResponseText = "";
-        int currentRequest = 1;
-        int maxRequests = 5;
+        var budget = new ContinueBudget(stepConfig.MaxContinueRequests);
         int emptyResponseRetries = 0;
 
         using var cts = new CancellationTokenSource();
@@ -235,7 +234,7 @@ public partial class LatexRefinementSession {
             }
             AttachmentUploader.HasJustUploaded = false;
 
-            Ui.Info($"Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {currentRequest}/{maxRequests})...", "API");
+            Ui.Info($"Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...", "API");
 
             string chunkResp = "";
             bool callSuccess = false;
@@ -310,8 +309,8 @@ public partial class LatexRefinementSession {
                 break;
             }
 
-            if (currentRequest >= maxRequests) {
-                Ui.Warn($"Maximale Anzahl an Requests ({maxRequests}) für dieses Refinement erreicht. Breche ab.");
+            if (!budget.TryContinue(chunkResp, out string stopReason)) {
+                Ui.Warn($"{stopReason} Breche dieses Refinement ab.");
                 break;
             }
 
@@ -335,13 +334,6 @@ public partial class LatexRefinementSession {
                 Ui.Warn("Warten durch Benutzer abgebrochen.");
                 break;
             }
-
-            if (!string.IsNullOrWhiteSpace(chunkResp)) {
-                Ui.Detail("Fortschritt erkannt: Request-Zähler für weiteren Continue-Schritt zurückgesetzt.", "Refinement");
-                currentRequest = 0;
-            }
-
-            currentRequest++;
         }
 
         Console.CancelKeyPress -= CancelHandler;
