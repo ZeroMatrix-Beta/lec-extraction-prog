@@ -1,5 +1,7 @@
 {
-  "UseChosenModelForRestOfPipeline": false, // <= Consider this
+  "UseChosenModelForRestOfPipeline": false,
+  "OnlyDoWarmUp": false,
+  // <= Consider this
   "EnableParallelFileUploads": false,
   "CreateLogFiles": true,
   "GenerateOffsetFiles": true,
@@ -18,7 +20,7 @@
   "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 2,
+  "NumberOfParts": 4,
   //or "auto"
   "OverlapSeconds": 240,
   "GoogleVideoFps": 0.25,
@@ -37,10 +39,9 @@
   "HistoryRateLimitDelaySeconds": 64,
   // "HighDemandDelaySeconds": 180,
   "HighDemandDelaySeconds": 64,
-  "OnlyDoWarmUp": false,
   "YouTubeTasks": [],
   "ApiKey": {
-    "ActiveProfile": 0,
+    "ActiveProfile": 1,
     "EnvNames": [
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
@@ -75,7 +76,7 @@
       /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-pedagogical-boxes.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-proof-wrappers.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-document-structure.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",*/,
+      /*"C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\environments-invisible-layer.md",*/ ,
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples.md",
       "C:\\Users\\miche\\latex\\prompt-engineering\\transcription\\big-examples"
       /* <- include folder*/

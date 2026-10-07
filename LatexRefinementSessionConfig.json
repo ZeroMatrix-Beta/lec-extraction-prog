@@ -46,7 +46,7 @@
           "gemini-3.5-flash",
           "gemini-3-flash-preview"
         ],
-        "CurrentIndex": 1
+        "CurrentIndex": 0
       },
       "ContextCaching": {
         "Enabled": true,
@@ -107,7 +107,7 @@
           "gemini-3.5-flash",
           "gemini-3-flash-preview"
         ],
-        "CurrentIndex": 1
+        "CurrentIndex": 0
       },
       "ContextCaching": {
         "Enabled": false,
@@ -168,7 +168,7 @@
           "gemini-3.5-flash",
           "gemini-3-flash-preview"
         ],
-        "CurrentIndex": 1
+        "CurrentIndex": 0
       },
       "ContextCaching": {
         "Enabled": false,

@@ -1,5 +1,10 @@
 {
   "version": "2.0.0",
+  "options": {
+    "env": {
+      "PATH": "${env:USERPROFILE}/.dotnet;${env:PATH}"
+    }
+  },
   "tasks": [
     {
       "label": "build",
