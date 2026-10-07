@@ -15,14 +15,6 @@ public static class PlannedCommands {
         Planned("ask", "Send one prompt with optional attachments and print the answer.", "C9")
     ];
 
-    private static Command WithSubcommands(string name, string description, Command[] children) {
-        var command = new Command(name, description);
-        foreach (var child in children) {
-            command.Add(child);
-        }
-        return command;
-    }
-
     private static Command Planned(string name, string description, string phase) {
         var command = new Command(name, $"{description} [not implemented yet - {phase}]");
         command.SetAction(_ => {

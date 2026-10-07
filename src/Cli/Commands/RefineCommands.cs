@@ -107,7 +107,7 @@ public static class RefineCommands {
             config.Step1MergeAndTimestamp.Enabled = false;
             config.Step2SpeechRefinement.Enabled = false;
             config.Step3LastRefinement.Enabled = false;
-            config.PdfCompilation ??= new PdfCompilationConfig();
+            config.PdfCompilation ??= new();
             config.PdfCompilation.Enabled = true;
 
             // The repair loop is what makes this command billable - it sends the failed document

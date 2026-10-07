@@ -222,6 +222,15 @@ public static class FfmpegToolkit {
             return -1;
         }
 
+        // A raw .aac file (ADTS, what ExtractAudioAsAacAsync writes) has no duration header, so ffprobe
+        // only estimates it from the bitrate: 01:30:33 for a lecture that runs 01:30:51. Measure it exactly.
+        if (Path.GetExtension(filePath).Equals(".aac", StringComparison.OrdinalIgnoreCase)) {
+            double exactDuration = await GetDemuxedAudioDurationAsync(filePath);
+            if (exactDuration > 0) {
+                return exactDuration;
+            }
+        }
+
         var startInfo = new ProcessStartInfo {
             FileName = "ffprobe",
             Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"",
@@ -252,6 +261,44 @@ public static class FfmpegToolkit {
             }
         }
         return -1;
+    }
+
+    /// <summary>
+    /// Reads every packet of the first audio stream without decoding it and returns where the last one
+    /// ends. Exact even without a duration header; about a second for a full lecture. -1 on failure.
+    /// </summary>
+    private static async Task<double> GetDemuxedAudioDurationAsync(string filePath) {
+        var startInfo = new ProcessStartInfo {
+            FileName = "ffmpeg",
+            Arguments = $"-nostdin -v error -i \"{filePath}\" -map 0:a:0 -c copy -f null -progress pipe:1 -nostats -",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        try {
+            using var process = Process.Start(startInfo);
+            if (process == null) return -1;
+
+            string output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
+            if (process.ExitCode != 0) return -1;
+
+            // -progress writes key=value blocks; the last out_time_us is the end of the stream.
+            const string key = "out_time_us=";
+            long lastMicroseconds = -1;
+            foreach (string line in output.Split('\n')) {
+                if (line.StartsWith(key, StringComparison.Ordinal) &&
+                    long.TryParse(line[key.Length..].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out long microseconds)) {
+                    lastMicroseconds = microseconds;
+                }
+            }
+            return lastMicroseconds > 0 ? lastMicroseconds / 1_000_000.0 : -1;
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Exakte Audiodauer nicht messbar ({ex.GetType().Name}: {ex.Message}); verwende die ffprobe-Schätzung.", "ffmpeg");
+            return -1;
+        }
     }
 
     private static async Task<bool> RunFfmpegAsync(string arguments) {

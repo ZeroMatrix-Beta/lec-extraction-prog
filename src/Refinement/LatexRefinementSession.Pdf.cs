@@ -112,11 +112,25 @@ public partial class LatexRefinementSession {
             }
             else {
                 Ui.Error($"Fehler bei der PDF-Generierung. Protokoll gespeichert in: {logPath}");
+
+                // Preserve original files before any repair attempts
+                string origTexPath = Path.Combine(targetFolder, $"{inputBaseName}-orig.tex");
+                if (!System.IO.File.Exists(origTexPath) && System.IO.File.Exists(finalTexFile)) {
+                    System.IO.File.Copy(finalTexFile, origTexPath, true);
+                    Ui.Info($"Originales LaTeX gesichert unter: {Path.GetFileName(origTexPath)}");
+                }
+                string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
+                if (System.IO.File.Exists(compiledPdfPath)) {
+                    string origPdfPath = Path.Combine(targetFolder, $"{inputBaseName}-orig.pdf");
+                    System.IO.File.Copy(compiledPdfPath, origPdfPath, true);
+                    Ui.Info($"Partielles/ursprüngliches PDF gesichert unter: {Path.GetFileName(origPdfPath)}");
+                }
+
                 CleanupHelperFiles(targetFolder, finalTexFile, false);
                 if (allowRetryOnFailure) {
                     if (_config.PdfCompilation?.UseAntiGravityAgent == true) {
                         Ui.Warn("PDF-Kompilierung fehlgeschlagen. Starte sofort interaktive Reparatur über AntiGravity...", "AntiGravity Agent Mode");
-                        return await RunExternalAgentRepairLoopAsync(finalTexFile, baseName, targetFolder, preambleText);
+                        return await RunExternalAgentRepairLoopAsync(finalTexFile, baseName, targetFolder, preambleText, logContent);
                     }
 
                     int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
@@ -130,15 +144,6 @@ public partial class LatexRefinementSession {
                         Ui.Step($"Starte Reparatur-Runde {round} von {maxRounds}...", "AI PDF Fix Loop");
 
                         bool roundSuccess = await TryRepairFailedPdfBuildAsync(preambleText, currentBodyTex, currentLog, baseName, targetFolder, round);
-
-                        for (int prev = 1; prev < round; prev++) {
-                            string prevNoPreamble = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{prev}.tex");
-                            string prevStandalone = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{prev}-main.tex");
-                            string prevLog = Path.Combine(targetFolder, $"compile-log-step5-last_try{prev}.txt");
-                            try { if (System.IO.File.Exists(prevNoPreamble)) System.IO.File.Delete(prevNoPreamble); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-                            try { if (System.IO.File.Exists(prevStandalone)) System.IO.File.Delete(prevStandalone); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-                            try { if (System.IO.File.Exists(prevLog)) System.IO.File.Delete(prevLog); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-                        }
 
                         if (roundSuccess) {
                             anyRoundSucceeded = true;
@@ -483,7 +488,7 @@ public partial class LatexRefinementSession {
         return fullResponseText;
     }
 
-    private async Task<bool> RunExternalAgentRepairLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText) {
+    private async Task<bool> RunExternalAgentRepairLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText, string initialLog) {
         int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
         if (maxRounds <= 0) maxRounds = 1;
 
@@ -497,30 +502,62 @@ public partial class LatexRefinementSession {
             return false;
         }
 
+        string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
+        string origTexPath = Path.Combine(targetFolder, $"{inputBaseName}-orig.tex");
+        if (!System.IO.File.Exists(origTexPath) && System.IO.File.Exists(finalTexFile)) {
+            System.IO.File.Copy(finalTexFile, origTexPath, true);
+            Ui.Info($"Originales LaTeX vor Reparatur gesichert unter: {Path.GetFileName(origTexPath)}");
+        }
+
         using var httpClient = new System.Net.Http.HttpClient();
         httpClient.Timeout = TimeSpan.FromMinutes(20);
         httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
 
+        string currentCandidatePath = finalTexFile;
+        string currentLog = initialLog;
+
         for (int round = 1; round <= maxRounds; round++) {
             Ui.Step($"Starte Reparatur-Runde {round} von {maxRounds}...", "Antigravity Agent API");
 
+            string? fixedLatex = await CallAntiGravityAgentAsync(httpClient, currentCandidatePath, currentLog);
+            if (string.IsNullOrWhiteSpace(fixedLatex)) {
+                Ui.Error($"Agent konnte in Runde {round} keine verwertbare Korrektur liefern. Breche Reparatur ab.");
+                return false;
+            }
+
+            string tryTexFileName = $"{inputBaseName}-try{round}.tex";
+            string tryTexPath = Path.Combine(targetFolder, tryTexFileName);
+            await System.IO.File.WriteAllTextAsync(tryTexPath, fixedLatex);
+            Ui.Info($"Reparierte Version (Runde {round}) gespeichert unter: {tryTexFileName}");
+
             string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
             string preamble = System.IO.File.Exists(preamblePath) ? await System.IO.File.ReadAllTextAsync(preamblePath) : preambleText;
-            string finalFileName = Path.GetFileName(finalTexFile);
-            string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
-            string wrapperFileName = $"{inputBaseName}-main.tex";
-            string wrapperPath = Path.Combine(targetFolder, wrapperFileName);
-            string wrapperContent = preamble + "\n\\begin{document}\n\n" + $"\\input{{{finalFileName}}}\n\n" + "\\end{document}\n";
-            await System.IO.File.WriteAllTextAsync(wrapperPath, wrapperContent);
 
-            var (success, log) = await LatexToolkit.CompilePdfAsync(wrapperPath);
+            string tryWrapperFileName = $"{inputBaseName}-try{round}-main.tex";
+            string tryWrapperPath = Path.Combine(targetFolder, tryWrapperFileName);
+            string tryWrapperContent = preamble + "\n\\begin{document}\n\n" + $"\\input{{{tryTexFileName}}}\n\n" + "\\end{document}\n";
+            await System.IO.File.WriteAllTextAsync(tryWrapperPath, tryWrapperContent);
+
+            var (success, log) = await LatexToolkit.CompilePdfAsync(tryWrapperPath);
             string logContent = FormatLatexLog(log, success);
-            string logPath = Path.Combine(targetFolder, "step4-compile-log.txt");
-            await System.IO.File.WriteAllTextAsync(logPath, logContent);
+            string tryLogFileName = $"compile-log-{inputBaseName}-try{round}.txt";
+            string tryLogPath = Path.Combine(targetFolder, tryLogFileName);
+            await System.IO.File.WriteAllTextAsync(tryLogPath, logContent);
+
+            string compiledPdfPath = tryWrapperPath.Replace(".tex", ".pdf");
+            if (System.IO.File.Exists(compiledPdfPath)) {
+                string tryPdfPath = Path.Combine(targetFolder, $"{inputBaseName}-try{round}.pdf");
+                System.IO.File.Copy(compiledPdfPath, tryPdfPath, true);
+                Ui.Info($"Try-PDF gespeichert: {Path.GetFileName(tryPdfPath)}");
+            }
 
             if (success) {
                 Ui.Success($"PDF durch Antigravity Agent erfolgreich (Runde {round}/{maxRounds}) generiert!", "LatexToolkit");
-                string compiledPdfPath = wrapperPath.Replace(".tex", ".pdf");
+
+                // Overwrite finalTexFile with the winning fix
+                System.IO.File.Copy(tryTexPath, finalTexFile, true);
+                Ui.Success($"Finale Datei aktualisiert mit erfolgreichem Fix: {Path.GetFileName(finalTexFile)}");
+
                 if (System.IO.File.Exists(compiledPdfPath)) {
                     string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
                     System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
@@ -530,16 +567,18 @@ public partial class LatexRefinementSession {
                     System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
                     Ui.Info($"Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
                 }
-                CleanupHelperFiles(targetFolder, finalTexFile, true);
+
+                // Cleanup only temporary wrapper auxiliary files, preserving -try{round}.tex, -try{round}.pdf, and logs
+                CleanupHelperFiles(targetFolder, tryTexPath, true);
                 return true;
             }
             else {
-                CleanupHelperFiles(targetFolder, finalTexFile, false);
-                Ui.Warn($"PDF-Generierung fehlgeschlagen (Runde {round} von {maxRounds}). Sende Log und Code an Remote-Agenten...", "Antigravity Agent API");
+                Ui.Warn($"PDF-Generierung für Versuch #{round} fehlgeschlagen. Details in: {tryLogFileName}", "Antigravity Agent API");
+                CleanupHelperFiles(targetFolder, tryTexPath, false);
 
-                if (!await CallAntiGravityAgentAsync(httpClient, finalTexFile, logContent)) {
-                    return false;
-                }
+                // Setup candidate and log for next round
+                currentCandidatePath = tryTexPath;
+                currentLog = logContent;
             }
         }
 
@@ -547,9 +586,9 @@ public partial class LatexRefinementSession {
         return false;
     }
 
-    private static async Task<bool> CallAntiGravityAgentAsync(System.Net.Http.HttpClient httpClient, string finalTexFile, string logContent) {
-        string finalFileName = Path.GetFileName(finalTexFile);
-        string currentLatexContent = await System.IO.File.ReadAllTextAsync(finalTexFile);
+    private static async Task<string?> CallAntiGravityAgentAsync(System.Net.Http.HttpClient httpClient, string candidateTexFile, string logContent) {
+        string candidateFileName = Path.GetFileName(candidateTexFile);
+        string currentLatexContent = await System.IO.File.ReadAllTextAsync(candidateTexFile);
 
         string prompt = $@"We are trying to compile a LaTeX document, but pdflatex encountered errors.
 You are the Antigravity Agent. Please fix the LaTeX code.
@@ -561,12 +600,12 @@ The preamble is managed by a wrapper script. Do not write the preamble, only out
 {logContent}
 ```
 
-### Current File Contents (`{finalFileName}`)
+### Current File Contents (`{candidateFileName}`)
 ```latex
 {currentLatexContent}
 ```
 
-Please return the fully corrected contents of `{finalFileName}` inside a ```latex code block. DO NOT use \begin{{document}} or \end{{document}}.";
+Please return the fully corrected contents of `{candidateFileName}` inside a ```latex code block. DO NOT use \begin{{document}} or \end{{document}}.";
 
         var payload = new {
             agent = "antigravity-preview-05-2026",
@@ -585,7 +624,7 @@ Please return the fully corrected contents of `{finalFileName}` inside a ```late
 
             if (!response.IsSuccessStatusCode) {
                 Ui.Error($"Antigravity Agent API Aufruf fehlgeschlagen: {response.StatusCode} - {responseBody}");
-                return false;
+                return null;
             }
 
             using var doc = System.Text.Json.JsonDocument.Parse(responseBody);
@@ -597,32 +636,78 @@ Please return the fully corrected contents of `{finalFileName}` inside a ```late
             if (string.IsNullOrWhiteSpace(agentOutput) && doc.RootElement.TryGetProperty("steps", out var stepsElement) && stepsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
                 var sb = new System.Text.StringBuilder();
                 foreach (var step in stepsElement.EnumerateArray()) {
-                    if (step.TryGetProperty("summary", out var summaryElement) && summaryElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
-                        foreach (var item in summaryElement.EnumerateArray()) {
-                            if (item.TryGetProperty("text", out var txtElement) && txtElement.ValueKind == System.Text.Json.JsonValueKind.String) {
-                                sb.AppendLine(txtElement.GetString());
+                    string stepType = "";
+                    if (step.TryGetProperty("type", out var typeElem) && typeElem.ValueKind == System.Text.Json.JsonValueKind.String) {
+                        stepType = typeElem.GetString() ?? "";
+                    }
+
+                    // CRITICAL: Skip internal thought steps entirely!
+                    // In v1beta/interactions, step.type == 'thought' contains 'summary' with reasoning thoughts,
+                    // NOT LaTeX output!
+                    if (stepType.Equals("thought", StringComparison.OrdinalIgnoreCase)) {
+                        continue;
+                    }
+
+                    // 1. Check for content array (standard model_output in modern Interactions API)
+                    if (step.TryGetProperty("content", out var contentElement) && contentElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
+                        foreach (var part in contentElement.EnumerateArray()) {
+                            if (part.TryGetProperty("text", out var txtElem) && txtElem.ValueKind == System.Text.Json.JsonValueKind.String) {
+                                sb.AppendLine(txtElem.GetString());
                             }
                         }
+                    }
+                    // 2. Check for parts array
+                    else if (step.TryGetProperty("parts", out var partsElement) && partsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
+                        foreach (var part in partsElement.EnumerateArray()) {
+                            if (part.TryGetProperty("text", out var txtElem) && txtElem.ValueKind == System.Text.Json.JsonValueKind.String) {
+                                sb.AppendLine(txtElem.GetString());
+                            }
+                        }
+                    }
+                    // 3. Check for direct text property
+                    else if (step.TryGetProperty("text", out var directTextElem) && directTextElem.ValueKind == System.Text.Json.JsonValueKind.String) {
+                        sb.AppendLine(directTextElem.GetString());
                     }
                 }
                 agentOutput = sb.ToString();
             }
 
-            if (!string.IsNullOrWhiteSpace(agentOutput)) {
-                string cleanedText = LatexResponseCleaner.CleanLatexResponse(agentOutput);
+            // Fallback: check for outputs array
+            if (string.IsNullOrWhiteSpace(agentOutput) && doc.RootElement.TryGetProperty("outputs", out var outputsElement) && outputsElement.ValueKind == System.Text.Json.JsonValueKind.Array) {
+                var sb = new System.Text.StringBuilder();
+                foreach (var outItem in outputsElement.EnumerateArray()) {
+                    if (outItem.TryGetProperty("text", out var txtElem) && txtElem.ValueKind == System.Text.Json.JsonValueKind.String) {
+                        sb.AppendLine(txtElem.GetString());
+                    }
+                }
+                agentOutput = sb.ToString();
+            }
 
-                await System.IO.File.WriteAllTextAsync(finalTexFile, cleanedText);
-                Ui.Success($"Agent hat Korrekturen angewendet und in `{finalFileName}` gespeichert. Starte nächsten Kompilierungs-Versuch...", "Antigravity Agent API");
-                return true;
+            if (string.IsNullOrWhiteSpace(agentOutput)) {
+                Ui.Error("Antigravity Agent Response enthielt keinen verwertbaren Text (kein model_output/output_text).");
+                return null;
             }
-            else {
-                Ui.Error("Antigravity Agent Response enthielt kein `output_text` Feld und in den `steps` wurde kein Text gefunden.");
-                return false;
+
+            // Safety guard: reject if thought summaries somehow leaked into the output
+            if (agentOutput.Contains("**Analyzing the Error**") || agentOutput.Contains("**Examining the Brackets**") ||
+                agentOutput.StartsWith("I'm currently focused on", StringComparison.OrdinalIgnoreCase)) {
+                Ui.Error("Antigravity Agent lieferte Denkprozess-Fragmente anstelle von LaTeX-Code. Verwerfe Antwort.");
+                return null;
             }
+
+            string cleanedText = LatexResponseCleaner.CleanLatexResponse(agentOutput);
+
+            if (!cleanedText.Contains('\\') || cleanedText.Length < 100) {
+                Ui.Error("Antigravity Agent lieferte keinen gültigen LaTeX-Code zurück.");
+                return null;
+            }
+
+            Ui.Success($"Agent hat LaTeX-Korrektur erfolgreich empfangen ({cleanedText.Length:N0} Zeichen).", "Antigravity Agent API");
+            return cleanedText;
         }
         catch (Exception ex) {
             Ui.Error($"Exception bei Antigravity Agent API: {ex.GetType().Name} - {ex.Message}");
-            return false;
+            return null;
         }
     }
 

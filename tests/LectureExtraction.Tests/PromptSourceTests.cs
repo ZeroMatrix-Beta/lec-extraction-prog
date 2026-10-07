@@ -165,6 +165,17 @@ public class UiPromptRoutingTests {
         Assert.Equal(["b.mp4"], chosen);
     }
 
+    private static async System.Threading.Tasks.Task WithSourceAsync(IPromptSource source, System.Func<System.Threading.Tasks.Task> body) {
+        var previous = Ui.PromptSource;
+        Ui.PromptSource = source;
+        try {
+            await body();
+        }
+        finally {
+            Ui.PromptSource = previous;
+        }
+    }
+
     [Fact]
     public void UnattendedRun_FailsAtTheMenu_WithTheMenusOwnTitle() {
         // The end-to-end shape of a headless run hitting a question it cannot answer.
@@ -172,5 +183,24 @@ public class UiPromptRoutingTests {
             () => WithSource(new PresetPromptSource(assumeYes: true), () => Ui.Select("Modus auswählen:", [("A", 1)])));
 
         Assert.Equal("Modus auswählen:", ex.PromptTitle);
+    }
+
+    [Fact]
+    public void YouTubeTaskPrompt_ThrowsUnattendedPromptException_UnderPresetPromptSource() {
+        var ex = Assert.Throws<UnattendedPromptException>(
+            () => WithSource(new PresetPromptSource(assumeYes: true), () => Extraction.YouTubeTaskPrompt.CreateInteractiveYouTubeTask()));
+
+        Assert.Equal("Bitte gib die YouTube-URL ein:", ex.PromptTitle);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task InteractiveDelay_WaitsFullDuration_UnderPresetPromptSource() {
+        await WithSourceAsync(new PresetPromptSource(assumeYes: true), async () => {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            bool completed = await InteractiveDelay.SmartDelayAsync(1, "Test delay");
+            sw.Stop();
+            Assert.True(completed);
+            Assert.True(sw.Elapsed.TotalMilliseconds >= 800, $"Expected delay >= 800ms, was {sw.Elapsed.TotalMilliseconds}ms");
+        });
     }
 }

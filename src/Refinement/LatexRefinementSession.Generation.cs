@@ -200,7 +200,9 @@ public partial class LatexRefinementSession {
                 Ui.Info($"Structural Integrity Tracker: Erwarte ca. {expectedSpokenClean}x speech und {expectedMathStroke}x content Blöcke im Output.");
             }
         }
-        catch { }
+        catch (Exception ex) {
+            Ui.Warn($"Structural Integrity Check übersprungen: Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}");
+        }
         return (expectedSpokenClean, expectedMathStroke);
     }
 

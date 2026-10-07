@@ -74,7 +74,14 @@ public static partial class VideoSegmentProducer {
                     }
                     else {
                         Ui.Warn($"Ignoriere unvollständigen oder defekten Cache für '{Path.GetFileName(file)}' ({cachedParts.Count} Teil(e), valid: {allFilesValid}). FFmpeg wird neu gestartet...", "Cache");
-                        foreach (var stalePartFile in cachedParts) { try { System.IO.File.Delete(stalePartFile); } catch { } }
+                        foreach (var stalePartFile in cachedParts) {
+                            try {
+                                System.IO.File.Delete(stalePartFile);
+                            }
+                            catch (Exception ex) {
+                                Ui.Detail($"[Cache Bereinigung] Veraltete Datei '{Path.GetFileName(stalePartFile)}' konnte nicht gelöscht werden: {ex.GetType().Name} - {ex.Message}");
+                            }
+                        }
                     }
                 }
             }

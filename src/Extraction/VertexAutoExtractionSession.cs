@@ -796,7 +796,12 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Ui.Error($"Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                 fileProcessingSuccess = false;
                 foreach (var f in generatedTexFiles) {
-                    try { System.IO.File.Delete(f); } catch { /* Ignore */ }
+                    try {
+                        System.IO.File.Delete(f);
+                    }
+                    catch (Exception ex) {
+                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(f)}' konnte nicht gelöscht werden: {ex.GetType().Name} - {ex.Message}");
+                    }
                 }
                 if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
                     Directory.Delete(fileSpecificOutputFolder);

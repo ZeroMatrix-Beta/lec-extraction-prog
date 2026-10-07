@@ -219,7 +219,8 @@ public partial class LatexRefinementSession {
                     AttachmentUploader.HasJustUploaded = false;
                 }
                 else {
-                    var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+                    var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "",
+                        fileActivationDelaySeconds: _config.Step1MergeAndTimestamp.RateLimitDelaySeconds);
                     var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                     if (success) {
                         audioParts.AddRange(attached);
@@ -300,7 +301,8 @@ public partial class LatexRefinementSession {
                 AttachmentUploader.HasJustUploaded = false;
             }
             else {
-                var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "");
+                var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "",
+                    fileActivationDelaySeconds: _config.Step2SpeechRefinement.RateLimitDelaySeconds);
                 var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
                 if (success) {
                     audioParts.AddRange(attached);

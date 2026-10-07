@@ -32,7 +32,10 @@ public static class InteractiveDelay {
 
         await _gate.WaitAsync();
         try {
-            Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
+            bool isUnattended = Ui.PromptSource is PresetPromptSource;
+            if (!isUnattended) {
+                Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
+            }
             bool delayCanceled = false;
             void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
             Console.CancelKeyPress += cancelHandler;
@@ -58,23 +61,29 @@ public static class InteractiveDelay {
                                 int remaining = seconds - (i / 10);
                                 ctx.Status($"⏳ Warte {remaining}s: {message}");
                                 await Task.Delay(100, cts.Token);
-                                try {
-                                    if (!Console.IsInputRedirected && Console.KeyAvailable) {
-                                        bool enterPressed = false;
-                                        while (Console.KeyAvailable) {
-                                            var keyInfo = Console.ReadKey(intercept: true);
-                                            if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
-                                        }
-                                        if (enterPressed) {
-                                            Ui.Info("Wartezeit durch Benutzer (Enter) übersprungen.", "Skip");
-                                            return true;
+                                if (!isUnattended) {
+                                    try {
+                                        if (!Console.IsInputRedirected && Console.KeyAvailable) {
+                                            bool enterPressed = false;
+                                            while (Console.KeyAvailable) {
+                                                var keyInfo = Console.ReadKey(intercept: true);
+                                                if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
+                                            }
+                                            if (enterPressed) {
+                                                Ui.Info("Wartezeit durch Benutzer (Enter) übersprungen.", "Skip");
+                                                return true;
+                                            }
                                         }
                                     }
+                                    catch (InvalidOperationException) { }
                                 }
-                                catch (InvalidOperationException) { }
                             }
                             return true;
                         }, cts.Token);
+
+                        if (isUnattended) {
+                            return await delayTask;
+                        }
 
                         var inputTask = Task.Run(async () => {
                             try {
@@ -87,8 +96,11 @@ public static class InteractiveDelay {
                                         continue;
                                     }
 
-                                    var lineTask = Console.In.ReadLineAsync(cts.Token).AsTask();
-                                    await lineTask;
+                                    string? line = await Console.In.ReadLineAsync(cts.Token);
+                                    if (line == null) {
+                                        // End of stream (EOF) reached - not a user Enter keypress.
+                                        return false;
+                                    }
                                     return true;
                                 }
                             }

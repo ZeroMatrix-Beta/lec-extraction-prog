@@ -1,7 +1,7 @@
 {
+  "UseChosenModelForRestOfPipeline": false, // <= Consider this
   "EnableParallelFileUploads": false,
   "CreateLogFiles": true,
-  "UseChosenModelForRestOfPipeline": true,
   "GenerateOffsetFiles": true,
   "LoadHistoryIntoSystemInstruction": true,
   "InlineHistoryImages": true,
@@ -40,7 +40,7 @@
   "OnlyDoWarmUp": false,
   "YouTubeTasks": [],
   "ApiKey": {
-    "ActiveProfile": 2,
+    "ActiveProfile": 0,
     "EnvNames": [
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
@@ -75,7 +75,7 @@
       /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-pedagogical-boxes.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-proof-wrappers.md",*/
       /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-document-structure.md",*/
-      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-invisible-layer.md",*/ ,
+      /*"C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\environments-invisible-layer.md",*/,
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples.md",
       "C:\\Users\\miche\\latex\\prompt-engineering-token-opt\\transcription\\big-examples"
       /* <- include folder*/

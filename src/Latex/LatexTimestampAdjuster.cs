@@ -26,13 +26,7 @@ public static partial class LatexTimestampAdjuster {
             return latexContent; // No adjustment needed
         }
 
-        // Regex to find \begin{speech}[HH:MM:SS - HH:MM:SS] (or the old \begin{spoken-clean}[...])
-        // Group 1: environment name
-        // Group 2: Start HH, Group 3: Start MM, Group 4: Start SS
-        // Group 5: End HH, Group 6: End MM, Group 7: End SS
-        string pattern = @"\\begin{(speech|spoken-clean)}\[(\d{2}):(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2}):(\d{2})\]";
-
-        return Regex.Replace(latexContent, pattern, match => {
+        return SpeechTimestampRegex().Replace(latexContent, match => {
             string environment = match.Groups[1].Value;
 
             // Parse start time
@@ -61,6 +55,9 @@ public static partial class LatexTimestampAdjuster {
             return $"\\begin{{{environment}}}[{newStartTimestamp} - {newEndTimestamp}]";
         });
     }
+
+    [GeneratedRegex(@"\\begin{(speech|spoken-clean)}\[(\d{2}):(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2}):(\d{2})\]")]
+    private static partial Regex SpeechTimestampRegex();
 
     [GeneratedRegex(@"^% PART_START_SECONDS: \d+(\.\d+)?\r?\n?", RegexOptions.Multiline)]
     private static partial Regex MyRegex();

@@ -27,8 +27,8 @@ public static partial class ApiRetryPolicy {
     /// On each retry, the optional <paramref name="onRetry"/> callback is invoked BEFORE the new attempt
     /// so callers can reset their accumulation buffers (e.g. <c>chunkResp = ""</c>) to prevent the
     /// partial-stream leak that occurs when a transient 503 mid-stream causes duplicate/corrupt output.
-    /// [Human] Führt eine Google API Streaming-Anfrage (für fließenden Text) mit automatischen Wiederholungen durch.
-    /// Der optionale onRetry-Callback erlaubt es dem Aufrufer, seinen Textpuffer vor jedem neuen Versuch zurückzusetzen.
+    /// [Human] Führt eine Google API Streaming-Anfrage mit automatischen Wiederholungen durch.
+    /// Bei vorzeitigen Stream-Unterbrechungen wird der bisherige Text behalten und nahtlos per 'Continue' fortgesetzt.
     /// </summary>
     /// <param name="streamFactory">A function that creates the IAsyncEnumerable stream from the API.</param>
     /// <param name="onChunkReceived">An async action to process each received chunk from the stream.</param>
@@ -49,7 +49,7 @@ public static partial class ApiRetryPolicy {
         Action? onRetry = null,
         int? highDemandDelay = null,
         bool resumeOnPartialProgress = false,
-        int minCharactersToResume = 100) {
+        int minCharactersToResume = 20) {
         int backoff = initialBackoff;
         int consecutiveFailuresWithoutProgress = 0;
         bool isRetry = false;
@@ -62,7 +62,7 @@ public static partial class ApiRetryPolicy {
             try {
                 if (isRetry) {
                     string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-                    Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {currentAttempt}/{maxRetries}). Puffer wird zurückgesetzt...", "API Retry");
+                    Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {currentAttempt}/{maxRetries})...", "API Retry");
                     onRetry?.Invoke();
                 }
 

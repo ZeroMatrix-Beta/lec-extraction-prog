@@ -654,7 +654,12 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Ui.Error($"Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                 state.FileProcessingSuccess = false;
                 foreach (var failedTexFile in state.GeneratedTexFiles) {
-                    try { System.IO.File.Delete(failedTexFile); } catch { /* Ignore */ }
+                    try {
+                        System.IO.File.Delete(failedTexFile);
+                    }
+                    catch (Exception ex) {
+                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(failedTexFile)}' konnte nicht gelöscht werden: {ex.GetType().Name} - {ex.Message}");
+                    }
                 }
                 if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
                     Directory.Delete(fileSpecificOutputFolder);

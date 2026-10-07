@@ -82,14 +82,20 @@
 \colorlet{ThemeAccent4}{BrickRed}
 
 % 2. TEXT & LINKS
-\colorlet{TextEmphColor}{SlateBlue4}
-\colorlet{TextBoldColor}{Brown!80!black} % Das Espresso-Braun #673132
+% \emph, \textbf, \newterm, \qt and the list labels follow the ta-notes palette (2026-10-03).
+\definecolor{TextEmphColor}{HTML}{BD6400}
+\definecolor{TextBoldColor}{HTML}{0E6C95}
 \colorlet{TextMetaNote}{Gray}
 \colorlet{LinkColor}{MidnightBlue}
 \colorlet{FileColor}{Magenta}
-\colorlet{ItemizeBullet}{ThemeAccent1}
-\colorlet{EnumerateBullet}{DeepSeaGreen} 
-\colorlet{EnumerateBullet}{OliveGreen} 
+\definecolor{ListAmber}{HTML}{BD2400}
+\colorlet{ItemizeBullet}{ListAmber}
+\colorlet{EnumerateBullet}{ListAmber}
+\definecolor{QuoteRed}{HTML}{BD2400} % quote marks of \newterm and \qt
+% Headings and the TOC keep the colors \emph and \textbf had before, under their own names,
+% so they do not move when the text colors do.
+\colorlet{HeadingSlate}{SlateBlue4}
+\colorlet{HeadingBrown}{Brown!80!black} % Das Espresso-Braun #673132
 
 % 3. SHADOWS & PROOF GLOBALS
 \colorlet{ShadowNormal}{black!50}
@@ -145,7 +151,7 @@
 
 % 8. SECTION BARS
 \colorlet{SecBar1}{ThemePrimary}
-\colorlet{SecBar2}{TextBoldColor}
+\colorlet{SecBar2}{HeadingBrown}
 \colorlet{SecBar3}{ThemeAccent3!80!black}
 \colorlet{SecBar4}{ThemeAccent4!90!black}
 \colorlet{SecBar1Proof}{SecBar1!50!ProofTint}
@@ -155,18 +161,18 @@
 \colorlet{SecTitleColor}{ThemePrimary}
 \colorlet{SecTitleColorProof}{SecTitleColor!50!ProofTint}
 
-\colorlet{SubSecBar1}{TextBoldColor}
-\colorlet{SubSecBar2}{TextBoldColor!70!white}
+\colorlet{SubSecBar1}{HeadingBrown}
+\colorlet{SubSecBar2}{HeadingBrown!70!white}
 \colorlet{SubSecBar1Proof}{SubSecBar1!50!ProofTint}
 \colorlet{SubSecBar2Proof}{SubSecBar2!50!ProofTint}
-\colorlet{SubSecTitleColor}{TextBoldColor}
+\colorlet{SubSecTitleColor}{HeadingBrown}
 \colorlet{SubSecTitleColorProof}{SubSecTitleColor!50!ProofTint}
 
-\colorlet{SubSubSecBar1}{TextBoldColor}
+\colorlet{SubSubSecBar1}{HeadingBrown}
 \colorlet{SubSubSecBar2}{gray!60!white}
 \colorlet{SubSubSecBar1Proof}{SubSubSecBar1!50!ProofTint}
 \colorlet{SubSubSecBar2Proof}{SubSubSecBar2!50!ProofTint}
-\colorlet{SubSubSecTitleColor}{TextBoldColor}
+\colorlet{SubSubSecTitleColor}{HeadingBrown}
 \colorlet{SubSubSecTitleColorProof}{SubSubSecTitleColor!50!ProofTint}
 
 
@@ -178,6 +184,10 @@
 \definecolor{OriginalTheoremHex}{HTML}{6A3199} % Dein ursprünglicher Hex-Code
 \colorlet{EnvTheorem}{OriginalTheoremHex}             % Dein ursprüngliches RoyalPurple
 \colorlet{EnvTheoremDark}{OriginalTheoremHex}  % Wendet den Hex-Code auf das Wort "Definition" an
+% The other theorem families are colored as in ta-notes (EnvTheorem: Satz, Definition, Beispiel).
+\definecolor{EnvRemark}{HTML}{008837}           % Bemerkung, Notation, Zusammenfassung, Ziele
+\colorlet{EnvQuestion}{MidnightBlue}            % Frage, Antwort
+\definecolor{EnvImportantRemark}{HTML}{D7263D}  % Wichtige Bemerkung
 % ==========================================
 
 % --- EMPHASIS STYLE OVERRIDE ---
@@ -304,7 +314,7 @@ bookmarksopen=true
 \setlist[enumerate]{
   % FIX: Leitet \textbf im Label temporär auf die Enumerate-Farbe um!
   font=\colorlet{TextBoldColor}{EnumerateBullet}, 
-  label=\textcolor{ItemizeBullet}{\bfseries(\alph*)}, % ItemizeBullet statt EnumerateBullet
+  label=\textcolor{EnumerateBullet}{\bfseries(\alph*)},
   ref=(\alph*)
 }
 
@@ -391,16 +401,16 @@ bookmarksopen=true
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{ThemeWeekNumber}\contentspage}
 
 \titlecontents{section}[1.8em]
-  {\addvspace{5pt}\sffamily\bfseries\color{TextEmphColor}}
-  {\color{ThemePrimary!85!black}\thecontentslabel\hspace{0.8em}\color{TextEmphColor}}
+  {\addvspace{5pt}\sffamily\bfseries\color{HeadingSlate}}
+  {\color{ThemePrimary!85!black}\thecontentslabel\hspace{0.8em}\color{HeadingSlate}}
   {}
-  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TextEmphColor}\contentspage}
+  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{HeadingSlate}\contentspage}
 
 \titlecontents{subsection}[4.0em]
-  {\addvspace{2.5pt}\sffamily\color{TextBoldColor}}
-  {\color{TextBoldColor}\thecontentslabel\hspace{0.8em}\color{TextBoldColor}}
+  {\addvspace{2.5pt}\sffamily\color{HeadingBrown}}
+  {\color{HeadingBrown}\thecontentslabel\hspace{0.8em}\color{HeadingBrown}}
   {}
-  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TextBoldColor}\contentspage}
+  {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{HeadingBrown}\contentspage}
 
 \titlecontents{subsubsection}[6.5em]
   {\addvspace{1.5pt}\sffamily\small\bfseries\color{gray}}
@@ -413,65 +423,84 @@ bookmarksopen=true
 \DeclareMathOperator{\Vol}{Vol}
 
 % Custom text commands
-\newcommand{\newterm}[1]{\textcolor{BrickRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{BrickRed}{\grqq}} 
+\newcommand{\newterm}[1]{\textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{\grqq}}
 \newcommand{\inlinemetanote}[1]{\textit{[\textcolor{TextMetaNote}{#1}]}}
 
-% Custom Theorem Style
-\newtheoremstyle{purplethm}%
-{\customenvspace}{\customenvspace}{\normalfont}{}{\color{EnvTheorem}\sffamily\bfseries}{:}{0.5em}%
-{\thmname{\textcolor{EnvTheorem}{\sffamily\bfseries#1 }}\thmnumber{\sffamily\bfseries #2}\thmnote{ \textcolor{EnvTheorem}{\bfseries(}{\normalfont\sffamily\textit{#3}}\textcolor{EnvTheorem}{\bfseries)}}}
+% Custom Theorem Styles: one per family, each with its own icon and color (after ta-notes).
+% \NewIconThmStyle{<style>}{<color>}{<icon>}
+\newcommand{\NewIconThmStyle}[3]{%
+\newtheoremstyle{#1}%
+{\customenvspace}{\customenvspace}{\normalfont}{}{\color{#2}\sffamily\bfseries}{:}{0.5em}%
+{#3\hspace{0.4em}\thmname{##1}\thmnumber{ ##2}\thmnote{ \textcolor{#2}{\bfseries(}{\normalfont\sffamily\textit{##3}}\textcolor{#2}{\bfseries)}}}%
+}
+\NewIconThmStyle{purplethm}{EnvTheorem}{\faGem}
+\NewIconThmStyle{defthm}{EnvTheorem}{\faBookOpen}
+% The OUTLINE bulb: the solid one already heads the insight box ("Einblick").
+\NewIconThmStyle{examplethm}{EnvTheorem}{\faLightbulb[regular]}
+\NewIconThmStyle{remarkthm}{EnvRemark}{\faInfoCircle}
+\NewIconThmStyle{questionthm}{EnvQuestion}{\faQuestionCircle}
+\NewIconThmStyle{importantremarkthm}{EnvImportantRemark}{\faExclamationTriangle}
 
+% Math Environments (Deutsch), grouped by style. All numbered ones share the theorem counter.
 \theoremstyle{purplethm}
-
-% Standard Math Environments (Deutsch)
 \newtheorem{theorem}{Satz}[chapter]
 \newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{definition}[theorem]{Definition}
 \newtheorem{corollary}[theorem]{Korollar}
 \newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{example}[theorem]{Beispiel}
-\newtheorem{examples}[theorem]{Beispiele}
-\newtheorem{exercise}[theorem]{Übung}
-\newtheorem{axiom}[theorem]{Axiom}
-\newtheorem{axioms}[theorem]{Axiome}
 \newtheorem{property}[theorem]{Eigenschaft}
 \newtheorem{principle}[theorem]{Prinzip}
 \newtheorem{fact}[theorem]{Fakt}
 \newtheorem{claim}[theorem]{Behauptung}
-\newtheorem{remark}[theorem]{Bemerkung}
-\newtheorem{notation}[theorem]{Notation}
-\newtheorem{summary}[theorem]{Zusammenfassung}
-\newtheorem{warmup}[theorem]{Einstieg}
-\newtheorem{question}[theorem]{Frage}
-\newtheorem{answer}[theorem]{Antwort}
-\newtheorem{importantremark}[theorem]{Wichtige Bemerkung}
-\newtheorem{goals}[theorem]{Ziele}
-
-% Unnumbered Environments (Deutsch)
 \newtheorem*{theorem*}{Satz}
 \newtheorem*{lemma*}{Lemma}
 \newtheorem*{proposition*}{Proposition}
-\newtheorem*{definition*}{Definition}
 \newtheorem*{corollary*}{Korollar}
-\newtheorem*{example*}{Beispiel}
-\newtheorem*{examples*}{Beispiele}
-\newtheorem*{exercise*}{Übung}
-\newtheorem*{axiom*}{Axiom}
-\newtheorem*{axioms*}{Axiome}
 \newtheorem*{property*}{Eigenschaft}
 \newtheorem*{principle*}{Prinzip}
 \newtheorem*{fact*}{Fakt}
 \newtheorem*{claim*}{Behauptung}
+
+\theoremstyle{defthm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{axioms}[theorem]{Axiome}
+\newtheorem*{definition*}{Definition}
+\newtheorem*{axiom*}{Axiom}
+\newtheorem*{axioms*}{Axiome}
+
+\theoremstyle{examplethm}
+\newtheorem{example}[theorem]{Beispiel}
+\newtheorem{examples}[theorem]{Beispiele}
+\newtheorem{exercise}[theorem]{Übung}
+\newtheorem{warmup}[theorem]{Einstieg}
+\newtheorem*{example*}{Beispiel}
+\newtheorem*{examples*}{Beispiele}
+\newtheorem*{exercise*}{Übung}
+\newtheorem*{warmup*}{Einstieg}
+
+\theoremstyle{remarkthm}
+\newtheorem{remark}[theorem]{Bemerkung}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{summary}[theorem]{Zusammenfassung}
+\newtheorem{goals}[theorem]{Ziele}
 \newtheorem*{remark*}{Bemerkung}
 \newtheorem*{notation*}{Notation}
 \newtheorem*{summary*}{Zusammenfassung}
-\newtheorem*{warmup*}{Einstieg}
-\newtheorem*{question*}{Frage}
-\newtheorem*{answer*}{Antwort}
-\newtheorem*{importantremark*}{Wichtige Bemerkung}
 \newtheorem*{goals*}{Ziele}
 
-\newcommand{\qt}[1]{\textit{\textcolor{BrickRed}{\glqq}#1\textcolor{BrickRed}{\grqq}}}
+\theoremstyle{questionthm}
+\newtheorem{question}[theorem]{Frage}
+\newtheorem{answer}[theorem]{Antwort}
+\newtheorem*{question*}{Frage}
+\newtheorem*{answer*}{Antwort}
+
+\theoremstyle{importantremarkthm}
+\newtheorem{importantremark}[theorem]{Wichtige Bemerkung}
+\newtheorem*{importantremark*}{Wichtige Bemerkung}
+
+\theoremstyle{purplethm}
+
+\newcommand{\qt}[1]{\textit{\textcolor{QuoteRed}{\glqq}#1\textcolor{QuoteRed}{\grqq}}}
 
 \crefname{axiom}{Axiom}{Axiome}
 \Crefname{axiom}{Axiom}{Axiome}

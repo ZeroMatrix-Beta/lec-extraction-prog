@@ -47,7 +47,7 @@ public partial class AiStudioAutoExtractionSession {
 
         // Step 0: Optionally warm up base system instruction before adding history
         if (!_config.MergeSystemInstructionAndFirstHistoryBatch) {
-            Console.WriteLine();
+            Ui.Blank();
             Ui.Step("Cache-Warming Schritt 0: Warmup für Basis System Instruction");
             if (!await PrimePrefixCacheAsync(systemInstructionDelay, includeDummyPart0: false, stepLabel: "Schritt 0")) return false;
         } else {
@@ -59,7 +59,7 @@ public partial class AiStudioAutoExtractionSession {
             var (batchLabel, batchFiles) = batches[batchIndex];
             bool isLastBatch = batchIndex == batches.Count - 1;
 
-            Console.WriteLine();
+            Ui.Blank();
             string dest = _config.LoadHistoryIntoSystemInstruction ? "System Instruction" : "User Prompt";
             Ui.Step($"Cache-Warming Schritt {batchIndex + 1}/{batches.Count}: Lade History-Batch '{batchLabel}' ({batchFiles.Count} Datei(en)) in {dest}");
 

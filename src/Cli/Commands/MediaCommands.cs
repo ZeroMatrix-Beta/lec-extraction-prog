@@ -187,7 +187,7 @@ public static class MediaCommands {
         var channel = Channel.CreateBounded<PreparedVideo>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.Wait });
         var producer = Task.Run(() => VideoSegmentProducer.RunAsync(files, channel.Writer, config));
 
-        var prepared = new List<PreparedVideo>();
+        List<PreparedVideo> prepared = [];
         await foreach (var video in channel.Reader.ReadAllAsync()) {
             prepared.Add(video);
         }

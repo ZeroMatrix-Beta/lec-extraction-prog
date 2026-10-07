@@ -14,21 +14,18 @@ namespace LectureExtraction.Extraction;
 /// </summary>
 public static class YouTubeTaskPrompt {
     public static YouTubeTranscriptionTask? CreateInteractiveYouTubeTask(int overlapSeconds = 180) {
-        Console.Write("\nBitte gib die YouTube-URL ein: ");
-        string url = Console.ReadLine()?.Trim() ?? "";
+        string url = Ui.Ask("Bitte gib die YouTube-URL ein:", null).Trim();
         if (string.IsNullOrWhiteSpace(url)) {
             Ui.Warn("Keine URL eingegeben.", "Abbruch");
             return null;
         }
 
-        Console.Write("Name / Titel für die Ausgabe (z.B. vorlesung-01) [Standard: youtube-lecture]: ");
-        string name = Console.ReadLine()?.Trim() ?? "";
+        string name = Ui.Ask("Name / Titel für die Ausgabe (z.B. vorlesung-01):", "youtube-lecture").Trim();
         if (string.IsNullOrWhiteSpace(name)) {
             name = "youtube-lecture";
         }
 
-        Console.Write("Wie lang ist das Video? (in Minuten, z.B. 90, oder im Format HH:MM:SS / MM:SS): ");
-        string durInput = Console.ReadLine()?.Trim() ?? "";
+        string durInput = Ui.Ask("Wie lang ist das Video? (in Minuten, z.B. 90, oder im Format HH:MM:SS / MM:SS):", null).Trim();
         double totalSeconds = 0;
 
         if (durInput.Contains(':')) {
@@ -59,11 +56,7 @@ public static class YouTubeTaskPrompt {
             numParts = (int)Math.Ceiling(totalSeconds / maxSegmentSeconds);
         }
 
-        Console.Write($"Das Video ({totalSeconds / 60:F1} Min.) wird in {numParts} Teil(e) aufgeteilt ({overlapSeconds}s Overlap). Anzahl Teile bestätigen/ändern [{numParts}]: ");
-        string partsInput = Console.ReadLine()?.Trim() ?? "";
-        if (int.TryParse(partsInput, out int customParts) && customParts > 0) {
-            numParts = customParts;
-        }
+        numParts = Ui.Ask($"Das Video ({totalSeconds / 60:F1} Min.) wird in {numParts} Teil(e) aufgeteilt ({overlapSeconds}s Overlap). Anzahl Teile bestätigen/ändern:", numParts);
 
         List<YouTubeTimestampFragment> fragList = [];
         if (numParts <= 1 || totalSeconds <= overlapSeconds * 2) {
