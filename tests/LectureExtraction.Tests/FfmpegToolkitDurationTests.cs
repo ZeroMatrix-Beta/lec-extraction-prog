@@ -14,7 +14,7 @@ namespace LectureExtraction.Tests;
 /// 01:30:51 lecture it reported 01:30:33, and the merge stage then told Gemini the audio ended there
 /// and derived every part boundary from it, 14 s off the real offsets by part 4. The fixture opens
 /// with 20 s of silence, which pushes ffprobe's estimate to about 980 s for a 60 s file, so a
-/// regression cannot pass by luck. Needs ffmpeg on PATH, like the pipeline itself.</para>
+/// regression cannot pass by luck. Needs ffmpeg on PATH, like the pipeline itself; skipped without it.</para>
 /// </summary>
 public class FfmpegToolkitDurationTests : IDisposable {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "lecx-dur-" + Guid.NewGuid().ToString("N"));
@@ -31,7 +31,7 @@ public class FfmpegToolkitDurationTests : IDisposable {
         }
     }
 
-    [Fact]
+    [RequiresFfmpegFact]
     public async Task GetVideoDurationAsync_MeasuresARawAacFileExactly() {
         string aacFile = Path.Combine(_directory, "silence-then-noise.aac");
         await RunFfmpegAsync("-f lavfi -i anullsrc=r=48000:cl=mono -f lavfi -i anoisesrc=r=48000:a=0.5 " +
