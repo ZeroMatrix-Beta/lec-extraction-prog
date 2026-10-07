@@ -11,6 +11,14 @@
 *.mp4
 *.jpg
 
+# LaTeX build output from compiling pdf-preamble.tex in the repository root
+/*.aux
+/*.fls
+/*.fdb_latexmk
+/*.synctex.gz
+/pdf-preamble.log
+/pdf-preamble.pdf
+
 
 
 # Build results

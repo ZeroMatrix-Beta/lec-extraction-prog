@@ -1,0 +1,23 @@
+# Store text with LF in the repository regardless of each clone's core.autocrlf. Commits made
+# with other settings had flipped whole config files between CRLF and LF.
+* text=auto
+
+# Explicit, so a stray lone CR cannot make git treat a source file as binary and commit it
+# unnormalized (which turns a one-line change into a whole-file diff).
+*.cs text diff=csharp
+*.csproj text
+*.slnx text
+*.md text
+*.tex text
+*.sh text eol=lf
+
+# Read by Windows tools and the app's own config writer; check them out with CRLF everywhere.
+*.json text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.mp4 binary
+*.aac binary
