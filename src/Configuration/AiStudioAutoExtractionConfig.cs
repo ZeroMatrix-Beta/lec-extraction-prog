@@ -15,7 +15,7 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
         LogFolder = @"C:\Users\miche\gemini-logs"
     };
     public ContextSources Sources { get; set; } = new() {
-        HistoryPreloadPaths = [@"C:\Users\miche\latex\prompt-engineering-token-opt\transcription\training-history"]
+        HistoryPreloadPaths = [@"C:\Users\miche\latex\prompt-engineering\transcription\training-history"]
     };
     public GenerationParameters Generation { get; set; } = new() {
         Temperature = 0.36f,
