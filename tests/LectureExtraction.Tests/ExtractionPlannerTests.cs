@@ -167,8 +167,18 @@ public class ExtractionHelpersNamingTests {
     [InlineData("lecture-speed-1.25-compressed.mp4", "lecture")]
     [InlineData("lecture-compressed.mp4", "lecture")]
     [InlineData("lecture.mp4", "lecture")]
+    [InlineData("lecture.mp4.mp4", "lecture")]
+    [InlineData("lecture-compressed.webm.mp4", "lecture")]
     public void ComputeOutputFolderName_StripsCompressionSuffixes(string fileName, string expected) {
         Assert.Equal(expected, ExtractionHelpers.ComputeOutputFolderName(fileName));
+    }
+
+    [Theory]
+    [InlineData("vorlesung.MOV", "vorlesung")]
+    [InlineData("vorlesung.mkv.avi", "vorlesung")]
+    [InlineData("vorlesung.v2", "vorlesung.v2")]
+    public void StripVideoExtensions_RemovesOnlyVideoExtensions(string name, string expected) {
+        Assert.Equal(expected, ExtractionHelpers.StripVideoExtensions(name));
     }
 
     [Fact]

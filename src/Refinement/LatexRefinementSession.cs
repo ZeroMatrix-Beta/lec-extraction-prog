@@ -401,16 +401,7 @@ public partial class LatexRefinementSession {
         await DumpPromptLogAsync(history, systemInstructionText, targetOutputFolder, outputFileName);
         var (expectedSpokenClean, expectedMathStroke) = ComputeExpectedStructuralCounts(history);
 
-        int totalInputLength = 0;
-        foreach (var msg in history.Where(c => c.Role == "user")) {
-            if (msg.Parts != null) {
-                foreach (var p in msg.Parts) {
-                    if (!string.IsNullOrEmpty(p.Text)) {
-                        totalInputLength += p.Text.Length;
-                    }
-                }
-            }
-        }
+        int totalInputLength = CountInputLatexLength(history);
 
         var (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens) =
             await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName);
@@ -425,6 +416,7 @@ public partial class LatexRefinementSession {
 
                 if (actualSpokenClean < minExpectedSpoken || actualMathStroke < minExpectedMath) {
                     Ui.Error($"SILENT TRUNCATION DETECTED! Erwartet: ~{expectedSpokenClean} speech / ~{expectedMathStroke} content, Erhalten: {actualSpokenClean} speech / {actualMathStroke} content.", "Refinement");
+                    await SaveTruncatedResponseAsync(targetOutputFolder, outputFileName, fullResponseText);
                     return null;
                 }
                 else {
@@ -432,7 +424,8 @@ public partial class LatexRefinementSession {
                 }
             }
             else if (totalInputLength > 1000 && fullResponseText.Length < totalInputLength * 0.25) {
-                Ui.Error($"SILENT TRUNCATION DETECTED! Eingabe: ~{totalInputLength:N0} Zeichen, Erhalten: nur {fullResponseText.Length:N0} Zeichen.", "Refinement");
+                Ui.Error($"SILENT TRUNCATION DETECTED! LaTeX-Eingabe: ~{totalInputLength:N0} Zeichen, Erhalten: nur {fullResponseText.Length:N0} Zeichen.", "Refinement");
+                await SaveTruncatedResponseAsync(targetOutputFolder, outputFileName, fullResponseText);
                 return null;
             }
         }
@@ -483,6 +476,42 @@ public partial class LatexRefinementSession {
     }
     private Task CleanupBucketAsync() => GcsWorkspace.PurgeAsync(_config.VertexGcsBucketName);
 
+    /// <summary>
+    /// [AI Context] Characters of LaTeX the step was given: the &lt;input_file&gt; / &lt;input_tex&gt;
+    /// payloads only. Instructions and compiler logs around them are not something the answer
+    /// reproduces, so counting them made the length check fire on complete answers.
+    /// </summary>
+    private static int CountInputLatexLength(List<Content> history) {
+        int length = 0;
+        foreach (var part in history.Where(c => c.Role == "user").SelectMany(c => c.Parts ?? [])) {
+            if (string.IsNullOrEmpty(part.Text)) continue;
+            foreach (System.Text.RegularExpressions.Match match in InputPayloadRegex().Matches(part.Text)) {
+                length += match.Groups[1].Length;
+            }
+        }
+        return length;
+    }
+
+    /// <summary>
+    /// [AI Context] A response rejected as truncated was still paid for; keep it next to the would-be
+    /// output so it can be inspected or salvaged instead of being thrown away.
+    /// [Human] Speichert eine als abgeschnitten erkannte Antwort, statt sie zu verwerfen.
+    /// </summary>
+    private static async Task SaveTruncatedResponseAsync(string targetOutputFolder, string outputFileName, string responseText) {
+        try {
+            Directory.CreateDirectory(targetOutputFolder);
+            string path = Path.Combine(targetOutputFolder, Path.GetFileNameWithoutExtension(outputFileName) + "-truncated.tex");
+            await System.IO.File.WriteAllTextAsync(path, LatexResponseCleaner.CleanLatexResponse(responseText));
+            Ui.Info($"Abgeschnittene Antwort gesichert unter: {path}", "Refinement");
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Abgeschnittene Antwort konnte nicht gesichert werden: {ex.Describe()}", "Refinement");
+        }
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"<input_(?:file|tex)\b[^>]*>(.*?)</input_(?:file|tex)>", System.Text.RegularExpressions.RegexOptions.Singleline)]
+    private static partial System.Text.RegularExpressions.Regex InputPayloadRegex();
+
     private static string GetCleanBaseName(string filePath) {
         string name = Path.GetFileNameWithoutExtension(filePath);
         if (name.Length > 6 && name.StartsWith("step", StringComparison.OrdinalIgnoreCase) && char.IsDigit(name[4]) && name[5] == '-') {
@@ -504,13 +533,7 @@ public partial class LatexRefinementSession {
         if (name.EndsWith("-all", StringComparison.OrdinalIgnoreCase)) {
             name = name[..^"-all".Length];
         }
-        while (name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".avi", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".mov", StringComparison.OrdinalIgnoreCase)) {
-            name = Path.GetFileNameWithoutExtension(name);
-        }
-        return name;
+        return ExtractionHelpers.StripVideoExtensions(name);
     }
 
     // `speech` and `content` since the environment rename; the old names still count, for older output.

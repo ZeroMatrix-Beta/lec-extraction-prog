@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -24,18 +25,22 @@ public static partial class ExtractionHelpers {
     }
 
     /// <summary>The folder a video's outputs are written to, relative to the target folder.</summary>
-    public static string ComputeOutputFolderName(string videoPath) {
-        string name = Path.GetFileNameWithoutExtension(videoPath);
-        // [AI Context] Windows users frequently end up with double extensions (e.g. video.mp4.mp4) when
-        // 'Hide extensions for known file types' is enabled in Explorer and they manually add .mp4.
-        while (name.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".avi", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".mov", StringComparison.OrdinalIgnoreCase) ||
-               name.EndsWith(".webm", StringComparison.OrdinalIgnoreCase)) {
+    public static string ComputeOutputFolderName(string videoPath) =>
+        StripCompressionSuffix(StripVideoExtensions(Path.GetFileNameWithoutExtension(videoPath)));
+
+    private static readonly string[] s_videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".webm"];
+
+    /// <summary>
+    /// [AI Context] Removes trailing video extensions left inside a name, e.g. the second ".mp4" of
+    /// "video.mp4.mp4". Windows users end up with these when "Hide extensions for known file types"
+    /// is on in Explorer and they type the extension themselves. Shared by the output-folder name and
+    /// the refinement base name so both strip the same list.
+    /// </summary>
+    public static string StripVideoExtensions(string name) {
+        while (Array.Exists(s_videoExtensions, ext => name.EndsWith(ext, StringComparison.OrdinalIgnoreCase))) {
             name = Path.GetFileNameWithoutExtension(name);
         }
-        return StripCompressionSuffix(name);
+        return name;
     }
 
     /// <summary>
@@ -109,7 +114,7 @@ public static partial class ExtractionHelpers {
             Ui.Info($"System Instruction vollständig auf Festplatte geloggt unter: {dumpPath}", "LOG");
         }
         catch (Exception ex) {
-            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.Describe()}");
         }
     }
 }
