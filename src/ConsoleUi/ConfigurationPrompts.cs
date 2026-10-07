@@ -92,7 +92,7 @@ public static class ConfigurationPrompts {
                     Ui.Success($"Ordner erstellt: {newPath}");
                 }
                 catch (Exception ex) {
-                    Ui.Error($"Unerwarteter Fehler beim Erstellen des Ordners: {ex.Message}");
+                    Ui.Error($"Unerwarteter Fehler beim Erstellen des Ordners: {ex.GetType().Name} - {ex.Message}");
                     return currentFolder;
                 }
             }

@@ -203,7 +203,7 @@ public partial class DirectAiChatSessionAiStudio {
             using var turnCts = new CancellationTokenSource();
             void turnCancelHandler(object? sender, ConsoleCancelEventArgs e) {
                 e.Cancel = true;
-                try { turnCts.Cancel(); } catch { }
+                try { turnCts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
             }
             Console.CancelKeyPress += turnCancelHandler;
 
@@ -270,8 +270,7 @@ public partial class DirectAiChatSessionAiStudio {
                 catch (Exception ex) {
                     // This block now catches unrecoverable errors re-thrown by the resilience helper.
                     Ui.Blank();
-                    Ui.Error("Der Fehler konnte nicht durch einen automatischen Retry behoben werden.", "Abbruch");
-                    Ui.Error($"Originaler Fehlertext: {ex.Message}");
+                    Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}", "Abbruch");
 
                     // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
                     if (history.Count > 0 && history.Last().Role == "user") {

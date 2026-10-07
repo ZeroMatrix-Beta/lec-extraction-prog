@@ -169,7 +169,7 @@ public class DirectAiChatSessionVertex {
             using var turnCts = new CancellationTokenSource();
             void turnCancelHandler(object? sender, ConsoleCancelEventArgs e) {
                 e.Cancel = true;
-                try { turnCts.Cancel(); } catch { }
+                try { turnCts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
             }
             Console.CancelKeyPress += turnCancelHandler;
 
@@ -214,7 +214,7 @@ public class DirectAiChatSessionVertex {
                 }
                 catch (Exception ex) {
                     Ui.Blank();
-                    Ui.Error($"{ex.Message}", "Vertex");
+                    Ui.Error($"{ex.GetType().Name}: {ex.Message}", "Vertex");
 
                     if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
                         Ui.Blank();

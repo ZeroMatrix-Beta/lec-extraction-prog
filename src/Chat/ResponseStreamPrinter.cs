@@ -62,7 +62,7 @@ public sealed class ResponseStreamPrinter {
         using var cts = new CancellationTokenSource();
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
             e.Cancel = true; // Verhindert das Beenden des Programms
-            try { cts.Cancel(); } catch { }
+            try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
         }
         Console.CancelKeyPress += cancelHandler;
 

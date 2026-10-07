@@ -220,7 +220,7 @@ public partial class AiStudioAutoExtractionSession {
         string currentLogPrompt = logContext;
 
         using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
         Console.CancelKeyPress += cancelHandler;
 
         while (true) {
@@ -269,7 +269,7 @@ public partial class AiStudioAutoExtractionSession {
                 );
             }
             catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Message}", "Abbruch");
+                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.GetType().Name} - {ex.Message}", "Abbruch");
                 break;
             }
 

@@ -163,7 +163,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
                     Directory.CreateDirectory(destFolder);
                 }
                 catch (Exception ex) {
-                    Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.Message}");
+                    Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.GetType().Name} - {ex.Message}");
                     continue;
                 }
             }

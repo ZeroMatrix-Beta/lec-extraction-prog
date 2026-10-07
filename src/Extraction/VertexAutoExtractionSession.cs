@@ -472,7 +472,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             int chunksReceivedThisAttempt = 0;
             fullResponse = "";
             using var cts = new CancellationTokenSource();
-            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch { } }
+            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
             Console.CancelKeyPress += cancelHandler;
 
             try {

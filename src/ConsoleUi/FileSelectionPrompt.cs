@@ -53,7 +53,7 @@ public static class FileSelectionPrompt {
                 subDirs = Directory.GetDirectories(currentPath);
             }
             catch (Exception ex) {
-                Ui.Warn($"Fehler beim Lesen des Ordners: {ex.Message}");
+                Ui.Warn($"Fehler beim Lesen des Ordners: {ex.GetType().Name} - {ex.Message}");
             }
 
             Array.Sort(subDirs, StringComparer.OrdinalIgnoreCase);

@@ -171,7 +171,7 @@ public partial class VertexAutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Message}. Fahre trotzdem fort.", "Cache-Warming");
+            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.GetType().Name} - {ex.Message}. Fahre trotzdem fort.", "Cache-Warming");
             int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
             Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
