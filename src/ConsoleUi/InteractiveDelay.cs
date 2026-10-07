@@ -36,11 +36,15 @@ public static class InteractiveDelay {
             if (!isUnattended) {
                 Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
             }
+            using var cts = new CancellationTokenSource();
             bool delayCanceled = false;
-            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
+            void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
+                e.Cancel = true;
+                delayCanceled = true;
+                try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
+            }
             Console.CancelKeyPress += cancelHandler;
             IsInSmartDelay = true;
-            using var cts = new CancellationTokenSource();
 
             // [AI Context] Every rate-limit wait in the app funnels through here, so measuring the real
             // elapsed time at this one point captures all 18 call sites - including the retry policy's
