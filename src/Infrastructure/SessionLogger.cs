@@ -31,14 +31,14 @@ public class SessionLogger(SessionLoggerConfig config) {
                 }
             }
             catch (Exception ex) {
-                Ui.Warn($"Log-Verzeichnis '{effectiveLogPath}' konnte nicht erstellt werden: {ex.GetType().Name} - {ex.Message}. Versuche Fallback.", "SessionLogger");
+                Ui.Warn($"Log-Verzeichnis '{effectiveLogPath}' konnte nicht erstellt werden: {ex.Describe()}. Versuche Fallback.", "SessionLogger");
                 effectiveLogPath = ResolveFallbackLogFolder();
                 if (!string.IsNullOrWhiteSpace(effectiveLogPath) && !Directory.Exists(effectiveLogPath)) {
                     try {
                         Directory.CreateDirectory(effectiveLogPath);
                     }
                     catch (Exception fallbackEx) {
-                        Ui.Warn($"Fallback-Log-Verzeichnis '{effectiveLogPath}' konnte nicht erstellt werden: {fallbackEx.GetType().Name} - {fallbackEx.Message}. Logging deaktiviert.", "SessionLogger");
+                        Ui.Warn($"Fallback-Log-Verzeichnis '{effectiveLogPath}' konnte nicht erstellt werden: {fallbackEx.Describe()}. Logging deaktiviert.", "SessionLogger");
                         effectiveLogPath = "";
                     }
                 }
@@ -62,7 +62,7 @@ public class SessionLogger(SessionLoggerConfig config) {
                     Directory.CreateDirectory(_currentSessionLogPath);
                 }
                 catch (Exception ex) {
-                    Ui.Warn($"Session-Log-Ordner konnte nicht erstellt werden: {ex.GetType().Name} - {ex.Message}. Logging deaktiviert.", "SessionLogger");
+                    Ui.Warn($"Session-Log-Ordner konnte nicht erstellt werden: {ex.Describe()}. Logging deaktiviert.", "SessionLogger");
                     _currentSessionLogPath = "";
                 }
             }
@@ -79,7 +79,7 @@ public class SessionLogger(SessionLoggerConfig config) {
                 return userLogs;
             }
             catch (Exception ex) {
-                Ui.Warn($"Konnte Fallback '{userLogs}' nicht erstellen: {ex.GetType().Name} - {ex.Message}. Versuche System-Laufwerk...", "SessionLogger");
+                Ui.Warn($"Konnte Fallback '{userLogs}' nicht erstellen: {ex.Describe()}. Versuche System-Laufwerk...", "SessionLogger");
             }
         }
 
@@ -91,7 +91,7 @@ public class SessionLogger(SessionLoggerConfig config) {
             return primaryCandidate;
         }
         catch (Exception ex) {
-            Ui.Warn($"Konnte Fallback '{primaryCandidate}' nicht erstellen: {ex.GetType().Name} - {ex.Message}. Versuche Arbeitsverzeichnis...", "SessionLogger");
+            Ui.Warn($"Konnte Fallback '{primaryCandidate}' nicht erstellen: {ex.Describe()}. Versuche Arbeitsverzeichnis...", "SessionLogger");
             return Path.Combine(Directory.GetCurrentDirectory(), "gemini-logs");
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -44,7 +45,7 @@ public static partial class FileTreeRenderer {
             return string.IsNullOrEmpty(baseDir) ? null : baseDir;
         }
         catch (Exception ex) {
-            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.Describe()}");
             return null;
         }
     }

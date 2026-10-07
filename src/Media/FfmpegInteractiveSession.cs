@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Media;
 
@@ -163,7 +164,7 @@ public class FfmpegInteractiveSession(FfmpegSessionConfig config) {
                     Directory.CreateDirectory(destFolder);
                 }
                 catch (Exception ex) {
-                    Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.GetType().Name} - {ex.Message}");
+                    Ui.Error($"Fehler beim Erstellen des Zielordners: {ex.Describe()}");
                     continue;
                 }
             }

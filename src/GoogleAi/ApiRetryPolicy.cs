@@ -103,18 +103,18 @@ public static partial class ApiRetryPolicy {
             }
             catch (Exception ex) {
                 if (!IsTransientError(ex)) {
-                    Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
+                    Ui.Error($"{ex.Describe()}", "API");
                     Ui.Error($"Unrecoverable error after {attempt} attempt(s).", "API Failure");
                     throw; // Re-throw for the caller to handle
                 }
 
                 if (resumeOnPartialProgress && charactersReceivedThisAttempt >= minCharactersToResume) {
-                    Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.GetType().Name}: {ex.Message}).", "Stream Unterbrochen");
+                    Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.Describe()}).", "Stream Unterbrochen");
                     Ui.Info($"Da bereits {charactersReceivedThisAttempt:N0} Zeichen empfangen wurden, wird der Text behalten und per 'Continue' fortgesetzt.", "Auto-Resume");
                     return true;
                 }
 
-                Ui.Warn($"{ex.GetType().Name}: {ex.Message}", "API");
+                Ui.Warn($"{ex.Describe()}", "API");
 
                 bool madeProgress = chunksReceivedThisAttempt > 0;
                 if (madeProgress) {
@@ -176,7 +176,7 @@ public static partial class ApiRetryPolicy {
                 return null;
             }
             catch (Exception ex) {
-                Ui.Error($"{ex.GetType().Name}: {ex.Message}", "API");
+                Ui.Error($"{ex.Describe()}", "API");
 
                 if (IsTransientError(ex) && attempt < maxRetries) {
                     var (WaitSuccess, NewBackoff) = await HandleBackoffAsync(ex, isFirstFailure: attempt == 1, nextAttempt: attempt + 1, maxAttempts: maxRetries, backoff, retryContext, highDemandDelay);
@@ -325,7 +325,7 @@ public static partial class ApiRetryPolicy {
 
         if (IsNetworkConnectionError(ex)) {
             waitTime = 300; // 5 Minuten
-            Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.GetType().Name}: {ex.Message}).", "Netzwerk-Fehler");
+            Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.Describe()}).", "Netzwerk-Fehler");
             Ui.Detail("Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
             Ui.Detail($"--> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {nextAttempt}/{maxAttempts})");
             delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
@@ -345,7 +345,7 @@ public static partial class ApiRetryPolicy {
         }
         else if (IsInterruptedStream(ex)) {
             waitTime = 20;
-            Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.GetType().Name}: {ex.Message}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Stream Unterbrochen");
+            Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.Describe()}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Stream Unterbrochen");
             nextBackoff = 30;
         }
         else {

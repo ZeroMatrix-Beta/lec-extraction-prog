@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Google.Cloud.Storage.V1;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.GoogleAi;
 
@@ -49,7 +50,7 @@ public static class GcsWorkspace {
             }
         }
         catch (Exception ex) {
-            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.Describe()}");
 
             if (verbose) {
                 Ui.Detail("--- GCS ERROR DUMP ---");

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Media;
 
@@ -133,7 +134,7 @@ public static partial class VideoDateParser {
             parsedDate = new DateTime(year, month, day);
         }
         catch (ArgumentOutOfRangeException ex) {
-            Ui.Warn($"Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'. Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}");
+            Ui.Warn($"Invalid date values ({year:D4}-{month:D2}-{day:D2}) in filename '{fileNameWithoutExtension}'. {ex.Describe()}");
             return new() {
                 Date = DateTime.MinValue,
                 Weekday = weekday,

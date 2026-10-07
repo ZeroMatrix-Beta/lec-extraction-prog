@@ -6,6 +6,7 @@ using Google.GenAI.Types;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -106,7 +107,7 @@ public partial class VertexAutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Error($"Konnte Kontext-Cache nicht erstellen: {ex.GetType().Name} - {ex.Message}. Falle auf normalen Upload zurück.", "ContextCache");
+            Ui.Error($"Konnte Kontext-Cache nicht erstellen: {ex.Describe()}. Falle auf normalen Upload zurück.", "ContextCache");
             _cachedContentName = null;
         }
     }

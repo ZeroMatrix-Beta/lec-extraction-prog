@@ -59,12 +59,7 @@ public sealed class ResponseStreamPrinter {
         var usage = new UsageReport();
 
         bool exceptionCaught = false;
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
-            e.Cancel = true; // Verhindert das Beenden des Programms
-            try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-        }
-        Console.CancelKeyPress += cancelHandler;
+        using var cancelScope = new ConsoleCancelScope(); // Ctrl+C bricht die Antwort ab, nicht das Programm
 
         bool isGenerating = true;
         var inputInterceptorTask = Task.Run(async () => {
@@ -101,7 +96,7 @@ public sealed class ResponseStreamPrinter {
                         usage.Absorb(chunk.UsageMetadata);
                         await Task.CompletedTask;
                     },
-                    cancellationToken: cts.Token,
+                    cancellationToken: cancelScope.Token,
                     maxRetries: 5,
                     retryContext: "Chat-Antwort"
                 );
@@ -118,7 +113,7 @@ public sealed class ResponseStreamPrinter {
         finally {
             isGenerating = false;
             await inputInterceptorTask; // Warte kurz, bis der Input-Blocker sauber beendet ist
-            Console.CancelKeyPress -= cancelHandler;
+            cancelScope.Dispose(); // stop intercepting Ctrl+C before the usage report
 
             // [AI Context] Unconditional, per review finding F9: the old guard was
             // "if (inputTokens > 0 || outputTokens > 0)", so a turn whose usage metadata never
@@ -138,7 +133,7 @@ public sealed class ResponseStreamPrinter {
             Ui.Detail(usage.Describe($"Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshPromptTokens:N0} | Output: {usage.CandidateTokens:N0}", "[Request Tokens]      "));
             Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens):N0} | Output: {_sessionTotalOutputTokens:N0}");
 
-            if (exceptionCaught || cts.IsCancellationRequested) {
+            if (exceptionCaught || cancelScope.IsCancellationRequested) {
                 Ui.Blank();
                 Ui.Info("Generierung durch Benutzer abgebrochen.");
             }

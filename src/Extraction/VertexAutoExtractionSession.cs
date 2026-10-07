@@ -465,9 +465,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         int finalCachedTokens = 0;
         var usage = new UsageReport();
 
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (ObjectDisposedException) { } }
-        Console.CancelKeyPress += cancelHandler;
+        using var cancelScope = new ConsoleCancelScope();
         try {
             // [AI Context] Same retry policy as every other generation call (bounded attempts, backoff,
             // network pause); this loop used to be a hand-written copy of it.
@@ -485,7 +483,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     }
                     return Task.CompletedTask;
                 },
-                cancellationToken: cts.Token,
+                cancellationToken: cancelScope.Token,
                 maxRetries: 10,
                 initialBackoff: initialBackoff,
                 retryContext: "History Bestätigung",
@@ -500,10 +498,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             cancelled = !success;
         }
         catch (Exception ex) {
-            Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}");
-        }
-        finally {
-            Console.CancelKeyPress -= cancelHandler;
+            Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.Describe()}");
         }
 
         if (cancelled) {
@@ -737,7 +732,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                         System.IO.File.Delete(f);
                     }
                     catch (Exception ex) {
-                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(f)}' konnte nicht gelöscht werden: {ex.GetType().Name} - {ex.Message}");
+                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(f)}' konnte nicht gelöscht werden: {ex.Describe()}");
                     }
                 }
                 if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {

@@ -8,6 +8,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.GoogleAi;
 
@@ -333,7 +334,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 }
 
                 Ui.Blank();
-                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+                Ui.Error($"[Exception gefangen] {ex.Describe()}");
 
                 if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                     Ui.Error("Der Google-Server konnte nicht erreicht werden.", "Netzwerk-Fehler");
@@ -389,7 +390,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                 }
 
                 Ui.Blank();
-                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+                Ui.Error($"[Exception gefangen] {ex.Describe()}");
 
                 if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
                     Ui.Error("Der Google Cloud Storage konnte nicht erreicht werden.", "Netzwerk-Fehler");

@@ -9,6 +9,7 @@ using LectureExtraction.Extraction.Model;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Latex;
 using LectureExtraction.Media;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -206,7 +207,7 @@ public partial class AiStudioAutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Fehler beim Zählen der Prompt-Token: [Exception gefangen] {ex.GetType().Name}: {ex.Message}", "Token-Analyse");
+            Ui.Warn($"Fehler beim Zählen der Prompt-Token: [Exception gefangen] {ex.Describe()}", "Token-Analyse");
         }
     }
 
@@ -218,9 +219,7 @@ public partial class AiStudioAutoExtractionSession {
         int interactionCachedTokens = 0;
         string currentLogPrompt = logContext;
 
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
-        Console.CancelKeyPress += cancelHandler;
+        using var cancelScope = new ConsoleCancelScope();
 
         while (true) {
             Ui.Step($"Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...");
@@ -253,7 +252,7 @@ public partial class AiStudioAutoExtractionSession {
                         }
                         await Task.CompletedTask;
                     },
-                    cancellationToken: cts.Token,
+                    cancellationToken: cancelScope.Token,
                     retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
                     onRetry: () => {
                         chunkResp = "";
@@ -268,7 +267,7 @@ public partial class AiStudioAutoExtractionSession {
                 );
             }
             catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.GetType().Name} - {ex.Message}", "Abbruch");
+                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Describe()}", "Abbruch");
                 break;
             }
 
@@ -345,7 +344,6 @@ public partial class AiStudioAutoExtractionSession {
             }
         }
 
-        Console.CancelKeyPress -= cancelHandler;
         AttachmentUploader.HasJustUploaded = false;
         return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens));
     }

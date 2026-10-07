@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using LectureExtraction.Media;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.ConsoleUi;
 
@@ -66,7 +67,7 @@ public static class DirectoryTreeRenderer {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Ordner konnte nicht gelesen werden: {ex.GetType().Name} - {ex.Message}");
+            Ui.Warn($"Ordner konnte nicht gelesen werden: {ex.Describe()}");
         }
     }
 }

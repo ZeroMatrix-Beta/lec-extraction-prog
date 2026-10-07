@@ -6,6 +6,7 @@ using Google.GenAI.Types;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction.Model;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -76,7 +77,7 @@ public static class DebugRoundtripRunner {
                 return new DebugRoundtripResult(true, usage, userTurn, modelTurn);
             }
             catch (Exception ex) {
-                Ui.Error($"{ex.GetType().Name}: {ex.Message}", "Debug Roundtrip");
+                Ui.Error($"{ex.Describe()}", "Debug Roundtrip");
                 if (attempt < maxRetries - 1) {
                     Ui.Detail($"Retry in {backoff}s...");
                     await Task.Delay(backoff * 1000);

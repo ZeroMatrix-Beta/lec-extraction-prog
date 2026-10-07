@@ -658,7 +658,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                         System.IO.File.Delete(failedTexFile);
                     }
                     catch (Exception ex) {
-                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(failedTexFile)}' konnte nicht gelöscht werden: {ex.GetType().Name} - {ex.Message}");
+                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(failedTexFile)}' konnte nicht gelöscht werden: {ex.Describe()}");
                     }
                 }
                 if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {

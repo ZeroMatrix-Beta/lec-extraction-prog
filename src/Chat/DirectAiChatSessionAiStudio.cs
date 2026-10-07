@@ -200,12 +200,7 @@ public partial class DirectAiChatSessionAiStudio {
         WriteCommandHelp();
 
         while (true) {
-            using var turnCts = new CancellationTokenSource();
-            void turnCancelHandler(object? sender, ConsoleCancelEventArgs e) {
-                e.Cancel = true;
-                try { turnCts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-            }
-            Console.CancelKeyPress += turnCancelHandler;
+            var turnCancel = new ConsoleCancelScope();
 
             try {
                 string? input;
@@ -243,7 +238,7 @@ public partial class DirectAiChatSessionAiStudio {
 
                 // Extract command handling to keep the main loop focused purely on the chat flow
                 // [AI Context] Uses a Command/Interceptor pattern. If TryHandleBuiltInCommandsAsync returns true, the input was a local REPL command, avoiding an API call.
-                bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt, turnCts.Token);
+                bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt, turnCancel.Token);
 
                 // If the command handler took care of everything (or failed gracefully), we skip the API call for this turn.
                 if (isCommandHandled) {
@@ -270,7 +265,7 @@ public partial class DirectAiChatSessionAiStudio {
                 catch (Exception ex) {
                     // This block now catches unrecoverable errors re-thrown by the resilience helper.
                     Ui.Blank();
-                    Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}", "Abbruch");
+                    Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.Describe()}", "Abbruch");
 
                     // Letzte User-Nachricht entfernen, damit der Chat nicht im fehlerhaften Zustand stecken bleibt
                     if (history.Count > 0 && history.Last().Role == "user") {
@@ -279,7 +274,7 @@ public partial class DirectAiChatSessionAiStudio {
                 }
             }
             finally {
-                Console.CancelKeyPress -= turnCancelHandler;
+                turnCancel.Dispose();
             }
         }
 

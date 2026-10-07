@@ -4,6 +4,7 @@ using System.Linq;
 using System.Globalization;
 using System.Reflection;
 using LectureExtraction.Configuration;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Cli;
 
@@ -108,7 +109,7 @@ public static class ConfigSectionRegistry {
             leaf.SetValue(current, converted);
         }
         catch (Exception ex) {
-            error = $"cannot convert '{rawValue}' to {target.Name} ({ex.GetType().Name}: {ex.Message}).";
+            error = $"cannot convert '{rawValue}' to {target.Name} ({ex.Describe()}).";
             return false;
         }
 

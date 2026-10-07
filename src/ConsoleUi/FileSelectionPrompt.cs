@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using LectureExtraction.Extraction;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.ConsoleUi;
 
@@ -53,7 +54,7 @@ public static class FileSelectionPrompt {
                 subDirs = Directory.GetDirectories(currentPath);
             }
             catch (Exception ex) {
-                Ui.Warn($"Fehler beim Lesen des Ordners: {ex.GetType().Name} - {ex.Message}");
+                Ui.Warn($"Fehler beim Lesen des Ordners: {ex.Describe()}");
             }
 
             Array.Sort(subDirs, StringComparer.OrdinalIgnoreCase);

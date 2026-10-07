@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Media;
 
@@ -251,7 +252,7 @@ public static class FfmpegToolkit {
             }
         }
         catch (Exception ex) {
-            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.Describe()}");
             if (ex is System.ComponentModel.Win32Exception win32Ex && win32Ex.NativeErrorCode == 2)
             {
                 Ui.Error("'ffprobe' konnte nicht gefunden werden. Bitte stellen Sie sicher, dass FFmpeg (inkl. ffprobe) installiert und im System-PATH konfiguriert ist.", "ffprobe");
@@ -296,7 +297,7 @@ public static class FfmpegToolkit {
             return lastMicroseconds > 0 ? lastMicroseconds / 1_000_000.0 : -1;
         }
         catch (Exception ex) {
-            Ui.Warn($"Exakte Audiodauer nicht messbar ({ex.GetType().Name}: {ex.Message}); verwende die ffprobe-Schätzung.", "ffmpeg");
+            Ui.Warn($"Exakte Audiodauer nicht messbar ({ex.Describe()}); verwende die ffprobe-Schätzung.", "ffmpeg");
             return -1;
         }
     }
@@ -355,7 +356,7 @@ public static class FfmpegToolkit {
             return true;
         }
         catch (Exception ex) {
-            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.Describe()}");
             if (ex is System.ComponentModel.Win32Exception win32Ex && win32Ex.NativeErrorCode == 2)
             {
                 Ui.Error("'ffmpeg' konnte nicht gefunden werden. Bitte stellen Sie sicher, dass FFmpeg installiert und im System-PATH konfiguriert ist.", "FFmpeg error");

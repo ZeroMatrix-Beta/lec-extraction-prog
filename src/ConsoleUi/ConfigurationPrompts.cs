@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.ConsoleUi;
 
@@ -92,7 +93,7 @@ public static class ConfigurationPrompts {
                     Ui.Success($"Ordner erstellt: {newPath}");
                 }
                 catch (Exception ex) {
-                    Ui.Error($"Unerwarteter Fehler beim Erstellen des Ordners: {ex.GetType().Name} - {ex.Message}");
+                    Ui.Error($"Unerwarteter Fehler beim Erstellen des Ordners: {ex.Describe()}");
                     return currentFolder;
                 }
             }

@@ -5,6 +5,7 @@ using Spectre.Console;
 using LectureExtraction.Cli.Commands;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Cli;
 
@@ -72,7 +73,7 @@ public static class CliBootstrapper {
         }
         catch (Exception ex) {
             // Some redirected handles reject the change; the only cost is degraded glyphs.
-            Ui.Detail($"Console encoding unchanged ({ex.GetType().Name}: {ex.Message})", "CLI");
+            Ui.Detail($"Console encoding unchanged ({ex.Describe()})", "CLI");
         }
     }
 

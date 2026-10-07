@@ -223,7 +223,7 @@ public partial class AiStudioAutoExtractionSession {
                 Ui.Info($"{prefix} Voraussichtlich NEU zu berechnen: {estNew:N0} | Total Prompt: {totalToks:N0}", "Tokens");
             }
             catch (Exception countEx) {
-                Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+                Ui.Detail($"[Exception gefangen] {countEx.Describe()}");
                 // [AI Context] Even when CountTokens fails after all retries (e.g. network outage), display
                 // the last known total so the user always sees a token count line before the actual generate request.
                 string lastKnown = _lastWarmupInputTokens > 0 ? $"{_lastWarmupInputTokens:N0}" : "unbekannt";
@@ -284,7 +284,7 @@ public partial class AiStudioAutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.GetType().Name} - {ex.Message}. Fahre trotzdem fort.", "Cache-Warming");
+            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Describe()}. Fahre trotzdem fort.", "Cache-Warming");
             int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
             Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");

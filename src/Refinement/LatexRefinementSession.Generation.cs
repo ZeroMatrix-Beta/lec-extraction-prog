@@ -176,7 +176,7 @@ public partial class LatexRefinementSession {
             Ui.Info($"Gemini-Prompt-Log gespeichert unter: {promptDumpPath}");
         }
         catch (Exception ex) {
-            Ui.Warn($"Konnte Prompt-Log nicht speichern: {ex.GetType().Name} - {ex.Message}");
+            Ui.Warn($"Konnte Prompt-Log nicht speichern: {ex.Describe()}");
         }
     }
 
@@ -201,7 +201,7 @@ public partial class LatexRefinementSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Structural Integrity Check übersprungen: Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}");
+            Ui.Warn($"Structural Integrity Check übersprungen: {ex.Describe()}");
         }
         return (expectedSpokenClean, expectedMathStroke);
     }
@@ -216,9 +216,7 @@ public partial class LatexRefinementSession {
         var budget = new ContinueBudget(stepConfig.MaxContinueRequests);
         int emptyResponseRetries = 0;
 
-        using var cts = new CancellationTokenSource();
-        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
-        Console.CancelKeyPress += CancelHandler;
+        using var cancelScope = new ConsoleCancelScope();
 
         while (true) {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
@@ -263,7 +261,7 @@ public partial class LatexRefinementSession {
 
                       await Task.CompletedTask;
                   },
-                  cancellationToken: cts.Token,
+                  cancellationToken: cancelScope.Token,
                   initialBackoff: rateLimitDelay,
                   retryContext: outputFileName,
                   onRetry: () => {
@@ -277,7 +275,7 @@ public partial class LatexRefinementSession {
                 );
             }
             catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}", "Abbruch");
+                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.Describe()}", "Abbruch");
                 break;
             }
 
@@ -291,7 +289,12 @@ public partial class LatexRefinementSession {
                     emptyResponseRetries++;
                     Ui.Error("Das Modell hat eine komplett leere Antwort zurückgegeben (z.B. wegen MALFORMED_RESPONSE oder Safety-Filtern).");
                     Ui.Detail($"Warte 5 Sekunden vor Versuch {emptyResponseRetries}/3...");
-                    await Task.Delay(5000, cts.Token);
+                    try {
+                        await Task.Delay(5000, cancelScope.Token);
+                    }
+                    catch (OperationCanceledException) {
+                        break;
+                    }
                     continue;
                 }
                 else {
@@ -336,7 +339,6 @@ public partial class LatexRefinementSession {
             }
         }
 
-        Console.CancelKeyPress -= CancelHandler;
 
         return (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens);
     }
@@ -377,7 +379,7 @@ public partial class LatexRefinementSession {
             }
         }
         catch (Exception ex) {
-            Ui.Error($"Kontext-Caching fehlgeschlagen: {ex.GetType().Name} - {ex.Message}");
+            Ui.Error($"Kontext-Caching fehlgeschlagen: {ex.Describe()}");
         }
         return null;
     }

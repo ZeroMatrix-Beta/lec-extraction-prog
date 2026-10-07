@@ -8,6 +8,7 @@ using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Latex;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Refinement;
 
@@ -159,7 +160,7 @@ public partial class LatexRefinementSession {
             }
         }
         catch (Exception ex) {
-            Ui.Error($"Unerwarteter Fehler bei der PDF-Generierung: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
+            Ui.Error($"Unerwarteter Fehler bei der PDF-Generierung: {ex.Describe()}", "LaTeX Refinement");
             return false;
         }
     }
@@ -196,7 +197,7 @@ public partial class LatexRefinementSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Sicherung vor der Reparatur fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
+            Ui.Warn($"Sicherung vor der Reparatur fehlgeschlagen: {ex.Describe()}", "LaTeX Refinement");
         }
     }
 
@@ -254,7 +255,7 @@ public partial class LatexRefinementSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Konnte temporäre Precheck-Dateien nicht vollständig bereinigen: {ex.GetType().Name} - {ex.Message}", "LaTeX Refinement");
+            Ui.Warn($"Konnte temporäre Precheck-Dateien nicht vollständig bereinigen: {ex.Describe()}", "LaTeX Refinement");
         }
     }
 
@@ -273,7 +274,7 @@ public partial class LatexRefinementSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Hilfsdateien für {Path.GetFileName(finalTexFile)} konnten nicht vollständig bereinigt werden: {ex.GetType().Name} - {ex.Message}");
+            Ui.Warn($"Hilfsdateien für {Path.GetFileName(finalTexFile)} konnten nicht vollständig bereinigt werden: {ex.Describe()}");
         }
     }
 
@@ -446,9 +447,7 @@ public partial class LatexRefinementSession {
         var budget = new ContinueBudget(_config.Step3LastRefinement?.MaxContinueRequests ?? 10);
         int emptyResponseRetries = 0;
 
-        using var cts = new CancellationTokenSource();
-        void CancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
-        Console.CancelKeyPress += CancelHandler;
+        using var cancelScope = new ConsoleCancelScope();
 
         while (true) {
             string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
@@ -478,7 +477,7 @@ public partial class LatexRefinementSession {
                       chunkResp += text;
                       await Task.CompletedTask;
                   },
-                  cancellationToken: cts.Token,
+                  cancellationToken: cancelScope.Token,
                   initialBackoff: fixDelay,
                   retryContext: outputFileName,
                   onRetry: () => { chunkResp = ""; },
@@ -487,7 +486,7 @@ public partial class LatexRefinementSession {
                 );
             }
             catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}", "Abbruch");
+                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.Describe()}", "Abbruch");
                 break;
             }
 
@@ -501,7 +500,12 @@ public partial class LatexRefinementSession {
                     emptyResponseRetries++;
                     Ui.Error("Das Modell hat eine komplett leere Antwort zurückgegeben (z.B. wegen MALFORMED_RESPONSE oder Safety-Filtern).");
                     Ui.Detail($"Warte 5 Sekunden vor Versuch {emptyResponseRetries}/3...");
-                    await Task.Delay(5000, cts.Token);
+                    try {
+                        await Task.Delay(5000, cancelScope.Token);
+                    }
+                    catch (OperationCanceledException) {
+                        break;
+                    }
                     continue;
                 }
                 else {
@@ -534,7 +538,6 @@ public partial class LatexRefinementSession {
             }
         }
 
-        Console.CancelKeyPress -= CancelHandler;
         return fullResponseText;
     }
 
@@ -700,7 +703,7 @@ Please return the fully corrected contents of `{candidateFileName}` inside a ```
             return cleanedText;
         }
         catch (Exception ex) {
-            Ui.Error($"Exception bei Antigravity Agent API: {ex.GetType().Name} - {ex.Message}");
+            Ui.Error($"Exception bei Antigravity Agent API: {ex.Describe()}");
             return null;
         }
     }

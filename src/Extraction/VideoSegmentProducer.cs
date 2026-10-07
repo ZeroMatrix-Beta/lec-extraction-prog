@@ -10,6 +10,7 @@ using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction.Model;
 using LectureExtraction.Media;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -79,7 +80,7 @@ public static partial class VideoSegmentProducer {
                                 System.IO.File.Delete(stalePartFile);
                             }
                             catch (Exception ex) {
-                                Ui.Detail($"[Cache Bereinigung] Veraltete Datei '{Path.GetFileName(stalePartFile)}' konnte nicht gelöscht werden: {ex.GetType().Name} - {ex.Message}");
+                                Ui.Detail($"[Cache Bereinigung] Veraltete Datei '{Path.GetFileName(stalePartFile)}' konnte nicht gelöscht werden: {ex.Describe()}");
                             }
                         }
                     }

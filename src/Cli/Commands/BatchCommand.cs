@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Cli.Commands;
 
@@ -293,8 +294,8 @@ public static class BatchCommand {
             return process.ExitCode;
         }
         catch (Exception ex) {
-            await log.WriteLineAsync($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
-            Ui.Error($"Worker-Prozess fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "batch");
+            await log.WriteLineAsync($"[Exception gefangen] {ex.Describe()}");
+            Ui.Error($"Worker-Prozess fehlgeschlagen: {ex.Describe()}", "batch");
             return ExitCodes.Unexpected;
         }
     }

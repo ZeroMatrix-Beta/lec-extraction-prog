@@ -4,6 +4,7 @@ using LectureExtraction.ConsoleUi;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Configuration;
 
@@ -29,7 +30,7 @@ public static class ConfigLoader<T> where T : class, new() {
                         File.Copy(currentDirFile, filePath, overwrite: true);
                     }
                     catch (Exception ex) {
-                        Ui.Warn($"Konnte '{fileName}' aus Arbeitsverzeichnis nicht synchronisieren: {ex.GetType().Name} - {ex.Message}");
+                        Ui.Warn($"Konnte '{fileName}' aus Arbeitsverzeichnis nicht synchronisieren: {ex.Describe()}");
                     }
                 }
             }
@@ -48,7 +49,7 @@ public static class ConfigLoader<T> where T : class, new() {
                 }
             }
             catch (Exception ex) {
-                Ui.Warn($"Migration in '{fileName}' fehlgeschlagen: {ex.GetType().Name} - {ex.Message}", "ConfigMigrator");
+                Ui.Warn($"Migration in '{fileName}' fehlgeschlagen: {ex.Describe()}", "ConfigMigrator");
             }
         }
 
@@ -112,7 +113,7 @@ public static class ConfigLoader<T> where T : class, new() {
                 return JsonCommentPreserver.Merge(existingJson, JObject.FromObject(config), ConfigMigrator.RemapAnchor);
             }
             catch (Exception ex) {
-                Ui.Warn($"Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden: {ex.GetType().Name} - {ex.Message}", "AppConfig");
+                Ui.Warn($"Kommentare in '{Path.GetFileName(filePath)}' konnten beim Speichern nicht erhalten werden: {ex.Describe()}", "AppConfig");
             }
         }
         return JsonConvert.SerializeObject(config, Formatting.Indented);
@@ -150,7 +151,7 @@ public static class ConfigLoader<T> where T : class, new() {
             }
         }
         catch (Exception ex) {
-            Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
+            Ui.Error($"[Exception gefangen] {ex.Describe()}");
         }
     }
 }

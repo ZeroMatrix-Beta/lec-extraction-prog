@@ -8,6 +8,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.GoogleAi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Extraction;
 
@@ -119,7 +120,7 @@ public partial class VertexAutoExtractionSession {
                 Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
             }
             catch (Exception countEx) {
-                Ui.Detail($"[Exception gefangen] {countEx.GetType().Name}: {countEx.Message}");
+                Ui.Detail($"[Exception gefangen] {countEx.Describe()}");
             }
         }
 
@@ -171,7 +172,7 @@ public partial class VertexAutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.GetType().Name} - {ex.Message}. Fahre trotzdem fort.", "Cache-Warming");
+            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Describe()}. Fahre trotzdem fort.", "Cache-Warming");
             int delay = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 130;
             Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");

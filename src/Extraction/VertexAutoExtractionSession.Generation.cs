@@ -219,7 +219,7 @@ public partial class VertexAutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Fehler beim Zählen der Prompt-Token: [Exception gefangen] {ex.GetType().Name}: {ex.Message}", "Token-Analyse");
+            Ui.Warn($"Fehler beim Zählen der Prompt-Token: [Exception gefangen] {ex.Describe()}", "Token-Analyse");
         }
     }
 
@@ -231,9 +231,7 @@ public partial class VertexAutoExtractionSession {
         int interactionCachedTokens = 0;
         string currentLogPrompt = logContext;
 
-        using var cts = new CancellationTokenSource();
-        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
-        Console.CancelKeyPress += cancelHandler;
+        using var cancelScope = new ConsoleCancelScope();
 
         while (true) {
             Ui.Step($"Sende Anfrage für Part {partNumber} an Vertex AI ({_config.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...");
@@ -266,7 +264,7 @@ public partial class VertexAutoExtractionSession {
                         }
                         await Task.CompletedTask;
                     },
-                    cancellationToken: cts.Token,
+                    cancellationToken: cancelScope.Token,
                     retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
                     onRetry: () => {
                         chunkResp = "";
@@ -281,7 +279,7 @@ public partial class VertexAutoExtractionSession {
                 );
             }
             catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.GetType().Name} - {ex.Message}", "Abbruch");
+                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Describe()}", "Abbruch");
                 break;
             }
 
@@ -357,7 +355,6 @@ public partial class VertexAutoExtractionSession {
             }
         }
 
-        Console.CancelKeyPress -= cancelHandler;
         return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens));
     }
 }

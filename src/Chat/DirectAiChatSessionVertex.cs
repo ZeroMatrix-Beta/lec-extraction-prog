@@ -166,12 +166,7 @@ public class DirectAiChatSessionVertex {
         WriteCommandHelp();
 
         while (true) {
-            using var turnCts = new CancellationTokenSource();
-            void turnCancelHandler(object? sender, ConsoleCancelEventArgs e) {
-                e.Cancel = true;
-                try { turnCts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-            }
-            Console.CancelKeyPress += turnCancelHandler;
+            var turnCancel = new ConsoleCancelScope();
 
             try {
                 string? input;
@@ -197,7 +192,7 @@ public class DirectAiChatSessionVertex {
                 var parts = new List<Part>();
                 string promptText = input;
 
-                bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt, turnCts.Token);
+                bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt, turnCancel.Token);
 
                 if (isCommandHandled) {
                     if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
@@ -214,7 +209,7 @@ public class DirectAiChatSessionVertex {
                 }
                 catch (Exception ex) {
                     Ui.Blank();
-                    Ui.Error($"{ex.GetType().Name}: {ex.Message}", "Vertex");
+                    Ui.Error($"{ex.Describe()}", "Vertex");
 
                     if (ex.Message.Contains("Service agents are being provisioned", StringComparison.OrdinalIgnoreCase)) {
                         Ui.Blank();
@@ -228,7 +223,7 @@ public class DirectAiChatSessionVertex {
                 }
             }
             finally {
-                Console.CancelKeyPress -= turnCancelHandler;
+                turnCancel.Dispose();
             }
         }
 

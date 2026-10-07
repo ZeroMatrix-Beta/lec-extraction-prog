@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Latex;
 
@@ -67,7 +68,7 @@ public class LatexToolkit {
                         process.Kill(entireProcessTree: true);
                     }
                     catch (Exception killEx) {
-                        Ui.Warn($"Prozess konnte nicht beendet werden. Art der Exception: {killEx.GetType().Name}, Fehler: {killEx.Message}", "LatexToolkit");
+                        Ui.Warn($"Prozess konnte nicht beendet werden. {killEx.Describe()}", "LatexToolkit");
                     }
                     string partialOutput = await outputTask;
                     return (false, $"Compilation timed out after {timeoutSeconds} seconds.\nPartial Output:\n{partialOutput}");
@@ -95,7 +96,7 @@ public class LatexToolkit {
                 }
             }
             catch (Exception ex) {
-                Ui.Error($"pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert? Art der Exception: {ex.GetType().Name}, Fehler: {ex.Message}", "LatexToolkit");
+                Ui.Error($"pdflatex konnte nicht ausgeführt werden. Ist LaTeX (z.B. MiKTeX oder TeX Live) installiert? {ex.Describe()}", "LatexToolkit");
                 return (false, ex.Message);
             }
         }
