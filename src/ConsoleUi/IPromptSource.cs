@@ -13,6 +13,12 @@ namespace LectureExtraction.ConsoleUi;
 /// </summary>
 public interface IPromptSource {
     /// <summary>
+    /// True when a person is at the keyboard. Unattended sources return false, so waits neither
+    /// offer "press Enter to skip" nor read keys that nobody will type.
+    /// </summary>
+    bool IsInteractive { get; }
+
+    /// <summary>
     /// Picks one of <paramref name="labels"/> and returns its index. Labels arrive unescaped and in
     /// display order, including any back/cancel entries the caller appended.
     /// </summary>

@@ -101,6 +101,7 @@ public class UiPromptRoutingTests {
     private sealed class ScriptedPromptSource(int index) : IPromptSource {
         public string? LastTitle { get; private set; }
         public IReadOnlyList<string> LastLabels { get; private set; } = [];
+        public bool IsInteractive => true;
 
         public int SelectIndex(string title, IReadOnlyList<string> labels, int pageSize, string? moreChoicesText) {
             LastTitle = title;

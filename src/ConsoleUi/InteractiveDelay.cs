@@ -32,17 +32,15 @@ public static class InteractiveDelay {
 
         await _gate.WaitAsync();
         try {
-            bool isUnattended = Ui.PromptSource is PresetPromptSource;
+            bool isUnattended = !Ui.PromptSource.IsInteractive;
             if (!isUnattended) {
                 Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
             }
             using var cts = new CancellationTokenSource();
+            // Ctrl+C only raises the flag; the delay loop sees it within 100 ms and returns false.
+            // Cancelling cts here instead would make Task.Delay throw out of SmartDelayAsync.
             bool delayCanceled = false;
-            void cancelHandler(object? sender, ConsoleCancelEventArgs e) {
-                e.Cancel = true;
-                delayCanceled = true;
-                try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); }
-            }
+            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
             Console.CancelKeyPress += cancelHandler;
             IsInSmartDelay = true;
 
@@ -64,7 +62,13 @@ public static class InteractiveDelay {
                                 if (delayCanceled || cts.Token.IsCancellationRequested) return false;
                                 int remaining = seconds - (i / 10);
                                 ctx.Status($"⏳ Warte {remaining}s: {message}");
-                                await Task.Delay(100, cts.Token);
+                                try {
+                                    await Task.Delay(100, cts.Token);
+                                }
+                                catch (OperationCanceledException) {
+                                    // cts is cancelled once the input task has decided; this result is then unused.
+                                    return false;
+                                }
                                 if (!isUnattended) {
                                     try {
                                         if (!Console.IsInputRedirected && Console.KeyAvailable) {
@@ -83,37 +87,23 @@ public static class InteractiveDelay {
                                 }
                             }
                             return true;
-                        }, cts.Token);
+                        });
 
                         if (isUnattended) {
                             return await delayTask;
                         }
 
+                        // A real console is polled for Enter by the delay loop above; only redirected
+                        // input needs a reader. Either way this task ends early only for an Enter.
                         var inputTask = Task.Run(async () => {
-                            try {
-                                while (!cts.Token.IsCancellationRequested) {
-                                    bool isRedirected = false;
-                                    try { isRedirected = Console.IsInputRedirected; } catch (InvalidOperationException) { }
-
-                                    if (!isRedirected) {
-                                        await Task.Delay(200, cts.Token);
-                                        continue;
-                                    }
-
-                                    string? line = await Console.In.ReadLineAsync(cts.Token);
-                                    if (line == null) {
-                                        // End of stream (EOF) reached - not a user Enter keypress.
-                                        return false;
-                                    }
-                                    return true;
-                                }
+                            bool isRedirected = false;
+                            try { isRedirected = Console.IsInputRedirected; } catch (InvalidOperationException) { }
+                            if (isRedirected) {
+                                return await WaitForEnterAsync(Console.In, cts.Token);
                             }
-                            catch (OperationCanceledException) { }
-                            catch (Exception ex) {
-                                Console.Error.WriteLine($"[{ex.GetType().Name}] {ex.Message}");
-                            }
+                            try { await Task.Delay(Timeout.Infinite, cts.Token); } catch (OperationCanceledException) { }
                             return false;
-                        }, cts.Token);
+                        });
 
                         var completedTask = await Task.WhenAny(delayTask, inputTask);
                         cts.Cancel();
@@ -140,5 +130,31 @@ public static class InteractiveDelay {
         finally {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// Waits for one line on <paramref name="reader"/> and returns true when it arrives. At end of
+    /// input it keeps waiting until <paramref name="cancellationToken"/> fires and returns false:
+    /// closed stdin means nobody can press Enter, so it must neither skip the wait (what EOF used
+    /// to do) nor end it early.
+    /// </summary>
+    public static async Task<bool> WaitForEnterAsync(TextReader reader, CancellationToken cancellationToken) {
+        try {
+            if (await reader.ReadLineAsync(cancellationToken) != null) {
+                return true;
+            }
+        }
+        catch (OperationCanceledException) {
+            return false;
+        }
+        catch (Exception ex) {
+            Console.Error.WriteLine($"[{ex.GetType().Name}] {ex.Message}");
+        }
+
+        try {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+        }
+        catch (OperationCanceledException) { }
+        return false;
     }
 }

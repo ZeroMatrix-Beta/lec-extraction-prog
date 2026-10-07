@@ -18,6 +18,8 @@ namespace LectureExtraction.ConsoleUi;
 public sealed class PresetPromptSource(bool assumeYes) : IPromptSource {
     private readonly bool _assumeYes = assumeYes;
 
+    public bool IsInteractive => false;
+
     public int SelectIndex(string title, IReadOnlyList<string> labels, int pageSize, string? moreChoicesText) =>
         throw new UnattendedPromptException(
             title,

@@ -10,6 +10,8 @@ namespace LectureExtraction.ConsoleUi;
 /// that shipped, so switching sources cannot alter what the interactive user sees.
 /// </summary>
 public sealed class InteractivePromptSource : IPromptSource {
+    public bool IsInteractive => true;
+
     public int SelectIndex(string title, IReadOnlyList<string> labels, int pageSize, string? moreChoicesText) {
         // Indices are carried as the choice value so that duplicate labels stay distinguishable -
         // the reason the menu primitive stopped being a prompt over bare strings in the first place.
