@@ -457,127 +457,64 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
         Ui.Step($"Warte auf Bestätigung der History von {_config.CurrentModel}...");
         int initialBackoff = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 45;
-        int backoff = initialBackoff;
-        int maxRetries = 10;
         bool success = false;
+        bool cancelled = false;
         string fullResponse = "";
         int finalInputTokens = 0;
         int finalOutputTokens = 0;
         int finalCachedTokens = 0;
-        int consecutiveFailuresWithoutProgress = 0;
-        bool isRetry = false;
+        var usage = new UsageReport();
 
-        while (consecutiveFailuresWithoutProgress < maxRetries) {
-            int currentAttempt = consecutiveFailuresWithoutProgress + 1;
-            int chunksReceivedThisAttempt = 0;
-            fullResponse = "";
-            using var cts = new CancellationTokenSource();
-            void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (Exception ex) { Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}"); } }
-            Console.CancelKeyPress += cancelHandler;
-
-            try {
-                if (isRetry) {
-                    Ui.Step($"[Versuch {currentAttempt}/{maxRetries}] Sende Anfrage...");
-                }
-
-                int requestInputTokens = 0;
-                int requestOutputTokens = 0;
-                int requestCachedTokens = 0;
-
-                var usage = new UsageReport();
-                var responseStream = _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _sessionPreamble, requestConfig);
-                await foreach (var chunk in responseStream.WithCancellation(cts.Token)) {
-                    if (cts.IsCancellationRequested) break;
-                    chunksReceivedThisAttempt++;
+        using var cts = new CancellationTokenSource();
+        void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; try { cts.Cancel(); } catch (ObjectDisposedException) { } }
+        Console.CancelKeyPress += cancelHandler;
+        try {
+            // [AI Context] Same retry policy as every other generation call (bounded attempts, backoff,
+            // network pause); this loop used to be a hand-written copy of it.
+            success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+                streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _sessionPreamble, requestConfig),
+                onChunkReceived: chunk => {
                     string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                     Ui.Raw(txt);
                     fullResponse += txt;
                     usage.Absorb(chunk.UsageMetadata);
                     if (chunk.UsageMetadata != null) {
-                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) requestCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
+                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) finalInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
+                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) finalOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
+                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) finalCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
                     }
-                }
+                    return Task.CompletedTask;
+                },
+                cancellationToken: cts.Token,
+                maxRetries: 10,
+                initialBackoff: initialBackoff,
+                retryContext: "History Bestätigung",
+                onRetry: () => {
+                    fullResponse = "";
+                    finalInputTokens = 0;
+                    finalOutputTokens = 0;
+                    finalCachedTokens = 0;
+                    usage = new UsageReport();
+                },
+                highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null);
+            cancelled = !success;
+        }
+        catch (Exception ex) {
+            Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.GetType().Name} - {ex.Message}");
+        }
+        finally {
+            Console.CancelKeyPress -= cancelHandler;
+        }
 
-                _sessionTotalInputTokens += requestInputTokens;
-                _sessionTotalOutputTokens += requestOutputTokens;
-                _sessionTotalCachedTokens += requestCachedTokens;
-                finalInputTokens = requestInputTokens;
-                finalOutputTokens = requestOutputTokens;
-                finalCachedTokens = requestCachedTokens;
-                Ui.Detail(usage.Describe($"Total Prompt: {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {(Math.Max(0, requestInputTokens - requestCachedTokens)):N0} | Output: {requestOutputTokens:N0}", "[Request Tokens]      "));
-                Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
-
-                success = true;
-                break;
-            }
-            catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException || ex.Message.Contains("The operation was canceled", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("Cancelled", StringComparison.OrdinalIgnoreCase)) {
-                Ui.Info("Bestätigung durch Benutzer abgebrochen.");
-                break;
-            }
-            catch (Exception ex) {
-                Ui.Error($"[Exception gefangen] {ex.GetType().Name}: {ex.Message}");
-                bool isOverloaded = ApiRetryPolicy.IsTransientError(ex);
-                if (isOverloaded) {
-                    bool madeProgress = chunksReceivedThisAttempt > 0 || fullResponse.Length > 0;
-                    if (madeProgress) {
-                        Ui.Info("Fortschritt während des Streams erkannt: Wiederholungs-Zähler wird auf 0 zurückgesetzt.", "API Retry");
-                        consecutiveFailuresWithoutProgress = 0;
-                        backoff = initialBackoff;
-                    }
-                    else {
-                        consecutiveFailuresWithoutProgress++;
-                    }
-
-                    if (consecutiveFailuresWithoutProgress < maxRetries) {
-                        int waitTime;
-                        string contextMsg = " [History Bestätigung]";
-                        string delayMessage = "Still waiting for the acknowledgment / processing...";
-
-                        if (ApiRetryPolicy.IsNetworkConnectionError(ex)) {
-                            waitTime = 300;
-                            Ui.Warn($"[Netzwerk-Fehler]{contextMsg} Verbindung unterbrochen ({ex.GetType().Name}: {ex.Message}).");
-                            Ui.Info("Keine Panik! Du hast jetzt 300 Sekunden Zeit, um deine Verbindung zu reparieren...");
-                            delayMessage = "Warte auf Wiederherstellung der Internetverbindung...";
-                        }
-                        else if (ex.Message.Contains("high demand", StringComparison.OrdinalIgnoreCase)) {
-                            int highDemandWait = _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : 180;
-                            waitTime = highDemandWait;
-                            string timeDesc = highDemandWait % 60 == 0 && highDemandWait > 0
-                                ? (highDemandWait == 60 ? "1 Minute" : $"{highDemandWait / 60} Minuten")
-                                : $"{highDemandWait}s";
-                            Ui.Warn($"[Hohe Auslastung]{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}...");
-                            backoff = waitTime;
-                        }
-                        else if (madeProgress || consecutiveFailuresWithoutProgress <= 1) {
-                            var retryMatch = MyRegex().Match(ex.Message);
-                            if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
-                                waitTime = serverSuggestedDelay + 20;
-                                Ui.Warn($"[Rate Limit]{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime}s... (Versuch {(madeProgress ? 1 : consecutiveFailuresWithoutProgress + 1)}/{maxRetries})");
-                            }
-                            else {
-                                waitTime = backoff;
-                                Ui.Warn($"[Rate Limit / Überlastung]{contextMsg} Initiale Wartezeit: {waitTime}s... (Versuch {(madeProgress ? 1 : consecutiveFailuresWithoutProgress + 1)}/{maxRetries})");
-                            }
-                            backoff = waitTime;
-                        }
-                        else {
-                            backoff += 30;
-                            waitTime = backoff;
-                            Ui.Warn($"[Rate Limit]{contextMsg} Inkrementiere Wartezeit. Warte {waitTime}s... (Versuch {consecutiveFailuresWithoutProgress + 1}/{maxRetries})");
-                        }
-                        if (!await InteractiveDelay.SmartDelayAsync(waitTime, delayMessage)) { break; }
-                        isRetry = true;
-                        continue;
-                    }
-                }
-                Ui.Error("Der Fehler konnte nicht durch einen automatischen Retry behoben werden.");
-                break;
-            }
-            finally {
-                Console.CancelKeyPress -= cancelHandler;
-            }
+        if (cancelled) {
+            Ui.Info("Bestätigung abgebrochen.");
+        }
+        if (success) {
+            _sessionTotalInputTokens += finalInputTokens;
+            _sessionTotalOutputTokens += finalOutputTokens;
+            _sessionTotalCachedTokens += finalCachedTokens;
+            Ui.Detail(usage.Describe($"Total Prompt: {finalInputTokens:N0} | Gecacht: {finalCachedTokens:N0} | Frisch: {(Math.Max(0, finalInputTokens - finalCachedTokens)):N0} | Output: {finalOutputTokens:N0}", "[Request Tokens]      "));
+            Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {(Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens)):N0} | Output: {_sessionTotalOutputTokens:N0}");
         }
 
         if (success && !string.IsNullOrWhiteSpace(fullResponse)) {
@@ -879,8 +816,6 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
 
     [System.Text.RegularExpressions.GeneratedRegex(@"\[(?:SYSTEM|AI-MODEL)\][^\r\n]*Video\s*complete", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex VideoCompleteRegex();
-    [System.Text.RegularExpressions.GeneratedRegex(@"""retryDelay""\s*:\s*""(\d+)s""")]
-    private static partial System.Text.RegularExpressions.Regex MyRegex();
 
     [System.Text.RegularExpressions.GeneratedRegex(@"^(\d{2,4}-)?\d{2}-\d{2}-(monday|tuesday|wednesday|thursday|friday|saturday|sunday|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag)(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)?\.[a-z0-9]+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex FilenamePatternRegex();
