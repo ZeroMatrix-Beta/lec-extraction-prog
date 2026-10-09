@@ -11,26 +11,39 @@ namespace LectureExtraction.ConsoleUi;
 /// [Human] Zentrale Console-UI-Klasse für gerahmte Ausgaben, Spectre-Prompts und Markup-sicheres Logging.
 /// </summary>
 public static class Ui {
+    private static volatile bool _isLineOpen = false;
+
+    private static void EnsureNewLine() {
+        if (_isLineOpen) {
+            _isLineOpen = false;
+            AnsiConsole.WriteLine();
+        }
+    }
+
     // Severity — canonical German tag + colour, markup-escaped
     public static void Info(string msg, string? scope = null) {
+        EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
         AnsiConsole.MarkupLine($"{prefix}[blue][[INFO]][/] {text}");
     }
 
     public static void Warn(string msg, string? scope = null) {
+        EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
         AnsiConsole.MarkupLine($"{prefix}[yellow][[WARNUNG]][/] {text}");
     }
 
     public static void Error(string msg, string? scope = null) {
+        EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
         AnsiConsole.MarkupLine($"{prefix}[red][[FEHLER]][/] {text}");
     }
 
     public static void Success(string msg, string? scope = null) {
+        EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
         AnsiConsole.MarkupLine($"{prefix}[green][[OK]][/] {text}");
@@ -44,6 +57,7 @@ public static class Ui {
     /// [Human] Abschnitts-Trenner mit optionaler Subsystem-Angabe.
     /// </summary>
     public static void Step(string title, string? scope = null) {
+        EnsureNewLine();
         string text = Markup.Escape(title);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]][/] " : "";
         AnsiConsole.Write(new Rule($"{prefix}[bold cyan]{text}[/]").LeftJustified());
@@ -56,6 +70,7 @@ public static class Ui {
     /// [Human] Gedimmte Detailausgabe mit optionaler Subsystem-Angabe.
     /// </summary>
     public static void Detail(string msg, string? scope = null) {
+        EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]][/] " : "";
         AnsiConsole.MarkupLine($"  {prefix}[grey]{text}[/]");
@@ -68,6 +83,7 @@ public static class Ui {
     /// [Human] Gerahmte Überschrift für den Start einer Session oder eines Modus.
     /// </summary>
     public static void Header(string title) {
+        EnsureNewLine();
         var panel = new Panel($"[bold]{Markup.Escape(title)}[/]")
             .Border(BoxBorder.Rounded)
             .BorderColor(Color.Cyan1)
@@ -76,15 +92,20 @@ public static class Ui {
     }
 
     public static void Blank() {
+        _isLineOpen = false;
         AnsiConsole.WriteLine();
     }
 
     // Verbatim — NO markup parsing, for model output and LaTeX
     public static void Raw(string text) {
-        AnsiConsole.Write(new Text(text));
+        if (!string.IsNullOrEmpty(text)) {
+            _isLineOpen = !text.EndsWith('\n');
+            AnsiConsole.Write(new Text(text));
+        }
     }
 
     public static void RawLine(string text = "") {
+        _isLineOpen = false;
         AnsiConsole.Write(new Text(text + "\n"));
     }
 

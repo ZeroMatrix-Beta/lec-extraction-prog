@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.Extraction;
 using LectureExtraction.GoogleAi;
@@ -23,7 +24,8 @@ public sealed record ExtractionPlan(
     bool ApiKeyResolves,
     string SourceFolder,
     string TargetFolder,
-    int SegmentsPerVideo,
+    string NumberOfParts,
+    int? SegmentsPerVideo,
     int OverlapSeconds,
     double SpeedMultiplier,
     bool RefinementFollows,
@@ -94,11 +96,14 @@ public static class ExtractionPlanner {
     /// </summary>
     public const double DefaultResumeWindowHours = 2;
 
+    /// <param name="durations">Each video's length in seconds, from <see cref="ProbeDurationsIfAutoAsync"/>.
+    /// Only consulted when NumberOfParts is "auto"; without it an auto plan assumes 3 parts.</param>
     public static ExtractionPlan Build(
         AiStudioAutoExtractionConfig config,
         IReadOnlyList<string> videos,
         double resumeWindowHours,
-        bool force) {
+        bool force,
+        IReadOnlyDictionary<string, double>? durations = null) {
 
         string targetFolder = string.IsNullOrWhiteSpace(config.TargetFolder)
             ? Path.Combine(config.SourceFolder, "extracted_output")
@@ -108,7 +113,7 @@ public static class ExtractionPlanner {
             .OrderBy(video => VideoDateParser.Parse(video).Date)
             .ThenBy(video => VideoDateParser.Parse(video).WeekNumber ?? int.MaxValue)
             .ThenBy(video => video)
-            .Select(video => Describe(video, config, targetFolder, resumeWindowHours, force))
+            .Select(video => Describe(video, config, targetFolder, resumeWindowHours, force, durations))
             .ToList();
 
         string envName = ApiKeyProfileResolver.Resolve(config.ActiveApiProfile, config.AiStudioApiKeyEnvNames);
@@ -121,7 +126,9 @@ public static class ExtractionPlanner {
             ApiKeyResolves: GoogleAiClientBuilder.IsApiKeyPresent(envName),
             SourceFolder: config.SourceFolder,
             TargetFolder: targetFolder,
-            SegmentsPerVideo: config.NumberOfParts.Resolve(),
+            NumberOfParts: config.NumberOfParts.ToString(),
+            // Under "auto" there is no single answer - each video's own count is in Videos.
+            SegmentsPerVideo: config.NumberOfParts.FixedParts,
             OverlapSeconds: config.OverlapSeconds,
             SpeedMultiplier: config.SpeedMultiplier,
             RefinementFollows: config.GoIntoLatexRefinement,
@@ -134,7 +141,8 @@ public static class ExtractionPlanner {
         AiStudioAutoExtractionConfig config,
         string targetFolder,
         double resumeWindowHours,
-        bool force) {
+        bool force,
+        IReadOnlyDictionary<string, double>? durations) {
 
         var lecture = VideoDateParser.Parse(video);
         // The output folder carries no prefix while the .tex files do; both come from the same
@@ -142,7 +150,9 @@ public static class ExtractionPlanner {
         string outputFolder = Path.Combine(targetFolder, ExtractionHelpers.ComputeOutputFolderName(video));
         string texBaseName = ExtractionHelpers.ComputeTexBaseName(video);
 
-        int segmentCount = config.NumberOfParts.Resolve();
+        // The same resolution VideoSegmentProducer applies when it cuts, so an "auto" plan predicts
+        // the segment count the run will actually produce.
+        int segmentCount = config.NumberOfParts.Resolve(durations?.GetValueOrDefault(video) ?? 0);
         return new PlannedVideo(
             FileName: Path.GetFileName(video),
             Path: Path.GetFullPath(video),
@@ -152,6 +162,27 @@ public static class ExtractionPlanner {
             SegmentCount: segmentCount,
             ResumableSegments: force ? 0 : CountResumableSegments(outputFolder, texBaseName, segmentCount, resumeWindowHours),
             OutputFolder: outputFolder);
+    }
+
+    /// <summary>
+    /// Measures each video's length with ffprobe, but only when NumberOfParts is "auto" - the one
+    /// setting whose part count depends on it. A fixed count needs no probe, so the common plan stays
+    /// instant and free of FFmpeg.
+    /// </summary>
+    public static async Task<IReadOnlyDictionary<string, double>> ProbeDurationsIfAutoAsync(
+        AiStudioAutoExtractionConfig config,
+        IReadOnlyList<string> videos) {
+
+        var durations = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        if (!config.NumberOfParts.IsAuto) {
+            return durations;
+        }
+
+        foreach (string video in videos) {
+            durations[video] = await FfmpegToolkit.GetVideoDurationAsync(video);
+        }
+
+        return durations;
     }
 
     /// <summary>

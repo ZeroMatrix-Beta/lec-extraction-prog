@@ -25,7 +25,7 @@ lecx run --folder "D:/lecture-videos/analysis2" --from 03-30-2026
 | `--resume-window <hours>` | How long a finished `.tex` part stays reusable. Default **2** |
 | `--force` | Ignore existing `.tex` parts and re-request every segment |
 | `--out <dir>` | Target folder. Defaults to `<source>/extracted_output` |
-| `--parts <n>` · `--overlap <s>` · `--speed <x>` · `--preset <p>` | Segment geometry and FFmpeg preset |
+| `--parts <n\|auto>` · `--overlap <s>` · `--speed <x>` · `--preset <p>` | Segment geometry and FFmpeg preset. `auto` = one part per 22.5 min of video: a 45-min lecture gets 2, a 90-min double lecture 4 |
 | `--model <id>` · `--profile <n>` | Model and API-key profile for this run only |
 
 Exits `0` on full success, `6` if some videos succeeded and others failed, `4` if the
@@ -48,13 +48,17 @@ Payload includes `videoCount`, `pendingRequests`, `resumableSegments`,
 `apiKeyResolves`, `resumeWindowHours`, a per-video breakdown, and `warnings`.
 Exits `4` when the active profile's key is unset.
 
+`numberOfParts` is the setting (`"4"` or `"auto"`). Under `auto` the plan probes each
+video's length with ffprobe and `segmentsPerVideo` is absent — each video's own
+`segmentCount` is the number to read.
+
 ## `lecx media` — free
 
 | Command | Does |
 |---|---|
 | `media probe --input <mp4>` | Duration, size, parsed lecture date, resulting segment geometry |
 | `media segment --input <mp4>` | Compresses and slices into overlapping segments |
-| `media audio --input <mp4>` | Extracts the mono AAC track used for timestamp correction |
+| `media audio --input <mp4>` | Extracts the mono AAC track used for timestamp correction into `<target>/<lecture>/`, where `extract run` and `refine run` look for it. Reuses a track already there |
 
 `media segment --json` emits a `PreparedVideo` — the same record the pipeline passes
 internally from its FFmpeg producer to its Gemini consumer:
@@ -83,6 +87,21 @@ lecx refine run --tex out/step1-lecture.tex --step 1 --through-end
 | `--step 1\|2\|3` | One step only: merge/timestamps, speech, final polish. Omit for all three |
 | `--through-end` | With `--step`, continue through the remaining steps and compile the PDF |
 | `--audio <file>` | Audio for timestamp correction. Defaults to `*_audio.aac` beside the `.tex` |
+| `--overlap <s>` | Overlap the segments were cut with, for step 1. Defaults to the extraction config's `OverlapSeconds` |
+| `--profile <n>` | Refinement API-key profile for this run only — an index into the refinement config's own key list. Switch it when a key hits its rate limit. Exits `4` if that key is unset |
+
+Step 1 reads the part count from the document itself (its `% --- TEIL n` separators), so
+it is right for `--parts auto` and for a config changed since the extraction.
+
+The input of each step is the previous step's output:
+
+| Step | Reads | Writes |
+|---|---|---|
+| 1 | `step1-<name>-all-offset.tex` | `step2-<name>-offset-merged.tex` |
+| 2 | `step2-<name>-offset-merged.tex` | `step3-<name>-offset-speech_refined.tex` |
+| 3 | `step3-<name>-offset-speech_refined.tex` | `step4-<name>-offset-final.tex` |
+
+Exits `6` when a step failed — the log on stderr names which.
 
 ## `lecx pdf compile` — paid unless `--fix-loop 0`
 
@@ -92,6 +111,8 @@ its compile log to the model.
 ```bash
 lecx pdf compile --tex final.tex --fix-loop 0   # local only
 ```
+
+`--profile <n>` selects the refinement key the repair loop uses, as for `refine run`.
 
 ## `lecx batch` — paid
 

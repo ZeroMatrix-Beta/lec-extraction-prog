@@ -19,10 +19,15 @@ public static class CliBootstrapper {
     private const string Description =
         "lecx - lecture video -> LaTeX -> PDF, headless. Run without arguments for the interactive menu.";
 
-    public static async Task<int> RunAsync(string[] args) {
+    public static Task<int> RunAsync(string[] args) => RunAsync(BuildRootCommand(), args);
+
+    /// <summary>
+    /// Runs <paramref name="args"/> against a given tree. Exposed so tests can check the exit-code
+    /// mapping with a command that fails on purpose, through the same path a real command takes.
+    /// </summary>
+    public static async Task<int> RunAsync(RootCommand root, string[] args) {
         EnableUnicodeOutput();
 
-        var root = BuildRootCommand();
         var parseResult = root.Parse(args);
 
         // Parse errors are reported here rather than through the default handler so that they carry
@@ -52,7 +57,11 @@ public static class CliBootstrapper {
         }
 
         try {
-            return await parseResult.InvokeAsync();
+            // The library's default handler would catch every exception itself, print it as
+            // "Unhandled exception" and return 1 - so the unanswered-prompt case below never ran and
+            // a caller got a crash code for a run that only needed one more argument. With it off,
+            // that case maps to its own code and anything else reaches Program.Main's handler.
+            return await parseResult.InvokeAsync(new InvocationConfiguration { EnableDefaultExceptionHandler = false });
         }
         catch (UnattendedPromptException ex) {
             // Distinct from a crash: the run was well-formed and simply needs one more argument.
@@ -70,6 +79,7 @@ public static class CliBootstrapper {
     private static void EnableUnicodeOutput() {
         try {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.InputEncoding = System.Text.Encoding.UTF8;
         }
         catch (Exception ex) {
             // Some redirected handles reject the change; the only cost is degraded glyphs.

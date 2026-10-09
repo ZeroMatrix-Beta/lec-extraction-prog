@@ -162,6 +162,86 @@ public class ApiRetryPolicyTests : IDisposable {
         Assert.True(ApiRetryPolicy.IsTransientError(new InvalidDataException("Response status code 503 (Service Unavailable).")));
     }
 
+    // The message the API returned when the free-tier daily request quota ran out, details included:
+    // its retry hint pointed 15 hours ahead, which the backoff used to sleep through.
+    private const string DailyQuotaMessage =
+        "You exceeded your current quota, please check your plan and billing details.\n" +
+        "* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.8-flash\n" +
+        "Please retry in 15h7.728714795s.\n" +
+        "Details: {\"@type\":\"type.googleapis.com/google.rpc.QuotaFailure\",\"violations\":[{\"quotaId\":\"GenerateRequestsPerDayPerProjectPerModel-FreeTier\",\"quotaValue\":\"20\"}]}";
+
+    [Fact]
+    public void An_exhausted_daily_quota_is_not_retried() {
+        var dailyQuota = new ClientError(DailyQuotaMessage, 429, "RESOURCE_EXHAUSTED");
+
+        Assert.True(ApiRetryPolicy.IsDailyQuotaExhausted(dailyQuota));
+        Assert.False(ApiRetryPolicy.IsTransientError(dailyQuota));
+    }
+
+    [Fact]
+    public void A_per_minute_rate_limit_is_still_retried() {
+        var perMinute = new ClientError(
+            "Quota exceeded. Details: {\"violations\":[{\"quotaId\":\"GenerateRequestsPerMinutePerProjectPerModel-FreeTier\"}]}",
+            429, "RESOURCE_EXHAUSTED");
+
+        Assert.False(ApiRetryPolicy.IsDailyQuotaExhausted(perMinute));
+        Assert.True(ApiRetryPolicy.IsTransientError(perMinute));
+    }
+
+    [Fact]
+    public async Task An_exhausted_daily_quota_fails_on_the_first_attempt() {
+        int attempts = 0;
+
+        await Assert.ThrowsAsync<ClientError>(() => ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => { attempts++; return Stream([], new ClientError(DailyQuotaMessage, 429, "RESOURCE_EXHAUSTED")); },
+            _ => Task.CompletedTask,
+            CancellationToken.None,
+            initialBackoff: 0));
+
+        Assert.Equal(1, attempts);
+    }
+
+    [Fact]
+    public async Task An_unrequested_cancellation_or_timeout_is_retried() {
+        int attempts = 0;
+        int retries = 0;
+
+        bool result = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => {
+                attempts++;
+                return attempts < 3
+                    ? Stream([], new TaskCanceledException("The operation was canceled (HttpClient timeout)."))
+                    : Stream(["success"], null);
+            },
+            _ => Task.CompletedTask,
+            CancellationToken.None,
+            maxRetries: 3,
+            onRetry: () => retries++);
+
+        Assert.True(result);
+        Assert.Equal(3, attempts);
+        Assert.Equal(2, retries);
+        Assert.Equal(2, _waits.Count);
+        Assert.All(_waits, w => Assert.Equal(30, w));
+    }
+
+    [Fact]
+    public async Task A_user_requested_cancellation_returns_false_without_retrying() {
+        int attempts = 0;
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        bool result = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => { attempts++; return Stream([], new OperationCanceledException(cts.Token)); },
+            _ => Task.CompletedTask,
+            cts.Token,
+            maxRetries: 3);
+
+        Assert.False(result);
+        Assert.Equal(1, attempts);
+        Assert.Empty(_waits);
+    }
+
     [Fact]
     public void ApiStatusCode_reads_a_wrapped_error() {
         var wrapped = new InvalidOperationException("outer", new ClientError("inner", 429, "RESOURCE_EXHAUSTED"));

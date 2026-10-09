@@ -7,6 +7,7 @@ using Google.GenAI.Types;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
+using LectureExtraction.Extraction.Model;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
 
@@ -206,11 +207,16 @@ public partial class LatexRefinementSession {
         return (expectedSpokenClean, expectedMathStroke);
     }
 
-    private async Task<(string FullResponseText, int TotalInputTokens, int TotalOutputTokens, int TotalCachedTokens)> StreamAndCollectAsync(
+    /// <summary>
+    /// [AI Context] Streams one refinement step, sending continue requests until the completion
+    /// marker arrives. The returned usage is the sum over every request the step needed - each
+    /// continue request re-sends and re-bills the whole conversation - with thinking tokens kept
+    /// apart from the visible output.
+    /// [Human] Streamt einen Refinement-Schritt inkl. Continue-Anfragen und summiert deren Tokens.
+    /// </summary>
+    private async Task<(string FullResponseText, TokenUsage Usage)> StreamAndCollectAsync(
         RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName) {
-        int totalInputTokens = 0;
-        int totalOutputTokens = 0;
-        int totalCachedTokens = 0;
+        TokenUsage totalUsage = default;
 
         string fullResponseText = "";
         var budget = new ContinueBudget(stepConfig.MaxContinueRequests);
@@ -236,6 +242,7 @@ public partial class LatexRefinementSession {
 
             string chunkResp = "";
             bool callSuccess = false;
+            var usage = new UsageReport();
 
             try {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
@@ -250,14 +257,8 @@ public partial class LatexRefinementSession {
                       Ui.Raw(text);
                       chunkResp += text;
 
-                      if (chunk.UsageMetadata != null) {
-                          if (chunk.UsageMetadata.PromptTokenCount.HasValue)
-                              totalInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                          if (chunk.UsageMetadata.CandidatesTokenCount.HasValue)
-                              totalOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                          if (chunk.UsageMetadata.CachedContentTokenCount.HasValue)
-                              totalCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                      }
+                      // Per request, the last chunk carrying usage wins; requests are summed below.
+                      usage.Absorb(chunk.UsageMetadata);
 
                       await Task.CompletedTask;
                   },
@@ -266,9 +267,7 @@ public partial class LatexRefinementSession {
                   retryContext: outputFileName,
                   onRetry: () => {
                       chunkResp = "";
-                      totalInputTokens = 0;
-                      totalOutputTokens = 0;
-                      totalCachedTokens = 0;
+                      usage = new UsageReport();
                   },
                   highDemandDelay: rateLimitDelay,
                   resumeOnPartialProgress: true
@@ -283,6 +282,10 @@ public partial class LatexRefinementSession {
                 Ui.Warn("Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
                 break;
             }
+
+            // Every completed request is billed, an empty answer included.
+            totalUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens, usage.ThoughtTokens, Requests: 1);
+            Ui.Info(usage.Describe($"[Request {budget.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
 
             if (string.IsNullOrWhiteSpace(chunkResp)) {
                 if (emptyResponseRetries < 3) {
@@ -317,13 +320,15 @@ public partial class LatexRefinementSession {
                 break;
             }
 
+            // The step prompts demand raw LaTeX, so a trailing fence means the model wrapped its answer
+            // anyway and probably believes it is done - the usual way the completion marker gets lost.
             bool closedBlock = chunkResp.TrimEnd().EndsWith("```");
             string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
-                "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Do not open a new ```latex block, do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
+                "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Output raw LaTeX only, without Markdown code fences. Do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
 
             if (closedBlock) {
-                continuePrompt += "\n\n[WARNING] It looks like you closed the ```latex markdown block, but you forgot the '% [SYSTEM] Refinement complete' marker. If you have not finished transcribing/refining the ENTIRE document, DO NOT just send the marker! You must continue transcribing the remaining content of the lecture. Open a new ```latex block and continue the transcription.";
+                continuePrompt += "\n\n[WARNING] Your output ended with a Markdown code fence (```), which the raw LaTeX output contract forbids, and without the '% [SYSTEM] Refinement complete' marker. If you have not finished refining the ENTIRE document, DO NOT just send the marker! Continue with the remaining content as raw LaTeX, without any code fence. If you have finished, output only the marker.";
             }
 
             Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "Refinement");
@@ -340,7 +345,7 @@ public partial class LatexRefinementSession {
         }
 
 
-        return (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens);
+        return (fullResponseText, totalUsage);
     }
 
     private async Task<string?> CreateContextCacheAsync(BackendParameters backendParams, string systemInstructionText, string outputFileName, string checksum, string cacheStateFileName, bool isRecreate) {

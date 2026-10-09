@@ -98,12 +98,18 @@ public static partial class ApiRetryPolicy {
 
                 return !cancellationToken.IsCancellationRequested;
             }
-            catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
+            catch (Exception ex) when (cancellationToken.IsCancellationRequested && (ex is OperationCanceledException || ex.InnerException is OperationCanceledException)) {
                 return false; // User cancelled
             }
-            catch (Exception ex) {
+            catch (Exception rawEx) {
+                var ex = (rawEx is OperationCanceledException || rawEx.InnerException is OperationCanceledException)
+                    ? new TimeoutException("The API request timed out before returning any data.", rawEx)
+                    : rawEx;
                 if (!IsTransientError(ex)) {
                     Ui.Error($"{ex.Describe()}", "API");
+                    if (IsDailyQuotaExhausted(ex)) {
+                        Ui.Error("Das Tageskontingent dieses API-Keys ist aufgebraucht - ein Retry hilft erst nach dem Reset. Anderes API-Key-Profil wählen (CLI: --profile).", "Quota");
+                    }
                     Ui.Error($"Unrecoverable error after {attempt} attempt(s).", "API Failure");
                     throw; // Re-throw for the caller to handle
                 }
@@ -171,11 +177,10 @@ public static partial class ApiRetryPolicy {
                 SessionCostLedger.RecordRequest(isGeneration: false, attempt);
                 return await apiCall();
             }
-            catch (Exception ex) when (ex is OperationCanceledException || ex.InnerException is OperationCanceledException) {
-                Ui.Warn("Operation cancelled by user.", "API");
-                return null;
-            }
-            catch (Exception ex) {
+            catch (Exception rawEx) {
+                var ex = (rawEx is OperationCanceledException || rawEx.InnerException is OperationCanceledException)
+                    ? new TimeoutException("The API request timed out.", rawEx)
+                    : rawEx;
                 Ui.Error($"{ex.Describe()}", "API");
 
                 if (IsTransientError(ex) && attempt < maxRetries) {
@@ -251,6 +256,13 @@ public static partial class ApiRetryPolicy {
             return false;
         }
 
+        // A 429 is normally worth waiting out, but not when a per-day quota is what ran out: the
+        // server then suggests a retry many hours away (15h observed), which an unattended run would
+        // sleep through. Failing fast lets the caller switch to another key instead.
+        if (IsDailyQuotaExhausted(ex)) {
+            return false;
+        }
+
         // An API error with a status code is classified by that code alone: rate limits, timeouts and
         // server errors are worth waiting for; any other 4xx (bad key, wrong model name, missing file)
         // fails the same way on every retry, and each retry costs minutes of backoff.
@@ -291,6 +303,20 @@ public static partial class ApiRetryPolicy {
     private static bool IsApiError(Exception ex) =>
         ex is ClientError or ServerError || ex.InnerException is ClientError or ServerError;
 
+    /// <summary>
+    /// [AI Context] True when a quota error names a per-day quota (e.g. the quota id
+    /// "GenerateRequestsPerDayPerProjectPerModel-FreeTier" in the QuotaFailure details), as opposed to
+    /// the per-minute limits a backoff does recover from.
+    /// [Human] Erkennt, ob das Tageskontingent des API-Keys aufgebraucht ist.
+    /// </summary>
+    public static bool IsDailyQuotaExhausted(Exception ex) {
+        string text = ex.ToString();
+        bool isQuotaError = ApiStatusCode(ex) == 429
+            || text.Contains("RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("quota", StringComparison.OrdinalIgnoreCase);
+        return isQuotaError && text.Contains("PerDay", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>The server closed the stream mid-response (truncated JSON in the streamed body).</summary>
     private static bool IsInterruptedStream(Exception ex) {
         string msg = ex.Message;
@@ -321,9 +347,15 @@ public static partial class ApiRetryPolicy {
         int nextBackoff;
 
         string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-        string delayMessage = "Still waiting for the acknowledgment / processing...";
+        string delayMessage = "Warte auf Server-Bestätigung / Verarbeitung...";
 
-        if (IsNetworkConnectionError(ex)) {
+        if (ex is TimeoutException || ex.InnerException is TimeoutException) {
+            waitTime = 30;
+            Ui.Warn($"{contextMsg} API-Anfrage hat das Zeitlimit überschritten ({ex.Describe()}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Timeout");
+            nextBackoff = currentBackoff + 15;
+            delayMessage = "Warte auf erneuten Versuch nach Timeout...";
+        }
+        else if (IsNetworkConnectionError(ex)) {
             waitTime = 300; // 5 Minuten
             Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.Describe()}).", "Netzwerk-Fehler");
             Ui.Detail("Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");

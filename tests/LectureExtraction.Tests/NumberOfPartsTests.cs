@@ -57,28 +57,24 @@ public class NumberOfPartsTests {
     }
 
     [Theory]
-    // Under 40 min -> 1 part
     [InlineData(0, 3)] // fallback when duration is zero/unknown
     [InlineData(-10, 3)] // fallback when duration is negative
+    // One part per 22.5 min, rounded, at least 1
     [InlineData(10 * 60, 1)] // 10 min
     [InlineData(30 * 60, 1)] // 30 min
-    [InlineData(39 * 60 + 59, 1)] // 39m 59s
-    // 40 to < 85 min -> 2 parts
-    [InlineData(40 * 60, 2)] // 40 min
+    [InlineData(33 * 60, 1)] // 33 min, just under the 33.75 min boundary
+    [InlineData(35 * 60, 2)] // 35 min
+    // The real lecture lengths: a single lecture -> 2 parts, a double lecture -> 4
+    [InlineData(2568, 2)] // 42m 48s, a Wednesday algebra lecture
     [InlineData(45 * 60, 2)] // 45 min
-    [InlineData(50 * 60, 2)] // 50 min
-    [InlineData(60 * 60, 2)] // 60 min
-    [InlineData(75 * 60, 2)] // 75 min
-    [InlineData(84 * 60 + 59, 2)] // 84m 59s
-    // >= 85 min -> 3 parts
-    [InlineData(85 * 60, 3)] // 85 min (around 85 min still 3 parts)
-    [InlineData(90 * 60, 3)] // 90 min
-    [InlineData(100 * 60, 3)] // 100 min
-    [InlineData(129 * 60 + 59, 3)] // 129m 59s
-    // Long videos scale further (+1 part per 45 min after 85 min)
-    [InlineData(130 * 60, 4)] // 130 min = 85 + 45 -> 4 parts
-    [InlineData(135 * 60, 4)] // 135 min -> 4 parts
-    [InlineData(175 * 60, 5)] // 175 min = 85 + 90 -> 5 parts
+    [InlineData(2642, 2)] // 44m 02s
+    [InlineData(5400, 4)] // 90 min
+    [InlineData(5451, 4)] // 90m 51s, a Tuesday double lecture
+    // In between and beyond
+    [InlineData(60 * 60, 3)] // 60 min
+    [InlineData(75 * 60, 3)] // 75 min
+    [InlineData(100 * 60, 4)] // 100 min
+    [InlineData(135 * 60, 6)] // 135 min, three lecture units
     public void Auto_ResolvesExpectedParts_ByDuration(double durationSeconds, int expectedParts) {
         var auto = NumberOfParts.Auto;
         Assert.Equal(expectedParts, auto.Resolve(durationSeconds));

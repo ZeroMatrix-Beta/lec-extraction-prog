@@ -293,7 +293,21 @@ public static class RefinementUiHelper {
         }
     }
 
-    public static async Task RunRefinementAsync(LatexRefinementSessionConfig refinementConfig, IAutoExtractionConfig? extractionConfig, string selectedTex, string? selectedAudio) {
+    /// <summary>
+    /// [AI Context] The environment variable holding the AI Studio key refinement runs under: the
+    /// active profile's entry, or the dedicated refinement key when the list has none for it.
+    /// [Human] Name der Umgebungsvariable mit dem API-Key für das Refinement.
+    /// </summary>
+    public static string ResolveRefinementKeyEnvName(LatexRefinementSessionConfig refinementConfig) {
+        string? extractedRefinementEnvName = (refinementConfig.AiStudioApiKeyEnvNames != null && refinementConfig.AiStudioApiKeyEnvNames.Length > refinementConfig.AiStudioActiveApiProfile)
+            ? refinementConfig.AiStudioApiKeyEnvNames[refinementConfig.AiStudioActiveApiProfile]
+            : null;
+        return !string.IsNullOrEmpty(extractedRefinementEnvName)
+            ? extractedRefinementEnvName
+            : "API_KEY-latex-refinement";
+    }
+
+    public static async Task<bool> RunRefinementAsync(LatexRefinementSessionConfig refinementConfig, IAutoExtractionConfig? extractionConfig, string selectedTex, string? selectedAudio, int? overlapSeconds = null) {
         Client refinementClient;
         if (refinementConfig.UseVertex && AppConfig.IsVertexAiEnabled) {
             refinementClient = GoogleAiClientBuilder.BuildVertexClient(
@@ -302,21 +316,16 @@ public static class RefinementUiHelper {
             );
         }
         else {
-            string? extractedRefinementEnvName = (refinementConfig.AiStudioApiKeyEnvNames != null && refinementConfig.AiStudioApiKeyEnvNames.Length > refinementConfig.AiStudioActiveApiProfile)
-                ? refinementConfig.AiStudioApiKeyEnvNames[refinementConfig.AiStudioActiveApiProfile]
-                : null;
-            string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
-                ? extractedRefinementEnvName
-                : "API_KEY-latex-refinement";
+            string envName = ResolveRefinementKeyEnvName(refinementConfig);
             string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
             refinementClient = GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
         }
 
         var refinementSession = new LatexRefinementSession(
             refinementClient,
-            RefinementOptions.ForFile(refinementConfig, selectedTex, extractionConfig, selectedAudio)
+            RefinementOptions.ForFile(refinementConfig, selectedTex, extractionConfig, selectedAudio) with { OverlapSeconds = overlapSeconds }
         );
 
-        await refinementSession.StartAsync();
+        return await refinementSession.StartAsync();
     }
 }

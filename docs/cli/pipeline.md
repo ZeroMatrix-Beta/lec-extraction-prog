@@ -86,6 +86,10 @@ lost; it is why part 2 of an 84-minute lecture starts at 2398 s rather than 2638
 
 `lecx media probe` reports the resulting geometry before anything is cut.
 
+`N` is `NumberOfParts`, or with `--parts auto` the video length divided by 22.5 minutes,
+rounded: a 45-minute lecture gets 2 parts, a 90-minute double lecture 4, so every segment
+stays around 25 minutes whatever the lecture's length.
+
 ## Caching and resume — two different windows
 
 | Layer | Window | Where |
@@ -97,6 +101,43 @@ The 2-hour one is the expensive one: past it, every part is re-requested and re-
 It was a hardcoded constant with no way to reach it; `--resume-window` and `--force` now
 expose it. The FFmpeg cache is additionally validated — an incomplete set, a part smaller
 than 1 KB, or a count that disagrees with `--parts` is discarded and re-cut.
+
+## The header stack at the top of every `.tex`
+
+Every file a stage writes opens with one comment block per step that produced it, newest
+on top — the configuration, date and token usage of the whole chain, like the rings of an
+onion. The first line of each block names its step, numbered like the file prefixes:
+
+```
+% ==========================================
+% Step 3/4 - Speech refinement (refinement step 2)
+% Output: step3-<name>-offset-speech_refined.tex
+% Input: step2-<name>-offset-merged.tex
+% Model: ...  Temperature: ...  Processed on: ...
+% ------------------------------------------
+% Token Usage (1 Request(s)):
+%   ... Output Tokens / Thinking Tokens listed separately ...
+% ==========================================
+% ==========================================
+% Step 2/4 - Merge & timestamp alignment (refinement step 1)
+% ...
+% ==========================================
+% ==========================================
+% Step 1/4 - Transcription, 4 part(s) combined
+% ...
+%   - Part 1: <part>.mp4 | start 00:00:00 | model ... | processed ... | prompt ... | output ... | thinking ...
+% ==========================================
+```
+
+The program stacks the blocks, not the model: a step reads the blocks of its input, puts its
+own on top, and drops any blocks the model echoed back. Inside a combined document each
+`% --- TEIL n` separator is followed by that part's own block, and every refinement step
+restores those blocks under each separator the model kept. The final refinement usually
+drops the separators; the one-line-per-part summary in the Step 1 block keeps the per-part
+facts after that.
+
+Token counts: *Output* is the visible answer only, *Thinking* is billed on top of it, and a
+step that needed continue requests reports the sum over all of them.
 
 ## Backends
 

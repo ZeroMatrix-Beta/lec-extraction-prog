@@ -284,11 +284,14 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
         }
 
-        // Ask user for confirmation
+        // Ask user for confirmation. Only a person at the keyboard is asked: declining means paying
+        // to transcribe without the instructions, so an unattended run has exactly one sensible
+        // answer and loads them, rather than failing on the question or needing --yes (which would
+        // accept every other default along with it).
         string confirmPrompt = shouldLoadHistory && historyFilesForSystemInstruction.Count > 0
             ? "System Instructions und History laden?"
             : "System Instructions laden?";
-        if (!Ui.Confirm(confirmPrompt, true)) {
+        if (Ui.PromptSource.IsInteractive && !Ui.Confirm(confirmPrompt, true)) {
             Ui.Warn("System Instructions wurden vom Benutzer nicht geladen.");
             return true;
         }
@@ -439,8 +442,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
         await TranscribeSegmentsAsync(state, file, fileSpecificOutputFolder, partsWithTimes, fullOriginalVideoDuration);
 
-        if (state.FileProcessingSuccess) {
-            await FinalizeVideoOutputAsync(state, file, fileSpecificOutputFolder, partsWithTimes.Count);
+        if (state.FileProcessingSuccess && !await FinalizeVideoOutputAsync(state, file, fileSpecificOutputFolder, partsWithTimes.Count)) {
+            // The .tex parts are on disk and stay reusable, but the refinement that follows them
+            // failed - the video is not done, and a caller reading the exit code must see that.
+            return false;
         }
 
         return state.FileProcessingSuccess;
@@ -511,6 +516,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         public string FullOutputTextRaw = ""; // Stores text as is, no timestamp adjustment
         public string FullOutputTextOffsetted = ""; // Stores text with timestamps adjusted by partStartTimeSeconds
         public TokenUsage FileTotalTokens;
+        public readonly List<string> PartSummaries = []; // one line per part, for the combined header
         public bool FileProcessingSuccess = true;
         public Task<SegmentUpload>? PendingVideoUploadTask;
         public Task<List<Part>>? PendingAudioUploadTask;
@@ -536,9 +542,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.", "Resume");
                 string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
                 state.GeneratedTexFiles.Add(targetPartPath);
-                state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex); // For raw output
+
+                // The part keeps the header it was written with - its own model, date and tokens - so
+                // a reused part is described as what it is, not as part of this run.
+                var (cachedHeader, cachedBody) = TexDocumentWriter.SplitHeaderLayers(existingTex);
+                string cachedSummary = TexDocumentWriter.SummarizePartHeader(cachedHeader);
+                state.PartSummaries.Add(cachedSummary.Length > 0 ? $"{cachedSummary} | aus Cache" : "aus Cache");
+                string cachedSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, cachedHeader, fromCache: true);
+                state.FullOutputTextRaw += cachedSeparator + cachedBody; // For raw output
                 if (_config.GenerateOffsetFiles) {
-                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds); // For offsetted output
+                    state.FullOutputTextOffsetted += cachedSeparator + LatexTimestampAdjuster.AdjustTimestamps(cachedBody, partStartTimeSeconds); // For offsetted output
                 }
                 state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
                 continue;
@@ -622,30 +635,35 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
 
             state.FileTotalTokens += segmentTranscript.Usage;
 
-            int partFreshTokens = segmentTranscript.Usage.Fresh;
-
             if (!string.IsNullOrWhiteSpace(segmentTranscript.LatexBody)) {
                 string cleanTex = LatexResponseCleaner.CleanLatexResponse(segmentTranscript.LatexBody);
 
-                state.FullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + cleanTex;
-                if (_config.GenerateOffsetFiles) {
-                    state.FullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
-                }
-
+                // One header per part, written into the part file and repeated under the part's
+                // separator in the combined document, so each part's settings travel with its text.
                 string partHeader = TexDocumentWriter.BuildPartHeader(
+                    partNumber: i + 1,
+                    totalParts: partsWithTimes.Count,
                     sourcePartFileName: Path.GetFileName(safePartPath),
                     partStartTimeSeconds: partStartTimeSeconds,
                     usage: segmentTranscript.Usage,
-                    model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
-                    maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
+                    model: _config.CurrentModel,
+                    generation: _config.Generation);
+                state.PartSummaries.Add(TexDocumentWriter.SummarizePartHeader(partHeader));
+
+                string partSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, partHeader, fromCache: false);
+                state.FullOutputTextRaw += partSeparator + cleanTex;
+                if (_config.GenerateOffsetFiles) {
+                    state.FullOutputTextOffsetted += partSeparator + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+                }
+
                 string uniqueTargetPartPath = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPath);
-                await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
+                await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + "\n" + cleanTex);
 
                 if (_config.GenerateOffsetFiles) {
                     string offsettedPartContent = LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                     string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}-offset.tex");
                     string uniqueTargetPartPathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPathOffset);
-                    await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
+                    await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + "\n" + offsettedPartContent);
                     Ui.Success($"Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
                 }
                 state.GeneratedTexFiles.Add(uniqueTargetPartPath);
@@ -653,41 +671,36 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             else {
                 Ui.Error($"Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                 state.FileProcessingSuccess = false;
-                foreach (var failedTexFile in state.GeneratedTexFiles) {
-                    try {
-                        System.IO.File.Delete(failedTexFile);
-                    }
-                    catch (Exception ex) {
-                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(failedTexFile)}' konnte nicht gelöscht werden: {ex.Describe()}");
-                    }
-                }
-                if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
-                    Directory.Delete(fileSpecificOutputFolder);
-                }
+                // [AI Context] Retain successfully generated parts so subsequent runs can resume without wasting tokens or re-computing.
                 break;
             }
         }
     }
 
-    private async Task FinalizeVideoOutputAsync(VideoProcessingState state, string file, string fileSpecificOutputFolder, int totalParts) {
+    /// <returns>The refinement's result: false if one of its steps failed. true when it succeeded or
+    /// was not meant to run (GoIntoLatexRefinement off).</returns>
+    private async Task<bool> FinalizeVideoOutputAsync(VideoProcessingState state, string file, string fileSpecificOutputFolder, int totalParts) {
         string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all.tex");
         string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-all-offset.tex");
 
-        string uniqueTargetFilePath = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePath);
-        string header = TexDocumentWriter.BuildCombinedHeader(
+        string Header(string outputPath) => TexDocumentWriter.BuildCombinedHeader(
+            outputFileName: Path.GetFileName(outputPath),
             sourceFileName: Path.GetFileName(file),
             totalParts: totalParts,
-            totalUsage: state.FileTotalTokens,
-            model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
-            maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
-        await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + state.FullOutputTextRaw);
+            runUsage: state.FileTotalTokens,
+            model: _config.CurrentModel,
+            generation: _config.Generation,
+            partSummaries: state.PartSummaries);
+
+        string uniqueTargetFilePath = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePath);
+        await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, Header(uniqueTargetFilePath) + state.FullOutputTextRaw);
         Ui.Success($"Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}", "AutoExtraction");
 
         string refinementTargetFile = uniqueTargetFilePath;
 
         if (_config.GenerateOffsetFiles) {
             string uniqueTargetFilePathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePathOffset);
-            await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + state.FullOutputTextOffsetted);
+            await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, Header(uniqueTargetFilePathOffset) + state.FullOutputTextOffsetted);
             Ui.Success($"Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}", "AutoExtraction");
             refinementTargetFile = uniqueTargetFilePathOffset;
         }
@@ -713,7 +726,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             RefinementOptions.ForFile(_latexRefinementConfig!, refinementTargetFile, _config, audioFilePath, preUploadedAudioParts));
 
         AttachmentUploader.HasJustUploaded = false;
-        await refinementSession.StartAsync();
+        return await refinementSession.StartAsync();
     }
 
     [System.Text.RegularExpressions.GeneratedRegex(@"-speed-[\d\.]+-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]

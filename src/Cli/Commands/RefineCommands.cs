@@ -4,6 +4,7 @@ using System.IO;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
+using LectureExtraction.GoogleAi;
 
 namespace LectureExtraction.Cli.Commands;
 
@@ -43,7 +44,7 @@ public static class RefineCommands {
 
     public static Command BuildRefine() {
         var group = new Command("refine", "LaTeX refinement steps 1-3 over an existing .tex.");
-        var run = new Command("run", "Merge, polish and validate a .tex file.") { Tex, Step, ThroughEnd, Audio };
+        var run = new Command("run", "Merge, polish and validate a .tex file.") { Tex, Step, ThroughEnd, Audio, ExtractionOptions.Overlap, ExtractionOptions.Profile, ExtractionOptions.Model };
 
         run.SetAction(async (parseResult, _) => {
             var context = CliOptions.ReadContext(parseResult);
@@ -61,8 +62,15 @@ public static class RefineCommands {
             }
 
             var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
+            var key = ApplyOverrides(config, parseResult);
             string? audio = ResolveAudio(parseResult, tex);
             bool throughEnd = parseResult.GetValue(ThroughEnd);
+
+            // Step 1 tells the model where each part starts, which needs the overlap the segments
+            // were cut with. A standalone run has no extraction session to ask, so it reads the same
+            // configured value the extraction used, unless --overlap says otherwise.
+            int overlapSeconds = parseResult.GetValue(ExtractionOptions.Overlap)
+                ?? ((AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig))).OverlapSeconds;
 
             // "4" is the interactive menu's spelling of "the whole pipeline"; reusing it keeps the
             // stage selection in one place rather than duplicating the flag arithmetic.
@@ -71,17 +79,26 @@ public static class RefineCommands {
             if (context.DryRun) {
                 CliOutput.Payload(context, new {
                     dryRun = true, tex = Path.GetFullPath(tex), step = stepChoice, throughEnd,
-                    audio, backend = config.UseVertex ? "vertex" : "aistudio"
+                    audio, overlapSeconds, backend = config.UseVertex ? "vertex" : "aistudio", model = StepModel(config),
+                    apiKeyProfile = config.AiStudioActiveApiProfile, apiKeyEnvName = key.EnvName, apiKeyResolves = key.Resolves
                 }, () => Ui.Info($"Würde {(step == null ? "die komplette Pipeline" : $"Schritt {step}")} auf {Path.GetFileName(tex)} anwenden."));
                 return ExitCodes.Success;
             }
 
-            RefinementUiHelper.ApplyStepSelection(config, stepChoice, throughEnd);
-            await RefinementUiHelper.RunRefinementAsync(config, null, Path.GetFullPath(tex), audio);
+            if (!key.Resolves) {
+                Ui.Error($"Der API-Key '{key.EnvName}' (Profil {config.AiStudioActiveApiProfile}) ist nicht gesetzt.", "refine");
+                return ExitCodes.Configuration;
+            }
 
-            CliOutput.Payload(context, new { tex = Path.GetFullPath(tex), step = stepChoice, throughEnd, completed = true },
+            RefinementUiHelper.ApplyStepSelection(config, stepChoice, throughEnd);
+            bool completed = await RefinementUiHelper.RunRefinementAsync(config, null, Path.GetFullPath(tex), audio, overlapSeconds);
+
+            CliOutput.Payload(context, new { tex = Path.GetFullPath(tex), step = stepChoice, throughEnd, completed },
                 () => { /* The session reports each stage as it runs. */ });
-            return ExitCodes.Success;
+
+            // A failed step is logged and the pipeline carries on or stops - either way a caller
+            // reading only the exit code has to learn that the output is not what it asked for.
+            return completed ? ExitCodes.Success : ExitCodes.Partial;
         });
 
         group.Add(run);
@@ -90,7 +107,7 @@ public static class RefineCommands {
 
     public static Command BuildPdf() {
         var group = new Command("pdf", "PDF compilation (step 4).");
-        var compile = new Command("compile", "Compile a .tex to PDF, optionally with the AI repair loop.") { Tex, FixLoop };
+        var compile = new Command("compile", "Compile a .tex to PDF, optionally with the AI repair loop.") { Tex, FixLoop, ExtractionOptions.Profile, ExtractionOptions.Model };
 
         compile.SetAction(async (parseResult, _) => {
             var context = CliOptions.ReadContext(parseResult);
@@ -102,6 +119,7 @@ public static class RefineCommands {
             }
 
             var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
+            var key = ApplyOverrides(config, parseResult);
 
             // Every generation step off, PDF on: the session then runs step 4 alone.
             config.Step1MergeAndTimestamp.Enabled = false;
@@ -123,7 +141,8 @@ public static class RefineCommands {
             if (context.DryRun) {
                 CliOutput.Payload(context, new {
                     dryRun = true, tex = Path.GetFullPath(tex),
-                    fixLoopRounds = config.PdfCompilation.MaxFixRounds
+                    fixLoopRounds = config.PdfCompilation.MaxFixRounds, model = StepModel(config),
+                    apiKeyProfile = config.AiStudioActiveApiProfile, apiKeyEnvName = key.EnvName, apiKeyResolves = key.Resolves
                 }, () => Ui.Info($"Würde {Path.GetFileName(tex)} kompilieren (AI-Reparatur: {config.PdfCompilation.MaxFixRounds} Runden)."));
                 return ExitCodes.Success;
             }
@@ -142,6 +161,32 @@ public static class RefineCommands {
         group.Add(compile);
         return group;
     }
+
+    /// <summary>
+    /// Applies --profile and --model to this run only and reports which key that selects. Refinement
+    /// keys come from their own list in the refinement config, so the extraction's profile check does
+    /// not cover them; a caller that hits a rate limit can move to another key, and one that hits
+    /// "high demand" on a model can move to another model, without editing config.
+    /// </summary>
+    private static (string EnvName, bool Resolves) ApplyOverrides(LatexRefinementSessionConfig config, ParseResult parseResult) {
+        if (parseResult.GetValue(ExtractionOptions.Profile) is int profile) {
+            config.AiStudioActiveApiProfile = profile;
+        }
+
+        // Every step, because the PDF repair runs on step 3's settings and --step picks which one runs.
+        if (parseResult.GetValue(ExtractionOptions.Model) is string model && !string.IsNullOrWhiteSpace(model)) {
+            foreach (var step in new[] { config.Step1MergeAndTimestamp, config.Step2SpeechRefinement, config.Step3LastRefinement }) {
+                (config.UseVertex ? step.Vertex : step.AiStudio).CurrentModel = model;
+            }
+        }
+
+        string envName = RefinementUiHelper.ResolveRefinementKeyEnvName(config);
+        return (envName, config.UseVertex || GoogleAiClientBuilder.IsApiKeyPresent(envName));
+    }
+
+    /// <summary>The model the final step (and with it the PDF repair) would use - what --model sets.</summary>
+    private static string StepModel(LatexRefinementSessionConfig config) =>
+        (config.UseVertex ? config.Step3LastRefinement.Vertex : config.Step3LastRefinement.AiStudio).CurrentModel;
 
     /// <summary>
     /// Uses an explicit --audio, otherwise looks for the audio track the extraction writes beside

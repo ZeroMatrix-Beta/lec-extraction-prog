@@ -156,20 +156,38 @@ public static class MediaCommands {
                 return MissingInput(input);
             }
 
-            string target = parseResult.GetValue(ExtractionOptions.Out) is string outFolder && !string.IsNullOrWhiteSpace(outFolder)
-                ? Path.GetFullPath(outFolder)
-                : Path.GetDirectoryName(Path.GetFullPath(input))!;
+            // The lecture's own output folder, the same one `segment` and the extraction write to:
+            // that is where the extraction looks for an existing track before cutting its own, and
+            // where `refine run` finds it beside the .tex. --out names the target root, as it does
+            // for every other stage.
+            var config = (AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig));
+            ExtractionOptions.Apply(config, parseResult);
+            EnsureTargetFolder(config, input);
+            string target = Path.Combine(config.TargetFolder, ExtractionHelpers.ComputeOutputFolderName(input));
+            string audioPath = Path.Combine(target, $"{Path.GetFileNameWithoutExtension(input)}_audio.aac");
+
+            // Same reuse rule as AudioTrackExtractor, so running this stage before `extract run` does
+            // not make the extraction cut the track a second time, and a re-run does not add a copy.
+            bool cached = File.Exists(audioPath) && new FileInfo(audioPath).Length >= 1024;
 
             if (context.DryRun) {
-                CliOutput.Payload(context, new { file = Path.GetFullPath(input), targetFolder = target, wouldRun = true },
-                    () => Ui.Info($"Würde Audio aus {Path.GetFileName(input)} nach {target} extrahieren."));
+                CliOutput.Payload(context, new { file = Path.GetFullPath(input), audioPath, cameFromCache = cached, wouldRun = !cached },
+                    () => Ui.Info(cached
+                        ? $"Audio liegt bereits vor: {audioPath}"
+                        : $"Würde Audio aus {Path.GetFileName(input)} nach {audioPath} extrahieren."));
                 return ExitCodes.Success;
             }
 
-            Directory.CreateDirectory(target);
-            bool ok = await FfmpegToolkit.ExtractAudioAsAacAsync(input, target);
+            bool ok = true;
+            if (cached) {
+                Ui.Info($"Vorhandene Audio-Datei gefunden: {Path.GetFileName(audioPath)}. Überspringe Audio-Extraktion.", "Cache");
+            }
+            else {
+                Directory.CreateDirectory(target);
+                ok = await FfmpegToolkit.ExtractAudioAsAacAsync(input, target);
+            }
 
-            CliOutput.Payload(context, new { file = Path.GetFullPath(input), targetFolder = target, extracted = ok },
+            CliOutput.Payload(context, new { file = Path.GetFullPath(input), audioPath, cameFromCache = cached, extracted = ok },
                 () => { /* ExtractAudioAsAacAsync already reports the destination it chose. */ });
 
             return ok ? ExitCodes.Success : ExitCodes.Unexpected;

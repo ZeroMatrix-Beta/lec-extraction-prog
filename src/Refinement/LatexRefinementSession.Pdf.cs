@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Google.GenAI.Types;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Extraction;
+using LectureExtraction.Extraction.Model;
 using LectureExtraction.GoogleAi;
 using LectureExtraction.Latex;
 using LectureExtraction.Infrastructure;
@@ -372,7 +374,7 @@ public partial class LatexRefinementSession {
         string noPreambleFileName = $"step5-{baseName}-offset-last_try{roundNumber}.tex";
         string standaloneFileName = $"step5-{baseName}-offset-last_try{roundNumber}-main.tex";
 
-        string fullResponseText = await StreamFixResponseAsync(history, requestConfig, backendParams, standaloneFileName);
+        var (fullResponseText, usage) = await StreamFixResponseAsync(history, requestConfig, backendParams, standaloneFileName);
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
             string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
@@ -401,8 +403,13 @@ public partial class LatexRefinementSession {
                 return (false, null, null);
             }
 
+            // The saved candidate carries the repaired document's header stack under its own layer;
+            // the body that gets compiled and handed to the next round stays as the model wrote it.
             string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
-            await System.IO.File.WriteAllTextAsync(noPreamblePath, bodyOnlyText);
+            string repairHeader = TexDocumentWriter.BuildRefinementHeader(
+                $"{TexDocumentWriter.PdfRepairStep}, round {roundNumber}", noPreambleFileName, null, usage, backendParams.CurrentModel, backendParams.Generation);
+            await System.IO.File.WriteAllTextAsync(noPreamblePath, TexDocumentWriter.StackLayers(
+                repairHeader, TexDocumentWriter.SplitHeaderLayers(originalBodyTex).Layers, TexDocumentWriter.SplitHeaderLayers(bodyOnlyText).Body));
             Ui.Info($"Gefixte LaTeX-Datei (Versuch #{roundNumber}) gespeichert unter: {noPreamblePath}");
 
             string standaloneContent = preambleText + "\n\\begin{document}\n\n" + bodyOnlyText + "\n\n\\end{document}\n";
@@ -442,8 +449,9 @@ public partial class LatexRefinementSession {
         return (false, null, null);
     }
 
-    private async Task<string> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName) {
+    private async Task<(string Text, TokenUsage Usage)> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName) {
         string fullResponseText = "";
+        TokenUsage totalUsage = default;
         var budget = new ContinueBudget(_config.Step3LastRefinement?.MaxContinueRequests ?? 10);
         int emptyResponseRetries = 0;
 
@@ -467,6 +475,7 @@ public partial class LatexRefinementSession {
 
             string chunkResp = "";
             bool callSuccess = false;
+            var usage = new UsageReport();
 
             try {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
@@ -475,12 +484,13 @@ public partial class LatexRefinementSession {
                       string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
                       Ui.Raw(text);
                       chunkResp += text;
+                      usage.Absorb(chunk.UsageMetadata);
                       await Task.CompletedTask;
                   },
                   cancellationToken: cancelScope.Token,
                   initialBackoff: fixDelay,
                   retryContext: outputFileName,
-                  onRetry: () => { chunkResp = ""; },
+                  onRetry: () => { chunkResp = ""; usage = new UsageReport(); },
                   highDemandDelay: fixDelay,
                   resumeOnPartialProgress: true
                 );
@@ -494,6 +504,9 @@ public partial class LatexRefinementSession {
                 Ui.Warn("Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
                 break;
             }
+
+            // Every completed request is billed, an empty answer included.
+            totalUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens, usage.ThoughtTokens, Requests: 1);
 
             if (string.IsNullOrWhiteSpace(chunkResp)) {
                 if (emptyResponseRetries < 3) {
@@ -538,7 +551,7 @@ public partial class LatexRefinementSession {
             }
         }
 
-        return fullResponseText;
+        return (fullResponseText, totalUsage);
     }
 
     private async Task<bool> RunExternalAgentRepairLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText, string initialLog) {

@@ -27,13 +27,16 @@ public static class InteractiveDelay {
     /// <summary>
     /// Implements an interactive delay with user cancellation using Spectre Status spinner.
     /// </summary>
-    public static async Task<bool> SmartDelayAsync(int seconds, string message = "Still waiting for the acknowledgment / processing...") {
+    public static async Task<bool> SmartDelayAsync(int seconds, string message = "Warte auf Server-Antwort / Verarbeitung...") {
         if (seconds <= 0) return true;
 
         await _gate.WaitAsync();
         try {
             bool isUnattended = !Ui.PromptSource.IsInteractive;
-            if (!isUnattended) {
+            bool isOutputRedirected = false;
+            try { isOutputRedirected = Console.IsOutputRedirected || Console.IsErrorRedirected; } catch (InvalidOperationException) { }
+
+            if (!isUnattended && !isOutputRedirected) {
                 Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
             }
             using var cts = new CancellationTokenSource();
@@ -52,6 +55,27 @@ public static class InteractiveDelay {
             bool skippedByUser = false;
 
             try {
+                // If output is redirected or running in unattended mode, avoid AnsiConsole.Status
+                // because non-TTY/redirected streams cannot rewrite lines in place, causing hundreds
+                // of duplicate status lines in log files.
+                if (isUnattended || isOutputRedirected) {
+                    Ui.Info($"Warte {seconds}s: {message}", "Delay");
+                    int elapsedSeconds = 0;
+                    while (elapsedSeconds < seconds) {
+                        if (delayCanceled || cts.Token.IsCancellationRequested) return false;
+                        int step = Math.Min(1, seconds - elapsedSeconds);
+                        try {
+                            await Task.Delay(step * 1000, cts.Token);
+                        }
+                        catch (OperationCanceledException) {
+                            return false;
+                        }
+                        elapsedSeconds += step;
+                    }
+                    return true;
+                }
+
+                int lastRemaining = -1;
                 bool completed = await AnsiConsole.Status()
                     .Spinner(Spinner.Known.Dots)
                     .SpinnerStyle(Style.Parse("yellow"))
@@ -61,7 +85,10 @@ public static class InteractiveDelay {
                             for (int i = 0; i < delaySteps; i++) {
                                 if (delayCanceled || cts.Token.IsCancellationRequested) return false;
                                 int remaining = seconds - (i / 10);
-                                ctx.Status($"⏳ Warte {remaining}s: {message}");
+                                if (remaining != lastRemaining) {
+                                    lastRemaining = remaining;
+                                    ctx.Status($"Warte {remaining}s: {message}");
+                                }
                                 try {
                                     await Task.Delay(100, cts.Token);
                                 }
@@ -88,10 +115,6 @@ public static class InteractiveDelay {
                             }
                             return true;
                         });
-
-                        if (isUnattended) {
-                            return await delayTask;
-                        }
 
                         // A real console is polled for Enter by the delay loop above; only redirected
                         // input needs a reader. Either way this task ends early only for an Enter.

@@ -229,6 +229,8 @@ public partial class VertexAutoExtractionSession {
         int interactionInputTokens = 0;
         int interactionOutputTokens = 0;
         int interactionCachedTokens = 0;
+        int interactionThinkingTokens = 0;
+        int interactionRequests = 0;
         string currentLogPrompt = logContext;
 
         using var cancelScope = new ConsoleCancelScope();
@@ -307,6 +309,8 @@ public partial class VertexAutoExtractionSession {
             interactionInputTokens += requestInputTokens;
             interactionOutputTokens += requestOutputTokens;
             interactionCachedTokens += requestCachedTokens;
+            interactionThinkingTokens += usage.ThoughtTokens;
+            interactionRequests++;
             _sessionTotalInputTokens += requestInputTokens;
             _sessionTotalOutputTokens += requestOutputTokens;
             _sessionTotalCachedTokens += requestCachedTokens;
@@ -337,7 +341,7 @@ public partial class VertexAutoExtractionSession {
             string continuePrompt = segmentComplete ? "Continue" :
                 $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
                 $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
-                "Please \"continue\" exactly where you left off. Do not open a new ```latex block if you were already inside one, just continue the text directly.";
+                "Please \"continue\" exactly where you left off, as raw LaTeX without Markdown code fences, just continuing the text directly.";
 
             if (segmentComplete) Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");
             else Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "AutoExtraction");
@@ -355,6 +359,6 @@ public partial class VertexAutoExtractionSession {
             }
         }
 
-        return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens));
+        return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens, interactionThinkingTokens, interactionRequests));
     }
 }

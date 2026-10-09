@@ -42,7 +42,7 @@ public static class PlanCommand {
             ExtractionOptions.Speed, ExtractionOptions.Model, ExtractionOptions.Profile
         };
 
-        command.SetAction(parseResult => {
+        command.SetAction(async (parseResult, _) => {
             var context = CliOptions.ReadContext(parseResult);
             var config = (AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig));
             ExtractionOptions.Apply(config, parseResult);
@@ -55,7 +55,8 @@ public static class PlanCommand {
                 config,
                 videos,
                 parseResult.GetValue(ResumeWindow) ?? ExtractionPlanner.DefaultResumeWindowHours,
-                parseResult.GetValue(Force));
+                parseResult.GetValue(Force),
+                await ExtractionPlanner.ProbeDurationsIfAutoAsync(config, videos));
 
             CliOutput.Payload(context, plan, () => Render(plan));
 
@@ -140,7 +141,7 @@ public static class PlanCommand {
             ("Quelle", plan.SourceFolder),
             ("Ziel", plan.TargetFolder),
             ("Videos", plan.VideoCount.ToString()),
-            ("Segmente je Video", $"{plan.SegmentsPerVideo} ({plan.OverlapSeconds}s Overlap, {plan.SpeedMultiplier}x)"),
+            ("Segmente je Video", $"{plan.SegmentsPerVideo?.ToString() ?? "auto, nach Videolänge"} ({plan.OverlapSeconds}s Overlap, {plan.SpeedMultiplier}x)"),
             ("Offene Anfragen", plan.PendingRequests.ToString()),
             ("Wiederverwendbar", $"{plan.ResumableSegments} (Fenster: {plan.ResumeWindowHours}h)"),
             ("Refinement danach", plan.RefinementFollows ? "ja" : "nein")

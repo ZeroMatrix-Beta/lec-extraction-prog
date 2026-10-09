@@ -586,6 +586,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
         string fullOutputTextRaw = "";
         string fullOutputTextOffsetted = "";
         TokenUsage fileTotalTokens = default;
+        List<string> partSummaries = []; // one line per part, for the combined header
         bool fileProcessingSuccess = true;
         TimeSpan cacheDuration = TimeSpan.FromHours(2);
         var audioTrackExtractor = new AudioTrackExtractor(file, fileSpecificOutputFolder);
@@ -603,9 +604,14 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.", "Resume");
                 string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
                 generatedTexFiles.Add(targetPartPath);
-                fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex);
+
+                var (cachedHeader, cachedBody) = TexDocumentWriter.SplitHeaderLayers(existingTex);
+                string cachedSummary = TexDocumentWriter.SummarizePartHeader(cachedHeader);
+                partSummaries.Add(cachedSummary.Length > 0 ? $"{cachedSummary} | aus Cache" : "aus Cache");
+                string cachedSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, cachedHeader, fromCache: true);
+                fullOutputTextRaw += cachedSeparator + cachedBody;
                 if (_config.GenerateOffsetFiles) {
-                    fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Aus Cache geladen) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(LatexTimestampAdjuster.ExtractContentWithoutTimestampHeader(existingTex), partStartTimeSeconds);
+                    fullOutputTextOffsetted += cachedSeparator + LatexTimestampAdjuster.AdjustTimestamps(cachedBody, partStartTimeSeconds);
                 }
                 audioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
                 continue;
@@ -696,30 +702,34 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
 
             fileTotalTokens += segmentTranscript.Usage;
-            int partFreshTokens = segmentTranscript.Usage.Fresh;
 
             if (!string.IsNullOrWhiteSpace(segmentTranscript.LatexBody)) {
                 string cleanTex = LatexResponseCleaner.CleanLatexResponse(segmentTranscript.LatexBody);
 
-                fullOutputTextRaw += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + cleanTex;
-                if (_config.GenerateOffsetFiles) {
-                    fullOutputTextOffsetted += $"\n\n% --- TEIL {i + 1} (Tokens: Input Gesamt {segmentTranscript.Usage.Input:N0}, Gecacht {segmentTranscript.Usage.Cached:N0}, Frisch/Video {partFreshTokens:N0}, Output {segmentTranscript.Usage.Output:N0}) ---\n" + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
-                }
-
                 string partHeader = TexDocumentWriter.BuildPartHeader(
+                    partNumber: i + 1,
+                    totalParts: partsWithTimes.Count,
                     sourcePartFileName: Path.GetFileName(safePartPath),
                     partStartTimeSeconds: partStartTimeSeconds,
                     usage: segmentTranscript.Usage,
-                    model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
-                    maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
+                    model: _config.CurrentModel,
+                    generation: _config.Generation);
+                partSummaries.Add(TexDocumentWriter.SummarizePartHeader(partHeader));
+
+                string partSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, partHeader, fromCache: false);
+                fullOutputTextRaw += partSeparator + cleanTex;
+                if (_config.GenerateOffsetFiles) {
+                    fullOutputTextOffsetted += partSeparator + LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
+                }
+
                 string uniqueTargetPartPath = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPath);
-                await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + cleanTex);
+                await System.IO.File.WriteAllTextAsync(uniqueTargetPartPath, partHeader + "\n" + cleanTex);
 
                 if (_config.GenerateOffsetFiles) {
                     string offsettedPartContent = LatexTimestampAdjuster.AdjustTimestamps(cleanTex, partStartTimeSeconds);
                     string targetPartPathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{i + 1}-offset.tex");
                     string uniqueTargetPartPathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetPartPathOffset);
-                    await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + offsettedPartContent);
+                    await System.IO.File.WriteAllTextAsync(uniqueTargetPartPathOffset, partHeader + "\n" + offsettedPartContent);
                     Ui.Success($"Offset-korrigierter Teil gespeichert unter: {Path.GetFileName(uniqueTargetPartPathOffset)}");
                 }
                 generatedTexFiles.Add(uniqueTargetPartPath);
@@ -727,17 +737,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             else {
                 Ui.Error($"Die Verarbeitung von Teil {i + 1} für '{Path.GetFileName(file)}' ist fehlgeschlagen. Breche die Verarbeitung für diese Datei ab.");
                 fileProcessingSuccess = false;
-                foreach (var f in generatedTexFiles) {
-                    try {
-                        System.IO.File.Delete(f);
-                    }
-                    catch (Exception ex) {
-                        Ui.Detail($"[Bereinigung] Fehlgeschlagene Datei '{Path.GetFileName(f)}' konnte nicht gelöscht werden: {ex.Describe()}");
-                    }
-                }
-                if (Directory.Exists(fileSpecificOutputFolder) && !Directory.EnumerateFileSystemEntries(fileSpecificOutputFolder).Any()) {
-                    Directory.Delete(fileSpecificOutputFolder);
-                }
+                // [AI Context] Retain successfully generated parts so subsequent runs can resume without wasting tokens or re-computing.
                 break;
             }
         }
@@ -746,21 +746,24 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             string targetFilePath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all.tex");
             string targetFilePathOffset = Path.Combine(fileSpecificOutputFolder, $"{baseName}-all-offset.tex");
 
-            string uniqueTargetFilePath = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePath);
-            string header = TexDocumentWriter.BuildCombinedHeader(
+            string Header(string outputPath) => TexDocumentWriter.BuildCombinedHeader(
+                outputFileName: Path.GetFileName(outputPath),
                 sourceFileName: Path.GetFileName(file),
                 totalParts: partsWithTimes.Count,
-                totalUsage: fileTotalTokens,
-                model: _config.CurrentModel, temperature: _config.Temperature, topP: _config.TopP, topK: _config.TopK,
-                maxOutputTokens: _config.MaxOutputTokens, thinkingBudget: _config.ThinkingBudget, thinkingLevel: _config.ThinkingLevel);
-            await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, header + fullOutputTextRaw);
+                runUsage: fileTotalTokens,
+                model: _config.CurrentModel,
+                generation: _config.Generation,
+                partSummaries: partSummaries);
+
+            string uniqueTargetFilePath = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePath);
+            await System.IO.File.WriteAllTextAsync(uniqueTargetFilePath, Header(uniqueTargetFilePath) + fullOutputTextRaw);
             Ui.Success($"Fertig mit {Path.GetFileName(file)}. Das komplette Dokument liegt hier: {uniqueTargetFilePath}", "AutoExtraction");
 
             string refinementTargetFile = uniqueTargetFilePath;
 
             if (_config.GenerateOffsetFiles) {
                 string uniqueTargetFilePathOffset = ExtractionHelpers.ResolveNonClashingTexPath(targetFilePathOffset);
-                await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, header + fullOutputTextOffsetted);
+                await System.IO.File.WriteAllTextAsync(uniqueTargetFilePathOffset, Header(uniqueTargetFilePathOffset) + fullOutputTextOffsetted);
                 Ui.Success($"Fertig mit {Path.GetFileName(file)}. Das offset-korrigierte Dokument liegt hier: {uniqueTargetFilePathOffset}", "AutoExtraction");
                 refinementTargetFile = uniqueTargetFilePathOffset;
             }

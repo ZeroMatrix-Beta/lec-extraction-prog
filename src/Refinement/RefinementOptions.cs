@@ -30,11 +30,20 @@ public sealed record RefinementOptions {
     /// <summary>
     /// [AI Context] The extraction config the .tex came from. Its presence is what enables the
     /// prerequisite checks in <c>StartAsync</c> (<c>GoIntoLatexRefinement</c>,
-    /// <c>GenerateOffsetFiles</c>, <c>GenerateAudioFile</c>) and supplies <c>NumberOfParts</c>.
+    /// <c>GenerateOffsetFiles</c>, <c>GenerateAudioFile</c>) and supplies the segment overlap, plus
+    /// a fallback part count for a document that does not record its own.
     /// Null when refinement runs standalone rather than as the tail of an extraction.
     /// [Human] Die Extraktions-Konfiguration, aus der die Datei stammt; null bei eigenständigem Lauf.
     /// </summary>
     public IAutoExtractionConfig? ExtractionConfig { get; init; }
+
+    /// <summary>
+    /// [AI Context] The overlap between the video segments the .tex was transcribed from, which
+    /// step 1 needs to tell the model where each part starts. Overrides the extraction config's
+    /// value; a standalone run has no extraction config and would otherwise fall back to 180 s.
+    /// [Human] Überlappung der Video-Teile in Sekunden, für den Merge in Schritt 1.
+    /// </summary>
+    public int? OverlapSeconds { get; init; }
 
     public string? AudioFilePath { get; init; }
 

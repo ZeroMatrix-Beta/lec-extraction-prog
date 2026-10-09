@@ -67,7 +67,7 @@ public sealed class ResponseStreamPrinter {
                 if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                     while (Console.KeyAvailable) Console.ReadKey(intercept: true);
                     Ui.Blank();
-                    Ui.Info("Still waiting for the acknowledgment / response. Please wait...", "AI-Model");
+                    Ui.Info("Warte auf Antwort des KI-Modells. Bitte warten...", "AI-Model");
                 }
                 await Task.Delay(100);
             }

@@ -57,7 +57,8 @@ public static class RunCommand {
 
             double resumeWindow = parseResult.GetValue(PlanCommand.ResumeWindow) ?? ExtractionPlanner.DefaultResumeWindowHours;
             bool force = parseResult.GetValue(PlanCommand.Force);
-            var plan = ExtractionPlanner.Build(config, videos, resumeWindow, force);
+            var plan = ExtractionPlanner.Build(config, videos, resumeWindow, force,
+                await ExtractionPlanner.ProbeDurationsIfAutoAsync(config, videos));
 
             if (context.DryRun) {
                 CliOutput.Payload(context, new { dryRun = true, plan },

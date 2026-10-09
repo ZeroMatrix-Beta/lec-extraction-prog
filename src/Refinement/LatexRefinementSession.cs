@@ -25,6 +25,7 @@ public partial class LatexRefinementSession {
     private readonly string? _singleFilePathToProcess;
     private readonly string[]? _multipleFilesToProcess;
     private readonly IAutoExtractionConfig? _extractionConfig;
+    private readonly int _overlapSeconds;
     private readonly string? _audioFilePath;
     private List<Part>? _preUploadedAudioAttachments;
 
@@ -40,6 +41,7 @@ public partial class LatexRefinementSession {
         _singleFilePathToProcess = options.SingleFilePath;
         _multipleFilesToProcess = options.MultipleFilePaths;
         _extractionConfig = options.ExtractionConfig;
+        _overlapSeconds = options.OverlapSeconds ?? options.ExtractionConfig?.OverlapSeconds ?? 180;
         _audioFilePath = options.AudioFilePath;
         _preUploadedAudioAttachments = options.PreUploadedAudioAttachments;
     }
@@ -48,22 +50,24 @@ public partial class LatexRefinementSession {
     /// [AI Context] Entry point for the refinement pipeline. Validates dependencies and starts the execution if prerequisites are met.
     /// [Human] Startet die Refinement-Pipeline, prüft aber vorher, ob die Ziel-Ordner und Audio-Dateien überhaupt vorhanden sind.
     /// </summary>
-    public async Task StartAsync() {
+    /// <returns>false if a step failed or the input is missing; true when every enabled step succeeded,
+    /// or when refinement is switched off by configuration and deliberately did nothing.</returns>
+    public async Task<bool> StartAsync() {
         if (!_config.Enabled) {
             Ui.Info("LaTeX Refinement ist in der Konfiguration deaktiviert. Überspringe die Ausführung.", "LaTeX Refinement");
-            return;
+            return true;
         }
 
         if ((_singleFilePathToProcess != null || _multipleFilesToProcess != null) && _extractionConfig != null) {
             if (!_extractionConfig.GoIntoLatexRefinement || !_extractionConfig.GenerateOffsetFiles || !_extractionConfig.GenerateAudioFile) {
                 Ui.Warn("LaTeX Refinement übersprungen.", "LaTeX Refinement");
                 Ui.Detail("Grund: Die Voraussetzungen in AutoExtractionConfig sind nicht erfüllt.");
-                return;
+                return true;
             }
 
             if (_singleFilePathToProcess != null && !System.IO.File.Exists(_singleFilePathToProcess)) {
                 Ui.Warn($"LaTeX Refinement übersprungen. Die Zieldatei fehlt: {_singleFilePathToProcess}", "LaTeX Refinement");
-                return;
+                return false;
             }
 
             if (_audioFilePath == null || !System.IO.File.Exists(_audioFilePath)) {
@@ -77,14 +81,15 @@ public partial class LatexRefinementSession {
         // or prior extraction steps don't suppress the initial 130-second token refill timer.
         AttachmentUploader.HasJustUploaded = false;
 
-        await ExecutePipelineAsync();
+        return await ExecutePipelineAsync();
     }
 
     /// <summary>
     /// [AI Context] Orchestrates the 4-step pipeline: Merge, Speech Refinement, Final Format, and PDF Compilation.
     /// [Human] Steuert die einzelnen Schritte (Zusammenfügen, Sprach-Korrektur, Finale Formatierung und PDF-Erstellung).
     /// </summary>
-    private async Task ExecutePipelineAsync() {
+    /// <returns>false if any enabled step failed - also the ones after which the pipeline carries on.</returns>
+    private async Task<bool> ExecutePipelineAsync() {
         string[] currentFiles;
         string targetFolder;
         string baseName;
@@ -103,26 +108,28 @@ public partial class LatexRefinementSession {
             string sourceFolder = _config.SourceFolder;
             if (!Directory.Exists(sourceFolder)) {
                 Ui.Error("Ordner nicht gefunden. Bitte prüfe den SourceFolder in der Konfiguration.", "LaTeX Refinement");
-                return;
+                return false;
             }
             currentFiles = Directory.GetFiles(sourceFolder, "*.tex");
-            if (currentFiles.Length == 0) return;
+            if (currentFiles.Length == 0) return false;
             targetFolder = string.IsNullOrWhiteSpace(_config.TargetFolder) ? sourceFolder : _config.TargetFolder;
             baseName = "refined_output";
         }
 
+        bool allStepsSucceeded = true;
+
         // Step 1: Merge and Timestamp Control
-        int partsCount = _extractionConfig?.NumberOfParts ?? currentFiles.Length;
+        int partsCount = ResolvePartsCount(currentFiles);
         if (_config.Step1MergeAndTimestamp.Enabled) {
             Ui.Step("LaTeX Refinement - Schritt 1: Merge & Zeitstempel-Abgleich");
             if (partsCount <= 1) {
                 Ui.Info($"NumberOfParts = {partsCount} (<= 1). Ein Merger ist nicht erforderlich. Überspringe Schritt 1.");
             }
             else {
-                string? step1Output = await MergeSegmentsAndAlignTimestampsAsync(currentFiles, _audioFilePath, baseName, targetFolder);
+                string? step1Output = await MergeSegmentsAndAlignTimestampsAsync(currentFiles, _audioFilePath, baseName, targetFolder, partsCount);
                 if (step1Output == null) {
                     Ui.Error("Schritt 1 (Merge) fehlgeschlagen. Breche Pipeline ab.", "LaTeX Refinement");
-                    return;
+                    return false;
                 }
                 currentFiles = [step1Output];
             }
@@ -134,7 +141,7 @@ public partial class LatexRefinementSession {
             string? step2Output = await RefineAgainstSpeechAsync(currentFiles[0], _audioFilePath, baseName, targetFolder);
             if (step2Output == null) {
                 Ui.Error("Schritt 2 (Speech Refinement) fehlgeschlagen. Breche Pipeline ab.", "LaTeX Refinement");
-                return;
+                return false;
             }
             currentFiles = [step2Output];
         }
@@ -163,6 +170,7 @@ public partial class LatexRefinementSession {
             var finalOutput = await ApplyFinalPolishAsync(currentFiles[0], baseName, targetFolder, alreadyCompiles, compileLog);
             if (finalOutput == null) {
                 Ui.Error("Schritt 3 (Last Refinement) fehlgeschlagen.", "LaTeX Refinement");
+                allStepsSucceeded = false;
             }
             else {
                 currentFiles = [finalOutput];
@@ -170,21 +178,54 @@ public partial class LatexRefinementSession {
         }
 
         // Step 4: PDF Compilation
-        if (_config.PdfCompilation?.Enabled == true || _config.PdfCompilation?.UseAntiGravityAgent == true) {
+        // UseAntiGravityAgent only picks how a failed compile is repaired, not whether step 4 runs:
+        // treating it as an enabler made every single-step run (--step 1, the menu's "only step N")
+        // compile an intermediate file and start a paid repair loop on it.
+        if (_config.PdfCompilation?.Enabled == true) {
             Ui.Step("LaTeX Refinement - Schritt 4: PDF Generierung & Validierung");
-            await CompilePdfAsync(currentFiles[0], baseName, targetFolder);
+            if (!await CompilePdfAsync(currentFiles[0], baseName, targetFolder)) {
+                allStepsSucceeded = false;
+            }
         }
 
-        Ui.Success("LaTeX Refinement Pipeline erfolgreich abgeschlossen!", "LaTeX Refinement");
+        if (allStepsSucceeded) {
+            Ui.Success("LaTeX Refinement Pipeline erfolgreich abgeschlossen!", "LaTeX Refinement");
+        }
+        else {
+            Ui.Warn("LaTeX Refinement Pipeline mit Fehlern abgeschlossen (siehe oben).", "LaTeX Refinement");
+        }
+
+        return allStepsSucceeded;
+    }
+
+    /// <summary>
+    /// [AI Context] How many video parts the input was transcribed from - what step 1 tells the model
+    /// and what decides whether a merge is needed at all. Several part files are counted directly. A
+    /// single combined file is asked first, through its "% --- TEIL n" separators: the configured
+    /// NumberOfParts is wrong for it whenever it is "auto" (resolving that needs the video's length,
+    /// which is not known here), has changed since the extraction, or is absent because refinement
+    /// runs standalone - and a combined file read as "1 part" silently skips the merge and timestamp
+    /// alignment.
+    /// [Human] Ermittelt, aus wie vielen Video-Teilen die Eingabe besteht - bevorzugt aus der Datei selbst.
+    /// </summary>
+    private int ResolvePartsCount(string[] inputFiles) {
+        if (inputFiles.Length != 1) {
+            return inputFiles.Length;
+        }
+
+        int fromDocument = System.IO.File.Exists(inputFiles[0])
+            ? TexDocumentWriter.CountParts(System.IO.File.ReadAllText(inputFiles[0]))
+            : 0;
+
+        return fromDocument > 0 ? fromDocument : _extractionConfig?.NumberOfParts.FixedParts ?? 1;
     }
     /// <summary>
     /// [AI Context] Step 1: Merges overlapping LaTeX chunks. If an audio file is provided, its metadata is attached to align timestamps correctly.
     /// [Human] Schritt 1: Führt die einzelnen Video-Teile zusammen. Nutzt (falls vorhanden) die Audio-Spur, um kaputte Zeitstempel zu korrigieren.
     /// </summary>
-    private async Task<string?> MergeSegmentsAndAlignTimestampsAsync(string[] inputFiles, string? audioFilePath, string baseName, string targetFolder) {
+    private async Task<string?> MergeSegmentsAndAlignTimestampsAsync(string[] inputFiles, string? audioFilePath, string baseName, string targetFolder, int partsCount) {
         if (inputFiles.Length == 0) return null;
-        int partsCount = _extractionConfig?.NumberOfParts ?? inputFiles.Length;
-        int overlapMin = (_extractionConfig?.OverlapSeconds ?? 180) / 60;
+        int overlapMin = _overlapSeconds / 60;
 
         string audioLengthStr = "unknown";
         string partTimestampsStr = "";
@@ -198,7 +239,7 @@ public partial class LatexRefinementSession {
             audioLengthStr = $"{t.Hours:D2}:{t.Minutes:D2}:{t.Seconds:D2}";
 
             // Calculate expected timestamps for each part
-            int overlapSec = _extractionConfig?.OverlapSeconds ?? 180;
+            int overlapSec = _overlapSeconds;
             double segmentLength = (dur + (partsCount - 1) * overlapSec) / partsCount;
             var sb = new System.Text.StringBuilder();
             for (int i = 0; i < partsCount; i++) {
@@ -237,13 +278,13 @@ public partial class LatexRefinementSession {
 
         if (audioAttached) {
             var round1Parts = new List<Part>();
-            string round1Prompt = $"Here is the combined .tex file to process. It was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
+            string round1Prompt = $"Here is the combined .tex file to process. It holds {partsCount} parts of one lecture video, each starting at its `% --- TEIL n ---` marker; consecutive parts overlap by {overlapMin} minutes. " +
                                   (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"\nExpected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `speech` block!)\n\n") +
                                   "Please acknowledge you have read it. I will provide the audio file and final merge instructions in the next round.";
             round1Parts.Add(new Part { Text = round1Prompt });
             foreach (var file in inputFiles) {
                 Ui.Info($"Lese Eingabedatei für Merge: {Path.GetFileName(file)}", "Step 1");
-                string content = await System.IO.File.ReadAllTextAsync(file);
+                string content = TexDocumentWriter.StripHeadersForModel(await System.IO.File.ReadAllTextAsync(file));
                 round1Parts.Add(new Part { Text = $"<input_file name=\"{Path.GetFileName(file)}\">\n{content}\n</input_file>" });
             }
 
@@ -254,29 +295,29 @@ public partial class LatexRefinementSession {
             var round2Parts = new List<Part>();
             round2Parts.AddRange(audioParts);
             string round2Prompt = $"Here is the generated audio file. The actual audio length is exactly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
-                                  $"The `speech` blocks timestamps need to perfectly align with this full duration. Please note that sometimes the timestamps in the `speech` blocks are horribly misaligned, so each block must be carefully checked and corrected to match the audio. Please perform the merge and timestamp correction according to the system instructions.";
+                                  $"The timestamps of every part are already shifted to lecture time. Use the audio to align the timestamps around each seam between two parts, and to correct a timestamp elsewhere only where it is clearly broken; leave all other timestamps as they are. The last `speech` block must end at {audioLengthStr}. Please perform the merge according to the system instructions.";
             round2Parts.Add(new Part { Text = round2Prompt });
 
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Ui.Info("Verwende Multi-Turn-Struktur für Schritt 1 (Simulation von Audio + Textsegmenten).", "Step 1");
-            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, TexDocumentWriter.MergeStep, inputFiles[0], history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
         else {
             var parts = new List<Part>();
             string promptText = "Here is the combined file with all the offset parts together. " +
-                                $"The .tex file was generated with {partsCount} parts by some lecture videos provided with {overlapMin} minutes overlap. " +
+                                $"It holds {partsCount} parts of one lecture video, each starting at its `% --- TEIL n ---` marker; consecutive parts overlap by {overlapMin} minutes. " +
                                 $"The actual audio/lecture length is roughly {audioLengthStr} (00:00:00 - {audioLengthStr}).\n\n" +
                                 (string.IsNullOrEmpty(partTimestampsStr) ? "" : $"Expected total duration timestamps for each part:\n{partTimestampsStr}\n(Note: These timestamps represent the total chronological span of each video part, NOT the span of a single `speech` block!)\n\n") +
                                 "Important: Since no audio file is attached, the timestamps in subsequent parts have already been pre-adjusted to global lecture time. Please eliminate redundant overlapping blocks at the part seams and only fix timestamps that look completely out of order or severely broken across boundaries. Otherwise, trust and preserve the existing pre-calibrated timestamps.";
             parts.Add(new Part { Text = promptText });
             foreach (var file in inputFiles) {
                 Ui.Info($"Lese Eingabedatei für Merge: {Path.GetFileName(file)}", "Step 1");
-                string content = await System.IO.File.ReadAllTextAsync(file);
+                string content = TexDocumentWriter.StripHeadersForModel(await System.IO.File.ReadAllTextAsync(file));
                 parts.Add(new Part { Text = $"<input_file name=\"{Path.GetFileName(file)}\">\n{content}\n</input_file>" });
             }
             AttachmentUploader.HasJustUploaded = false;
-            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, TexDocumentWriter.MergeStep, inputFiles[0], parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
 
         if (_config.UseVertex) {
@@ -284,10 +325,6 @@ public partial class LatexRefinementSession {
         }
 
         return result;
-    }
-
-    private async Task<string?> MergeSegmentsAndAlignTimestampsAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
-        return await MergeSegmentsAndAlignTimestampsAsync([inputFile], audioFilePath, baseName, targetFolder);
     }
 
     private async Task<string?> RefineAgainstSpeechAsync(string inputFile, string? audioFilePath, string baseName, string targetFolder) {
@@ -316,7 +353,7 @@ public partial class LatexRefinementSession {
         }
 
         Ui.Info($"Lese Eingabedatei für Textkorrektur: {Path.GetFileName(inputFile)}", "Step 2");
-        string content = await System.IO.File.ReadAllTextAsync(inputFile);
+        string content = TexDocumentWriter.StripHeadersForModel(await System.IO.File.ReadAllTextAsync(inputFile));
         string outputFileName = $"step3-{baseName}-offset-speech_refined.tex";
         string? result;
 
@@ -338,7 +375,7 @@ public partial class LatexRefinementSession {
 
             Ui.Info("Verwende Multi-Turn-Struktur für Schritt 2 (Simulation von Text-Dokument + Audio-Refinement).", "Step 2");
             AttachmentUploader.HasJustUploaded = false;
-            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, TexDocumentWriter.SpeechStep, inputFile, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
         }
         else {
             var parts = new List<Part> {
@@ -346,7 +383,7 @@ public partial class LatexRefinementSession {
                 new() { Text = $"<input_tex>\n{content}\n</input_tex>" }
             };
             AttachmentUploader.HasJustUploaded = false;
-            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, TexDocumentWriter.SpeechStep, inputFile, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
         }
 
         if (_config.UseVertex) {
@@ -366,12 +403,12 @@ public partial class LatexRefinementSession {
         }
 
         Ui.Info($"Lese Eingabedatei für Formatierung: {Path.GetFileName(inputFile)}", "Step 3");
-        string content = await System.IO.File.ReadAllTextAsync(inputFile);
+        string content = TexDocumentWriter.StripHeadersForModel(await System.IO.File.ReadAllTextAsync(inputFile));
         parts.Add(new Part { Text = $"<input_tex>\n{content}\n</input_tex>" });
 
         string outputFileName = $"step4-{baseName}-offset-final.tex";
         AttachmentUploader.HasJustUploaded = false;
-        var result = await RunRefinementStepAsync(_config.Step3LastRefinement, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
+        var result = await RunRefinementStepAsync(_config.Step3LastRefinement, TexDocumentWriter.FinalStep, inputFile, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
 
         if (_config.UseVertex) {
             await CleanupBucketAsync();
@@ -380,13 +417,15 @@ public partial class LatexRefinementSession {
         return result;
     }
 
-    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
+    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, string stepLabel, string inputFile, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         var finalPromptParts = new List<Part>(userPromptParts);
         var history = new List<Content> { new() { Role = "user", Parts = finalPromptParts } };
-        return await RunRefinementStepAsync(stepConfig, history, targetOutputFolder, outputFileName, cacheStateFileName);
+        return await RunRefinementStepAsync(stepConfig, stepLabel, inputFile, history, targetOutputFolder, outputFileName, cacheStateFileName);
     }
 
-    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
+    /// <param name="stepLabel">The step name heading this step's header layer (a <see cref="TexDocumentWriter"/> constant).</param>
+    /// <param name="inputFile">The file the step works on: its header layers and per-part blocks are carried into the output.</param>
+    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, string stepLabel, string inputFile, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
         string systemInstructionText = await ResolveSystemInstructionTextAsync(stepConfig);
@@ -403,7 +442,7 @@ public partial class LatexRefinementSession {
 
         int totalInputLength = CountInputLatexLength(history);
 
-        var (fullResponseText, totalInputTokens, totalOutputTokens, totalCachedTokens) =
+        var (fullResponseText, usage) =
             await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName);
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
@@ -445,24 +484,18 @@ public partial class LatexRefinementSession {
                 outputFileName = Path.GetFileName(outPath);
             }
 
-            string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
+            // The header is the C#'s, not the model's: this step's layer goes on top of the layers the
+            // input carried, and any layers the model echoed at the top of its answer are dropped.
+            // Each part's block goes back under every separator the model kept.
+            string inputText = System.IO.File.Exists(inputFile) ? await System.IO.File.ReadAllTextAsync(inputFile) : "";
+            var (inheritedLayers, _) = TexDocumentWriter.SplitHeaderLayers(inputText);
+            var (_, body) = TexDocumentWriter.SplitHeaderLayers(LatexResponseCleaner.CleanLatexResponse(fullResponseText));
+            body = TexDocumentWriter.RestorePartHeaders(body, TexDocumentWriter.ExtractPartHeaders(inputText));
 
-            string fileHeader = $"% ==========================================\n" +
-                                $"% LatexRefinement Step Output: {outputFileName}\n" +
-                                $"% Model: {backendParams.CurrentModel}\n" +
-                                $"% Temperature: {backendParams.Temperature}\n" +
-                                $"% TopP: {backendParams.TopP}\n" +
-                                $"% TopK: {backendParams.TopK}\n" +
-                                $"% MaxOutputTokens: {backendParams.MaxOutputTokens}\n" +
-                                (backendParams.ThinkingBudget.HasValue ? $"% ThinkingBudget: {backendParams.ThinkingBudget.Value}\n" : "") +
-                                (!string.IsNullOrEmpty(backendParams.ThinkingLevel) ? $"% ThinkingLevel: {backendParams.ThinkingLevel}\n" : "") +
-                                $"% Prompt Tokens: {totalInputTokens:N0}\n" +
-                                $"% Candidates Tokens: {totalOutputTokens:N0} (inkl. Thinking Tokens)\n" +
-                                $"% Cached Tokens: {totalCachedTokens:N0}\n" +
-                                $"% Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\n" +
-                                $"% ==========================================\n\n";
+            string stepHeader = TexDocumentWriter.BuildRefinementHeader(
+                stepLabel, outputFileName, Path.GetFileName(inputFile), usage, backendParams.CurrentModel, backendParams.Generation);
 
-            await System.IO.File.WriteAllTextAsync(outPath, fileHeader + cleanedText);
+            await System.IO.File.WriteAllTextAsync(outPath, TexDocumentWriter.StackLayers(stepHeader, inheritedLayers, body));
             Ui.Success($"Ergebnis gespeichert unter: {outPath}", "Refinement");
 
             InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;

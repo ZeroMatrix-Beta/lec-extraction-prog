@@ -8,8 +8,8 @@ namespace LectureExtraction.Configuration;
 /// <summary>
 /// [AI Context] Represents the segment partitioning policy for lecture extraction.
 /// Can be either a fixed positive integer (e.g. 2, 3) or "auto", which dynamically determines
-/// the number of parts based on the video duration (e.g. &lt; 40 min = 1 part, 40 to &lt; 85 min = 2 parts,
-/// &gt;= 85 min = 3 parts, scaling by +1 part per additional 45 minutes).
+/// the number of parts based on the video duration: one part per ~22.5 minutes, so a 45-minute
+/// lecture gets 2 parts and a 90-minute double lecture gets 4.
 /// [Human] Bestimmt, in wie viele Teile ein Video geschnitten wird: entweder eine feste Zahl (z.B. 2) oder "auto",
 /// wodurch die Teile anhand der Videolänge dynamisch berechnet werden.
 /// </summary>
@@ -44,17 +44,21 @@ public readonly struct NumberOfParts : IEquatable<NumberOfParts>, IEquatable<int
     }
 
     /// <summary>
-    /// Computes the auto-split part count from the duration in seconds:
-    /// &lt; 40 min -&gt; 1 part
-    /// 40 to &lt; 85 min -&gt; 2 parts
-    /// &gt;= 85 min -&gt; 3 parts (scales by +1 part every additional 45 min).
+    /// The video length one auto part covers. Two parts per 45-minute lecture unit keeps every
+    /// segment around 25 minutes including overlap - the length the transcription handles well -
+    /// so a single lecture splits in 2 and a double lecture in 4.
+    /// </summary>
+    public const double AutoMinutesPerPart = 22.5;
+
+    /// <summary>
+    /// Computes the auto-split part count from the duration in seconds: the duration divided by
+    /// <see cref="AutoMinutesPerPart"/>, rounded, at least 1. The rounding boundaries (33.75, 56.25,
+    /// 78.75, 101.25 min) sit well away from the 45- and 90-minute lengths real lectures have.
     /// </summary>
     public static int ResolveAuto(double durationSeconds) {
         if (durationSeconds <= 0) return 3;
         double minutes = durationSeconds / 60.0;
-        if (minutes < 40.0) return 1;
-        if (minutes < 85.0) return 2;
-        return 3 + (int)Math.Floor((minutes - 85.0) / 45.0);
+        return Math.Max(1, (int)Math.Round(minutes / AutoMinutesPerPart, MidpointRounding.AwayFromZero));
     }
 
     public static NumberOfParts Parse(string? text) {

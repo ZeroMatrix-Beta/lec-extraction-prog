@@ -283,7 +283,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
                         await Task.Delay(100, cancellationToken);
                         if (!InteractiveDelay.IsInSmartDelay && !Console.IsInputRedirected && Console.KeyAvailable) {
                             while (Console.KeyAvailable) Console.ReadKey(intercept: true);
-                            Ui.Raw("\n[System] Still waiting for the acknowledgment / processing...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
+                            Ui.Raw("\n[System] Warte auf serverseitige Verarbeitung...\n  [AI Studio] Warte auf serverseitige Verarbeitung ");
                         }
                     }
                     fileInfo = await ApiRetryPolicy.ExecuteWithRetryAsync(
