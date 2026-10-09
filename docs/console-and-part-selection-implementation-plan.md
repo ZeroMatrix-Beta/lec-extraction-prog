@@ -11,23 +11,25 @@ This document specifies two major architectural enhancements for `lec-extraction
 ### 1.1 Problem Statement
 1. **Countdown Ticker Flood**: In non-interactive or redirected streams (log files, background tasks, CI runners), `AnsiConsole.Status` cannot rewrite lines in place. A 64-second wait produces 64 distinct lines (`⏳ Warte 64s: ...`), causing severe log bloat.
 2. **Stream Collisions**: When LLM output streams directly to stdout without a trailing newline, any subsequent warning or error banner (e.g., on connection loss) gets appended directly to the end of the partial LaTeX token.
-3. **Unicode Mojibake on Windows**: Emojis like `⏳` and box-drawing glyphs `──` render as garbled characters (`â ³`, `â”€â”€`) on Windows console streams using OEM code pages.
+3. **Garbled Glyphs in Logs**: Emojis like `⏳` and box-drawing glyphs `──` show up as `â ³`, `â”€â”€`. The program writes valid UTF-8 (the CLI sets `Console.OutputEncoding = UTF8`); the pattern is UTF-8 read back as Windows-1252 by whatever opens the log (e.g. PowerShell 5.1 `Get-Content` without `-Encoding UTF8`). The program cannot fix that reader, only avoid the glyphs.
 4. **Mixed Language Phrasing**: Standard German banners were frequently paired with English fallback strings like `"Still waiting for the acknowledgment / processing..."`.
 
 ### 1.2 Implemented Design
 - **`InteractiveDelay.cs`**:
-  - Automatically inspects `bool isUnattended = !Ui.PromptSource.IsInteractive || Console.IsOutputRedirected || Console.IsErrorRedirected`.
-  - When unattended or redirected, skips `AnsiConsole.Status` entirely and emits a single clean notice:
+  - Chooses the display by `Ui.CanRedrawInPlace` (Spectre's `Interactive && Ansi`), not by attended/unattended. Spectre treats the console as non-interactive as soon as *any* of stdin/stdout/stderr is redirected, and its live `Status` then prints every update as a new line - even when the display is a real window.
+  - Can redraw: live countdown, updated only when the remaining second changes - also for an unattended `lecx run` in a terminal.
+  - Cannot redraw: one line up front instead of a ticker:
     ```csharp
     Ui.Info($"Warte {seconds}s: {message}", "Delay");
     ```
-  - In interactive mode, throttles status updates so `ctx.Status(...)` is only updated once per second when the remaining countdown value changes.
+  - One wait loop serves both displays; Enter-to-skip depends only on whether a person is at the keyboard (`Ui.PromptSource.IsInteractive`), not on the display.
   - Updates default message to `"Warte auf Server-Antwort / Verarbeitung..."`.
+- **`Ui.cs` ASCII frames**:
+  - `Step` (rule), `Header` (panel) and `Table` use ASCII borders when `Ui.IsTerminalOutput` is false (Spectre's output stream is a file or pipe), so a log stays readable in a Windows-1252 reader. Spectre's own `Unicode = false` does not help here: it only swaps to "safe" borders that are still box-drawing glyphs.
+  - Umlauts, emojis and dashes inside message text are unaffected; a log containing them must be read as UTF-8.
 - **`Ui.cs` Line Tracking**:
   - Tracks `_isLineOpen` in `Ui.Raw` and `Ui.RawLine`.
   - Automatically calls `EnsureNewLine()` before rendering any structured badge (`Info`, `Warn`, `Error`, `Success`, `Step`, `Detail`, `Header`), preventing banner collisions with unfinished streams.
-- **`CliBootstrapper.cs` Encoding**:
-  - Configures both `Console.OutputEncoding = Encoding.UTF8` and `Console.InputEncoding = Encoding.UTF8`.
 - **Language Normalization**:
   - Normalized status strings across `ApiRetryPolicy.cs`, `ResponseStreamPrinter.cs`, and `AttachmentUploader.cs`.
 

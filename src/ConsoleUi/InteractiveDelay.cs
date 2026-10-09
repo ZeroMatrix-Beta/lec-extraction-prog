@@ -33,15 +33,11 @@ public static class InteractiveDelay {
         await _gate.WaitAsync();
         try {
             bool isUnattended = !Ui.PromptSource.IsInteractive;
-            bool isOutputRedirected = false;
-            try { isOutputRedirected = Console.IsOutputRedirected || Console.IsErrorRedirected; } catch (InvalidOperationException) { }
-
-            if (!isUnattended && !isOutputRedirected) {
+            if (!isUnattended) {
                 Ui.Detail("(Tipp: Du kannst jederzeit [Enter] drücken, um die Wartezeit sofort zu überspringen.)");
             }
-            using var cts = new CancellationTokenSource();
             // Ctrl+C only raises the flag; the delay loop sees it within 100 ms and returns false.
-            // Cancelling cts here instead would make Task.Delay throw out of SmartDelayAsync.
+            // Cancelling a token here instead would make Task.Delay throw out of SmartDelayAsync.
             bool delayCanceled = false;
             void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; delayCanceled = true; }
             Console.CancelKeyPress += cancelHandler;
@@ -55,89 +51,26 @@ public static class InteractiveDelay {
             bool skippedByUser = false;
 
             try {
-                // If output is redirected or running in unattended mode, avoid AnsiConsole.Status
-                // because non-TTY/redirected streams cannot rewrite lines in place, causing hundreds
-                // of duplicate status lines in log files.
-                if (isUnattended || isOutputRedirected) {
-                    Ui.Info($"Warte {seconds}s: {message}", "Delay");
-                    int elapsedSeconds = 0;
-                    while (elapsedSeconds < seconds) {
-                        if (delayCanceled || cts.Token.IsCancellationRequested) return false;
-                        int step = Math.Min(1, seconds - elapsedSeconds);
-                        try {
-                            await Task.Delay(step * 1000, cts.Token);
-                        }
-                        catch (OperationCanceledException) {
-                            return false;
-                        }
-                        elapsedSeconds += step;
-                    }
-                    return true;
+                bool completed;
+                if (Ui.CanRedrawInPlace) {
+                    int lastRemaining = -1;
+                    completed = await AnsiConsole.Status()
+                        .Spinner(Spinner.Known.Dots)
+                        .SpinnerStyle(Style.Parse("yellow"))
+                        .StartAsync($"Warte {seconds}s: {message}", ctx => WaitOutAsync(seconds, listenForEnter: !isUnattended, () => delayCanceled, remaining => {
+                            if (remaining != lastRemaining) {
+                                lastRemaining = remaining;
+                                ctx.Status($"Warte {remaining}s: {message}");
+                            }
+                        }));
                 }
-
-                int lastRemaining = -1;
-                bool completed = await AnsiConsole.Status()
-                    .Spinner(Spinner.Known.Dots)
-                    .SpinnerStyle(Style.Parse("yellow"))
-                    .StartAsync($"Warte {seconds}s: {message}", async ctx => {
-                        var delayTask = Task.Run(async () => {
-                            int delaySteps = seconds * 10;
-                            for (int i = 0; i < delaySteps; i++) {
-                                if (delayCanceled || cts.Token.IsCancellationRequested) return false;
-                                int remaining = seconds - (i / 10);
-                                if (remaining != lastRemaining) {
-                                    lastRemaining = remaining;
-                                    ctx.Status($"Warte {remaining}s: {message}");
-                                }
-                                try {
-                                    await Task.Delay(100, cts.Token);
-                                }
-                                catch (OperationCanceledException) {
-                                    // cts is cancelled once the input task has decided; this result is then unused.
-                                    return false;
-                                }
-                                if (!isUnattended) {
-                                    try {
-                                        if (!Console.IsInputRedirected && Console.KeyAvailable) {
-                                            bool enterPressed = false;
-                                            while (Console.KeyAvailable) {
-                                                var keyInfo = Console.ReadKey(intercept: true);
-                                                if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
-                                            }
-                                            if (enterPressed) {
-                                                Ui.Info("Wartezeit durch Benutzer (Enter) übersprungen.", "Skip");
-                                                return true;
-                                            }
-                                        }
-                                    }
-                                    catch (InvalidOperationException) { }
-                                }
-                            }
-                            return true;
-                        });
-
-                        // A real console is polled for Enter by the delay loop above; only redirected
-                        // input needs a reader. Either way this task ends early only for an Enter.
-                        var inputTask = Task.Run(async () => {
-                            bool isRedirected = false;
-                            try { isRedirected = Console.IsInputRedirected; } catch (InvalidOperationException) { }
-                            if (isRedirected) {
-                                return await WaitForEnterAsync(Console.In, cts.Token);
-                            }
-                            try { await Task.Delay(Timeout.Infinite, cts.Token); } catch (OperationCanceledException) { }
-                            return false;
-                        });
-
-                        var completedTask = await Task.WhenAny(delayTask, inputTask);
-                        cts.Cancel();
-
-                        if (completedTask == inputTask && await inputTask) {
-                            Ui.Info("Wartezeit durch Benutzer (Enter) übersprungen.", "Skip");
-                            return true;
-                        }
-
-                        return await delayTask;
-                    });
+                else {
+                    // Where Spectre cannot redraw - a log file, a pipe, any redirected stream - every
+                    // countdown update would become a line of its own, 64 for a 64 s wait. One line
+                    // up front says the same.
+                    Ui.Info($"Warte {seconds}s: {message}", "Delay");
+                    completed = await WaitOutAsync(seconds, listenForEnter: !isUnattended, () => delayCanceled, _ => { });
+                }
 
                 // The return value cannot distinguish "waited the full time" from "user pressed Enter" -
                 // both are true - so the elapsed time is what tells them apart.
@@ -153,6 +86,76 @@ public static class InteractiveDelay {
         finally {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// Waits <paramref name="seconds"/>, handing each whole second still to go to
+    /// <paramref name="showRemaining"/>. Returns false on Ctrl+C, true when the time ran out or -
+    /// with <paramref name="listenForEnter"/> - Enter skipped the rest. The display is the caller's
+    /// business, so skipping works the same whichever one it chose.
+    /// </summary>
+    private static async Task<bool> WaitOutAsync(int seconds, bool listenForEnter, Func<bool> ctrlCPressed, Action<int> showRemaining) {
+        using var cts = new CancellationTokenSource();
+        // Taken once: the losing task can still be running when cts is disposed on return.
+        var token = cts.Token;
+
+        var delayTask = Task.Run(async () => {
+            int delaySteps = seconds * 10;
+            for (int i = 0; i < delaySteps; i++) {
+                if (ctrlCPressed() || token.IsCancellationRequested) return false;
+                showRemaining(seconds - (i / 10));
+                try {
+                    await Task.Delay(100, token);
+                }
+                catch (OperationCanceledException) {
+                    // cts is cancelled once the input task has decided; this result is then unused.
+                    return false;
+                }
+                if (listenForEnter) {
+                    try {
+                        if (!Console.IsInputRedirected && Console.KeyAvailable) {
+                            bool enterPressed = false;
+                            while (Console.KeyAvailable) {
+                                var keyInfo = Console.ReadKey(intercept: true);
+                                if (keyInfo.Key == ConsoleKey.Enter) enterPressed = true;
+                            }
+                            if (enterPressed) {
+                                Ui.Info("Wartezeit durch Benutzer (Enter) übersprungen.", "Skip");
+                                return true;
+                            }
+                        }
+                    }
+                    catch (InvalidOperationException) { }
+                }
+            }
+            return true;
+        });
+
+        if (!listenForEnter) {
+            return await delayTask;
+        }
+
+        // A real console is polled for Enter by the delay loop above; only redirected
+        // input needs a reader. Either way this task ends early only for an Enter.
+        var inputTask = Task.Run(async () => {
+            bool isRedirected = false;
+            try { isRedirected = Console.IsInputRedirected; } catch (InvalidOperationException) { }
+            if (isRedirected) {
+                return await WaitForEnterAsync(Console.In, token);
+            }
+            try { await Task.Delay(Timeout.Infinite, token); } catch (OperationCanceledException) { }
+            return false;
+        });
+
+        var completedTask = await Task.WhenAny(delayTask, inputTask);
+        cts.Cancel();
+
+        if (completedTask == inputTask && await inputTask) {
+            Ui.Info("Wartezeit durch Benutzer (Enter) übersprungen.", "Skip");
+            return true;
+        }
+
+        return await delayTask;
     }
 
     /// <summary>

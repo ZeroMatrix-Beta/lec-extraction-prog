@@ -13,6 +13,23 @@ namespace LectureExtraction.ConsoleUi;
 public static class Ui {
     private static volatile bool _isLineOpen = false;
 
+    /// <summary>
+    /// [AI Context] True when Spectre writes to a console window rather than a file or pipe. Frames
+    /// fall back to ASCII otherwise: the output is UTF-8 either way, but a log is often read back as
+    /// Windows-1252, where every "─" turns into "â”€" and a rule fills a whole line with it.
+    /// [Human] Ob die Ausgabe in einem Konsolenfenster landet (sonst Rahmen nur aus ASCII).
+    /// </summary>
+    public static bool IsTerminalOutput => AnsiConsole.Profile.Out.IsTerminal;
+
+    /// <summary>
+    /// [AI Context] True when Spectre can redraw a line in place, which its live displays (Status)
+    /// need. Spectre calls a console non-interactive as soon as any of stdin, stdout or stderr is
+    /// redirected - even if the display itself is a real window - and then prints every update of a
+    /// live display as a new line.
+    /// [Human] Ob eine Zeile an Ort und Stelle aktualisiert werden kann (Countdown statt Zeilenflut).
+    /// </summary>
+    public static bool CanRedrawInPlace => AnsiConsole.Profile.Capabilities is { Interactive: true, Ansi: true };
+
     private static void EnsureNewLine() {
         if (_isLineOpen) {
             _isLineOpen = false;
@@ -60,7 +77,11 @@ public static class Ui {
         EnsureNewLine();
         string text = Markup.Escape(title);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]][/] " : "";
-        AnsiConsole.Write(new Rule($"{prefix}[bold cyan]{text}[/]").LeftJustified());
+        var rule = new Rule($"{prefix}[bold cyan]{text}[/]").LeftJustified();
+        if (!IsTerminalOutput) {
+            rule.Border = BoxBorder.Ascii;
+        }
+        AnsiConsole.Write(rule);
     }
 
     /// <summary>
@@ -85,7 +106,7 @@ public static class Ui {
     public static void Header(string title) {
         EnsureNewLine();
         var panel = new Panel($"[bold]{Markup.Escape(title)}[/]")
-            .Border(BoxBorder.Rounded)
+            .Border(IsTerminalOutput ? BoxBorder.Rounded : BoxBorder.Ascii)
             .BorderColor(Color.Cyan1)
             .Expand();
         AnsiConsole.Write(panel);
@@ -254,7 +275,7 @@ public static class Ui {
 
     // Data
     public static void Table(string title, IEnumerable<(string Key, string Value)> rows) {
-        var table = new Table().Border(TableBorder.Rounded);
+        var table = new Table().Border(IsTerminalOutput ? TableBorder.Rounded : TableBorder.Ascii);
         table.AddColumn("[bold]Eigenschaft[/]");
         table.AddColumn("[bold]Wert[/]");
         if (!string.IsNullOrEmpty(title)) {

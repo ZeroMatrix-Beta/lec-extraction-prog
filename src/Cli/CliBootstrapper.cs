@@ -79,7 +79,6 @@ public static class CliBootstrapper {
     private static void EnableUnicodeOutput() {
         try {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.InputEncoding = System.Text.Encoding.UTF8;
         }
         catch (Exception ex) {
             // Some redirected handles reject the change; the only cost is degraded glyphs.
