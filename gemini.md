@@ -46,5 +46,5 @@ Um C#-Compiler- und Analyzer-Warnungen (insbesondere `CA1860`, `SYSLIB1045`, `ID
    Bevor eine KI ihre Arbeit an den Benutzer übergibt, **muss** zwingend `dotnet build` ausgeführt werden. Eine Aufgabe gilt erst dann als erledigt, wenn der Build exakt `0 Warnung(en)` und `0 Fehler` ausgibt. Jede auftretende Warnung ist sofort zu beheben.
 
 ## 4. Zugriff auf externe Verzeichnisse
-**Regel:** Die KI benötigt keinen Lese- oder Schreibzugriff auf die externen Verzeichnisse `C:\Users\miche\latex\prompt-engineering` oder `C:\Users\miche\latex\prompt-engineering-token-opt` oder deren Unterordner. Die dortigen Prompt-Vorlagen werden außerhalb dieses Projekts verwaltet. Fordere niemals Berechtigungen für diese Pfade an.
+**Regel:** Die KI benötigt keinen Lese- oder Schreibzugriff auf das externe Verzeichnis `C:\Users\miche\latex\prompt-engineering` oder dessen Unterordner. Die dortigen Prompt-Vorlagen werden außerhalb dieses Projekts verwaltet. Fordere niemals Berechtigungen für diesen Pfad an.
 

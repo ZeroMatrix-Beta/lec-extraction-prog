@@ -16,7 +16,7 @@
 7. **Mandatory Build Verification Before Task Completion**:
    Before finishing any task or handing over to the user, you MUST run `dotnet build`. Ensure the output is exactly `0 Warning(s)` and `0 Error(s)`. Any warnings (e.g. `CA1860`, `SYSLIB1045`, `IDE0028`, `IDE0060`) must be fixed immediately.
 8. **No Access to External Prompt Directory**:
-   You do not need read or write access to the external directories `C:\Users\miche\latex\prompt-engineering` / `C:\Users\miche\latex\prompt-engineering-token-opt` or their subdirectories. The prompt engineering files there are managed outside the scope of this project. Do not request permissions for these directory paths.
+   You do not need read or write access to the external directory `C:\Users\miche\latex\prompt-engineering` or its subdirectories. The prompt engineering files there are managed outside the scope of this project. Do not request permissions for this directory path.
 9. **Running the program headlessly**:
    The program has two entry points, chosen in `Program.Main` by argument count: no
    arguments starts the interactive Spectre menu, anything else runs the CLI
