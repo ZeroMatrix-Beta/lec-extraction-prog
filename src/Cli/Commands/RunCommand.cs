@@ -28,13 +28,18 @@ public static class RunCommand {
         Description = "Stop after a stage: extract (skip refinement and PDF) or full (default)."
     };
 
+    public static readonly Option<bool> CleanTmp = new("--clean-tmp") {
+        Description = "Delete intermediate tmp/ directory upon successful completion."
+    };
+
     public static Command Build(bool chainRefinement, string name, string description) {
         var command = new Command(name, description) {
             PlanCommand.Video, PlanCommand.Folder, PlanCommand.From,
-            PlanCommand.ResumeWindow, PlanCommand.Force,
+            PlanCommand.ResumeWindow, PlanCommand.Resume, PlanCommand.Force, CleanTmp,
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
             ExtractionOptions.Speed, ExtractionOptions.Preset,
-            ExtractionOptions.Model, ExtractionOptions.Profile
+            ExtractionOptions.Model, ExtractionOptions.Profile,
+            ExtractionOptions.VideoFps, ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
         };
 
         if (chainRefinement) {
@@ -55,7 +60,9 @@ public static class RunCommand {
                 || string.Equals(parseResult.GetValue(StopAfter), "extract", StringComparison.OrdinalIgnoreCase);
             config.GoIntoLatexRefinement = !stopAfterExtract;
 
-            double resumeWindow = parseResult.GetValue(PlanCommand.ResumeWindow) ?? ExtractionPlanner.DefaultResumeWindowHours;
+            double resumeWindow = parseResult.GetValue(PlanCommand.Resume)
+                ? 87600.0
+                : (parseResult.GetValue(PlanCommand.ResumeWindow) ?? ExtractionPlanner.DefaultResumeWindowHours);
             bool force = parseResult.GetValue(PlanCommand.Force);
             var plan = ExtractionPlanner.Build(config, videos, resumeWindow, force,
                 await ExtractionPlanner.ProbeDurationsIfAutoAsync(config, videos));
@@ -82,6 +89,25 @@ public static class RunCommand {
             var session = BuildSession(config, force ? 0 : resumeWindow);
 
             bool allSucceeded = await session.RunAsync([.. videos]);
+
+            if (allSucceeded && parseResult.GetValue(CleanTmp)) {
+                foreach (string video in videos) {
+                    string folderName = ExtractionHelpers.ComputeOutputFolderName(video);
+                    string targetFolder = string.IsNullOrWhiteSpace(config.TargetFolder)
+                        ? Path.Combine(config.SourceFolder, "extracted_output", folderName)
+                        : Path.Combine(config.TargetFolder, folderName);
+                    string tmpPath = Path.Combine(targetFolder, "tmp");
+                    if (Directory.Exists(tmpPath)) {
+                        try {
+                            Directory.Delete(tmpPath, recursive: true);
+                            Ui.Detail($"Bereinigt (tmp): {folderName}/tmp", "clean-tmp");
+                        }
+                        catch (Exception ex) {
+                            Ui.Warn($"Konnte tmp-Ordner nicht löschen ({ex.GetType().Name}): {ex.Message}", "clean-tmp");
+                        }
+                    }
+                }
+            }
 
             var summary = new {
                 videos = plan.VideoCount,

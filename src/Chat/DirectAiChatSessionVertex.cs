@@ -68,9 +68,39 @@ public class DirectAiChatSessionVertex {
 
     /// <summary>
     /// [AI Context] Asynchronous entry point for the Vertex session. Initializes clients and enforces rigorous bucket cleanup.
+    /// Supports headless or quick start by skipping setup prompts.
     /// [Human] Startet die Vertex-Session, verbindet sich mit Google Cloud und stellt sicher, dass der GCS Bucket für Datei-Uploads komplett leer ist.
     /// </summary>
-    public async Task StartAsync() {
+    public async Task StartAsync(bool skipSetup = false, bool loadSystemPrompt = true, bool loadHistory = true) {
+        if (skipSetup) {
+            bool skipLoadedSysPrompt = false;
+            string? skipInitialInput = null;
+
+            if (loadSystemPrompt && !string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+                _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+                Ui.Success($"System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                skipLoadedSysPrompt = true;
+            }
+
+            if (loadHistory) {
+                var historyPrompt = GetInitialHistoryCommand(_activeModel);
+                if (historyPrompt.IsValue) {
+                    skipInitialInput = historyPrompt.Value;
+                }
+            }
+
+            Ui.Blank();
+            Ui.Info("Initiating Vertex AI Enterprise Session...", "System");
+            await ForcePurgeGcsBucketAsync();
+
+            _sessionLogger.InitializeSession();
+            _sessionLogger.SetSessionMetadata(skipLoadedSysPrompt, skipInitialInput != null);
+            await _sessionLogger.LogSessionSetupAsync();
+
+            await RunChatSessionAsync(skipInitialInput);
+            return;
+        }
+
         // [AI Context] Three-step setup machine, mirroring the AI Studio session: every prompt can
         // offer "back" because each step knows its predecessor. The bucket purge and the session log
         // folder happen after the last step, so abandoning the setup costs nothing.

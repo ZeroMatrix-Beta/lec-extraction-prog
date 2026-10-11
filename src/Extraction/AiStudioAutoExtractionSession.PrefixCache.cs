@@ -25,7 +25,9 @@ namespace LectureExtraction.Extraction;
 /// real video processing begins. Split out of AiStudioAutoExtractionSession.cs (Phase 4.5).
 /// Member Index:
 /// - WarmUpWithBatchedHistoryAsync: Staged cache warming by grouping history files into batches.
-/// - TryLoadSystemInstructionWithHistoryAsync: Loads system instruction text & preloads history.
+/// - PrimePrefixCacheAsync: Session warm-up handshake (system instruction + dummy anchor).
+/// - PrimePrefixCacheForResumedPartAsync: Extra handshake when a video's first sent part is 2+ (resume).
+/// - SendWarmupHandshakeAsync: Sends one handshake, records usage, waits for the token refill.
 /// [Human] Der Cache-Warmup-Teil der Session: dummy-part0.tex laden und Warmup-Handshakes senden.
 /// </summary>
 public partial class AiStudioAutoExtractionSession {
@@ -124,6 +126,93 @@ public partial class AiStudioAutoExtractionSession {
         string stepPrefix = string.IsNullOrEmpty(stepLabel) ? "" : $"[{stepLabel}] ";
         Ui.Info($"Starte initialen Handshake-Roundtrip {stepPrefix}um die System Instruction bei Google im impliziten Cache zu aktivieren...", "Cache-Warming");
 
+        // [AI Context] Prefix-consistency rule: include dummy-part0.tex only when the system instruction
+        // is COMPLETE (includeDummyPart0=true, i.e. last history batch or single-shot warmup). Intermediate
+        // batches have a partial system instruction that cannot produce a cache hit for Part-1 anyway, so
+        // sending the dummy there wastes ~4500 tokens with zero cache benefit.
+        // SendDummyFileWithEachWarmUpRound=true overrides to always send (debugging/testing aid).
+        // [Human] Dummy nur beim letzten Handshake (vollständige Sys-Instruction), sonst Tokenverbrauch ohne Nutzen.
+        bool shouldIncludeDummy = _config.SendDummyFileDuringTranscription
+            && ((_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound);
+        List<Part> warmupParts = [];
+
+        // [AI Context] When LoadHistoryIntoSystemInstruction is false, the history resides in the User Message.
+        // We prepend it here to ensure the exact same token sequence is sent during the warmup handshakes
+        // as will be sent during the actual video generation request, ensuring a perfect prefix match.
+        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+            warmupParts.AddRange(_historyParts);
+        }
+
+        if (shouldIncludeDummy) {
+            warmupParts.Add(new Part { Text = ComposeReferenceContextText("", 1) });
+        } else if (includeDummyPart0) {
+            warmupParts.Add(new Part { Text = GetStaticPromptBeginning(1) });
+        }
+        warmupParts.Add(new Part { Text = HandshakeText() });
+
+        return await SendWarmupHandshakeAsync([new() { Role = "user", Parts = warmupParts }], customDelay, stepLabel);
+    }
+
+    /// <summary>
+    /// [AI Context] Whether the first part a session sends for a video gets the resumed-part warm-up:
+    /// it is part 2 or later, its predecessors are on disk, they are inlined into the prompt (not
+    /// uploaded as files, which that text does not contain), and warm-up is enabled at all.
+    /// [Human] Entscheidet, ob vor dem ersten gesendeten Teil (Teil 2+) ein Resume-Warm-up nötig ist.
+    /// </summary>
+    public static bool ShouldWarmUpResumedPart(AiStudioAutoExtractionConfig config, int partNumber, int precedingPartsOnDisk) =>
+        partNumber > 1
+        && precedingPartsOnDisk > 0
+        && config.EnableImplicitPrefixCacheWarmup
+        && config.DebugSendReferenceFile
+        && config.InlinePrecedingLecTexParts;
+
+    /// <summary>
+    /// [AI Context] One extra warm-up round for a video whose first part sent in this session is part 2
+    /// or later - the earlier parts were reused from disk (resume, see ResumeWindow). The session warm-up
+    /// only primed system instruction + dummy anchor, so without this round the part's inlined
+    /// predecessors (~10-15k tokens each) all arrive cold in one request, on top of the video. In a run
+    /// that starts at part 1 they enter the cache one part at a time instead. The handshake sends exactly
+    /// the text Part that request will open with (built by ComposeReferenceContextText), minus the video,
+    /// right before it. Only meaningful for the inline path: uploaded .tex references are not part of
+    /// that text.
+    /// [Human] Zusätzliches Cache-Warming, wenn ein Video erst ab Teil 2+ transkribiert wird (die
+    /// vorherigen Teile kommen von der Festplatte): wärmt die eingebetteten Vorgänger-Teile vor.
+    /// </summary>
+    private async Task PrimePrefixCacheForResumedPartAsync(int partNumber, IReadOnlyList<string> previousTexFiles) {
+        string stepLabel = $"Resume Part {partNumber}";
+        Ui.Info($"[{stepLabel}] Teil 1-{partNumber - 1} stammen von der Festplatte - zusätzlicher Handshake, damit die eingebetteten Teile vor dem Video-Request im impliziten Cache liegen:", "Cache-Warming");
+
+        List<Part> warmupParts = [];
+        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
+            warmupParts.AddRange(_historyParts);
+        }
+        warmupParts.Add(new Part { Text = ComposeReferenceContextText(await BuildInlinedPrecedingPartsAsync(previousTexFiles), partNumber) });
+        warmupParts.Add(new Part { Text = HandshakeText() });
+
+        // _sessionPreamble precedes the user turn in the real request too (BuildGenerationRequestAsync).
+        List<Content> contents = [.. _sessionPreamble, new() { Role = "user", Parts = warmupParts }];
+
+        // An optimization only: if it fails, the part request still runs, just with a colder cache.
+        if (!await SendWarmupHandshakeAsync(contents, customDelay: null, stepLabel)) {
+            Ui.Warn($"[{stepLabel}] Zusätzlicher Handshake fehlgeschlagen - Teil {partNumber} wird trotzdem gesendet.", "Cache-Warming");
+        }
+    }
+
+    // [AI Context] The handshake text is explicitly phrased to suppress any content generation:
+    // - No video or media is attached — the system instruction's processing rules do not apply.
+    // - The model must ONLY echo the acknowledgement string, nothing else.
+    private string HandshakeText() =>
+        $"""[Cache-Warming Handshake] This is a technical warmup request to pre-fill the implicit prefix cache (on Google AI Studio servers). No video, audio, or any other media file is attached to this request — the lecture extraction instructions in the system instruction are therefore NOT applicable and must NOT be executed. Do not generate any LaTeX, summaries, or content of any kind. Please acknowledge receipt with exactly this string and nothing else: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'""";
+
+    /// <summary>
+    /// [AI Context] Sends one warm-up handshake (the given contents under the session's system
+    /// instruction and generation config), records its usage, then waits for the token refill.
+    /// Shared by the session warm-up and the resumed-part warm-up.
+    /// [Human] Sendet einen Warm-up-Handshake, verbucht die Tokens und wartet auf den Token-Refill.
+    /// </summary>
+    private async Task<bool> SendWarmupHandshakeAsync(List<Content> pingContent, int? customDelay, string stepLabel) {
+        string stepPrefix = string.IsNullOrEmpty(stepLabel) ? "" : $"[{stepLabel}] ";
+
         var requestConfig = new GenerateContentConfig {
             Temperature = _config.Temperature,
             TopP = _config.TopP,
@@ -156,47 +245,6 @@ public partial class AiStudioAutoExtractionSession {
                 }
             }
         }
-
-        // [AI Context] The handshake text is explicitly phrased to suppress any content generation:
-        // - No video or media is attached — the system instruction's processing rules do not apply.
-        // - The model must ONLY echo the acknowledgement string, nothing else.
-        string handshakeText = $"""[Cache-Warming Handshake] This is a technical warmup request to pre-fill the implicit prefix cache (on Google AI Studio servers). No video, audio, or any other media file is attached to this request — the lecture extraction instructions in the system instruction are therefore NOT applicable and must NOT be executed. Do not generate any LaTeX, summaries, or content of any kind. Please acknowledge receipt with exactly this string and nothing else: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'""";
-
-        // [AI Context] Prefix-consistency rule: include dummy-part0.tex only when the system instruction
-        // is COMPLETE (includeDummyPart0=true, i.e. last history batch or single-shot warmup). Intermediate
-        // batches have a partial system instruction that cannot produce a cache hit for Part-1 anyway, so
-        // sending the dummy there wastes ~4500 tokens with zero cache benefit.
-        // SendDummyFileWithEachWarmUpRound=true overrides to always send (debugging/testing aid).
-        // [Human] Dummy nur beim letzten Handshake (vollständige Sys-Instruction), sonst Tokenverbrauch ohne Nutzen.
-        bool shouldIncludeDummy = _config.SendDummyFileDuringTranscription
-            && ((_config.DebugSendReferenceFile && includeDummyPart0) || _config.SendDummyFileWithEachWarmUpRound);
-        List<Part> warmupParts = [];
-        
-        // [AI Context] When LoadHistoryIntoSystemInstruction is false, the history resides in the User Message.
-        // We prepend it here to ensure the exact same token sequence is sent during the warmup handshakes 
-        // as will be sent during the actual video generation request, ensuring a perfect prefix match.
-        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            warmupParts.AddRange(_historyParts);
-        }
-
-        if (shouldIncludeDummy) {
-            string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
-
-            warmupParts.Add(new Part { Text = ReferenceContextPreamble + dummyReferenceBlock + GetStaticPromptBeginning(1) });
-            warmupParts.Add(new Part { Text = handshakeText });
-        } else {
-            if (includeDummyPart0) {
-                warmupParts.Add(new Part { Text = GetStaticPromptBeginning(1) });
-            }
-            warmupParts.Add(new Part { Text = handshakeText });
-        }
-
-        var pingContent = new List<Content> {
-            new() {
-                Role = "user",
-                Parts = warmupParts
-            }
-        };
 
         // [AI Context] Count tokens before request so that token count is visible even if a Quota Error occurs.
         // IMPORTANT: CountTokensAsync itself may consume input tokens against the same Free-Tier quota

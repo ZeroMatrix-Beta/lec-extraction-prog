@@ -30,7 +30,8 @@ public sealed record ExtractionPlan(
     double SpeedMultiplier,
     bool RefinementFollows,
     double ResumeWindowHours,
-    IReadOnlyList<PlannedVideo> Videos) {
+    IReadOnlyList<PlannedVideo> Videos,
+    double? GoogleVideoFps = null) {
 
     public int VideoCount => Videos.Count;
 
@@ -133,7 +134,8 @@ public static class ExtractionPlanner {
             SpeedMultiplier: config.SpeedMultiplier,
             RefinementFollows: config.GoIntoLatexRefinement,
             ResumeWindowHours: resumeWindowHours,
-            Videos: planned);
+            Videos: planned,
+            GoogleVideoFps: config.GoogleVideoFps);
     }
 
     private static PlannedVideo Describe(

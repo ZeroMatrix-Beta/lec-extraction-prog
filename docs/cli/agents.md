@@ -124,6 +124,13 @@ nothing.
 **`pdf compile` is not free by default.** Its repair path sends the failed document and
 the compile log to the model. `--fix-loop 0` makes it purely local.
 
+**A PDF that will not compile is usually a known error class.** Before any AI repair, the
+highly experimental auto-fixer (`PdfCompilation.ExperimentalLatexAutoFix`) applies our own
+rule-based fixes, and the AI repair gets structural findings with line numbers. To repair
+by hand: read the first `ERROR` in `step4-compile-log.txt`, fix every occurrence of that
+pattern (not just the reported line), and compile with `--fix-loop 0`. The playbook and the
+known error classes are in [../latex-auto-fix.md](../latex-auto-fix.md).
+
 **Parallelism means processes, not threads.** The pipeline keeps its rate-limit pacing in
 one process-wide clock, so two runs inside one process would corrupt each other's timing.
 Use `lecx batch`, which spawns one child process per worker. See

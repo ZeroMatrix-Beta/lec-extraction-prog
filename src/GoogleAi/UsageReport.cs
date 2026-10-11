@@ -27,9 +27,51 @@ public sealed class UsageReport {
 
     public int PromptTokens { get; private set; }
     public int CandidateTokens { get; private set; }
+
+    /// <summary>
+    /// [AI Context] Google's CachedContentTokenCount, reported as-is. Do not rely on it: the implicit
+    /// cache is best-effort and the figure is unreliable - the identical prefix can report a large hit
+    /// in one run and 0 in the next (maintainer's long-standing experience; seen again 2026-10-10,
+    /// 263k vs. 0 for the same 265k handshake). Display it, never base logic, rate-limit planning or
+    /// a verdict on a single run's value. See Documentation.md §4.4.
+    /// [Human] Von Google gemeldete gecachte Tokens - nicht verlässlich, nur zur Anzeige.
+    /// </summary>
     public int CachedTokens { get; private set; }
     public int ThoughtTokens { get; private set; }
     public int TotalTokens { get; private set; }
+
+    /// <summary>Why the server ended the response (e.g. STOP, MAX_TOKENS); null if it never said.</summary>
+    public string? FinishReason { get; private set; }
+
+    /// <summary>
+    /// [AI Context] Keeps the last finish reason a chunk carried. Streams send it on the final chunk
+    /// only, so null/empty values from earlier chunks are ignored rather than overwriting it.
+    /// [Human] Merkt sich, warum der Server die Antwort beendet hat.
+    /// </summary>
+    public void RecordFinishReason(string? reason) {
+        if (!string.IsNullOrWhiteSpace(reason)) {
+            FinishReason = reason;
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] One line that answers "why did this response stop?": output and thinking tokens
+    /// against MaxOutputTokens - thinking draws from the same budget, which the plain "Output:" figure
+    /// hides - plus the server's finish reason. Printed after every refinement request, so a continue
+    /// request can be attributed to the output limit (and to thinking's share of it) at a glance.
+    /// [Human] Zeigt, ob eine Antwort am Output-Limit endete und wie viel davon Denk-Tokens waren.
+    /// </summary>
+    public string DescribeOutputBudget(int maxOutputTokens) {
+        int used = CandidateTokens + ThoughtTokens;
+        string limit = maxOutputTokens > 0
+            ? $" von {maxOutputTokens:N0} MaxOutputTokens ({100.0 * used / maxOutputTokens:F1} %)"
+            : "";
+        string reason = FinishReason ?? "nicht gemeldet";
+        string verdict = string.Equals(FinishReason, "MAX_TOKENS", StringComparison.OrdinalIgnoreCase)
+            ? $" - Antwort durch das Output-Limit abgeschnitten (Denk-Tokens davon: {ThoughtTokens:N0})"
+            : "";
+        return $"[Output-Budget] {CandidateTokens:N0} Output + {ThoughtTokens:N0} Denk-Tokens = {used:N0}{limit} | FinishReason: {reason}{verdict}";
+    }
 
     /// <summary>
     /// [AI Context] Takes the last non-null metadata seen. Usage is cumulative-to-date per chunk

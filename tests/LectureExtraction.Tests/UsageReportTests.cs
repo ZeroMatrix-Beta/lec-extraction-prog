@@ -96,4 +96,43 @@ public class UsageReportTests {
         Assert.Equal(100, report.PromptTokens);
         Assert.Equal(5, report.ThoughtTokens);
     }
+
+    /// <summary>
+    /// The 2026-10-10 merge of the 09-22 lecture: 42,156 output + 23,375 thinking hit the 65,535
+    /// cap. The budget line has to make that sum - and thinking's share of it - visible.
+    /// </summary>
+    [Fact]
+    public void Output_budget_adds_thinking_to_output_and_names_the_output_limit() {
+        var report = new UsageReport();
+        report.Absorb(new GenerateContentResponseUsageMetadata { CandidatesTokenCount = 42156, ThoughtsTokenCount = 23375 });
+        report.RecordFinishReason("MAX_TOKENS");
+
+        string line = report.DescribeOutputBudget(65535);
+
+        Assert.Contains("= 65’531", line.Replace(",", "’").Replace(".", "’").Replace("'", "’"));
+        Assert.Contains("MAX_TOKENS", line);
+        Assert.Contains("Output-Limit abgeschnitten", line);
+    }
+
+    [Fact]
+    public void Output_budget_does_not_blame_the_limit_for_a_normal_stop() {
+        var report = new UsageReport();
+        report.Absorb(new GenerateContentResponseUsageMetadata { CandidatesTokenCount = 7731, ThoughtsTokenCount = 8948 });
+        report.RecordFinishReason("STOP");
+
+        string line = report.DescribeOutputBudget(65535);
+
+        Assert.Contains("FinishReason: STOP", line);
+        Assert.DoesNotContain("abgeschnitten", line);
+    }
+
+    [Fact]
+    public void A_later_empty_finish_reason_does_not_erase_the_reported_one() {
+        var report = new UsageReport();
+        report.RecordFinishReason("MAX_TOKENS");
+        report.RecordFinishReason(null);
+        report.RecordFinishReason("");
+
+        Assert.Equal("MAX_TOKENS", report.FinishReason);
+    }
 }

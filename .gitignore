@@ -19,6 +19,9 @@
 /pdf-preamble.log
 /pdf-preamble.pdf
 
+# dotnet CLI home (first-use sentinels, telemetry) when DOTNET_CLI_HOME points at the repository
+/.dotnet/
+
 
 
 # Build results

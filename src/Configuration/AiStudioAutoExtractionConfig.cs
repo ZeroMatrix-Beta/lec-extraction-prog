@@ -56,12 +56,21 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool DebugSendReferenceFile { get; set; } = true;
     public bool SendDummyFileDuringTranscription { get; set; } = true;
     public bool InlinePrecedingLecTexParts { get; set; } = true;
+
+    /// <summary>
+    /// [AI Context] Strips LaTeX comments and `hidden` environments from the inlined reference context
+    /// (preceding parts and the dummy anchor), and adds a rule to the reference-context preamble saying
+    /// so - and that the model's own output must still contain them. Inline path only: uploaded .tex
+    /// references are sent as they are.
+    /// [Human] Entfernt Kommentare und hidden-Umgebungen aus den eingebetteten Kontext-Dateien.
+    /// </summary>
+    public bool StripCommentsFromReferenceContext { get; set; } = true;
     public bool DebugHelloRoundtrip { get; set; } = false;
     public bool VerboseConsoleOutput { get; set; } = false;
     public bool GenerateAudioFile { get; set; } = true;
     public bool GoIntoLatexRefinement { get; set; } = true;
     public bool UseChosenModelForRestOfPipeline { get; set; } = true;
-    public NumberOfParts NumberOfParts { get; set; } = 3;
+    public NumberOfParts NumberOfParts { get; set; } = NumberOfParts.Auto;
     public int OverlapSeconds { get; set; } = 180;
     public bool CreateLogFiles { get; set; } = true;
     public bool EnableParallelFileUploads { get; set; } = true;

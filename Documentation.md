@@ -164,6 +164,14 @@ Part 1 always includes a `<reference_context file="part0.tex">` block (a synthet
 ### ThinkingConfig Consistency
 The `GenerateContentConfig` sent during warm-up uses the **same `ThinkingConfig`** as the actual Part-1 request (same `ThinkingBudget` / `ThinkingLevel` / model-specific routing). A mismatch would create a different cache bucket key, causing a cache miss. Use `DisableThinkingDuringWarmUp: true` to force `ThinkingBudget = 0` for the handshake only (saves thinking-tokens during warm-up at the cost of a guaranteed cache miss for that round).
 
+### Caveat: Google's Reported Cache Hit Is Not Reliable
+The cached-token count Google reports (`CachedContentTokenCount`, shown as "Gecacht" in the console, the chat log and the part headers) is **not reliable**, and the implicit cache itself is best-effort. The same prefix can report a large hit in one run and 0 in the next. This has been the maintainer's experience for a long time; one example from 2026-10-10: the identical history handshake (265k tokens) reported 263k cached at 14:40 and 0 cached about an hour later, and in an ordinary run parts 2 and 3 reported the same ~245k cached although each repeated the previous part's text.
+
+Consequences:
+- The warm-up can make a hit more likely; it never guarantees one.
+- Do not plan rate limits (e.g. the free tier's 250k input tokens per minute) or cost on the assumption that cached tokens will not count.
+- Do not judge a prompt-layout or warm-up change by the cache figure of a single run.
+
 ---
 
 
@@ -542,6 +550,14 @@ Part 1 enthält immer einen `<reference_context file="part0.tex">`-Block (ein sy
 
 ### ThinkingConfig-Konsistenz
 Die `GenerateContentConfig` im Warm-Up verwendet dieselbe **`ThinkingConfig`** wie die echte Part-1-Anfrage (gleiches `ThinkingBudget` / `ThinkingLevel` / modellspezifisches Routing). Ein Unterschied würde einen anderen Cache-Bucket-Key erzeugen und einen Cache-Miss verursachen. Mit `DisableThinkingDuringWarmUp: true` wird für den Handshake `ThinkingBudget = 0` erzwungen (spart Denk-Tokens im Warm-Up, auf Kosten eines garantierten Cache-Misses für diese Runde).
+
+### Achtung: Googles gemeldeter Cache-Hit ist nicht verlässlich
+Die von Google gemeldete Zahl gecachter Tokens (`CachedContentTokenCount`, als "Gecacht" in Konsole, Chat-Log und Part-Headern) ist **nicht verlässlich**, und der implizite Cache selbst ist Best-Effort. Derselbe Präfix kann in einem Lauf einen grossen Hit melden und im nächsten 0. Das ist die langjährige Erfahrung des Maintainers; ein Beispiel vom 2026-10-10: Der identische History-Handshake (265k Tokens) meldete um 14:40 263k gecacht und rund eine Stunde später 0, und in einem normalen Lauf meldeten Teil 2 und 3 dieselben ~245k gecacht, obwohl jeder den Text des vorherigen Teils wiederholte.
+
+Folgen:
+- Der Warm-Up macht einen Hit wahrscheinlicher, garantiert ihn aber nie.
+- Rate-Limits (z. B. 250k Input-Tokens pro Minute im Free Tier) und Kosten nicht darauf planen, dass gecachte Tokens nicht zählen.
+- Eine Änderung am Prompt-Aufbau oder Warm-Up nicht anhand der Cache-Zahl eines einzelnen Laufs beurteilen.
 
 ---
 

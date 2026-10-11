@@ -149,6 +149,26 @@ worker.
 and `SourceFolder` reach the same value. `set` handles scalars only; arrays have no
 unambiguous command-line spelling.
 
+## `lecx chat`
+
+Starts an interactive chat REPL directly from the command line with Google AI Studio or Vertex AI.
+
+```bash
+lecx chat
+lecx chat --model gemini-3.6-flash --profile 1 --skip-setup
+lecx chat --backend vertex
+```
+
+| Option | Meaning |
+|---|---|
+| `--backend <aistudio\|vertex>` | Backend to use. Default **aistudio** |
+| `--model <id>` | Model override for this session |
+| `--profile <n>` | API-key profile index for AI Studio |
+| `--skip-setup` | Skip interactive wizard prompts and enter chat directly |
+| `--system-prompt <file>` | Path to custom system instruction file |
+| `--no-system-prompt` | Do not load any system instruction file |
+| `--no-history` | Do not preload history attachments |
+
 ## `lecx ask`
 
 **Not implemented.** Registered so the intended shape is visible; refuses with exit `2`.

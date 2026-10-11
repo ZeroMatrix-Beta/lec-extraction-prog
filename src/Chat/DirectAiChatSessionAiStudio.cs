@@ -91,9 +91,36 @@ public partial class DirectAiChatSessionAiStudio {
 
     /// <summary>
     /// [AI Context] Asynchronous entry point for the session. Initializes API clients and directory structures.
+    /// Supports headless or quick start by skipping setup prompts.
     /// [Human] Startet die Session, verbindet sich mit Google und erstellt die Log-Ordner für diesen Chat-Verlauf.
     /// </summary>
-    public async Task StartAsync() {
+    public async Task StartAsync(bool skipSetup = false, bool loadSystemPrompt = true, bool loadHistory = true) {
+        if (skipSetup) {
+            bool skipLoadedSysPrompt = false;
+            string? skipInitialInput = null;
+
+            if (loadSystemPrompt && !string.IsNullOrWhiteSpace(SystemInstructionPath) && System.IO.File.Exists(SystemInstructionPath)) {
+                _systemInstructionText = await System.IO.File.ReadAllTextAsync(SystemInstructionPath);
+                Ui.Success($"System-Prompt '{Path.GetFileName(SystemInstructionPath)}' erfolgreich als System Instruction geladen!");
+                skipLoadedSysPrompt = true;
+            }
+
+            if (loadHistory) {
+                var historyPrompt = GetInitialHistoryCommand(_activeModel);
+                if (historyPrompt.IsValue) {
+                    skipInitialInput = historyPrompt.Value;
+                }
+            }
+
+            await CleanupGcsBucketAsync();
+            _sessionLogger.InitializeSession();
+            _sessionLogger.SetSessionMetadata(skipLoadedSysPrompt, skipInitialInput != null);
+            await _sessionLogger.LogSessionSetupAsync();
+
+            await RunChatSessionAsync(skipInitialInput);
+            return;
+        }
+
         // [AI Context] The setup runs as a three-step machine so every prompt can offer "back": each
         // step knows its predecessor, and a profile change (Restart) rewinds to the first step
         // because the client built from the old profile is stale. The side effects that used to sit

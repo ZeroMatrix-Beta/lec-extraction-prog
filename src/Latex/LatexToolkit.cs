@@ -21,7 +21,7 @@ public class LatexToolkit {
     /// [AI Context] Spawns an external pdflatex process to compile a .tex file to a .pdf. Captures standard output and errors for debugging.
     /// Uses a 90-second timeout and -disable-installer to avoid blocking on package installation dialogs or infinite loops.
     /// </summary>
-    public static async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath, int timeoutSeconds = 90) {
+    public static async Task<(bool success, string outputLog)> CompilePdfAsync(string texFilePath, int timeoutSeconds = 240) {
         if (!File.Exists(texFilePath)) {
             return (false, $"File not found: {texFilePath}");
         }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.GoogleAi;
 using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Cli.Commands;
@@ -42,7 +43,9 @@ public static class BatchCommand {
         var command = new Command("batch", "Run several videos in parallel worker processes, each with its own model and API-key profile.") {
             Workers, LogFolder,
             PlanCommand.Folder, PlanCommand.From, PlanCommand.ResumeWindow, PlanCommand.Force,
-            ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap, ExtractionOptions.Speed
+            ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
+            ExtractionOptions.Speed, ExtractionOptions.VideoFps,
+            ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
         };
 
         command.SetAction(async (parseResult, cancellationToken) => {
@@ -151,8 +154,13 @@ public static class BatchCommand {
                 switch (pair[0].ToLowerInvariant()) {
                     case "profile":
                         if (!int.TryParse(pair[1], out int parsed)) {
-                            error = $"'{pair[1]}' is not a valid profile index.";
-                            return false;
+                            var config = (AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig));
+                            int resolved = ApiKeyProfileResolver.ResolveIndex(pair[1], config.AiStudioApiKeyEnvNames, -1);
+                            if (resolved < 0) {
+                                error = $"'{pair[1]}' is not a valid profile index or profile name.";
+                                return false;
+                            }
+                            parsed = resolved;
                         }
                         profile = parsed;
                         break;
@@ -250,6 +258,9 @@ public static class BatchCommand {
         Forward(arguments, "--parts", parseResult.GetValue(ExtractionOptions.Parts)?.ToString());
         Forward(arguments, "--overlap", parseResult.GetValue(ExtractionOptions.Overlap)?.ToString());
         Forward(arguments, "--speed", parseResult.GetValue(ExtractionOptions.Speed)?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Forward(arguments, "--video-fps", parseResult.GetValue(ExtractionOptions.VideoFps)?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Forward(arguments, "--skip-token-counting", parseResult.GetValue(ExtractionOptions.SkipTokenCounting)?.ToString());
+        Forward(arguments, "--file-activation-delay", parseResult.GetValue(ExtractionOptions.FileActivationDelay)?.ToString());
         Forward(arguments, "--resume-window", parseResult.GetValue(PlanCommand.ResumeWindow)?.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         if (parseResult.GetValue(PlanCommand.Force)) {

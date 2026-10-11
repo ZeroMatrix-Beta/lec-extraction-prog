@@ -61,13 +61,13 @@ public static class GcsWorkspace {
             if (ex is System.Net.Http.HttpRequestException || ex.InnerException is System.Net.Sockets.SocketException ||
                 ex.Message.Contains("Host ist unbekannt", StringComparison.OrdinalIgnoreCase) ||
                 ex.Message.Contains("host is known", StringComparison.OrdinalIgnoreCase)) {
-                Ui.Error($"Netzwerkfehler beim Zugriff auf '{bucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ex.Message}", "GCS");
+                Ui.Error($"Netzwerkfehler beim Zugriff auf '{bucketName}'. Möglicherweise sind Sie nicht mit dem Internet verbunden! Originalfehler: {ExceptionExtensions.CleanMessage(ex.Message)}", "GCS");
             }
             else if (ex.Message.Contains("billing account", StringComparison.OrdinalIgnoreCase)) {
-                Ui.Error($"Zugriff auf Bucket '{bucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ex.Message}", "GCS");
+                Ui.Error($"Zugriff auf Bucket '{bucketName}' verweigert. Dem Projekt fehlt ein aktives Rechnungskonto (Billing Account)! Originalfehler: {ExceptionExtensions.CleanMessage(ex.Message)}", "GCS");
             }
             else {
-                Ui.Error($"Bucket '{bucketName}' konnte nicht bereinigt oder erreicht werden: {ex.Message}", "GCS");
+                Ui.Error($"Bucket '{bucketName}' konnte nicht bereinigt oder erreicht werden: {ExceptionExtensions.CleanMessage(ex.Message)}", "GCS");
             }
         }
     }

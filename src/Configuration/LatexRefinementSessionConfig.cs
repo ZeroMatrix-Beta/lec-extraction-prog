@@ -21,6 +21,15 @@ public class LatexRefinementSessionConfig {
     public string TargetFolder { get; set; } = "";
     public string SourceFolder { get; set; } = "";
 
+    /// <summary>
+    /// [AI Context] How many characters of a cut-off response the continue prompt quotes back
+    /// (refinement steps 1-3 and the PDF repair). The whole response is in the history anyway (as the
+    /// model turn); the quote is only the anchor for "resume exactly here". Values &lt;= 0 fall back to
+    /// ContinueBudget.EchoLength.
+    /// [Human] Anzahl Zeichen, die der Continue-Prompt vom abgeschnittenen Text als Anker wiederholt.
+    /// </summary>
+    public int ContinuePromptEchoCharacters { get; set; } = 500;
+
     public PdfCompilationConfig PdfCompilation { get; set; } = new PdfCompilationConfig();
 
     public RefinementStepConfig Step1MergeAndTimestamp { get; set; } = new RefinementStepConfig {

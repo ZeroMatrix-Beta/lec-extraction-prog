@@ -35,7 +35,7 @@ public partial class LatexRefinementSession {
     /// [AI Context] Compiles the final merged LaTeX file into a PDF using local pdflatex. Uses a wrapper file to inject the preamble.
     /// [Human] Baut das fertige LaTeX-Skript mithilfe einer Preamble (Design-Vorlage) zu einem PDF zusammen.
     /// </summary>
-    private async Task<bool> CompilePdfAsync(string finalTexFile, string baseName, string targetFolder, string stepPrefix = "step4", bool allowRetryOnFailure = true) {
+    private async Task<bool> CompilePdfAsync(string finalTexFile, string baseName, string targetFolder, string stepPrefix = "step4", bool allowRetryOnFailure = true, bool autoFixApplied = false) {
         if (!System.IO.File.Exists(finalTexFile)) {
             Ui.Error($"Kann PDF nicht generieren: {finalTexFile} existiert nicht.", "LaTeX Refinement");
             return false;
@@ -116,23 +116,38 @@ public partial class LatexRefinementSession {
             else {
                 Ui.Error($"Fehler bei der PDF-Generierung. Protokoll gespeichert in: {logPath}");
 
-                if (allowRetryOnFailure) {
+                // The backup holds the text as it was before any repair; after our own fixes the
+                // original is already saved, and a second backup would only store the fixed text.
+                if (allowRetryOnFailure && !autoFixApplied) {
                     BackupBeforeRepair(targetFolder, inputBaseName, finalTexFile, Path.ChangeExtension(wrapperPath, ".pdf"));
                 }
 
                 CleanupHelperFiles(targetFolder, finalTexFile, false);
                 if (allowRetryOnFailure) {
+                    // Our own rule-based fixes first (HIGHLY EXPERIMENTAL, opt-in): free, instant, and aimed
+                    // at the error classes the AI repair kept failing on. Only if they change nothing, or the
+                    // result still fails, does the AI repair below get its turn.
+                    if (!autoFixApplied && _config.PdfCompilation?.ExperimentalLatexAutoFix == true && await TryApplyAutoFixesAsync(finalTexFile, inputBaseName)) {
+                        Ui.Info("[EXPERIMENTELL] Kompiliere erneut mit den automatischen LaTeX-Korrekturen...", "LaTeX Auto-Fix");
+                        return await CompilePdfAsync(finalTexFile, baseName, targetFolder, stepPrefix, allowRetryOnFailure: true, autoFixApplied: true);
+                    }
+
+                    string originalBodyTex = await System.IO.File.ReadAllTextAsync(finalTexFile);
+
+                    // The AI repair gets our scanner's findings with line numbers next to the compile log,
+                    // since pdflatex reports only its first fatal error, often far from the cause.
+                    string logWithFindings = AppendStructuralFindings(logContent, originalBodyTex);
+
                     if (_config.PdfCompilation?.UseAntiGravityAgent == true) {
                         Ui.Warn("PDF-Kompilierung fehlgeschlagen. Starte sofort interaktive Reparatur über AntiGravity...", "AntiGravity Agent Mode");
-                        return await RunExternalAgentRepairLoopAsync(finalTexFile, baseName, targetFolder, preambleText, logContent);
+                        return await RunExternalAgentRepairLoopAsync(finalTexFile, baseName, targetFolder, preambleText, logWithFindings);
                     }
 
                     int maxRounds = _config.PdfCompilation?.MaxFixRounds ?? 3;
-                    if (maxRounds <= 0) maxRounds = 1;
+                    if (maxRounds <= 0) return false;
 
-                    string originalBodyTex = await System.IO.File.ReadAllTextAsync(finalTexFile);
                     string currentBodyTex = originalBodyTex;
-                    string currentLog = logContent;
+                    string currentLog = logWithFindings;
                     bool anyRoundSucceeded = false;
 
                     for (int round = 1; round <= maxRounds; round++) {
@@ -148,7 +163,7 @@ public partial class LatexRefinementSession {
                         // A rejected or empty answer leaves the input as it was, so the next round retries it.
                         if (candidateBody != null) {
                             currentBodyTex = candidateBody;
-                            currentLog = candidateLog ?? currentLog;
+                            currentLog = candidateLog != null ? AppendStructuralFindings(candidateLog, candidateBody) : currentLog;
                         }
                     }
 
@@ -165,6 +180,45 @@ public partial class LatexRefinementSession {
             Ui.Error($"Unerwarteter Fehler bei der PDF-Generierung: {ex.Describe()}", "LaTeX Refinement");
             return false;
         }
+    }
+
+    /// <summary>
+    /// [AI Context] HIGHLY EXPERIMENTAL. Runs LatexAutoFixer over the .tex in place and reports each
+    /// change with an [EXPERIMENTELL] tag and where the original is. Returns true when something changed,
+    /// i.e. a recompile is worth trying. Called after BackupBeforeRepair, so -orig.tex holds the input.
+    /// [Human] HOCHGRADIG EXPERIMENTELL: wendet die eigenen LaTeX-Korrekturen an und meldet jede Änderung.
+    /// </summary>
+    private static async Task<bool> TryApplyAutoFixesAsync(string texFile, string inputBaseName) {
+        string tex = await System.IO.File.ReadAllTextAsync(texFile);
+        var result = LatexAutoFixer.Apply(tex);
+        if (!result.Changed) {
+            Ui.Info("[EXPERIMENTELL] Keine automatisch behebbaren LaTeX-Fehler gefunden.", "LaTeX Auto-Fix");
+            return false;
+        }
+
+        await System.IO.File.WriteAllTextAsync(texFile, result.Text);
+        Ui.Warn($"[EXPERIMENTELL] {result.Changes.Count} automatische Korrektur(en) in {Path.GetFileName(texFile)} - das Original liegt als {inputBaseName}-orig.tex daneben:", "LaTeX Auto-Fix");
+        foreach (string change in result.Changes) {
+            Ui.Detail(change);
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// [AI Context] Appends LatexDiagnostics' findings (line numbers for unclosed environments, surplus
+    /// braces, unclosed inline math) to a compile log before it goes to an AI repair, and prints them.
+    /// Read-only, so it runs whether or not the experimental auto-fix is on.
+    /// [Human] Hängt die Strukturbefunde mit Zeilennummern an das Compile-Log für die KI-Reparatur an.
+    /// </summary>
+    private static string AppendStructuralFindings(string compileLog, string bodyTex) {
+        var findings = LatexDiagnostics.Analyze(bodyTex);
+        if (findings.Count == 0) return compileLog;
+
+        Ui.Info($"{findings.Count} Strukturbefund(e) gehen mit an die KI-Reparatur:", "LaTeX Diagnose");
+        foreach (string finding in findings) {
+            Ui.Detail(finding);
+        }
+        return compileLog + LatexDiagnostics.FormatForPrompt(findings);
     }
 
     /// <summary>
@@ -538,7 +592,7 @@ public partial class LatexRefinementSession {
             }
 
             string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                $"{ContinueBudget.EchoTail(chunkResp, _config.ContinuePromptEchoCharacters)}\n\n" +
                 "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Just print the very next character.";
 
             Ui.Info("Unerwartetes Ende der Antwort. Bereite Continue-Prompt vor...", "PDF-Fix");
@@ -650,7 +704,7 @@ public partial class LatexRefinementSession {
 
                 // Setup candidate and log for next round
                 currentCandidatePath = tryTexPath;
-                currentLog = logContent;
+                currentLog = AppendStructuralFindings(logContent, fixedLatex);
             }
         }
 
@@ -695,7 +749,7 @@ Please return the fully corrected contents of `{candidateFileName}` inside a ```
             string responseBody = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode) {
-                Ui.Error($"Antigravity Agent API Aufruf fehlgeschlagen: {response.StatusCode} - {responseBody}");
+                Ui.Error($"Antigravity Agent API Aufruf fehlgeschlagen: {response.StatusCode} - {ExceptionExtensions.CleanMessage(responseBody)}");
                 return null;
             }
 

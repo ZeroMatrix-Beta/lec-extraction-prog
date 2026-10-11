@@ -25,6 +25,9 @@ public class CliCommandTreeTests {
     [InlineData("refine")]
     [InlineData("pdf")]
     [InlineData("ask")]
+    [InlineData("chat")]
+    [InlineData("clean")]
+    [InlineData("status")]
     public void RootCommand_ExposesTopLevelCommand(string name) {
         var root = CliBootstrapper.BuildRootCommand();
 

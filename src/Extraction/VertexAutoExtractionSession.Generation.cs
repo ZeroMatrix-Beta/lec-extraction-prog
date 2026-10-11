@@ -177,6 +177,8 @@ public partial class VertexAutoExtractionSession {
     }
 
     private async Task LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
+        if (_config.SkipTokenCountingDuringWarmUp) return;
+
         try {
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
             // [AI Context] CountTokensAsync counts against the same Free-Tier quota as GenerateContent,
@@ -340,7 +342,7 @@ public partial class VertexAutoExtractionSession {
 
             string continuePrompt = segmentComplete ? "Continue" :
                 $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                $"{ContinueBudget.EchoTail(chunkResp)}\n\n" +
                 "Please \"continue\" exactly where you left off, as raw LaTeX without Markdown code fences, just continuing the text directly.";
 
             if (segmentComplete) Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");

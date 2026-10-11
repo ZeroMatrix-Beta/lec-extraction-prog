@@ -50,4 +50,26 @@ public class ContinueBudgetTests {
         Assert.True(budget.TryContinue("", out _));
         Assert.Equal(1, budget.RequestsWithoutProgress);
     }
+
+    [Fact]
+    public void Echo_tail_quotes_the_last_EchoLength_characters_of_a_long_response() {
+        string response = new string('a', 500) + new string('b', ContinueBudget.EchoLength);
+
+        string echo = ContinueBudget.EchoTail(response);
+
+        Assert.Equal("...\n" + new string('b', ContinueBudget.EchoLength), echo);
+    }
+
+    [Fact]
+    public void Echo_tail_honours_a_configured_length_and_falls_back_when_it_is_not_positive() {
+        string response = new string('x', 3000);
+
+        Assert.Equal("...\n" + new string('x', 2000), ContinueBudget.EchoTail(response, 2000));
+        Assert.Equal("...\n" + new string('x', ContinueBudget.EchoLength), ContinueBudget.EchoTail(response, 0));
+    }
+
+    [Fact]
+    public void Echo_tail_quotes_a_short_response_whole() {
+        Assert.Equal("short", ContinueBudget.EchoTail("short"));
+    }
 }

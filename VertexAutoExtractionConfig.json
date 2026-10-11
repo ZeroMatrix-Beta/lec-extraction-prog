@@ -64,7 +64,7 @@
   "InlinePrecedingLecTexParts": true,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 3,
+  "NumberOfParts": "auto",
   "OverlapSeconds": 240,
   "CreateLogFiles": true,
   "UseContextCaching": true,

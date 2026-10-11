@@ -169,8 +169,8 @@ public static class RefineCommands {
     /// "high demand" on a model can move to another model, without editing config.
     /// </summary>
     private static (string EnvName, bool Resolves) ApplyOverrides(LatexRefinementSessionConfig config, ParseResult parseResult) {
-        if (parseResult.GetValue(ExtractionOptions.Profile) is int profile) {
-            config.AiStudioActiveApiProfile = profile;
+        if (parseResult.GetValue(ExtractionOptions.Profile) is string profileRaw && !string.IsNullOrWhiteSpace(profileRaw)) {
+            config.AiStudioActiveApiProfile = ApiKeyProfileResolver.ResolveIndex(profileRaw, config.AiStudioApiKeyEnvNames, config.AiStudioActiveApiProfile);
         }
 
         // Every step, because the PDF repair runs on step 3's settings and --step picks which one runs.

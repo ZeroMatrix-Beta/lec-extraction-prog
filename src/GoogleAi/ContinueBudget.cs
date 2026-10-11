@@ -15,6 +15,26 @@ namespace LectureExtraction.GoogleAi;
 public sealed class ContinueBudget {
     private const int TailLength = 300;
 
+    /// <summary>
+    /// [AI Context] How much of the cut-off response a continue prompt quotes back. The quote carries no
+    /// new information: the WHOLE response is already in the history as the model turn before it. It is
+    /// only an anchor that says "resume exactly here" (useful when the cut falls inside a formula or an
+    /// environment), so its length is a matter of taste, not cost - 500 characters are ~150 tokens
+    /// against a prompt of hundreds of thousands. Separate from TailLength, which only detects a model
+    /// repeating itself.
+    /// [Human] Wie viel vom abgeschnittenen Text der Continue-Prompt als Anker wiederholt.
+    /// </summary>
+    public const int EchoLength = 500;
+
+    /// <summary>
+    /// The end of <paramref name="response"/> for a continue prompt: its last
+    /// <paramref name="length"/> characters (EchoLength when not positive).
+    /// </summary>
+    public static string EchoTail(string response, int length = EchoLength) {
+        if (length <= 0) length = EchoLength;
+        return response.Length > length ? "...\n" + response[^length..] : response;
+    }
+
     private readonly int _maxWithoutProgress;
     private string _previousTail = "";
 

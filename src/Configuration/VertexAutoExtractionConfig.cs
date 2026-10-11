@@ -71,7 +71,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public bool GenerateAudioFile { get; set; } = true;
     public bool GoIntoLatexRefinement { get; set; } = true;
     public bool UseChosenModelForRestOfPipeline { get; set; } = true;
-    public NumberOfParts NumberOfParts { get; set; } = 3;
+    public NumberOfParts NumberOfParts { get; set; } = NumberOfParts.Auto;
     public int OverlapSeconds { get; set; } = 180;
     public bool CreateLogFiles { get; set; } = true;
     public bool EnableParallelFileUploads { get; set; } = true;

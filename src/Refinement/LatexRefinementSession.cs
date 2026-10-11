@@ -365,12 +365,12 @@ public partial class LatexRefinementSession {
 
             List<Content> history = [
                 new() { Role = "user", Parts = round1Parts },
-                new() { Role = "model", Parts = [new Part { Text = "Understood. I have read the complete LaTeX document and internalized all mathematical structures, formulas, timestamps, and `speech` environments. I will preserve all math, timestamps, and LaTeX structure exactly as they are. I am ready for the audio file to listen to the speech and refine the spoken text inside the `speech` environments." }] }
+                new() { Role = "model", Parts = [new Part { Text = "Understood. I have read the complete LaTeX document and internalized all mathematical structures, formulas, timestamps, and `speech` environments. I will refine the spoken text inside the `speech` environments and leave everything else as it is, apart from the edits the system instructions allow. I am ready for the audio file." }] }
             ];
 
             var round2Parts = new List<Part>();
             round2Parts.AddRange(audioParts);
-            round2Parts.Add(new Part { Text = "Here is the lecture audio file. Please listen to the audio carefully and refine the text strictly inside the `speech` environments to fix any transcription, word choice, or grammatical errors according to the system instructions. Do not alter any mathematical formulas, equations, or timestamps. Output only the refined LaTeX code." });
+            round2Parts.Add(new Part { Text = "Here is the lecture audio file. Please listen to the audio carefully and refine the text inside the `speech` environments to fix any transcription, word choice, or grammatical errors according to the system instructions. Outside `speech`, change only what the system instructions allow. Output only the refined LaTeX code." });
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Ui.Info("Verwende Multi-Turn-Struktur für Schritt 2 (Simulation von Text-Dokument + Audio-Refinement).", "Step 2");
@@ -379,7 +379,7 @@ public partial class LatexRefinementSession {
         }
         else {
             var parts = new List<Part> {
-                new() { Text = "Please refine the text strictly in between the `speech` environments according to the system instructions. Do not alter the math or the timestamps." },
+                new() { Text = "Please refine the text inside the `speech` environments according to the system instructions. Outside `speech`, change only what the system instructions allow." },
                 new() { Text = $"<input_tex>\n{content}\n</input_tex>" }
             };
             AttachmentUploader.HasJustUploaded = false;

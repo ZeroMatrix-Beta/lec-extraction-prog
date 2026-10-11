@@ -17,11 +17,12 @@
   "SendDummyFileDuringTranscription": true,
   "SendDummyFileWithEachWarmUpRound": true,
   "InlinePrecedingLecTexParts": true,
+  // Removes LaTeX comments and hidden environments from the inlined context files (preamble says so)
+  "StripCommentsFromReferenceContext": true,
   "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,
-  "NumberOfParts": 2,
-  //or "auto"
+  "NumberOfParts": "auto",
   "OverlapSeconds": 240,
   "GoogleVideoFps": 0.3333333,
   "UseGoogleSearch": false,
@@ -33,7 +34,7 @@
   "SystemInstructionDelaySeconds": 64,
   // "FileActivationDelaySeconds": 140,
   "FileActivationDelaySeconds": 64,
-  "VideoUploadTimeoutSeconds": 150,
+  "VideoUploadTimeoutSeconds": 300,
   "VideoUploadMaxRetries": 3,
   // "HistoryRateLimitDelaySeconds": 190,
   "HistoryRateLimitDelaySeconds": 64,
@@ -46,7 +47,8 @@
       "API_KEY-automated-content-extraction",
       "API_KEY-ai-studio-test-project-1",
       "API_KEY-ai-studio-test-project-2",
-      "API_KEY-ai-studio-test-project-3"
+      "API_KEY-ai-studio-test-project-3",
+      "API_KEY-latex-refinement"
     ]
   },
   "Paths": {
@@ -122,7 +124,7 @@
   },
   "SpeedMultiplier": 1.0,
   "VerboseConsoleOutput": true,
-  "EnableImplicitPrefixCacheWarmup": true,
+  "EnableImplicitPrefixCacheWarmup": false,
   "DisableThinkingDuringWarmUp": false,
   "SkipTokenCountingDuringWarmUp": false,
   "CountTokensRetryBackoffSeconds": 20,

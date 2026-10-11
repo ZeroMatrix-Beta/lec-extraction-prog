@@ -1,8 +1,12 @@
-# Implementation Plan: Console Output Improvements & Selective Part Execution
+# Implementation Plan: Console Output, Part Reuse & Cleanup
 
-This document specifies two major architectural enhancements for `lec-extraction-prog`:
-1. **Console Output, Delay Logging, and Stream Safety**
-2. **Selective Part Execution (`--from-part`, `--part`) & Resilient Part Caching**
+| Section | Status |
+|---|---|
+| 1. Console output, delay logging & stream safety | Done (`776c6b3`, `e1887d4`) |
+| 2. Part reuse and redoing a single part | Planned |
+| 3. Cleanup (`lecx clean`, `--clean-tmp`, `lecx files`) | Planned |
+| 4. Dropped from the first draft, with reasons | - |
+| 5. Order and verification | - |
 
 ---
 
@@ -35,110 +39,175 @@ This document specifies two major architectural enhancements for `lec-extraction
 
 ---
 
-## 2. Selective Part Execution & Resilient Part Caching
+## 2. Part Reuse and Redoing a Single Part
 
-### 2.1 Problem Statement
-1. **Wasteful Failure Deletion**: Currently, if extraction fails on Part 3 or 4 (e.g., reaching daily API quota or prolonged rate limits), the failure branch in `AiStudioAutoExtractionSession` iterates over `state.GeneratedTexFiles` and deletes them:
-   ```csharp
-   foreach (var failedTexFile in state.GeneratedTexFiles) {
-       System.IO.File.Delete(failedTexFile);
-   }
-   ```
-   This deletes successfully transcribed parts (Parts 1 and 2), throwing away paid tokens and compute time.
-2. **No Selective Part Selection**: Users currently cannot instruct the pipeline to transcribe only a specific part (e.g., `--part 3`) or resume starting from a given part (e.g., `--from-part 2`).
+### 2.1 Where things stand
 
-### 2.2 Proposed Solution
+Already done (`776c6b3`): a failed part no longer deletes the parts finished before it, and an
+exhausted per-day quota fails fast with a `--profile` hint instead of sleeping for hours. Re-running
+with another profile inside the resume window reuses the finished parts; after the window,
+`--resume-window 48` does. **Resuming after a failure therefore needs no new option.**
 
-#### A. Preserve Succeeded Parts on Failure
-- In `AiStudioAutoExtractionSession.cs` and `VertexAutoExtractionSession.cs`, remove the deletion of `GeneratedTexFiles`.
-- Retain all valid, generated `.tex` files on disk so subsequent runs can immediately reuse them within the resume window.
+What is still wrong or missing:
 
-#### B. Command-Line Options
-Add two new options to `ExtractionOptions.cs` and `RunCommand.cs`:
-1. `--from-part <n>`:
-   - Starts transcription from segment `n` (1-indexed) up to the final segment.
-   - For any parts `< n`, checks if the corresponding `.tex` part already exists on disk. If present, it loads the header and content into memory and includes them in the inlined prefix-caching reference context.
-2. `--part <n>`:
-   - Transcribes *only* segment `n`.
-   - Leaves other segments untouched on disk.
+1. **Reuse ignores how a part was cut.** The rule is "the `.tex` exists and is younger than the
+   window", and it exists four times: `AiStudioAutoExtractionSession`, `VertexAutoExtractionSession`,
+   `ExtractionPlanner.CountResumableSegments`, and the pre-upload in `AiStudioAutoExtractionSession`
+   (which checks existence only, without the window). Change `NumberOfParts` from 4 to 2 within two
+   hours and `part1.tex` - the first *quarter* - is reused as part 1 of 2, the first *half*: the
+   combined document silently loses a quarter of the lecture. The part headers now record
+   `part n of N` and `PART_START_SECONDS`, so this is detectable.
+2. **A redone part is never used.** Every write goes through `ExtractionHelpers.ResolveNonClashingTexPath`:
+   when `part3.tex` exists, the new text lands in `part3-copy-1.tex`, while resume and assembly keep
+   reading `part3.tex`. The same holds for `-all.tex` / `-all-offset.tex`: after a re-run the new
+   document is `...-copy-1.tex` and `refine run --tex step1-<name>-all-offset.tex` picks up the old
+   one. This is also where the `-copy-N` sprawl comes from.
+3. **One bad part cannot be redone** without `--force`, which re-bills every part of the video.
 
-#### C. Extraction Planner Integration (`lecx plan`)
-- Update `ExtractionPlan.cs` and `ExtractionPlanner.cs` to accept `fromPart` and `singlePart`.
-- Adjust `pendingSegments` and `pendingRequests`:
-  - If `--part 3` is specified for a 4-part video, `pendingSegments` will report `1`.
-  - If `--from-part 2` is specified and Part 1 exists on disk, `pendingSegments` will report `3` (or fewer if subsequent parts exist).
+### 2.2 Design
 
-#### D. End-of-Run Assembly
-- In `FinalizeVideoOutputAsync`:
-  - Reads any missing parts from existing files on disk so that `step1-...-all-offset.tex` and `step1-...-all.tex` are always fully assembled from all parts `1..totalParts`.
-  - If a part is missing and was not processed in this run, logs a warning and assembles whatever parts are available.
+#### A. One reuse rule, with a geometry check
+- A new `PartReuse.Check` in `src/Extraction` replaces all four copies:
+  ```csharp
+  PartReuseDecision Check(string texPath, int partNumber, int totalParts,
+                          double? expectedStartSeconds, TimeSpan window, bool ignoreAge)
+  ```
+  The decision is one of *reuse*, *missing*, *too old* or *cut differently*, with a reason for the
+  log and the plan.
+- Geometry: read the part's header layer (`TexDocumentWriter.SplitHeaderLayers`). `part n of N` must
+  match `totalParts`; `PART_START_SECONDS` must match the segment's start within 1 s when both are
+  known. On a mismatch the part is re-transcribed, with a warning naming both geometries.
+- Headers written before these fields existed: age only, as today, plus a count proxy (a
+  `part{N+1}.tex` next to it means the set was cut into more parts).
+- Start times: the formula `(duration + (N - 1) * overlap) / N` currently lives inline in
+  `media probe` and separately in the segment producer. Move it into one pure function in `src/Media`
+  used by both and by the reuse check. To check first: whether `VideoSegment.StartTimeSeconds` is in
+  original-video seconds or after `--speed`, so the header value is compared in the same unit.
+- Planner: probes the duration (ffprobe) of every video that already has parts on disk, so it applies
+  exactly the run's rule. A plan that disagrees with the run is worse than no plan. Videos without
+  parts need no probe, so a fresh plan stays instant.
+
+#### B. Replace, don't copy
+- Replace `ResolveNonClashingTexPath` in both sessions with `ExtractionHelpers.ArchiveAndReplace(path)`:
+  if the target exists, move it to `<lecture>/archive/<yyyyMMdd-HHmmss>/` (one timestamp per run),
+  then write under the canonical name.
+- Effects: the canonical names always hold the newest output, so resume, assembly and
+  `refine run --tex ...` see what was just produced; nothing that was paid for is deleted; no new
+  `-copy-N` files appear.
+- Covers part files (`partN.tex`, `partN-offset.tex`) and combined files (`-all.tex`,
+  `-all-offset.tex`). Check how the refinement names its step outputs and apply the same rule if it
+  copy-suffixes too.
+- Resume, planner and `media` read exact names and `tmp/`, so they never see `archive/`.
+
+#### C. `--redo-part <n>` on `lecx run` and `lecx extract run`
+Re-transcribes part `n` of one video and rebuilds the combined documents from the parts on disk.
+
+- Requires `--video`. With `--folder`, with `--force`, or with `n` outside `1..N` (after `--parts`
+  or `auto` resolution): exit `2` (Usage). `batch` does not forward it.
+- Every other part must exist and pass the geometry check, **regardless of age** - the caller named
+  the bad part, which vouches for the rest. A missing or differently cut part exits `2` before any
+  API call and names the parts; a normal run (or `--force`) is the way to fill them.
+- Part `n` is transcribed even if its file is fresh; the old file goes to `archive/` (B).
+- Parts `1..n-1` are passed as preceding context exactly as in a normal run (`GeneratedTexFiles`),
+  so continuity and prefix caching match the original run.
+- `lecx run` then chains into refinement as usual, since the combined document changed;
+  `lecx extract run --redo-part` stops after assembly.
+- Implementation: a `RedoPart` init property on both sessions next to `ResumeWindow`. In
+  `TranscribeSegmentsAsync`, part `RedoPart` skips the reuse check; every other part calls
+  `PartReuse.Check` with `ignoreAge: true`. The pre-upload uses the same check, so it uploads only
+  part `n`.
+- FFmpeg: the producer still needs the segment. Its 48 h cache usually has it; otherwise it re-cuts
+  the video - minutes of local work, no API cost.
+- Name: `--redo-part`, not `--part`. `--parts 3` already exists and means "cut into 3 parts"; one
+  letter between "cut into 3" and "redo part 3" is a typo waiting to happen.
+
+#### D. `lecx plan`
+- Accepts `--redo-part`: that video reports `pendingSegments = 1`; a missing or differently cut part
+  becomes a warning (the run would exit `2`).
+- Each planned video gains `parts: [{ number, decision, reason }]`, so a caller sees *why* a part
+  will be re-billed (too old, cut differently) instead of only a count.
 
 ---
 
----
-
-## 3. Dedicated Cleanup Commands (`lecx clean` & `lecx files`)
+## 3. Cleanup
 
 ### 3.1 Problem Statement
-1. **Disk Sprawl in Output Folders**:
-   - Each lecture creates multi-GB sliced video chunks in `<lecture>/tmp/` (`part1.mp4`, `part2.mp4`, etc.) and `-speed-1-compressed.mp4`. Once a lecture is transcribed, these intermediate video chunks are rarely needed.
-   - Re-running extractions without manual archiving creates `-copy-1.tex`, `-copy-2.tex` duplicate files, alongside prompt logs and compiler logs.
-   - Users currently have to manually organize ad-hoc folders like `old/`, `old2/` using File Explorer or PowerShell.
-2. **Cloud Storage Accumulation**:
-   - Google AI Studio File API stores uploaded videos for up to 48 hours. When iterating or testing batches, uploaded remote files accumulate against project storage limits without an easy CLI mechanism to list or purge them.
+1. `<lecture>/tmp/` holds the compressed video and every segment - gigabytes per lecture. It doubles
+   as the FFmpeg cache (48 h) and is never deleted.
+2. `-copy-N.tex` files from earlier re-runs. 2.2.B stops new ones; existing ones remain.
+3. Uploads to the Gemini Files API stay until they expire after 48 h. A project holds up to 20 GB,
+   which heavy `batch` use can reach.
 
-### 3.2 Proposed Cleanup & Command-Line Controls
+### 3.2 Design
 
-#### A. Pipeline Command-Line Flags on `lecx run` & `lecx extract run`
-These flags allow automated or direct control over cleanup as part of a run:
-| Flag | Behavior |
+#### A. `lecx clean --video <mp4> | --folder <dir>`
+| Flag | Does |
 |---|---|
-| `--clean-before` | Automatically archives existing `.tex`, `.pdf`, `.aac` outputs in the target lecture folder to `archive/` before running, ensuring completely clean output filenames without `-copy-1.tex` suffixes. |
-| `--clean-tmp` | Deletes temporary FFmpeg video segments (`tmp/*.mp4`) upon successful completion to reclaim multi-GB disk space automatically. |
-| `--clean-copies` | Removes any stray `-copy-*.tex` files from earlier aborted runs before processing. |
+| `--tmp` | Deletes `<lecture>/tmp/`. Safe: FFmpeg recreates it when needed. |
+| `--copies` | For each canonical name with `-copy-N` siblings, keeps the **newest** of them under the canonical name and moves the rest to `archive/<timestamp>/`. Never deletes. |
+| `--dry-run` | Lists what would be moved or deleted, and the bytes freed. |
 
-#### B. Standalone Output Cleanup: `lecx clean`
-```bash
-lecx clean --video "lecture.mp4" [flags]
-lecx clean --folder "D:/lectures" [flags]
-```
-| Flag | Behavior |
-|---|---|
-| `--archive` *(default)* | Moves previous `.tex`, `.pdf`, and `.aac` outputs into a timestamped `old-YYYYMMDD-HHmmss/` directory so a fresh run has no collisions. |
-| `--tmp` / `--cache` | Deletes intermediate FFmpeg video segments (`<lecture>/tmp/*.mp4`) to reclaim disk space after extraction completes. |
-| `--copies` | Deletes stray `-copy-*.tex` duplicate files produced by previous clashing runs. |
-| `--all` | Archives previous outputs and purges `tmp/` intermediate videos. |
-| `--dry-run` | Shows what would be moved or deleted without modifying files. |
+- At least one of `--tmp` / `--copies` is required.
+- Skips a lecture whose `tmp/` or `.tex` files changed in the last 10 minutes (a run is probably
+  using them); `--force` overrides. Exit `6` when lectures were skipped.
+- "Newest wins" matters: a `-copy-1` written by a re-run is *newer* than the canonical file, so the
+  first draft's "delete the copies" would often have deleted the latest paid transcription.
 
-#### C. Interactive Runtime Console Commands (from Stdin while running)
-While `lec-extraction-prog` is executing (during backoff delays, between segments, or during retries), the console listener accepts interactive text commands without having to kill the process:
-| Command | Action |
-|---|---|
-| `[Enter]` / `skip` | Immediately skips the current delay/backoff countdown. |
-| `retry` | Immediately cancels the current wait and triggers an API retry. |
-| `profile <n>` (e.g. `profile 2`) | Dynamically switches the active API key profile to `<n>` on the fly (saving the run if a 429 quota error occurs mid-lecture!). |
-| `model <id>` | Switches the model on the fly if the current model faces a prolonged high-demand outage. |
-| `clean` | Cleans up intermediate temp files in `tmp/`. |
-| `stop` / `abort` | Cleanly halts the pipeline, preserving all completed parts on disk without deleting them. |
+#### B. `--clean-tmp` on `lecx run` / `lecx extract run`
+- Deletes a video's `tmp/` once it finished successfully (for `run`, including refinement).
+- Off by default: keeping `tmp/` is what makes a later `--redo-part` cheap.
 
-#### D. Cloud Storage Management: `lecx files`
-```bash
-lecx files list [--profile <n>]      # List active remote video/audio files on Google File API
-lecx files purge [--profile <n>]     # Delete remote files across projects to free quota
-lecx cloud purge                     # Purge Vertex AI GCS bucket (wrapping GcsWorkspace.PurgeAsync)
-```
+#### C. `lecx files list | purge [--profile <n>]`
+- `list`: name, display name, size, created, expires and state of every upload in the project behind
+  the profile's key.
+- `purge --older-than <hours>` (default 6) `[--dry-run]`: deletes uploads older than that. The age
+  floor protects a `batch` worker that is using its upload in the same project right now.
+- Uses the SDK's Files list/delete calls; today only `UploadAsync` and `GetAsync` are used, so check
+  the exact API surface of the Google.GenAI version in the project first.
+- Possibly better later: delete a video's uploads once the video is done. Decide after `files list`
+  shows how much actually accumulates.
 
 ---
 
-## 4. Verification & Testing
+## 4. Dropped From the First Draft
 
-1. **Unit Tests (`tests/LectureExtraction.Tests/`)**:
-   - `ExtractionPlannerTests.cs`: verify that `--from-part` and `--part` correctly calculate pending requests and segment counts.
-   - `ExtractionHelpersTests.cs`: verify part numbering and naming logic.
-   - `CleanCommandTests.cs`: verify archiving and temp cleanup operations without data loss.
-2. **Console Output Verification**:
-   - Verify that redirected runs output a single clean delay notice rather than 60+ ticking lines.
-3. **Mandatory Build Verification**:
-   - Verify `dotnet build` passes with **0 Warnings, 0 Errors**.
-   - Verify `dotnet test` passes with **all tests green**.
+| Idea | Why dropped |
+|---|---|
+| `--from-part <n>` | Covered already: parts survive a failure and a re-run reuses them (`--resume-window` past 2 h). What it added - skipping missing earlier parts - produces an incomplete document. |
+| `--part <n>` | Replaced by `--redo-part` (2.2.C): too close to `--parts`, and it did not say that the part is redone even when it exists. |
+| Typed commands while running (`skip`, `retry`, `profile`, `model`, `clean`, `stop`) | `skip`/`retry` = Enter, `stop` = Ctrl+C now that finished parts survive. `profile`/`model` mid-video cannot just swap: uploads and caches belong to the old key's project and model, so everything would be uploaded again - failing fast and re-running with `--profile` does the same with no new machinery. `clean` would delete segments in use. Stdin is already shared by Enter-to-skip, prompts and key polling, and `batch` workers have no keyboard. |
+| `--clean-before` | Archives the `.tex` parts - the resume cache section 2 depends on. That is `--force` plus a file move, and with 2.2.B `--force` archives on its own. |
+| `--clean-copies`, `clean --copies` as deletion | Would often delete the newest output; replaced by newest-wins archiving (3.2.A). |
+| `clean --archive` (default), `--all` | With 2.2.B outputs are archived when replaced; a separate whole-folder archive step adds nothing. |
+| Two archive locations (`archive/` and `old-YYYYMMDD-HHmmss/`) | One convention: `<lecture>/archive/<yyyyMMdd-HHmmss>/`. |
+| `lecx cloud purge` | The CLI drives AI Studio only; Vertex is disabled for cost reasons and its sessions purge their bucket themselves (`GcsWorkspace.PurgeAsync`). |
 
+---
+
+## 5. Order and Verification
+
+Each step can ship on its own:
+
+1. 2.2.A - one reuse rule with the geometry check. Fixes a silent bug that exists today.
+2. 2.2.B - replace instead of copy.
+3. 2.2.C / 2.2.D - `--redo-part` and its plan.
+4. 3.2.A / 3.2.B - `lecx clean`, `--clean-tmp`.
+5. 3.2.C - `lecx files`.
+
+Tests (`tests/LectureExtraction.Tests/`):
+- `PartReuseTests`: fresh / too old / missing; part count differs; start time differs; legacy header
+  (age only, count proxy); `ignoreAge`.
+- Planner: `--redo-part` gives one pending segment; a missing other part gives a warning; a
+  differently cut part counts as pending with its reason; planner and run share `PartReuse.Check`.
+- `ArchiveAndReplace`: an existing target moves into `archive/<ts>/`, the canonical file has the new
+  content, no `-copy-` file appears, and two writes in one run share one timestamp folder.
+- CLI validation, following `CliExitCodeTests`: `--redo-part` with `--folder`, with `--force`, out
+  of range - each exits `2`.
+- `clean`: `--copies` keeps the newest under the canonical name; `--tmp` touches nothing outside
+  `tmp/`; `--dry-run` changes nothing; a recently modified lecture is skipped.
+- `files purge`: the age filter as a pure function - no API calls in tests.
+
+Docs: `docs/cli/commands.md` (new options and commands) and `docs/cli/pipeline.md` ("Caching and
+resume": geometry check, archive folder).
+
+Build: `dotnet build` with 0 warnings, 0 errors; `dotnet test` all green.

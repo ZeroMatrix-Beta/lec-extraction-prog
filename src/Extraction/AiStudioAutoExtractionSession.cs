@@ -67,14 +67,33 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
     /// Used identically in warm-up handshakes and real video extraction requests.
     /// [Human] Einleitungstext für die Referenz-Kontextblöcke – wird sowohl im Warm-up als auch in der echten Extraktion verwendet.
     /// </summary>
-    private static readonly string ReferenceContextPreamble =
+    private static readonly string ReferenceContextPreambleRules =
         "IMPORTANT CONTEXT WARNING: Below is the LaTeX output generated from previous parts of this lecture.\n" +
         "You must treat this strictly as READ-ONLY reference material. It is provided ONLY so you know what has already been transcribed " +
         "and can correctly reference existing labels (e.g. \\ref{...}) if the professor refers back to previous theorems or equations.\n\n" +
         "CRITICAL RULES:\n" +
         "1. DO NOT rewrite, summarize, or continue transcribing this previous text.\n" +
         "2. Your SOLE task is to transcribe the new attached video segment verbatim.\n" +
-        "3. Treat these context files as read-only and focus entirely on the new video fragment.\n\n";
+        "3. Treat these context files as read-only and focus entirely on the new video fragment.\n";
+
+    // [AI Context] Rule 4 exists only while StripCommentsFromReferenceContext is in effect. The stripped
+    // copies must not read as a style example: the system instructions require comments and `hidden`
+    // checkpoints, and a model that sees thousands of tokens without any would drift towards omitting them.
+    private const string StrippedCommentsRule =
+        "4. To save tokens, all LaTeX comments and all `hidden` environments have been removed from these context files. " +
+        "That applies to these reference copies only: it does NOT mean you may omit them. Your own transcription must still contain " +
+        "every comment and every `hidden` environment the system instructions require.\n";
+
+    /// <summary>
+    /// [AI Context] Whether inlined reference context is stripped of comments in this session. The same
+    /// answer decides the preamble's rule 4, so warm-up and part requests keep one identical prefix.
+    /// [Human] Ob die eingebetteten Kontext-Dateien ohne Kommentare gesendet werden.
+    /// </summary>
+    private bool StripsReferenceContextComments =>
+        _config.StripCommentsFromReferenceContext && _config.InlinePrecedingLecTexParts;
+
+    private string ReferenceContextPreamble =>
+        ReferenceContextPreambleRules + (StripsReferenceContextComments ? StrippedCommentsRule : "") + "\n";
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.
@@ -518,6 +537,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         public TokenUsage FileTotalTokens;
         public readonly List<string> PartSummaries = []; // one line per part, for the combined header
         public bool FileProcessingSuccess = true;
+        public bool AnyPartSentToApi; // false while every part so far came from disk (resume)
         public Task<SegmentUpload>? PendingVideoUploadTask;
         public Task<List<Part>>? PendingAudioUploadTask;
         public Client? RefinementClient;
@@ -629,6 +649,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     });
                 }
             }
+
+            // Every part before this one was reused from disk: the run starts mid-video, so its inlined
+            // predecessors have never been sent in this session and get one warm-up round of their own.
+            if (!state.AnyPartSentToApi && ShouldWarmUpResumedPart(_config, i + 1, state.GeneratedTexFiles.Count)) {
+                await PrimePrefixCacheForResumedPartAsync(i + 1, state.GeneratedTexFiles);
+            }
+            state.AnyPartSentToApi = true;
 
             segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles);
             InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;

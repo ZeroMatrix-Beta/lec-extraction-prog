@@ -107,42 +107,25 @@ public partial class AiStudioAutoExtractionSession {
             userPromptParts.AddRange(_historyParts);
         }
 
-        string staticBeginning = GetStaticPromptBeginning(partNumber);
         var uploadedTexParts = new List<Part>();
-        if (_config.DebugSendReferenceFile) {
-            bool hasDummy = _config.SendDummyFileDuringTranscription;
-            bool hasPreviousParts = previousTexFiles.Count > 0;
-
-            if (hasDummy || hasPreviousParts) {
-                var referenceContextBuilder = new System.Text.StringBuilder(ReferenceContextPreamble);
-
-                if (hasDummy) {
-                    string dummyReferenceBlock = $"<reference_context file=\"part0.tex\">\n{PrefixCacheAnchor.LoadPrefixCacheAnchorText()}\n</reference_context>\n\n";
-                    referenceContextBuilder.Append(dummyReferenceBlock);
+        bool hasDummy = _config.SendDummyFileDuringTranscription;
+        bool hasPreviousParts = previousTexFiles.Count > 0;
+        if (_config.DebugSendReferenceFile && (hasDummy || hasPreviousParts)) {
+            string precedingPartsText = "";
+            if (hasPreviousParts) {
+                if (_config.InlinePrecedingLecTexParts) {
+                    Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
+                    precedingPartsText = await BuildInlinedPrecedingPartsAsync(previousTexFiles);
+                } else {
+                    var uploaded = await PrecedingTexReferences.UploadAsync(previousTexFiles, _attachmentHandler);
+                    precedingPartsText = uploaded.ReferenceText;
+                    uploadedTexParts.AddRange(uploaded.Parts);
                 }
-
-                if (hasPreviousParts) {
-                    if (_config.InlinePrecedingLecTexParts) {
-                        Ui.Info("Bette folgende bereits generierte .tex-Dateien vor dem Video für optimales Prefix-Caching ein:", "Kontext");
-                        foreach (var previousTexFile in previousTexFiles) {
-                            string previousTexFileName = Path.GetFileName(previousTexFile);
-                            Ui.Detail($"- {previousTexFileName}");
-                            string previousTexContent = await System.IO.File.ReadAllTextAsync(previousTexFile);
-                            referenceContextBuilder.Append($"<reference_context file=\"{previousTexFileName}\">\n{previousTexContent}\n</reference_context>\n\n");
-                        }
-                    } else {
-                        var uploaded = await PrecedingTexReferences.UploadAsync(previousTexFiles, _attachmentHandler);
-                        referenceContextBuilder.Append(uploaded.ReferenceText);
-                        uploadedTexParts.AddRange(uploaded.Parts);
-                    }
-                }
-
-                userPromptParts.Add(new Part { Text = referenceContextBuilder.ToString() + staticBeginning });
-            } else {
-                userPromptParts.Add(new Part { Text = staticBeginning });
             }
+
+            userPromptParts.Add(new Part { Text = ComposeReferenceContextText(precedingPartsText, partNumber) });
         } else {
-            userPromptParts.Add(new Part { Text = staticBeginning });
+            userPromptParts.Add(new Part { Text = GetStaticPromptBeginning(partNumber) });
         }
 
         // [AI Context] Uploaded .tex references sit between the text Part and the video, never inside the
@@ -164,7 +147,65 @@ public partial class AiStudioAutoExtractionSession {
         return (requestConfig, history);
     }
 
+    /// <summary>
+    /// [AI Context] One &lt;reference_context&gt; block. The dummy anchor, the inlined preceding parts and
+    /// every warm-up handshake are built from this, so the warmed prefix and the real request agree
+    /// byte for byte - the precondition for an implicit-cache hit.
+    /// [Human] Ein &lt;reference_context&gt;-Block; von Request und Warm-up gemeinsam genutzt.
+    /// </summary>
+    private static string ReferenceContextBlock(string fileName, string content) =>
+        $"<reference_context file=\"{fileName}\">\n{content}\n</reference_context>\n\n";
+
+    private string DummyReferenceBlock() =>
+        ReferenceContextBlock("part0.tex", PrepareReferenceContent(PrefixCacheAnchor.LoadPrefixCacheAnchorText()));
+
+    /// <summary>
+    /// [AI Context] Applies StripCommentsFromReferenceContext to one file's text. Every inlined file goes
+    /// through here, so the preamble's rule 4 is true for all of them.
+    /// [Human] Bereitet den Inhalt einer Kontext-Datei auf (ggf. ohne Kommentare).
+    /// </summary>
+    private string PrepareReferenceContent(string tex) =>
+        StripsReferenceContextComments ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex) : tex;
+
+    /// <summary>
+    /// [AI Context] Reads the preceding parts' .tex files and wraps each in a reference_context block,
+    /// in part order.
+    /// [Human] Liest die .tex-Dateien der vorherigen Teile und bettet sie als Referenzblöcke ein.
+    /// </summary>
+    private async Task<string> BuildInlinedPrecedingPartsAsync(IReadOnlyList<string> previousTexFiles) {
+        var builder = new System.Text.StringBuilder();
+        foreach (var previousTexFile in previousTexFiles) {
+            string previousTexFileName = Path.GetFileName(previousTexFile);
+            string content = await System.IO.File.ReadAllTextAsync(previousTexFile);
+            string prepared = PrepareReferenceContent(content);
+            Ui.Detail(prepared.Length == content.Length
+                ? $"- {previousTexFileName}"
+                : $"- {previousTexFileName} ({content.Length:N0} -> {prepared.Length:N0} Zeichen ohne Kommentare/hidden)");
+            builder.Append(ReferenceContextBlock(previousTexFileName, prepared));
+        }
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// [AI Context] The text Part that opens a part's user turn when reference context is sent:
+    /// preamble, dummy anchor (if configured), the preceding parts' text, then the static prompt
+    /// beginning. Shared by BuildGenerationRequestAsync and PrimePrefixCacheForResumedPartAsync, so the
+    /// resumed-part warm-up caches exactly the prefix the real request will send.
+    /// [Human] Der Textblock vor dem Video; gemeinsam für echten Request und Resume-Warm-up.
+    /// </summary>
+    private string ComposeReferenceContextText(string precedingPartsText, int partNumber) {
+        var builder = new System.Text.StringBuilder(ReferenceContextPreamble);
+        if (_config.SendDummyFileDuringTranscription) {
+            builder.Append(DummyReferenceBlock());
+        }
+        builder.Append(precedingPartsText);
+        builder.Append(GetStaticPromptBeginning(partNumber));
+        return builder.ToString();
+    }
+
     private async Task LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
+        if (_config.SkipTokenCountingDuringWarmUp) return;
+
         try {
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
             // [AI Context] CountTokensAsync counts against the same Free-Tier quota as GenerateContent,
@@ -328,7 +369,7 @@ public partial class AiStudioAutoExtractionSession {
 
             string continuePrompt = segmentComplete ? "Continue" :
                 $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                $"{ContinueBudget.EchoTail(chunkResp)}\n\n" +
                 "Please \"continue\" exactly where you left off, as raw LaTeX without Markdown code fences, just continuing the text directly.";
 
             if (segmentComplete) Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");

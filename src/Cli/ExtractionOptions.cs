@@ -34,8 +34,20 @@ public static class ExtractionOptions {
         Description = "Model id to use for this run."
     };
 
-    public static readonly Option<int?> Profile = new("--profile") {
-        Description = "API-key profile index to use for this run."
+    public static readonly Option<string?> Profile = new("--profile") {
+        Description = "API-key profile index (0-4) or name (e.g. latex-refinement, automated-content-extraction) to use for this run."
+    };
+
+    public static readonly Option<double?> VideoFps = new("--video-fps", "--google-video-fps", "--fps") {
+        Description = "Video sampling frame rate for Google AI Studio (e.g. 0.25, 0.3333333, 1)."
+    };
+
+    public static readonly Option<bool?> SkipTokenCounting = new("--skip-token-counting") {
+        Description = "Skip pre-flight CountTokensAsync calls to preserve Free Tier token quota budget."
+    };
+
+    public static readonly Option<int?> FileActivationDelay = new("--file-activation-delay") {
+        Description = "Seconds to wait after file activation in AI Studio (default 0 for maximum prefix cache freshness)."
     };
 
     /// <summary>
@@ -72,8 +84,20 @@ public static class ExtractionOptions {
             config.CurrentModel = model;
         }
 
-        if (parseResult.GetValue(Profile) is int profile) {
-            config.ActiveApiProfile = profile;
+        if (parseResult.GetValue(Profile) is string profileRaw && !string.IsNullOrWhiteSpace(profileRaw)) {
+            config.ActiveApiProfile = GoogleAi.ApiKeyProfileResolver.ResolveIndex(profileRaw, config.AiStudioApiKeyEnvNames, config.ActiveApiProfile);
+        }
+
+        if (parseResult.GetValue(VideoFps) is double videoFps) {
+            config.GoogleVideoFps = videoFps;
+        }
+
+        if (parseResult.GetValue(SkipTokenCounting) is bool skipTokens) {
+            config.SkipTokenCountingDuringWarmUp = skipTokens;
+        }
+
+        if (parseResult.GetValue(FileActivationDelay) is int activationDelay) {
+            config.FileActivationDelaySeconds = activationDelay;
         }
     }
 }

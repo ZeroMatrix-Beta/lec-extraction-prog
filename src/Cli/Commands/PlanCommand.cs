@@ -31,15 +31,20 @@ public static class PlanCommand {
         Description = "Hours a finished .tex part stays reusable. Default 2, matching the pipeline's own constant."
     };
 
+    public static readonly Option<bool> Resume = new("--resume") {
+        Description = "Reuse existing .tex parts regardless of age (equivalent to an unlimited --resume-window)."
+    };
+
     public static readonly Option<bool> Force = new("--force") {
         Description = "Ignore existing .tex parts and re-request every segment."
     };
 
     public static Command Build() {
         var command = new Command("plan", "Report what a run would do - videos, segments, requests - without calling the API.") {
-            Video, Folder, From, ResumeWindow, Force,
+            Video, Folder, From, ResumeWindow, Resume, Force,
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
-            ExtractionOptions.Speed, ExtractionOptions.Model, ExtractionOptions.Profile
+            ExtractionOptions.Speed, ExtractionOptions.Model, ExtractionOptions.Profile,
+            ExtractionOptions.VideoFps, ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
         };
 
         command.SetAction(async (parseResult, _) => {
@@ -51,10 +56,14 @@ public static class PlanCommand {
                 return failure;
             }
 
+            double resumeWindow = parseResult.GetValue(Resume)
+                ? 87600.0
+                : (parseResult.GetValue(ResumeWindow) ?? ExtractionPlanner.DefaultResumeWindowHours);
+
             var plan = ExtractionPlanner.Build(
                 config,
                 videos,
-                parseResult.GetValue(ResumeWindow) ?? ExtractionPlanner.DefaultResumeWindowHours,
+                resumeWindow,
                 parseResult.GetValue(Force),
                 await ExtractionPlanner.ProbeDurationsIfAutoAsync(config, videos));
 
@@ -141,7 +150,7 @@ public static class PlanCommand {
             ("Quelle", plan.SourceFolder),
             ("Ziel", plan.TargetFolder),
             ("Videos", plan.VideoCount.ToString()),
-            ("Segmente je Video", $"{plan.SegmentsPerVideo?.ToString() ?? "auto, nach Videolänge"} ({plan.OverlapSeconds}s Overlap, {plan.SpeedMultiplier}x)"),
+            ("Segmente je Video", $"{plan.SegmentsPerVideo?.ToString() ?? "auto, nach Videolänge"} ({plan.OverlapSeconds}s Overlap, {plan.SpeedMultiplier}x{(plan.GoogleVideoFps.HasValue ? $", {plan.GoogleVideoFps.Value:0.###} FPS" : "")})"),
             ("Offene Anfragen", plan.PendingRequests.ToString()),
             ("Wiederverwendbar", $"{plan.ResumableSegments} (Fenster: {plan.ResumeWindowHours}h)"),
             ("Refinement danach", plan.RefinementFollows ? "ja" : "nein")

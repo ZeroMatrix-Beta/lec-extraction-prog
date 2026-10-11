@@ -97,6 +97,36 @@ public class ExtractionOptionsTests {
         Assert.Equal("gemini-2.5-flash", config.CurrentModel);
         Assert.Equal(2, config.ActiveApiProfile);
     }
+
+    [Theory]
+    [InlineData("--video-fps", "0.25", 0.25)]
+    [InlineData("--google-video-fps", "0.5", 0.5)]
+    [InlineData("--fps", "1.0", 1.0)]
+    public void Apply_OverridesVideoFps(string flag, string value, double expectedFps) {
+        var command = new Command("probe-fps") {
+            ExtractionOptions.VideoFps
+        };
+        var config = ConfigWithKnownValues();
+
+        ExtractionOptions.Apply(config, command.Parse($"{flag} {value}"));
+
+        Assert.NotNull(config.GoogleVideoFps);
+        Assert.Equal(expectedFps, config.GoogleVideoFps.Value, precision: 4);
+    }
+
+    [Fact]
+    public void Apply_OverridesSkipTokenCountingAndFileActivationDelay() {
+        var command = new Command("probe-tokens") {
+            ExtractionOptions.SkipTokenCounting,
+            ExtractionOptions.FileActivationDelay
+        };
+        var config = ConfigWithKnownValues();
+
+        ExtractionOptions.Apply(config, command.Parse("--skip-token-counting true --file-activation-delay 0"));
+
+        Assert.True(config.SkipTokenCountingDuringWarmUp);
+        Assert.Equal(0, config.FileActivationDelaySeconds);
+    }
 }
 
 /// <summary>Shape of the media command group.</summary>

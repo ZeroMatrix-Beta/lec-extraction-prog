@@ -14,10 +14,15 @@
   "VertexGcsBucketName": "test-latex-lecture-extraction-bucket",
   "TargetFolder": "",
   "SourceFolder": "",
+  // Characters of the cut-off response a continue prompt repeats as an anchor (steps 1-3, PDF repair).
+  // The whole response is re-sent anyway; this is only the "resume exactly here" pointer.
+  "ContinuePromptEchoCharacters": 500,
   "PdfCompilation": {
+    // HIGHLY EXPERIMENTAL: own rule-based LaTeX fixes before the AI repair (original kept as -orig.tex)
+    "ExperimentalLatexAutoFix": true,
     "Enabled": true,
     "PreamblePath": "pdf-preamble.tex",
-    "UseAntiGravityAgent": true,
+    "UseAntiGravityAgent": false,
     "MaxFixRounds": 3,
     "MaxAntiGravityAgentRounds": 3
   },
@@ -37,7 +42,7 @@
         "TopK": 40,
         "MaxOutputTokens": 65535,
         "ThinkingBudget": 32765,
-        "ThinkingLevel": "HIGH"
+        "ThinkingLevel": "MEDIUM"
       },
       "ModelSelection": {
         "Available": [
@@ -63,7 +68,7 @@
         "TopK": 35,
         "MaxOutputTokens": 65535,
         "ThinkingBudget": 32765,
-        "ThinkingLevel": "HIGH"
+        "ThinkingLevel": "MEDIUM"
       },
       "ModelSelection": {
         "Available": [
@@ -99,7 +104,7 @@
         "TopK": 10,
         "MaxOutputTokens": 65535,
         "ThinkingBudget": 4096,
-        "ThinkingLevel": "HIGH"
+        "ThinkingLevel": "MEDIUM"
       },
       "ModelSelection": {
         "Available": [
@@ -125,7 +130,7 @@
         "TopK": 10,
         "MaxOutputTokens": 65535,
         "ThinkingBudget": 4096,
-        "ThinkingLevel": "HIGH"
+        "ThinkingLevel": "MEDIUM"
       },
       "ModelSelection": {
         "Available": [
@@ -161,7 +166,7 @@
         "TopK": 10,
         "MaxOutputTokens": 65535,
         "ThinkingBudget": 4096,
-        "ThinkingLevel": "HIGH"
+        "ThinkingLevel": "MEDIUM"
       },
       "ModelSelection": {
         "Available": [
@@ -187,7 +192,7 @@
         "TopK": 10,
         "MaxOutputTokens": 65535,
         "ThinkingBudget": 4096,
-        "ThinkingLevel": "HIGH"
+        "ThinkingLevel": "MEDIUM"
       },
       "ModelSelection": {
         "Available": [

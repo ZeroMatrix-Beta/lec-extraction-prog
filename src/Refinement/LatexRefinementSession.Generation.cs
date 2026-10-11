@@ -259,6 +259,7 @@ public partial class LatexRefinementSession {
 
                       // Per request, the last chunk carrying usage wins; requests are summed below.
                       usage.Absorb(chunk.UsageMetadata);
+                      usage.RecordFinishReason(chunk.Candidates?[0]?.FinishReason?.ToString());
 
                       await Task.CompletedTask;
                   },
@@ -286,6 +287,9 @@ public partial class LatexRefinementSession {
             // Every completed request is billed, an empty answer included.
             totalUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens, usage.ThoughtTokens, Requests: 1);
             Ui.Info(usage.Describe($"[Request {budget.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
+            if (usage.WasReported) {
+                Ui.Info(usage.DescribeOutputBudget(backendParams.MaxOutputTokens), "Tokens");
+            }
 
             if (string.IsNullOrWhiteSpace(chunkResp)) {
                 if (emptyResponseRetries < 3) {
@@ -324,7 +328,7 @@ public partial class LatexRefinementSession {
             // anyway and probably believes it is done - the usual way the completion marker gets lost.
             bool closedBlock = chunkResp.TrimEnd().EndsWith("```");
             string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{(chunkResp.Length > 300 ? "...\n" + chunkResp[^300..] : chunkResp)}\n\n" +
+                $"{ContinueBudget.EchoTail(chunkResp, _config.ContinuePromptEchoCharacters)}\n\n" +
                 "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Output raw LaTeX only, without Markdown code fences. Do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
 
             if (closedBlock) {

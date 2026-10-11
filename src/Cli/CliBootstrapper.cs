@@ -119,6 +119,9 @@ public static class CliBootstrapper {
         root.Add(RefineCommands.BuildRefine());
         root.Add(RefineCommands.BuildPdf());
         root.Add(BatchCommand.Build());
+        root.Add(ChatCommand.Build());
+        root.Add(CleanCommand.Build());
+        root.Add(StatusCommand.Build());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);
