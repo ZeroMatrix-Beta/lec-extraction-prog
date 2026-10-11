@@ -57,6 +57,18 @@
 \usepackage{capt-of}  % \captionof for figures outside floats
 \usepackage{fontawesome5}
 \usepackage[dvipsnames, x11names]{xcolor}
+% Packages for other subjects: transcription.md lets Gemini assume any package is loaded, so the
+% common ones are. physics is left out (it redefines \qty of siunitx and several brackets);
+% derivative gives \odv and \pdv, with \dv as an alias further down.
+\usepackage{siunitx}                  % \SI, \si, \qty, \num, \unit (physics, engineering)
+\usepackage[version=4]{mhchem}        % \ce{H2O} (chemistry)
+\usepackage{bm}                       % \bm{v}, bold vectors
+\usepackage{mathrsfs}                 % \mathscr
+\usepackage{cancel}                   % \cancel, \bcancel, \cancelto
+\usepackage{braket}                   % \bra, \ket, \braket, \set
+\usepackage{derivative}               % \odv, \pdv
+\usepackage[only, llbracket, rrbracket, mapsfrom, longmapsfrom]{stmaryrd} % only these, the rest would override amssymb
+\usepackage{algorithm, algpseudocode} % pseudocode (computer science)
 
 % Setzt global "Woche" anstelle von "Kapitel" (angepasst an ngerman)
 \addto\captionsngerman{\renewcommand{\chaptername}{Woche}}
@@ -382,9 +394,12 @@ bookmarksopen=true
 \usetikzlibrary{arrows} % legacy arrow tips (stealth', right hook, ...) alongside arrows.meta
 \usetikzlibrary{babel}  % keeps ngerman's active " from breaking TikZ/tikz-cd labels ("f")
 \usetikzlibrary{angles, quotes, intersections} % pic {right angle}, "label" syntax, name intersections (Stage 1 rules assume them)
+\usetikzlibrary{automata, matrix, backgrounds, shapes.misc, shapes.arrows, decorations.markings, decorations.pathmorphing} % state diagrams, matrices of nodes, layers, crosses, arrows on paths, springs
 \usepackage{tikz-cd}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
+\usepgfplotslibrary{fillbetween} % shaded areas between plots
+\usepackage{circuitikz}          % circuit diagrams (engineering, physics)
 \usepackage{titlesec}
 \usepackage{titletoc}
 
@@ -421,6 +436,14 @@ bookmarksopen=true
 % Math operators
 \DeclareMathOperator{\id}{id}
 \DeclareMathOperator{\Vol}{Vol}
+% \bigtimes: the large cross of a Cartesian product, which transcription.md requires. No loaded
+% package has it (mathabx would replace most symbols), so \times is scaled; limits go below in display.
+\providecommand{\bigtimes}{\mathop{\mathchoice
+  {\vcenter{\hbox{\scalebox{1.8}{$\displaystyle\times$}}}}
+  {\vcenter{\hbox{\scalebox{1.35}{$\textstyle\times$}}}}
+  {\vcenter{\hbox{\scalebox{1.2}{$\scriptstyle\times$}}}}
+  {\vcenter{\hbox{\scalebox{1.2}{$\scriptscriptstyle\times$}}}}}\displaylimits}
+\providecommand{\dv}{\odv} % the physics package's name for an ordinary derivative
 
 % Custom text commands
 \newcommand{\newterm}[1]{\textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{\grqq}}
