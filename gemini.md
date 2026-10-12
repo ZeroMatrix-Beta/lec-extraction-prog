@@ -7,20 +7,19 @@ Dieses Dokument enthält verbindliche Regeln für alle KI-Programmierassistenten
 
 Klar, eine "Exception thrown"-Meldung im Terminal ist oft unschön, aber für das Debuggen von Datei-Uploads, API-Limits und Cloud-Berechtigungen in diesem Tool ist es absolut essenziell, genau zu wissen, was schiefgelaufen ist.
 
-Wenn eine Exception in einem `catch`-Block gefangen wird, **muss** immer der genaue Fehlertext (`ex.Message`) und idealerweise auch die Art der Exception (`ex.GetType().Name`) per `Console.WriteLine` ausgegeben werden.
+Wenn eine Exception in einem `catch`-Block gefangen wird, **muss** sie über die `Ui`-Schicht gemeldet werden, mit `ex.Describe()` (`src/Infrastructure/ExceptionExtensions.cs`): das gibt einheitlich `Typ: Nachricht` aus, ohne rohe JSON-Blobs. Kein eigenes `Console.WriteLine`-Format.
 
 **Negativ-Beispiel (VERBOTEN):**
 ```csharp
 catch (Exception ex) {
-    Console.WriteLine("Hoppla, es gab einen Fehler beim Upload."); 
+    Ui.Error("Hoppla, es gab einen Fehler beim Upload.", "Upload");
 }
 ```
 
-**Positiv-Beispiel (ZUKÜNFTIGER STANDARD):**
+**Positiv-Beispiel (STANDARD):**
 ```csharp
 catch (Exception ex) {
-    Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-    Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+    Ui.Error($"Upload fehlgeschlagen: {ex.Describe()}", "Upload");   // Ui.Warn, wenn es weitergeht
 }
 ```
 *Hinweis: Dies gilt auch für GCS-Bereinigungen, FFmpeg-Prozesse und API-Aufrufe.*
@@ -45,6 +44,6 @@ Um C#-Compiler- und Analyzer-Warnungen (insbesondere `CA1860`, `SYSLIB1045`, `ID
 5. **Verpflichtender Build-Check vor Abschluss der Aufgabe:**
    Bevor eine KI ihre Arbeit an den Benutzer übergibt, **muss** zwingend `dotnet build` ausgeführt werden. Eine Aufgabe gilt erst dann als erledigt, wenn der Build exakt `0 Warnung(en)` und `0 Fehler` ausgibt. Jede auftretende Warnung ist sofort zu beheben.
 
-## 4. Zugriff auf externe Verzeichnisse
-**Regel:** Die KI benötigt keinen Lese- oder Schreibzugriff auf das externe Verzeichnis `C:\Users\miche\latex\prompt-engineering` oder dessen Unterordner. Die dortigen Prompt-Vorlagen werden außerhalb dieses Projekts verwaltet. Fordere niemals Berechtigungen für diesen Pfad an.
+## 4. Das Prompt-Repo `prompt-engineering`
+`C:\Users\miche\latex\prompt-engineering` enthält die Prompt-Dateien, die die `*Config.json` dieses Projekts per absolutem Pfad laden. Lesen ist erlaubt, wenn eine Aufgabe die Prompts oder diese Pfade betrifft (ein umbenannter Ordner dort bricht die Configs hier). Ändern nur auf ausdrückliche Anweisung: Änderungen dort gehören in jenes Repo und werden dort committet.
 
