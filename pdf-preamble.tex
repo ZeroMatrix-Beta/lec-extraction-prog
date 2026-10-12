@@ -490,6 +490,10 @@ bookmarksopen=true
 % Custom text commands
 \newcommand{\newterm}[1]{\textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{\grqq}}
 \newcommand{\inlinemetanote}[1]{\textit{[\textcolor{TextMetaNote}{#1}]}}
+% Recap line: a definition or result from an earlier lecture (or from earlier in this one) that the
+% lecturer states again. A transcript uses it for a recap the lecturer only speaks (anything written
+% goes into `content`); a review also puts one before a restatement on the board, citing the first.
+\newcommand{\recap}[1]{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faHistory\ Rückblick:}\ #1\par\smallskip}
 
 % Custom Theorem Styles: one per family, each with its own icon and color (after ta-notes).
 % \NewIconThmStyle{<style>}{<color>}{<icon>}
