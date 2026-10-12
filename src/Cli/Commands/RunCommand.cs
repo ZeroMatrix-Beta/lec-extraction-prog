@@ -24,7 +24,7 @@ namespace LectureExtraction.Cli.Commands;
 /// the key does not resolve, and <c>--dry-run</c> prints exactly what it would do.</para>
 /// </summary>
 public static class RunCommand {
-    private static readonly Option<string?> StopAfter = new("--stop-after") {
+    internal static readonly Option<string?> StopAfter = new("--stop-after") {
         Description = "Stop after a stage: extract (skip refinement and PDF) or full (default)."
     };
 
@@ -34,7 +34,7 @@ public static class RunCommand {
 
     public static Command Build(bool chainRefinement, string name, string description) {
         var command = new Command(name, description) {
-            PlanCommand.Video, PlanCommand.Folder, PlanCommand.From,
+            PlanCommand.Video, PlanCommand.Folder, PlanCommand.From, PlanCommand.Limit,
             PlanCommand.ResumeWindow, PlanCommand.Resume, PlanCommand.Force, CleanTmp,
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
             ExtractionOptions.Speed, ExtractionOptions.Preset,

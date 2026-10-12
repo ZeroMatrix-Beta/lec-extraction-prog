@@ -109,6 +109,7 @@ public static partial class ApiRetryPolicy {
                     Ui.Error($"{ex.Describe()}", "API");
                     if (IsDailyQuotaExhausted(ex)) {
                         Ui.Error("Das Tageskontingent dieses API-Keys ist aufgebraucht - ein Retry hilft erst nach dem Reset. Anderes API-Key-Profil wählen (CLI: --profile).", "Quota");
+                        ApiKeyQuotaTracker.RecordQuotaExhaustedFromException(ex);
                     }
                     Ui.Error($"Unrecoverable error after {attempt} attempt(s).", "API Failure");
                     throw; // Re-throw for the caller to handle

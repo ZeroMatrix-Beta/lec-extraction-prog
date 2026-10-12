@@ -35,13 +35,17 @@ public static class PlanCommand {
         Description = "Reuse existing .tex parts regardless of age (equivalent to an unlimited --resume-window)."
     };
 
+    public static readonly Option<int?> Limit = new("--limit") {
+        Description = "Process at most this many videos in chronological order."
+    };
+
     public static readonly Option<bool> Force = new("--force") {
         Description = "Ignore existing .tex parts and re-request every segment."
     };
 
     public static Command Build() {
         var command = new Command("plan", "Report what a run would do - videos, segments, requests - without calling the API.") {
-            Video, Folder, From, ResumeWindow, Resume, Force,
+            Video, Folder, From, Limit, ResumeWindow, Resume, Force,
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
             ExtractionOptions.Speed, ExtractionOptions.Model, ExtractionOptions.Profile,
             ExtractionOptions.VideoFps, ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
@@ -97,7 +101,9 @@ public static class PlanCommand {
                 failureExitCode = ExitCodes.Usage;
                 return false;
             }
-            videos = [Path.GetFullPath(single)];
+            string fullPath = Path.GetFullPath(single);
+            config.SourceFolder = Path.GetDirectoryName(fullPath) ?? config.SourceFolder;
+            videos = [fullPath];
             return true;
         }
 
@@ -112,32 +118,33 @@ public static class PlanCommand {
         }
 
         config.SourceFolder = Path.GetFullPath(folder);
-        var found = Directory.GetFiles(config.SourceFolder, "*.mp4").ToList();
+        var ordered = Directory.GetFiles(config.SourceFolder, "*.mp4")
+            .OrderBy(video => Media.VideoDateParser.Parse(video).Date)
+            .ThenBy(video => Media.VideoDateParser.Parse(video).WeekNumber ?? int.MaxValue)
+            .ThenBy(video => video)
+            .ToList();
 
         string? from = parseResult.GetValue(From);
         if (!string.IsNullOrWhiteSpace(from)) {
-            // Ordering happens in the planner, so filter on the same ordering rather than on the
-            // raw directory listing - "start at this video" has to mean chronologically.
-            var ordered = found
-                .OrderBy(video => Media.VideoDateParser.Parse(video).Date)
-                .ThenBy(video => Media.VideoDateParser.Parse(video).WeekNumber ?? int.MaxValue)
-                .ThenBy(video => video)
-                .ToList();
-
             int index = ordered.FindIndex(video => Path.GetFileName(video).Contains(from, StringComparison.OrdinalIgnoreCase));
             if (index < 0) {
                 Ui.Error($"No video in '{config.SourceFolder}' matches --from '{from}'.", "plan");
                 failureExitCode = ExitCodes.Usage;
                 return false;
             }
-            found = [.. ordered.Skip(index)];
+            ordered = [.. ordered.Skip(index)];
         }
 
-        if (found.Count == 0) {
+        int? limit = parseResult.GetValue(Limit);
+        if (limit.HasValue && limit.Value > 0) {
+            ordered = [.. ordered.Take(limit.Value)];
+        }
+
+        if (ordered.Count == 0) {
             Ui.Warn($"No .mp4 files in '{config.SourceFolder}'.", "plan");
         }
 
-        videos = found;
+        videos = ordered;
         return true;
     }
 

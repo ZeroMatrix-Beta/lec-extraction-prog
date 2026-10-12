@@ -58,7 +58,13 @@ public class SessionLogger(SessionLoggerConfig config) {
                     }
 
                     int folderIndex = maxIndex + 1;
-                    _currentSessionLogPath = Path.Combine(effectiveLogPath, $"folder-{folderIndex}-{_currentSessionDateSuffix}");
+                    string candidate;
+                    do {
+                        candidate = Path.Combine(effectiveLogPath, $"folder-{folderIndex}-{Environment.ProcessId}-{_currentSessionDateSuffix}");
+                        folderIndex++;
+                    } while (Directory.Exists(candidate));
+
+                    _currentSessionLogPath = candidate;
                     Directory.CreateDirectory(_currentSessionLogPath);
                 }
                 catch (Exception ex) {
@@ -105,23 +111,28 @@ public class SessionLogger(SessionLoggerConfig config) {
 
     public async Task LogSessionSetupAsync() {
         if (string.IsNullOrWhiteSpace(_currentSessionLogPath)) return;
-        string setupLog = $"\n=== Neue Chat-Sitzung ({DateTime.Now}) ===\n- System Prompt geladen: {_loadedSystemInstruction}\n- History geladen: {_loadedHistory}\n---\n";
-        await File.AppendAllTextAsync(GetChatLogFilePath(), setupLog);
+        try {
+            string setupLog = $"\n=== Neue Chat-Sitzung ({DateTime.Now}) ===\n- System Prompt geladen: {_loadedSystemInstruction}\n- History geladen: {_loadedHistory}\n---\n";
+            await File.AppendAllTextAsync(GetChatLogFilePath(), setupLog);
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Session-Setup-Log konnte nicht geschrieben werden: {ex.Describe()}", "SessionLogger");
+        }
     }
 
     public async Task LogChatAsync(string input, string promptText, string selectedModel, string fullResponse, string userName, int inputTokens = 0, int outputTokens = 0, int cachedTokens = 0) {
         if (string.IsNullOrWhiteSpace(_currentSessionLogPath)) return;
 
-        // Markdown Verlauf mitprotokollieren
-        string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
-        int freshTokens = Math.Max(0, inputTokens - cachedTokens);
-        string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Total Prompt {inputTokens:N0}, Gecacht {cachedTokens:N0}, Frisch {freshTokens:N0}, Output {outputTokens:N0})*" : "";
-        await File.AppendAllTextAsync(GetChatLogFilePath(), $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
+        try {
+            // Markdown Verlauf mitprotokollieren
+            string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
+            int freshTokens = Math.Max(0, inputTokens - cachedTokens);
+            string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Total Prompt {inputTokens:N0}, Gecacht {cachedTokens:N0}, Frisch {freshTokens:N0}, Output {outputTokens:N0})*" : "";
+            await File.AppendAllTextAsync(GetChatLogFilePath(), $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
 
-        // LaTeX Response speichern
-        // [AI Context] Isolates the raw model output into dedicated .tex files.
-        // This is a core feature for academic workflows, allowing immediate compilation of the AI's response without copy-pasting from a Markdown log.
-        if (!string.IsNullOrWhiteSpace(_currentSessionLogPath)) {
+            // LaTeX Response speichern
+            // [AI Context] Isolates the raw model output into dedicated .tex files.
+            // This is a core feature for academic workflows, allowing immediate compilation of the AI's response without copy-pasting from a Markdown log.
             string texFilePath = Path.Combine(_currentSessionLogPath, $"response-{_responseCount}-{_currentSessionDateSuffix}.tex");
 
             string formattedPrompt = logInput.Replace("\r\n", "\n").Replace("\n", "\n% ");
@@ -137,6 +148,9 @@ public class SessionLogger(SessionLoggerConfig config) {
 
             await File.WriteAllTextAsync(texFilePath, texHeader + fullResponse.FixMalformedEndTags());
             _responseCount++;
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Chat-Log konnte nicht geschrieben werden: {ex.Describe()}", "SessionLogger");
         }
     }
 

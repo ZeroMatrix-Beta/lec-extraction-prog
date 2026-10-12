@@ -41,8 +41,8 @@ public static class BatchCommand {
 
     public static Command Build() {
         var command = new Command("batch", "Run several videos in parallel worker processes, each with its own model and API-key profile.") {
-            Workers, LogFolder,
-            PlanCommand.Folder, PlanCommand.From, PlanCommand.ResumeWindow, PlanCommand.Force,
+            Workers, LogFolder, RunCommand.StopAfter,
+            PlanCommand.Folder, PlanCommand.From, PlanCommand.Limit, PlanCommand.ResumeWindow, PlanCommand.Force,
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
             ExtractionOptions.Speed, ExtractionOptions.VideoFps,
             ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
@@ -99,7 +99,7 @@ public static class BatchCommand {
             RenderAssignments(assignments, logFolder);
 
             var results = await Task.WhenAll(assignments.Select(assignment =>
-                RunWorkerAsync(assignment, parseResult, logFolder, cancellationToken)));
+                RunWorkerAsync(assignment, parseResult, logFolder, plan.TargetFolder, cancellationToken)));
 
             var summary = new {
                 workers = results,
@@ -214,6 +214,7 @@ public static class BatchCommand {
         WorkerAssignment assignment,
         ParseResult parseResult,
         string logFolder,
+        string targetFolder,
         System.Threading.CancellationToken cancellationToken) {
 
         string logPath = Path.Combine(logFolder, $"worker-{assignment.Index}.log");
@@ -224,7 +225,7 @@ public static class BatchCommand {
         // One child per video rather than per shard: a worker's videos are sequential anyway, and
         // per-video children mean one failure does not abandon the rest of that worker's list.
         foreach (string video in assignment.Videos) {
-            var arguments = BuildChildArguments(video, assignment.Worker, parseResult);
+            var arguments = BuildChildArguments(video, assignment.Worker, parseResult, targetFolder);
             await log.WriteLineAsync($"=== {Path.GetFileName(video)} ===");
             await log.WriteLineAsync($"$ {Environment.ProcessPath} {string.Join(' ', arguments)}");
             await log.FlushAsync(cancellationToken);
@@ -242,7 +243,7 @@ public static class BatchCommand {
             assignment.Videos.Count, worstExitCode, logPath);
     }
 
-    private static List<string> BuildChildArguments(string video, WorkerSpec worker, ParseResult parseResult) {
+    private static List<string> BuildChildArguments(string video, WorkerSpec worker, ParseResult parseResult, string targetFolder) {
         List<string> arguments = ["run", "--video", video];
 
         if (worker.Profile is int profile) {
@@ -254,7 +255,7 @@ public static class BatchCommand {
 
         // Pass through the knobs that change what a run does, so a child cannot silently use
         // different geometry from the batch that scheduled it.
-        Forward(arguments, "--out", parseResult.GetValue(ExtractionOptions.Out));
+        Forward(arguments, "--out", parseResult.GetValue(ExtractionOptions.Out) ?? targetFolder);
         Forward(arguments, "--parts", parseResult.GetValue(ExtractionOptions.Parts)?.ToString());
         Forward(arguments, "--overlap", parseResult.GetValue(ExtractionOptions.Overlap)?.ToString());
         Forward(arguments, "--speed", parseResult.GetValue(ExtractionOptions.Speed)?.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -262,6 +263,7 @@ public static class BatchCommand {
         Forward(arguments, "--skip-token-counting", parseResult.GetValue(ExtractionOptions.SkipTokenCounting)?.ToString());
         Forward(arguments, "--file-activation-delay", parseResult.GetValue(ExtractionOptions.FileActivationDelay)?.ToString());
         Forward(arguments, "--resume-window", parseResult.GetValue(PlanCommand.ResumeWindow)?.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Forward(arguments, "--stop-after", parseResult.GetValue(RunCommand.StopAfter));
 
         if (parseResult.GetValue(PlanCommand.Force)) {
             arguments.Add("--force");

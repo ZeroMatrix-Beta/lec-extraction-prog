@@ -122,6 +122,7 @@ public static class CliBootstrapper {
         root.Add(ChatCommand.Build());
         root.Add(CleanCommand.Build());
         root.Add(StatusCommand.Build());
+        root.Add(QuotaCommand.Build());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);

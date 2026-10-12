@@ -183,16 +183,10 @@ public static class ConfigCommands {
                 })
                 .ToList();
 
-            var payload = new { active = config.ActiveApiProfile, profiles };
+            var overviewData = ApiKeyProfileOverview.GetProfilesData();
+            var payload = new { active = config.ActiveApiProfile, profiles, details = overviewData };
 
-            CliOutput.Payload(context, payload, () => {
-                Ui.Step("API-Key Profile");
-                foreach (var profile in profiles) {
-                    string marker = profile.isActive ? "*" : " ";
-                    string state = profile.resolves ? "set" : "MISSING";
-                    Ui.Detail($"{marker} [{profile.profile}] {profile.envName} — {state}");
-                }
-            });
+            CliOutput.Payload(context, payload, ApiKeyProfileOverview.Render);
 
             // A missing key for the *active* profile is the failure a caller most needs to catch
             // before starting a run, so it is reported as a configuration problem rather than OK.

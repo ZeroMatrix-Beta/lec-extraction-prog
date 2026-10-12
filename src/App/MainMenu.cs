@@ -35,11 +35,12 @@ public static class MainMenu {
             string choice5 = "5) ✍️ LaTeX Refinement & Nachbearbeitung (Dedizierter Key)";
             string choice6 = "6) ⚙️ Quellordner (Source Folders) verwalten & ändern";
             string choice7 = "7) 🔑 API-Key Profile (AI Studio & Refinement) verwalten & ändern";
+            string choice8 = "8) 📊 API-Key Kontingente & Quota-Tracking (Tageslimits & Modelle)";
             var choices = new List<string> { choice1, choice2 };
             if (AppConfig.IsVertexAiEnabled) {
                 choices.Add(choice3);
             }
-            choices.AddRange([choice4, choice5, choice6, choice7]);
+            choices.AddRange([choice4, choice5, choice6, choice7, choice8]);
 
             if (!AppConfig.IsVertexAiEnabled) {
                 Ui.Detail("  " + choice3);
@@ -47,7 +48,7 @@ public static class MainMenu {
 
             // The main menu is the root of the navigation, so its "back" is leaving the program.
             var result = Ui.Select("Bitte gewünschten Modus auswählen:", choices,
-                backLabel: "8) 🚪 Beenden", pageSize: 10);
+                backLabel: "9) 🚪 Beenden", pageSize: 11);
 
             if (!result.IsValue) {
                 break;
@@ -82,6 +83,9 @@ public static class MainMenu {
             }
             else if (selection == choice7) {
                 ApiKeyProfileMenu.Show();
+            }
+            else if (selection == choice8) {
+                QuotaTrackingMenu.Show();
             }
 
             ReportSessionCost();

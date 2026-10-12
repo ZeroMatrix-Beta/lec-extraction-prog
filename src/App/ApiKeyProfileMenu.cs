@@ -21,17 +21,24 @@ public static class ApiKeyProfileMenu {
             string chatProfileLabel = chatConfig.ActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {chatConfig.ActiveApiProfile}";
             string latexProfileLabel = latexConfig.AiStudioActiveApiProfile == 0 ? "Dedizierter Key (0)" : $"Profil {latexConfig.AiStudioActiveApiProfile}";
 
+            ApiKeyProfileOverview.Render();
+
             Ui.Step("API-Key Profil Konfiguration (JSON)");
 
+            string choice0 = "0) 📊 Quota-Tracking & Kontingent-Menü öffnen";
             string choice1 = $"1) Google AI Studio Auto-Extraktion: {autoExtProfileLabel}";
             string choice2 = $"2) Direct AI Studio Chat:          {chatProfileLabel}";
             string choice3 = $"3) LaTeX Refinement Session:       {latexProfileLabel}";
             var selection = Ui.Select(
                 "Welches API-Key Profil möchten Sie ansehen / ändern?",
-                [choice1, choice2, choice3],
+                [choice0, choice1, choice2, choice3],
                 backLabel: "🚪 Zurück zum Hauptmenü");
 
             if (!selection.IsValue) break;
+            if (selection.Value == choice0) {
+                QuotaTrackingMenu.Show();
+                continue;
+            }
 
             if (selection.Value == choice1) {
                 aiStudioConfig.ActiveApiProfile = ConfigurationPrompts.ConfirmOrChangeApiKeyProfile(

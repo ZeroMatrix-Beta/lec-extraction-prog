@@ -17,44 +17,49 @@ public sealed partial class InlineMetaNoteMathFix : ILatexLineFix {
     public string Description => "Math-Modus in \\inlinemetanote korrigiert";
 
     public string FixLine(string code) {
-        if (!code.Contains(@"\inlinemetanote{")) return code;
+        if (!code.Contains(@"\inlinemetanote{", StringComparison.Ordinal)) return code;
 
-        string fixedCode = InlineMetaNoteMathRegex().Replace(code, m =>
-            $@"\inlinemetanote{{{m.Groups[1].Value}${m.Groups[2].Value}$ {m.Groups[3].Value}${m.Groups[4].Value}${m.Groups[5].Value}}}");
-
-        fixedCode = FixUnclosedMathInInlineMetaNote(fixedCode);
-
-        return fixedCode;
-    }
-
-    private static string FixUnclosedMathInInlineMetaNote(string line) {
         int idx = 0;
-        while ((idx = line.IndexOf(@"\inlinemetanote{", idx, StringComparison.Ordinal)) >= 0) {
+        while ((idx = code.IndexOf(@"\inlinemetanote{", idx, StringComparison.Ordinal)) >= 0) {
             int openBrace = idx + @"\inlinemetanote".Length;
-            int closeBrace = LatexScan.FindMatchingBrace(line, openBrace);
+            int closeBrace = LatexScan.FindMatchingBrace(code, openBrace);
             if (closeBrace < 0) {
                 idx++;
                 continue;
             }
 
-            string inner = line[(openBrace + 1)..closeBrace];
-            int dollarCount = 0;
-            for (int i = 0; i < inner.Length; i++) {
-                if (inner[i] == '$' && !LatexScan.IsEscaped(inner, i)) {
-                    dollarCount++;
-                }
+            string inner = code[(openBrace + 1)..closeBrace];
+            string fixedInner = FixInnerNote(inner);
+
+            if (fixedInner != inner) {
+                code = string.Concat(code.AsSpan(0, openBrace + 1), fixedInner, code.AsSpan(closeBrace));
+                closeBrace = openBrace + 1 + fixedInner.Length;
             }
 
-            if (dollarCount % 2 != 0) {
-                line = line[..closeBrace] + "$" + line[closeBrace..];
-                idx = closeBrace + 2;
-            } else {
-                idx = closeBrace + 1;
-            }
+            idx = closeBrace + 1;
         }
-        return line;
+
+        return code;
     }
 
-    [GeneratedRegex(@"\\inlinemetanote\{([^}]*?)\$([a-zA-Z0-9\\_^{}]+)\s+([a-zA-Z]{2,}\b[^{}$]*?)\$([a-zA-Z0-9\\_^{}]+)\$([^}]*)\}")]
-    private static partial Regex InlineMetaNoteMathRegex();
+    private static string FixInnerNote(string inner) {
+        // 1) English/prose text accidentally inside math mode:
+        //    e.g. 'writes $\bar{f} is surjective onto the image of $f$'
+        //    ->   'writes $\bar{f}$ is surjective onto the image of $f$'
+        inner = InnerMetaNoteMathRegex().Replace(inner, m =>
+            $"{m.Groups[1].Value}${m.Groups[2].Value}$ {m.Groups[3].Value}${m.Groups[4].Value}${m.Groups[5].Value}");
+
+        // 2) Unclosed math inside the note:
+        //    e.g. 'schreibt \qt{Fall 1: } $A \text{ endl.}'
+        //    ->   'schreibt \qt{Fall 1: } $A \text{ endl.}$'
+        int dollarCount = LatexScan.CountUnescaped(inner, '$');
+        if (dollarCount % 2 != 0) {
+            inner += "$";
+        }
+
+        return inner;
+    }
+
+    [GeneratedRegex(@"^([^$]*?)\$([a-zA-Z0-9\\_^{}]+)\s+([a-zA-Z]{2,}\b[^{}$]*?)\$([a-zA-Z0-9\\_^{}]+)\$([^$]*)$")]
+    private static partial Regex InnerMetaNoteMathRegex();
 }
