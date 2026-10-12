@@ -408,6 +408,40 @@ bookmarksopen=true
 
 % --- TABLE OF CONTENTS TYPOGRAPHY & COLORS ---
 \contentsmargin{2.0em}
+\colorlet{TocProofColor}{ProofTint} % titled proofWrapper entries, in the color of the proof heading
+
+% Left indent of a TOC entry at depth n (1 section, 2 subsection, 3 subsubsection). Depths 4 and
+% more only occur for entries inside a titled proofWrapper, which are listed one level deeper.
+\newcommand{\tocindent}[1]{\ifcase\numexpr#1\relax 0em\or 1.8em\or 4.0em\or 6.5em\or 9.0em\or 11.5em\else 14.0em\fi}
+
+% --- TITLED PROOFS IN THE TOC ---
+% A proofWrapper with its own title (\begin{proofWrapper}[Beweis von \cref{...}]) writes, in this
+% order, \proofwrappertocbegin{<depth of the heading it sits under>}, its own entry (one level
+% below that heading), the entries of the headings inside the proof, and \proofwrappertocend.
+% The first heading inside the proof fixes how many levels these entries move down, so that
+% they sit one level below the proof entry (a \section > proof > \subsection and a
+% \subsection > proof > \subsubsection both come out right). The same levels go to the PDF
+% bookmarks, which is all a pipeline PDF shows: it prints no TOC.
+\makeatletter
+\def\proofwrapper@tocparent{-1} % -1: not inside a titled proof
+\def\proofwrapper@tocshift{-1}  % -1: no heading inside the proof yet
+\newcommand{\proofwrappertocbegin}[1]{\gdef\proofwrapper@tocparent{#1}\gdef\proofwrapper@tocshift{-1}}
+\newcommand{\proofwrappertocend}{\gdef\proofwrapper@tocparent{-1}}
+% Called by the section levels with their own depth #1; does nothing outside a titled proof.
+\newcommand{\proofwrapper@tocinner}[1]{%
+  \ifnum\proofwrapper@tocparent<\z@\else
+    \ifnum\proofwrapper@tocshift<\z@
+      \count@=\numexpr\proofwrapper@tocparent+2-#1\relax
+      \ifnum\count@<\z@ \count@=\z@ \fi
+      \xdef\proofwrapper@tocshift{\the\count@}%
+    \fi
+    \setlength\leftskip{\tocindent{#1+\proofwrapper@tocshift}}%
+  \fi}
+% titletoc needs a level for the entry type: shown up to tocdepth 3
+\def\ttll@proofwrapper{3}
+% Inside the entry, references are printed without a link of their own: the whole entry is a link.
+\newcommand{\proofwrappertoctitle}[1]{{\let\proofwrapper@cref\cref\let\proofwrapper@Cref\Cref
+  \def\cref{\proofwrapper@cref*}\def\Cref{\proofwrapper@Cref*}#1}}
 
 \titlecontents{chapter}[0em]
   {\addvspace{16pt}\sffamily\bfseries\large\color{ThemePrimary!95!black}}
@@ -415,23 +449,31 @@ bookmarksopen=true
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{ThemeWeekNumber}\contentspage}
 
-\titlecontents{section}[1.8em]
-  {\addvspace{5pt}\sffamily\bfseries\color{HeadingSlate}}
+\titlecontents{section}[\tocindent{1}]
+  {\addvspace{5pt}\proofwrapper@tocinner{1}\sffamily\bfseries\color{HeadingSlate}}
   {\color{ThemePrimary!85!black}\thecontentslabel\hspace{0.8em}\color{HeadingSlate}}
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{HeadingSlate}\contentspage}
 
-\titlecontents{subsection}[4.0em]
-  {\addvspace{2.5pt}\sffamily\color{HeadingBrown}}
+\titlecontents{subsection}[\tocindent{2}]
+  {\addvspace{2.5pt}\proofwrapper@tocinner{2}\sffamily\color{HeadingBrown}}
   {\color{HeadingBrown}\thecontentslabel\hspace{0.8em}\color{HeadingBrown}}
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{HeadingBrown}\contentspage}
 
-\titlecontents{subsubsection}[6.5em]
-  {\addvspace{1.5pt}\sffamily\small\bfseries\color{gray}}
+\titlecontents{subsubsection}[\tocindent{3}]
+  {\addvspace{1.5pt}\proofwrapper@tocinner{3}\sffamily\small\bfseries\color{gray}}
   {\color{gray}\thecontentslabel\hspace{0.8em}\color{gray}}
   {}
   {\normalfont\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{gray}\contentspage}
+
+% Titled proofWrapper: pen nib in place of a number, one level below the heading it sits under
+\titlecontents{proofwrapper}[0pt]
+  {\addvspace{1.5pt}\setlength\leftskip{\tocindent{\proofwrapper@tocparent+1}}\sffamily\small\color{TocProofColor}}
+  {}
+  {\faPenNib\hspace{0.6em}\itshape}
+  {\normalfont\sffamily\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocProofColor}\contentspage}
+\makeatother
 
 % Math operators
 \DeclareMathOperator{\id}{id}
@@ -847,11 +889,74 @@ breakable
     \par\vspace{2ex}
 }
 
-% LONG PROOF 
+% LONG PROOF
+% With its own title, e.g. [Beweis von \cref{thm:x}], the proof gets a TOC entry and a PDF bookmark,
+% one level below the heading it sits under; headings inside the proof are listed below it. With
+% the default title (no option, or [Beweis]) it gets neither. The short proof never does.
+\newcommand*{\proofWrapperDefaultTitle}{Beweis}
+\let\proofwrapper@tocclose\relax
+% Depth of the heading the proof sits under (0 chapter, 1 section, 2 subsection, 3 subsubsection),
+% read off the counters: each heading resets the counter of the level below it.
+\newcommand{\proofwrapper@depth}{%
+  \ifnum\value{section}=\z@ 0%
+  \else\ifnum\value{subsection}=\z@ 1%
+  \else\ifnum\value{subsubsection}=\z@ 2%
+  \else 3\fi\fi\fi}
+\newcommand{\proofwrapper@tocentry}[1]{%
+  \edef\proofwrapper@level{\proofwrapper@depth}%
+  \phantomsection
+  \addtocontents{toc}{\protect\proofwrappertocbegin{\proofwrapper@level}}%
+  \edef\toclevel@proofwrapper{\the\numexpr\proofwrapper@level+1\relax}%
+  \addcontentsline{toc}{proofwrapper}{\protect\proofwrappertoctitle{#1}}%
+  % Bookmarks of the headings inside the proof become children of the proof's bookmark, by the
+  % same rule as in the TOC: the first heading fixes the shift. The bookmark depth limit moves
+  % with them, so that exactly the levels shown outside a proof are shown inside it.
+  \gdef\proofwrapper@bmshift{-1}%
+  \let\proofwrapper@addcontentsline\addcontentsline
+  \def\addcontentsline##1##2##3{\proofwrapper@bmlevel{##2}\proofwrapper@addcontentsline{##1}{##2}{##3}}%
+  \def\proofwrapper@tocclose{\addtocontents{toc}{\protect\proofwrappertocend}}%
+}
+\def\proofwrapper@baselevel@section{1}
+\def\proofwrapper@baselevel@subsection{2}
+\def\proofwrapper@baselevel@subsubsection{3}
+\def\proofwrapper@baselevel@paragraph{4}
+\def\proofwrapper@baselevel@subparagraph{5}
+\newcommand{\proofwrapper@bmlevel}[1]{%
+  \ifcsname proofwrapper@baselevel@#1\endcsname
+    \ifnum\proofwrapper@bmshift<\z@
+      \count@=\numexpr\proofwrapper@level+2-\csname proofwrapper@baselevel@#1\endcsname\relax
+      \ifnum\count@<\z@ \count@=\z@ \fi
+      \xdef\proofwrapper@bmshift{\the\count@}%
+    \fi
+    \expandafter\edef\csname toclevel@#1\endcsname
+      {\the\numexpr\csname proofwrapper@baselevel@#1\endcsname+\proofwrapper@bmshift\relax}%
+    \edef\Hy@bookmarksdepth{\the\numexpr\c@tocdepth+\proofwrapper@bmshift\relax}%
+  \fi}
+% PDF bookmarks cannot hold a \cref; spell it out from the label data cleveref writes to the aux
+% file ([theorem][4][3]3.4 -> "Satz 3.4"), or "??" before the first run has written it.
+\newcommand{\proofwrapper@pdfref}[1]{%
+  \ifcsname r@#1@cref\endcsname
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+  {\expandafter\expandafter\expandafter\proofwrapper@pdfref@i\csname r@#1@cref\endcsname\@nil}%
+  {??}}
+\def\proofwrapper@pdfref@i#1#2\@nil{\proofwrapper@pdfref@ii#1\@nil}
+\def\proofwrapper@pdfref@ii[#1][#2][#3]#4\@nil{\csname Cref@#1@name\endcsname\space#4}
+\pdfstringdefDisableCommands{%
+  \let\proofwrappertoctitle\@firstofone
+  \let\cref\proofwrapper@pdfref
+  \let\Cref\proofwrapper@pdfref
+}
+
 \newenvironment{proofWrapper}[1][Beweis]{
     \par\addvspace{3.5ex plus 1ex minus .2ex}
     \insideprooftrue 
-    \noindent\makebox[0pt][r]{\textcolor{ProofTint}{\faPenNib}\hspace{10pt}}%
+    \noindent
+    \def\proofwrapper@title{#1}%
+    \ifx\proofwrapper@title\proofWrapperDefaultTitle\else\proofwrapper@tocentry{#1}\fi
+    \makebox[0pt][r]{\textcolor{ProofTint}{\faPenNib}\hspace{10pt}}%
     {\normalfont\sffamily\Large\bfseries\color{ProofTint}#1}%
     \par\nobreak\vspace{1.5ex plus .2ex}\vspace{-\parskip}
     \@afterindentfalse\@afterheading
@@ -861,6 +966,7 @@ breakable
         \node[draw=ProofTint, fill=ProofQEDBg, line width=1pt, rounded corners=2pt, inner xsep=4pt, inner ysep=2pt, font=\sffamily\bfseries\small, text=ProofQEDText, drop shadow={shadow xshift=0.5ex, shadow yshift=-0.5ex, fill=ProofTint, opacity=0.4}] (Q) {Q.E.D.};
     }
     \par\vspace{2ex}
+    \proofwrapper@tocclose
 }
 \makeatother
 
