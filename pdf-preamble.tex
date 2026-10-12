@@ -1096,9 +1096,10 @@ breakable
 \hspace{10pt}%
 }
 
-\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{\ifinsideproof SecTitleColorProof\else SecTitleColor\fi}}{}{0pt}{\makebox[0pt][r]{\sectionbar}}
-\titleformat{\subsection}{\normalfont\sffamily\large\bfseries\color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleColor\fi}}{}{0pt}{\makebox[0pt][r]{\subsectionbar}}
-\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries\color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleColor\fi}}{}{0pt}{\makebox[0pt][r]{\subsubsectionbar}}
+\titleformat{\section}{\normalfont\sffamily\Large\bfseries\color{\ifinsideproof SecTitleColorProof\else SecTitleColor\fi}}{}{0pt}{\phantomsection\makebox[0pt][r]{\sectionbar}}
+\titleformat{\subsection}{\normalfont\sffamily\large\bfseries\color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleColor\fi}}{}{0pt}{\phantomsection\makebox[0pt][r]{\subsectionbar}}
+\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries\color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleColor\fi}}{}{0pt}{\phantomsection\makebox[0pt][r]{\subsubsectionbar}}
+\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{\phantomsection} % the class default, plus a link target on the heading (unnumbered, it has none)
 
 \titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 \titlespacing*{\subsection}{0pt}{3ex plus 1ex minus .2ex}{1.2ex plus .2ex}
