@@ -58,11 +58,13 @@ public static class LatexAutoFixer {
         new InlineMetaNoteMathFix(),
         new BareHiddenOpeningFix(),
         new UndefinedMathCommandFix(),
+        new HighlightOptionalColorFix(),
     ];
 
     /// <summary>Document fixes, run after all line fixes in this order.</summary>
     public static IReadOnlyList<ILatexDocumentFix> DefaultDocumentFixes { get; } = [
         new MisnamedEnvironmentEndFix(),
+        new SurplusBraceAfterMetaNoteFix(),
     ];
 
     /// <summary>The repaired text and one German, user-facing line per change.</summary>

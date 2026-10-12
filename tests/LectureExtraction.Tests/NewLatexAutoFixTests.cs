@@ -95,4 +95,69 @@ public partial class NewLatexAutoFixTests {
         Assert.Equal(beginHidden, BareHiddenFix.FixLine(beginHidden));
         Assert.Equal(endHidden, BareHiddenFix.FixLine(endHidden));
     }
+
+    private static readonly HighlightOptionalColorFix HighlightFix = new();
+
+    [Fact]
+    public void HighlightOptionalColorFix_AddsDefaultColorWhenOmitted() {
+        string input = @"\begin{highlight}[Diffie-Hellman-Schlüsselaustauschprotokoll]";
+        string expected = @"\begin{highlight}{BrickRed}[Diffie-Hellman-Schlüsselaustauschprotokoll]";
+        Assert.Equal(expected, HighlightFix.FixLine(input));
+    }
+
+    [Fact]
+    public void HighlightOptionalColorFix_LeavesExplicitColorUntouched() {
+        string input = @"\begin{highlight}{RoyalBlue}[Diffie-Hellman-Schlüsselaustauschprotokoll]";
+        Assert.Equal(input, HighlightFix.FixLine(input));
+    }
+
+    [Fact]
+    public void InlineMetaNoteMathFix_RemovesTrailingDollarAfterClosedNote() {
+        string input = @"Zum Beispiel $Fx$. \inlinemetanote{schreibt $F x$}$ Wie schon gesagt, $x$ ist eine Variable";
+        string expected = @"Zum Beispiel $Fx$. \inlinemetanote{schreibt $F x$} Wie schon gesagt, $x$ ist eine Variable";
+        Assert.Equal(expected, InlineMetaFix.FixLine(input));
+    }
+
+    [Fact]
+    public void InlineMetaNoteMathFix_LeavesDollarAfterNoteInsideMathUntouched() {
+        // the note sits inside math, so the '$' after it closes that math: the line compiles
+        string correct = @"Also $x = 1 \inlinemetanote{zeigt auf $x$}$ und weiter.";
+        Assert.Equal(correct, InlineMetaFix.FixLine(correct));
+    }
+
+    [Fact]
+    public void InlineMetaNoteMathFix_ClosesUnclosedCasesInsideNote() {
+        string input = @"$f(\beta)$, sagen wir, das soll $0$ sein für $\beta = \alpha$, \inlinemetanote{schreibt $f(\beta) := \begin{cases} 0 & \text{für } \beta = \alpha$}";
+        string expected = @"$f(\beta)$, sagen wir, das soll $0$ sein für $\beta = \alpha$, \inlinemetanote{schreibt $f(\beta) := \begin{cases} 0 & \text{für } \beta = \alpha \end{cases}$}";
+        Assert.Equal(expected, InlineMetaFix.FixLine(input));
+    }
+
+    private static readonly SurplusBraceAfterMetaNoteFix SurplusBraceFix = new();
+
+    [Fact]
+    public void SurplusBraceAfterMetaNoteFix_RemovesTheBraceThatClosesNothing() {
+        string input = "\\begin{speech}\n"
+            + @"E sind Paare von Gästen. \inlinemetanote{schreibt $E = \{\{x, y\} \mid x \text{ und } y\}$ und darunter \qt{gesehen: $|V|$ ist gerade.}}}" + "\n"
+            + "\\end{speech}\n";
+        DocumentFixResult result = SurplusBraceFix.Apply(input);
+
+        Assert.Equal(input.Replace("gerade.}}}", "gerade.}}"), result.Text);
+        Assert.Equal(@"Zeile 2: überzählige } nach \inlinemetanote entfernt", Assert.Single(result.Changes));
+    }
+
+    [Fact]
+    public void SurplusBraceAfterMetaNoteFix_LeavesABraceThatClosesAGroupFromAnEarlierLine() {
+        // the '}' after the note closes the footnote opened one line up: it compiles
+        string correct = "Satz.\\footnote{Er schreibt\n\\inlinemetanote{schreibt $x$}}\nWeiter.\n";
+        DocumentFixResult result = SurplusBraceFix.Apply(correct);
+
+        Assert.Equal(correct, result.Text);
+        Assert.Empty(result.Changes);
+    }
+
+    [Fact]
+    public void SurplusBraceAfterMetaNoteFix_LeavesOtherSurplusBracesToTheAiRepair() {
+        string input = "Ein Satz mit \\textbf{fett}} und mehr.\n";
+        Assert.Empty(SurplusBraceFix.Apply(input).Changes);
+    }
 }
