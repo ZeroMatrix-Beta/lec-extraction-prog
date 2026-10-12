@@ -226,7 +226,7 @@ bookmarksopen=true
 }
 
 \usepackage{tcolorbox}
-\tcbuselibrary{skins, breakable, theorems}
+\tcbuselibrary{skins, breakable, theorems, hooks} % hooks: before title app
 
 % --- DYNAMIC PROOF STYLING ENGINE ---
 \newif\ifinsideproof
@@ -254,6 +254,8 @@ bookmarksopen=true
   every box/.append style={
     before skip=16pt plus 4pt minus 2pt, 
     after skip=16pt plus 4pt minus 2pt,  
+    % \textbf in a box title takes the title's color: blue bold on a red title bar is unreadable
+    before title app={\colorlet{TextBoldColor}{.}},
     underlay first={
       \fill[white] ([xshift=-15pt,yshift=0pt]frame.south west) rectangle ([xshift=15pt,yshift=-15pt]frame.south east);
     },
@@ -324,9 +326,10 @@ bookmarksopen=true
 }
 
 \setlist[enumerate]{
-  % FIX: Leitet \textbf im Label temporär auf die Enumerate-Farbe um!
-  font=\colorlet{TextBoldColor}{EnumerateBullet}, 
-  label=\textcolor{EnumerateBullet}{\bfseries(\alph*)},
+  % Every label in the enumerate color and sans-serif bold, however it is written: the default
+  % (a), label=(1), or label=\textbf{(i)} (TextBoldColor is redirected for \textbf).
+  font=\sffamily\bfseries\color{EnumerateBullet}\colorlet{TextBoldColor}{EnumerateBullet},
+  label=(\alph*),
   ref=(\alph*)
 }
 
@@ -694,7 +697,9 @@ code={
 },
 IfValueTF={#2}{
   title={\faBox\ \ #2},
-  attach boxed title to top left={xshift=10pt, yshift=-10pt}
+  attach boxed title to top left={xshift=10pt, yshift=-10pt},
+  % the attached title reaches 10pt into the box: keep the first line clear of it (as overview)
+  top=14pt
 }{
   notitle
 }
@@ -707,7 +712,7 @@ enhanced,
 colback=white,
 fonttitle=\bfseries\sffamily,
 coltitle=black,
-title=\faBox\ \ ##1,
+title={\faBox\ \ ##1},
 boxrule=1.5pt,
 arc=4pt,
 dynamic color shadow=#3,
@@ -752,7 +757,7 @@ enhanced,
 colback=white,
 fonttitle=\bfseries\sffamily,
 coltitle=black,
-title=\faSquareRootAlt\ \ ##1,
+title={\faIcon{square-root-alt}\ \ ##1},
 boxrule=1.5pt,
 arc=4pt,
 dynamic color shadow=#3,
@@ -836,7 +841,7 @@ code={
 },
 fonttitle=\bfseries\sffamily,
 coltitle=white,
-title=\faRobot\ \ #1,
+title={\faRobot\ \ #1},
 boxrule=1pt,
 arc=3pt,
 breakable
@@ -1013,7 +1018,7 @@ code={
 },
 fonttitle=\sffamily\bfseries,
 coltitle=white,
-title=\faExclamationTriangle\ \ ##1,
+title={\faExclamationTriangle\ \ ##1},
 breakable
 }
 }
