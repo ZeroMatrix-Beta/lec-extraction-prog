@@ -126,12 +126,20 @@ So a pair can only collide if you hand both paths to a script yourself. `plan` s
 reports `warnings` for that case. To see which file a run will really use, read the
 `videos[].fileName` of `lecx plan --json` — not the filename you passed.
 
-**`dummy-part0.tex` is only found from the repository root.** The program looks for it in the
-current directory and next to the `.exe` (`bin/Debug/net10.0/`), but it lives in the
-repository root. Run `lecx` from anywhere else and every video logs `dummy-part0.tex nicht
-gefunden`. The file is a Lorem-Ipsum placeholder for the implicit prefix cache, so the
-transcription is unaffected; only a cache hit becomes less likely. `cd` into the repository
-root first to avoid it.
+**Run `lecx` from the repository root — otherwise `run` loses its PDF and corrupts step 3.**
+Two files in the repository root are looked up relative to the *current directory*:
+
+- `pdf-preamble.tex` (`PdfCompilation.PreamblePath`, relative). From anywhere else the log says
+  `Preamble-Datei (pdf-preamble.tex) nicht gefunden`. The probe compile before step 3 then
+  fails, and step 3 is handed that failure as if it were a LaTeX syntax error to fix. Step 4
+  skips the PDF, and the video exits `6` although all text steps finished. Redo step 3 and
+  the PDF from the repository root with `refine run --step 3 --through-end`.
+- `dummy-part0.tex` (also searched next to the `.exe`). Missing, it only logs `dummy-part0.tex
+  nicht gefunden`: it is a Lorem-Ipsum placeholder for the implicit prefix cache, so the
+  transcription is unaffected and only a cache hit becomes less likely.
+
+A script that drives `lecx` must `cd` into the repository root first, and pass `--video` and
+`--out` as absolute paths.
 
 **"High demand" (HTTP 503) gives up after 8 attempts and loses only that part.** The video then
 ends with exit `6`. The parts finished before it are on disk, so running the same video again
