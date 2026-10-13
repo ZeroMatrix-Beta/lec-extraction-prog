@@ -29,7 +29,8 @@ public static partial class VideoSegmentProducer {
         // Chronologisch aufsteigend sortieren anhand des Dateinamens und der Woche
         files = [.. files.OrderBy(videoFile => VideoDateParser.Parse(videoFile).Date).ThenBy(videoFile => VideoDateParser.Parse(videoFile).WeekNumber ?? int.MaxValue).ThenBy(videoFile => videoFile)];
 
-        foreach (var file in files) {
+        foreach (var rawFile in files) {
+            string file = ExtractionHelpers.ResolveCompressedVariantIfExists(rawFile);
             string baseName = ExtractionHelpers.ComputeOutputFolderName(file);
             // Create a file-specific output folder within the main target folder
             string fileSpecificOutputFolder = Path.Combine(config.TargetFolder, baseName);
@@ -94,7 +95,7 @@ public static partial class VideoSegmentProducer {
 
                 // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
                 double speedVideoDuration;
-                bool wasInputFilePreCompressedWhenCached = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
+                bool wasInputFilePreCompressedWhenCached = ExtractionHelpers.IsPreCompressed(file);
 
                 if (wasInputFilePreCompressedWhenCached) {
                     // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
@@ -117,7 +118,7 @@ public static partial class VideoSegmentProducer {
             }
 
             // Determine if the file is already in a "compressed" format or already processed in tmp
-            bool isPreCompressed = PreCompressedFileRegex().IsMatch(Path.GetFileName(file).ToLowerInvariant());
+            bool isPreCompressed = ExtractionHelpers.IsPreCompressed(file);
             bool isProcessedVideoCached = System.IO.File.Exists(expectedProcessedVideoPath) &&
                 new FileInfo(expectedProcessedVideoPath).Length > 1024 &&
                 (DateTime.Now - new FileInfo(expectedProcessedVideoPath).LastWriteTime) <= cacheDuration;
@@ -164,13 +165,4 @@ public static partial class VideoSegmentProducer {
         }
         writer.Complete(); // Signalisiert dem Fließband: "Feierabend, es kommen keine Videos mehr."
     }
-
-    [GeneratedRegex(@"-speed-[\d\.]+-compressed$", RegexOptions.IgnoreCase)]
-    private static partial Regex SpeedCompressedRegex();
-
-    [GeneratedRegex(@"-compressed$", RegexOptions.IgnoreCase)]
-    private static partial Regex CompressedRegex();
-
-    [GeneratedRegex(@"(?:-speed-\d+(?:\.\d+)?-compressed|-compressed)\.[a-z0-9]+$", RegexOptions.IgnoreCase)]
-    private static partial Regex PreCompressedFileRegex();
 }

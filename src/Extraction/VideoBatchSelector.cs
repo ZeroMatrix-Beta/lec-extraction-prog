@@ -25,7 +25,8 @@ public static class VideoBatchSelector {
             return [];
         }
 
-        var files = Directory.GetFiles(sourceFolder, "*.mp4")
+        var rawFiles = Directory.GetFiles(sourceFolder, "*.mp4");
+        var files = ExtractionHelpers.DeduplicatePreferCompressed(rawFiles)
                              .OrderBy(f => VideoDateParser.Parse(f).Date)
                              .ThenBy(f => VideoDateParser.Parse(f).WeekNumber ?? int.MaxValue)
                              .ThenBy(f => f)

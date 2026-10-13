@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
+using LectureExtraction.Extraction;
 
 namespace LectureExtraction.Cli.Commands;
 
@@ -102,8 +103,12 @@ public static class PlanCommand {
                 return false;
             }
             string fullPath = Path.GetFullPath(single);
-            config.SourceFolder = Path.GetDirectoryName(fullPath) ?? config.SourceFolder;
-            videos = [fullPath];
+            string resolvedPath = ExtractionHelpers.ResolveCompressedVariantIfExists(fullPath);
+            if (!string.Equals(fullPath, resolvedPath, StringComparison.OrdinalIgnoreCase)) {
+                Ui.Info($"Verwende vorhandene komprimierte Datei: '{Path.GetFileName(resolvedPath)}' anstelle von '{Path.GetFileName(fullPath)}'", "plan");
+            }
+            config.SourceFolder = Path.GetDirectoryName(resolvedPath) ?? config.SourceFolder;
+            videos = [resolvedPath];
             return true;
         }
 
@@ -118,7 +123,9 @@ public static class PlanCommand {
         }
 
         config.SourceFolder = Path.GetFullPath(folder);
-        var ordered = Directory.GetFiles(config.SourceFolder, "*.mp4")
+        var rawVideos = Directory.GetFiles(config.SourceFolder, "*.mp4");
+        var deduplicated = ExtractionHelpers.DeduplicatePreferCompressed(rawVideos);
+        var ordered = deduplicated
             .OrderBy(video => Media.VideoDateParser.Parse(video).Date)
             .ThenBy(video => Media.VideoDateParser.Parse(video).WeekNumber ?? int.MaxValue)
             .ThenBy(video => video)

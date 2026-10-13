@@ -86,7 +86,7 @@ public static class RunCommand {
             // --force is expressed by widening the reuse window to nothing, which is the same knob
             // the pipeline reads; there is no separate "ignore the cache" path to keep in sync.
             SessionCostLedger.Reset();
-            var session = BuildSession(config, force ? 0 : resumeWindow);
+            var session = BuildSession(config, force ? 0 : resumeWindow, parseResult);
 
             bool allSucceeded = await session.RunAsync([.. videos]);
 
@@ -131,7 +131,7 @@ public static class RunCommand {
         return command;
     }
 
-    private static AiStudioAutoExtractionSession BuildSession(AiStudioAutoExtractionConfig config, double resumeWindowHours) {
+    private static AiStudioAutoExtractionSession BuildSession(AiStudioAutoExtractionConfig config, double resumeWindowHours, ParseResult parseResult) {
         string envName = ApiKeyProfileResolver.Resolve(config.ActiveApiProfile, config.AiStudioApiKeyEnvNames);
         string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);
@@ -145,6 +145,25 @@ public static class RunCommand {
 
         var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
         var refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
+
+        if (parseResult.GetValue(ExtractionOptions.Profile) is string profileRaw && !string.IsNullOrWhiteSpace(profileRaw)) {
+            refinementConfig.AiStudioActiveApiProfile = ApiKeyProfileResolver.ResolveIndex(profileRaw, refinementConfig.AiStudioApiKeyEnvNames, refinementConfig.AiStudioActiveApiProfile);
+        }
+        else {
+            int matchingRefinementProfile = ApiKeyProfileResolver.ResolveIndex(envName, refinementConfig.AiStudioApiKeyEnvNames, -1);
+            if (matchingRefinementProfile >= 0) {
+                refinementConfig.AiStudioActiveApiProfile = matchingRefinementProfile;
+            }
+        }
+
+        string modelToUse = parseResult.GetValue(ExtractionOptions.Model) ?? config.CurrentModel;
+        if (!string.IsNullOrWhiteSpace(modelToUse)) {
+            foreach (var step in new[] { refinementConfig.Step1MergeAndTimestamp, refinementConfig.Step2SpeechRefinement, refinementConfig.Step3LastRefinement }) {
+                if (step != null) {
+                    (refinementConfig.UseVertex ? step.Vertex : step.AiStudio).CurrentModel = modelToUse;
+                }
+            }
+        }
 
         return new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, refinementConfig) {
             ResumeWindow = TimeSpan.FromHours(resumeWindowHours)

@@ -41,3 +41,41 @@
    - `VertexAutoExtractionSession` is split into:
      - `VertexAutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
      - `VertexAutoExtractionSession.PrefixCache.cs`: Prefix cache initialization and warm-up logic.
+
+## 12. Operational Runbook: Converting & Processing Lecture Videos
+When the user asks to process/convert lecture videos, **do not spend turns searching code or re-reading pipeline internals**. Follow this exact runbook:
+
+### Course & Directory Mapping
+- **Analysis 2**:
+  - Source videos: `D:\lecture-videos\analysis2`
+  - Extraction output: `D:\lecture-videos\analysis2\extracted_output`
+  - Main LaTeX document: `C:\Users\miche\latex\eth-analysis2-fs2026-ai-transcription\analysis2-fs2026-color.tex`
+  - Content snippets folder: `C:\Users\miche\latex\eth-analysis2-fs2026-ai-transcription\content`
+- **Grundstrukturen**:
+  - Source videos: `D:\lecture-videos\grundstrukturen`
+  - Extraction output: `D:\lecture-videos\grundstrukturen\extracted_output`
+  - Main LaTeX document: `C:\Users\miche\latex\grundstrukturen-ai-transcription-spring-2025\grundstrukturen.tex`
+  - Content snippets folder: `C:\Users\miche\latex\grundstrukturen-ai-transcription-spring-2025\content`
+
+### Fast Execution Workflow
+1. **Check Status**:
+   ```powershell
+   dotnet run --no-build -- status --folder "<output-folder>"
+   ```
+2. **Plan Next Video (Free pre-flight)**:
+   ```powershell
+   dotnet run --no-build -- plan --video "<video-path>" --out "<output-folder>" --model <model>
+   ```
+   *(Note: The pipeline automatically discovers and prioritizes pre-compressed siblings `-speed-1-compressed.mp4` / `-compressed.mp4`)*.
+3. **Run Extraction & Refinement**:
+   ```powershell
+   dotnet run --no-build -- run --video "<video-path>" --out "<output-folder>" --model <model> --profile <profile> --skip-token-counting
+   ```
+   - Always run with `BypassSandbox: true` and `WaitMsBeforeAsync: 10000` (runs in background).
+   - Use `--skip-token-counting` to save request quota.
+   - Quotas on Free Tier: 20 RPD per model per API profile. Profiles: 0 (`automated-content-extraction`), 1 (`ai-studio-test-project-1`), 2 (`ai-studio-test-project-2`), 3 (`ai-studio-test-project-3`), 4 (`latex-refinement`).
+4. **LaTeX Integration**:
+   - Once extraction + refinement finishes (producing `step4-...-final.tex`), copy `step4-...-final.tex` to `<latex-project>\content\`.
+   - Add `\include{content/step4-...-final.tex}` into the main `.tex` file in chronological order.
+   - Verify compilation: `lualatex -interaction=nonstopmode <main>.tex`.
+

@@ -25,8 +25,13 @@ public static class FileSelectionPrompt {
         var selection = Ui.Select("Verfügbare Dateien im Quellordner:", choices, pageSize: 15);
         if (!selection.IsValue) return [];
 
-        Ui.Success($"Ausgewähltes Ziel: {Path.GetFileName(selection.Value!)}");
-        return [selection.Value!];
+        string selectedFile = selection.Value!;
+        string resolved = ExtractionHelpers.ResolveCompressedVariantIfExists(selectedFile);
+        if (!string.Equals(selectedFile, resolved, StringComparison.OrdinalIgnoreCase)) {
+            Ui.Info($"Verwende vorhandene komprimierte Datei: '{Path.GetFileName(resolved)}' anstelle von '{Path.GetFileName(selectedFile)}'");
+        }
+        Ui.Success($"Ausgewähltes Ziel: {Path.GetFileName(resolved)}");
+        return [resolved];
     }
 
     public static string[] SelectBatchFiles(string sourceFolder) {
@@ -36,8 +41,11 @@ public static class FileSelectionPrompt {
             return [];
         }
 
-        Ui.Success($"{inputFiles.Length} Datei(en) für die Stapelverarbeitung gefunden.");
-        return inputFiles;
+        var deduplicated = ExtractionHelpers.DeduplicatePreferCompressed(
+            inputFiles.Where(f => f.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))).ToArray();
+
+        Ui.Success($"{deduplicated.Length} Datei(en) für die Stapelverarbeitung gefunden.");
+        return deduplicated;
     }
 
     public static string NavigateDirectory(string startingDir) {

@@ -175,7 +175,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             Ui.Detail($"API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
         }
 
-        string[] videoFilesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+        string[] videoFilesToProcess = ExtractionHelpers.DeduplicatePreferCompressed(Directory.GetFiles(_config.SourceFolder, "*.mp4")).ToArray();
         foreach (var videoFile in videoFilesToProcess) {
             var dateInfo = VideoDateParser.Parse(videoFile);
             if (!dateInfo.IsValid) {

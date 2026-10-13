@@ -198,6 +198,54 @@ public class ExtractionHelpersNamingTests {
         Assert.Equal("step1-" + ExtractionHelpers.ComputeOutputFolderName("lecture.mp4"),
                      ExtractionHelpers.ComputeTexBaseName("lecture.mp4"));
     }
+
+    [Theory]
+    [InlineData("lecture-speed-1-compressed.mp4", true)]
+    [InlineData("lecture-speed-1.5-compressed.mp4", true)]
+    [InlineData("lecture-compressed.mp4", true)]
+    [InlineData("lecture-speed-1-compressed", true)]
+    [InlineData("lecture-compressed", true)]
+    [InlineData("lecture.mp4", false)]
+    [InlineData("lecture-speed-1.mp4", false)]
+    public void IsPreCompressed_DetectsCompressedMarkers(string fileName, bool expected) {
+        Assert.Equal(expected, ExtractionHelpers.IsPreCompressed(fileName));
+    }
+
+    [Fact]
+    public void DeduplicatePreferCompressed_PicksCompressedOverRawVariant() {
+        string[] inputs = [
+            "02-16-2026-monday-week1-Analysis_II.mp4",
+            "02-16-2026-monday-week1-Analysis_II-speed-1-compressed.mp4",
+            "02-18-2026-wednesday-week1-Analysis_II.mp4"
+        ];
+
+        var result = ExtractionHelpers.DeduplicatePreferCompressed(inputs);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains("02-16-2026-monday-week1-Analysis_II-speed-1-compressed.mp4", result);
+        Assert.Contains("02-18-2026-wednesday-week1-Analysis_II.mp4", result);
+    }
+
+    [Fact]
+    public void ResolveCompressedVariantIfExists_ResolvesToSiblingWhenPresent() {
+        string tempDir = Path.Combine(Path.GetTempPath(), "lec_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        try {
+            string rawFile = Path.Combine(tempDir, "02-16-2026-monday-week1-Analysis_II.mp4");
+            string compressedFile = Path.Combine(tempDir, "02-16-2026-monday-week1-Analysis_II-speed-1-compressed.mp4");
+            File.WriteAllText(rawFile, "fake raw");
+            File.WriteAllText(compressedFile, "fake compressed");
+
+            string resolved = ExtractionHelpers.ResolveCompressedVariantIfExists(rawFile);
+            Assert.Equal(compressedFile, resolved);
+
+            // If already compressed, it returns itself
+            Assert.Equal(compressedFile, ExtractionHelpers.ResolveCompressedVariantIfExists(compressedFile));
+        }
+        finally {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }
 
 /// <summary>The durations the per-part prompt announces; the hour used to be dropped.</summary>

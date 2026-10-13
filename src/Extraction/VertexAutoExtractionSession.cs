@@ -92,7 +92,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             Ui.Detail($"API-Projekt:     {_config.ProjectId} ({_config.Location})");
         }
 
-        string[] videoFilesToProcess = Directory.GetFiles(_config.SourceFolder, "*.mp4");
+        string[] videoFilesToProcess = ExtractionHelpers.DeduplicatePreferCompressed(Directory.GetFiles(_config.SourceFolder, "*.mp4")).ToArray();
         foreach (var videoFile in videoFilesToProcess) {
             var dateInfo = VideoDateParser.Parse(videoFile);
             if (!dateInfo.IsValid) {

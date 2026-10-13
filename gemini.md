@@ -47,3 +47,6 @@ Um C#-Compiler- und Analyzer-Warnungen (insbesondere `CA1860`, `SYSLIB1045`, `ID
 ## 4. Das Prompt-Repo `prompt-engineering`
 `C:\Users\miche\latex\prompt-engineering` enthält die Prompt-Dateien, die die `*Config.json` dieses Projekts per absolutem Pfad laden. Lesen ist erlaubt, wenn eine Aufgabe die Prompts oder diese Pfade betrifft (ein umbenannter Ordner dort bricht die Configs hier). Ändern nur auf ausdrückliche Anweisung: Änderungen dort gehören in jenes Repo und werden dort committet.
 
+## 5. Vorlesungsextraktion & LaTeX-Workflow (Runbook)
+Siehe `.agents/rules/AGENTS.md` (Abschnitt 12) für die exakten Pfade (`analysis2`, `grundstrukturen`), CLI-Befehle (`status`, `plan`, `run`), API-Profile und LaTeX-Integrationsschritte. KIs sollen dieses Runbook direkt anwenden, statt den Code nach Parametern und Pfaden zu durchsuchen.
+

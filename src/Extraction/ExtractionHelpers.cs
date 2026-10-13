@@ -76,6 +76,55 @@ public static partial class ExtractionHelpers {
     [GeneratedRegex(@"-compressed$", RegexOptions.IgnoreCase)]
     private static partial Regex CompressedRegex();
 
+    [GeneratedRegex(@"(?:-speed-[\d\.]+-compressed|-compressed)(?:\.[a-z0-9]+)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex PreCompressedRegex();
+
+    /// <summary>
+    /// Checks whether a file path or file name contains a pre-compressed marker
+    /// (e.g. <c>-speed-1-compressed.mp4</c> or <c>-compressed.mp4</c>).
+    /// </summary>
+    public static bool IsPreCompressed(string pathOrFileName) =>
+        PreCompressedRegex().IsMatch(pathOrFileName);
+
+    /// <summary>
+    /// If the given video is not pre-compressed, checks if a sibling pre-compressed file
+    /// with the same output folder name exists in the same directory.
+    /// If found, returns the path to the pre-compressed variant; otherwise returns the original path.
+    /// </summary>
+    public static string ResolveCompressedVariantIfExists(string originalPath) {
+        if (IsPreCompressed(originalPath)) {
+            return originalPath;
+        }
+
+        string? dir = Path.GetDirectoryName(originalPath);
+        if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) {
+            return originalPath;
+        }
+
+        string targetBaseName = ComputeOutputFolderName(originalPath);
+        string[] candidates = Directory.GetFiles(dir, "*.mp4");
+        for (int i = 0; i < candidates.Length; i++) {
+            string candidate = candidates[i];
+            if (IsPreCompressed(candidate) && string.Equals(ComputeOutputFolderName(candidate), targetBaseName, StringComparison.OrdinalIgnoreCase)) {
+                return candidate;
+            }
+        }
+
+        return originalPath;
+    }
+
+    /// <summary>
+    /// Deduplicates a collection of video paths sharing the same <see cref="ComputeOutputFolderName"/>,
+    /// preferring the pre-compressed variant (<c>-speed-N-compressed.mp4</c> or <c>-compressed.mp4</c>)
+    /// over the uncompressed raw file.
+    /// </summary>
+    public static List<string> DeduplicatePreferCompressed(IEnumerable<string> videoPaths) {
+        return videoPaths
+            .GroupBy(ComputeOutputFolderName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderByDescending(IsPreCompressed).ThenBy(p => p).First())
+            .ToList();
+    }
+
     public static string ResolveNonClashingTexPath(string originalPath) {
         if (!File.Exists(originalPath)) {
             return originalPath;
