@@ -126,6 +126,17 @@ So a pair can only collide if you hand both paths to a script yourself. `plan` s
 reports `warnings` for that case. To see which file a run will really use, read the
 `videos[].fileName` of `lecx plan --json` — not the filename you passed.
 
+**`dummy-part0.tex` is only found from the repository root.** The program looks for it in the
+current directory and next to the `.exe` (`bin/Debug/net10.0/`), but it lives in the
+repository root. Run `lecx` from anywhere else and every video logs `dummy-part0.tex nicht
+gefunden`. The file is a Lorem-Ipsum placeholder for the implicit prefix cache, so the
+transcription is unaffected; only a cache hit becomes less likely. `cd` into the repository
+root first to avoid it.
+
+**"High demand" (HTTP 503) gives up after 8 attempts and loses only that part.** The video then
+ends with exit `6`. The parts finished before it are on disk, so running the same video again
+within `--resume-window` requests only the missing part and the refinement.
+
 **The output folder and the `.tex` stem differ.** The folder is
 `<target>/<name-without-compression-suffix>/`, but the parts inside are
 `step1-<name>-partN.tex`. Predicting `.tex` paths from the folder name alone finds
