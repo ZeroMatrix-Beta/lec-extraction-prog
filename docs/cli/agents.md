@@ -110,11 +110,21 @@ Use the separate commands when you want to inspect or intervene between stages.
 
 ## Things that will surprise you
 
-**Two variants of the same lecture collide.** A folder often holds both `lecture.mp4`
-and `lecture-speed-1-compressed.mp4`. The compression suffix is stripped when deriving
-the output folder, so **both resolve to the same folder and the same part filenames** —
-each reads the other's segments and `.tex` as its own cache. `plan` reports this in
-`warnings`. Pick one variant with `--video`, or accept that the pair is one lecture.
+**A raw video and its `-speed-N-compressed` sibling are one lecture, and the compressed
+one wins.** A folder often holds both `lecture.mp4` and `lecture-speed-1-compressed.mp4`.
+The compression suffix is stripped when deriving the output folder, so both map to the
+same folder and part filenames. You do **not** have to pick a variant, because the program
+already does:
+
+- `--folder` / `--from` / `--limit` (and so `plan`, `run`, `batch`) keep only the
+  compressed file of each pair (`ExtractionHelpers.DeduplicatePreferCompressed`).
+- `--video <raw.mp4>` is swapped for the compressed sibling in the same directory, with an
+  info line `Verwende vorhandene komprimierte Datei`.
+- FFmpeg then cuts the segments from that compressed file (`VideoSegmentProducer`).
+
+So a pair can only collide if you hand both paths to a script yourself. `plan` still
+reports `warnings` for that case. To see which file a run will really use, read the
+`videos[].fileName` of `lecx plan --json` — not the filename you passed.
 
 **The output folder and the `.tex` stem differ.** The folder is
 `<target>/<name-without-compression-suffix>/`, but the parts inside are

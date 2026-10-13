@@ -56,8 +56,10 @@ the planner and the pipeline share — so a plan cannot predict a path the run w
 write.
 
 **Consequence:** `lecture.mp4` and `lecture-speed-1-compressed.mp4` produce the *same*
-folder and the *same* part names. Processing both means each reads the other's output as
-its own cache. `lecx plan` reports this in `warnings`.
+folder and the *same* part names, which is why the program treats them as one lecture and
+uses the compressed file (see "A raw video and its `-speed-N-compressed` sibling" in
+[agents.md](agents.md)). Only a script that passes both paths itself can make them collide;
+`lecx plan` reports that in `warnings`.
 
 ## The hand-off record
 
@@ -138,6 +140,29 @@ facts after that.
 
 Token counts: *Output* is the visible answer only, *Thinking* is billed on top of it, and a
 step that needed continue requests reports the sum over all of them.
+
+## Continue requests ("please continue")
+
+A response that stops before the model's completion marker (cut off at `MaxOutputTokens`,
+thinking tokens included) is followed by an automatic **continue request**, which re-sends
+the whole history. Each one is a full extra paid request.
+
+| Stage | Continue prompt | Limit per part/step |
+|---|---|---|
+| Extraction (per part) | `Continue` if the model reached its segment-limit marker, otherwise `[IMPORTANT] Your response was cut short … Please "continue" exactly where you left off` | `MaxContinueRequests` (15) |
+| Refinement steps 1-3 | always the `[IMPORTANT] Your response was cut short … Please "continue"` form | per-step `MaxContinueRequests` (10) |
+
+Both stop early after 3 responses in a row that are empty or repeat the previous tail
+(`ContinueBudget`).
+
+**How to count them after a run.** For each part or step, `continues = Requests − 1`, where
+`Requests` is the number in its header, `Token Usage (N Request(s))`. The Step 1 block
+lists every part separately; steps 2-4 carry their own header. Extraction continues are
+also logged in `C:\Users\miche\gemini-logs\folder-*\chat_log.md` as
+`[Continue Prompt für Part N]`. Add the PDF-repair rounds if any ran
+(`step4-compile-log.txt`, `compile-log-step5-last_tryN.txt`). `lecx run --json` reports the
+total as `generationRequests` (all paid requests of that process; subtract the planned
+`requestsPlanned` for the continues).
 
 ## Backends
 
