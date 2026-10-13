@@ -104,6 +104,15 @@ It was a hardcoded constant with no way to reach it; `--resume-window` and `--fo
 expose it. The FFmpeg cache is additionally validated — an incomplete set, a part smaller
 than 1 KB, or a count that disagrees with `--parts` is discarded and re-cut.
 
+**The compressed intermediate is not validated.** For a raw video the producer first writes
+`tmp/<name>-speed-1-compressed.mp4` and then cuts the segments from it. On the next run that
+file is reused as soon as it is **larger than 1 KB and younger than 48 hours**; its length is
+never checked. A compression that was killed (Ctrl+C, Task Manager, a crashed run) leaves a
+truncated file that passes, and the run then transcribes only the first part of the lecture,
+without any error. After killing FFmpeg, delete that file or replace it with a complete copy.
+A copy needs a fresh modification time (`cp`, not `cp -p`), or it counts as older than 48
+hours and is recompressed anyway.
+
 ## The header stack at the top of every `.tex`
 
 Every file a stage writes opens with one comment block per step that produced it, newest
