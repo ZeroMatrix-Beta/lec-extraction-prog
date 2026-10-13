@@ -63,6 +63,28 @@ profile would double the load on one key.
 
 `lecx config profiles` lists the profiles and shows which resolve in this environment.
 
+## Free-tier quota: 20 requests per key, per model, per day
+
+The keys are free tier. Google's limit is
+`GenerateRequestsPerDayPerProjectPerModel-FreeTier (limit: 20)`: 20 generate requests per
+day, **per key (project) and per model name**. It resets at 00:00 UTC (02:00 summer time).
+One lecture with 4 parts and refinement needs well over 7 requests (parts, continues,
+refinement steps), so one key gets through about two lectures per model per day.
+
+- **The "20/20 Bereit" in `lecx quota` / `config profiles` is the app's own count**, not
+  Google's. It does not see requests made outside this program. On 2026-10-13 it showed
+  20/20 for every key while Google refused profiles 2 and 3 after a few requests. Do not
+  plan a batch on it.
+- **An exhausted key fails fast and the run moves on.** The part request is retried once,
+  then the video is abandoned (`allSucceeded: false`). Every further video on that key fails
+  the same way a few minutes later (after cutting and upload). A queue loop must therefore **stop the worker** on the first
+  `FreeTier (limit: 20)` error. Otherwise one exhausted key drains the whole queue, marking
+  every lecture it touches as failed.
+- **`gemini-3.7-flash` is a second budget for the same model.** User report, 2026-10-13:
+  requests to `gemini-3.7-flash` are answered by `gemini-3.8-flash`, so a worker can switch to
+  `--model gemini-3.7-flash` when 3.8's quota on its key is used up. (Not verified from the
+  API response; the `.tex` header records the requested name.)
+
 ## Doing it by hand
 
 `batch` is a convenience. Two shells work just as well, because the isolation comes from
