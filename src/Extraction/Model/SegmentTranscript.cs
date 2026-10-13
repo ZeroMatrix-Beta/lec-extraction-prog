@@ -8,4 +8,5 @@ namespace LectureExtraction.Extraction.Model;
 /// [Human] Ergebnis der Transkription eines hochgeladenen Videosegments: der generierte LaTeX-Text
 /// plus die dabei verbrauchten Tokens.
 /// </summary>
-public sealed record SegmentTranscript(string LatexBody, TokenUsage Usage);
+/// <param name="ThoughtsFile">The segment's thoughts file, when thought summaries were written to one.</param>
+public sealed record SegmentTranscript(string LatexBody, TokenUsage Usage, string? ThoughtsFile = null);

@@ -130,6 +130,18 @@ public static class Ui {
         AnsiConsole.Write(new Text(text + "\n"));
     }
 
+    /// <summary>
+    /// [AI Context] Verbatim like <see cref="Raw"/>, but dim and italic: Gemini's thought summaries,
+    /// streamed before the answer and kept visually apart from it. No markup parsing.
+    /// [Human] Gedanken-Zusammenfassung des Modells, gedimmt und kursiv, ohne Markup.
+    /// </summary>
+    public static void Thought(string text) {
+        if (!string.IsNullOrEmpty(text)) {
+            _isLineOpen = !text.EndsWith('\n');
+            AnsiConsole.Write(new Text(text, new Style(decoration: Decoration.Dim | Decoration.Italic)));
+        }
+    }
+
     // Input
     /// <summary>
     /// Where prompt answers come from. Defaults to the keyboard, so the interactive app behaves

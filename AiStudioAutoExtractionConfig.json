@@ -128,5 +128,12 @@
   "DisableThinkingDuringWarmUp": false,
   "SkipTokenCountingDuringWarmUp": false,
   "CountTokensRetryBackoffSeconds": 20,
-  "MaxContinueRequests": 15
+  "MaxContinueRequests": 15,
+  // Gemini's thought summaries for Stage 1: console, chat_log.md, and/or <part>-thoughts.md (read with `lecx thoughts`).
+  "ThoughtSummaries": {
+    "Enabled": false,
+    "ToConsole": true,
+    "ToExistingLog": false,
+    "ToSeparateFile": true
+  }
 }

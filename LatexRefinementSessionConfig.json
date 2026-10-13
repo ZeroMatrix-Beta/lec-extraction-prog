@@ -24,7 +24,14 @@
     "PreamblePath": "pdf-preamble.tex",
     "UseAntiGravityAgent": false,
     "MaxFixRounds": 3,
-    "MaxAntiGravityAgentRounds": 3
+    "MaxAntiGravityAgentRounds": 3,
+    // The AI repair rounds' own switch (they run on Step3LastRefinement's model). ToExistingLog = the round's compile log.
+    "ThoughtSummaries": {
+      "Enabled": false,
+      "ToConsole": true,
+      "ToExistingLog": false,
+      "ToSeparateFile": true
+    }
   },
   "Step1MergeAndTimestamp": {
     "Enabled": true,
@@ -35,6 +42,13 @@
       "C:\\Users\\miche\\latex\\prompt-engineering\\merge-instructions\\merging_leftovers_example.md"
     ],
     "HistoryPreloadPaths": [],
+    // Gemini's thought summaries for this step: console, the step's -prompt-log.md, and/or <output>-thoughts.md (read with `lecx thoughts`).
+    "ThoughtSummaries": {
+      "Enabled": false,
+      "ToConsole": true,
+      "ToExistingLog": false,
+      "ToSeparateFile": true
+    },
     "AiStudio": {
       "Generation": {
         "Temperature": 0.4,
@@ -97,6 +111,12 @@
       "C:\\Users\\miche\\latex\\prompt-engineering\\speech-refinement\\speech-refinement.md"
     ],
     "HistoryPreloadPaths": [],
+    "ThoughtSummaries": {
+      "Enabled": false,
+      "ToConsole": true,
+      "ToExistingLog": false,
+      "ToSeparateFile": true
+    },
     "AiStudio": {
       "Generation": {
         "Temperature": 0.35,
@@ -159,6 +179,12 @@
       "C:\\Users\\miche\\latex\\prompt-engineering\\last-refinement\\last-refinement.md"
     ],
     "HistoryPreloadPaths": [],
+    "ThoughtSummaries": {
+      "Enabled": false,
+      "ToConsole": true,
+      "ToExistingLog": false,
+      "ToSeparateFile": true
+    },
     "AiStudio": {
       "Generation": {
         "Temperature": 0.35,

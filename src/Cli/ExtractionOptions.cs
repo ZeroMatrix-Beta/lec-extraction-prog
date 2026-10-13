@@ -99,5 +99,7 @@ public static class ExtractionOptions {
         if (parseResult.GetValue(FileActivationDelay) is int activationDelay) {
             config.FileActivationDelaySeconds = activationDelay;
         }
+
+        ThoughtOptions.Apply(config, parseResult);
     }
 }

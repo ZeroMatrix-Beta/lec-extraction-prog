@@ -413,22 +413,20 @@ public partial class LatexRefinementSession {
             MaxOutputTokens = backendParams.MaxOutputTokens
         };
 
-        if (ModelCapabilities.SupportsThinking(backendParams.CurrentModel)) {
-            bool isGemini25 = backendParams.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-            if (!isGemini25 && !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = backendParams.ThinkingLevel };
-            }
-            else if (backendParams.ThinkingBudget.HasValue) {
-                int budget = backendParams.ThinkingBudget.Value;
-                if (budget > 32768) budget = 32768;
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-            }
-        }
+        var thoughtSettings = _config.PdfCompilation?.ThoughtSummaries;
+        requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
+            backendParams.CurrentModel, backendParams.ThinkingBudget, backendParams.ThinkingLevel, thoughtSettings?.Enabled == true);
 
         string noPreambleFileName = $"step5-{baseName}-offset-last_try{roundNumber}.tex";
         string standaloneFileName = $"step5-{baseName}-offset-last_try{roundNumber}-main.tex";
+        string retryLogPath = Path.Combine(targetFolder, $"compile-log-step5-last_try{roundNumber}.txt");
 
-        var (fullResponseText, usage) = await StreamFixResponseAsync(history, requestConfig, backendParams, standaloneFileName);
+        // The round's compile log is its existing log, but it is written only after the answer has
+        // been compiled, so the thoughts are appended to it then rather than per request.
+        var thoughts = new ThoughtLog(thoughtSettings, $"pdf-repair-{roundNumber}", $"{TexDocumentWriter.PdfRepairStep}, round {roundNumber}",
+            backendParams.CurrentModel, Path.Combine(targetFolder, noPreambleFileName), existingLogPath: null);
+
+        var (fullResponseText, usage) = await StreamFixResponseAsync(history, requestConfig, backendParams, standaloneFileName, thoughts);
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
             string cleanedText = LatexResponseCleaner.CleanLatexResponse(fullResponseText);
@@ -461,7 +459,8 @@ public partial class LatexRefinementSession {
             // the body that gets compiled and handed to the next round stays as the model wrote it.
             string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
             string repairHeader = TexDocumentWriter.BuildRefinementHeader(
-                $"{TexDocumentWriter.PdfRepairStep}, round {roundNumber}", noPreambleFileName, null, usage, backendParams.CurrentModel, backendParams.Generation);
+                $"{TexDocumentWriter.PdfRepairStep}, round {roundNumber}", noPreambleFileName, null, usage, backendParams.CurrentModel, backendParams.Generation,
+                thoughts.FilePath != null ? Path.GetFileName(thoughts.FilePath) : null);
             await System.IO.File.WriteAllTextAsync(noPreamblePath, TexDocumentWriter.StackLayers(
                 repairHeader, TexDocumentWriter.SplitHeaderLayers(originalBodyTex).Layers, TexDocumentWriter.SplitHeaderLayers(bodyOnlyText).Body));
             Ui.Info($"Gefixte LaTeX-Datei (Versuch #{roundNumber}) gespeichert unter: {noPreamblePath}");
@@ -476,8 +475,8 @@ public partial class LatexRefinementSession {
             Ui.Info($"Starte PDF-Kompilierung für step5 (Fix-Versuch #{roundNumber})...");
             var (retrySuccess, retryLog) = await LatexToolkit.CompilePdfAsync(standalonePath);
             string retryLogContent = FormatLatexLog(retryLog, retrySuccess);
-            string retryLogPath = Path.Combine(targetFolder, $"compile-log-step5-last_try{roundNumber}.txt");
             await System.IO.File.WriteAllTextAsync(retryLogPath, retryLogContent);
+            await thoughts.AppendAllToAsync(retryLogPath);
 
             if (retrySuccess) {
                 Ui.Success($"PDF erfolgreich im Fix-Versuch #{roundNumber} (step5) erstellt: {targetFolder}");
@@ -503,7 +502,7 @@ public partial class LatexRefinementSession {
         return (false, null, null);
     }
 
-    private async Task<(string Text, TokenUsage Usage)> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName) {
+    private async Task<(string Text, TokenUsage Usage)> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName, ThoughtLog thoughts) {
         string fullResponseText = "";
         TokenUsage totalUsage = default;
         var budget = new ContinueBudget(_config.Step3LastRefinement?.MaxContinueRequests ?? 10);
@@ -535,16 +534,17 @@ public partial class LatexRefinementSession {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                   streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
                   onChunkReceived: async (chunk) => {
-                      string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                      string text = thoughts.Absorb(chunk);
                       Ui.Raw(text);
                       chunkResp += text;
                       usage.Absorb(chunk.UsageMetadata);
+                      usage.RecordFinishReason(chunk.Candidates?[0]?.FinishReason?.ToString());
                       await Task.CompletedTask;
                   },
                   cancellationToken: cancelScope.Token,
                   initialBackoff: fixDelay,
                   retryContext: outputFileName,
-                  onRetry: () => { chunkResp = ""; usage = new UsageReport(); },
+                  onRetry: () => { chunkResp = ""; usage = new UsageReport(); thoughts.DiscardRequest(); },
                   highDemandDelay: fixDelay,
                   resumeOnPartialProgress: true
                 );
@@ -561,6 +561,7 @@ public partial class LatexRefinementSession {
 
             // Every completed request is billed, an empty answer included.
             totalUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens, usage.ThoughtTokens, Requests: 1);
+            await thoughts.EndRequestAsync(budget.RequestNumber, usage);
 
             if (string.IsNullOrWhiteSpace(chunkResp)) {
                 if (emptyResponseRetries < 3) {

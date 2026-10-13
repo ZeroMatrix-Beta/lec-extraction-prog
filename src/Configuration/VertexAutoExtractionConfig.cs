@@ -124,4 +124,11 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     /// </summary>
     public bool OnlyDoWarmUp { get; set; } = false;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
+
+    /// <summary>
+    /// [AI Context] Vertex counterpart of the AI Studio setting: thought summaries for Stage 1, one file
+    /// per part. The history acknowledgement and the warm-up handshake never request them.
+    /// [Human] Gedanken-Zusammenfassungen für die Transkription (eine Datei pro Teil).
+    /// </summary>
+    public ThoughtSummaryConfig ThoughtSummaries { get; set; } = new();
 }

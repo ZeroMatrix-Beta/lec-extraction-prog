@@ -44,7 +44,7 @@ public static class RefineCommands {
 
     public static Command BuildRefine() {
         var group = new Command("refine", "LaTeX refinement steps 1-3 over an existing .tex.");
-        var run = new Command("run", "Merge, polish and validate a .tex file.") { Tex, Step, ThroughEnd, Audio, ExtractionOptions.Overlap, ExtractionOptions.Profile, ExtractionOptions.Model };
+        var run = new Command("run", "Merge, polish and validate a .tex file.") { Tex, Step, ThroughEnd, Audio, ExtractionOptions.Overlap, ExtractionOptions.Profile, ExtractionOptions.Model, ThoughtOptions.Thoughts };
 
         run.SetAction(async (parseResult, _) => {
             var context = CliOptions.ReadContext(parseResult);
@@ -107,7 +107,7 @@ public static class RefineCommands {
 
     public static Command BuildPdf() {
         var group = new Command("pdf", "PDF compilation (step 4).");
-        var compile = new Command("compile", "Compile a .tex to PDF, optionally with the AI repair loop.") { Tex, FixLoop, ExtractionOptions.Profile, ExtractionOptions.Model };
+        var compile = new Command("compile", "Compile a .tex to PDF, optionally with the AI repair loop.") { Tex, FixLoop, ExtractionOptions.Profile, ExtractionOptions.Model, ThoughtOptions.Thoughts };
 
         compile.SetAction(async (parseResult, _) => {
             var context = CliOptions.ReadContext(parseResult);
@@ -179,6 +179,8 @@ public static class RefineCommands {
                 (config.UseVertex ? step.Vertex : step.AiStudio).CurrentModel = model;
             }
         }
+
+        ThoughtOptions.Apply(config, parseResult);
 
         string envName = RefinementUiHelper.ResolveRefinementKeyEnvName(config);
         return (envName, config.UseVertex || GoogleAiClientBuilder.IsApiKeyPresent(envName));

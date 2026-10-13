@@ -109,6 +109,13 @@ public class SessionLogger(SessionLoggerConfig config) {
 
     private string GetChatLogFilePath() => !string.IsNullOrWhiteSpace(_currentSessionLogPath) ? Path.Combine(_currentSessionLogPath, "chat_log.md") : "chat_log.md";
 
+    /// <summary>
+    /// [AI Context] The session's chat_log.md, or null when no session folder exists (CreateLogFiles off,
+    /// or the folder could not be created) - the same condition under which LogChatAsync writes nothing.
+    /// [Human] Pfad des chat_log.md dieser Session, oder null ohne Session-Ordner.
+    /// </summary>
+    public string? ChatLogFilePath => string.IsNullOrWhiteSpace(_currentSessionLogPath) ? null : GetChatLogFilePath();
+
     public async Task LogSessionSetupAsync() {
         if (string.IsNullOrWhiteSpace(_currentSessionLogPath)) return;
         try {

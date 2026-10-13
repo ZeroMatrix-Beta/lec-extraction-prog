@@ -144,6 +144,22 @@ considered default — it does not answer menus.
 
 ---
 
+## Reading the model's reasoning
+
+Run with `--thoughts file` (or set `ThoughtSummaries.Enabled` per stage) and each stage
+writes `<output>-thoughts.md` beside its output. Then:
+
+```bash
+lecx thoughts list --folder "<output-folder>" --json        # stage, requests, thinking tokens
+lecx thoughts show --folder "<lecture>" --stage speech --json # the summaries themselves
+```
+
+The files are plain Markdown with one `<!-- lecx-thoughts... {json} -->` line per file and
+per request, so `cat` works too. Thinking tokens share `MaxOutputTokens` with the answer;
+a request ending in `MAX_TOKENS` with a large thinking count is where a continue came from.
+
+---
+
 ## Not implemented
 
 `lecx ask` is registered but refuses with exit `2`. Everything else in `--help` works.

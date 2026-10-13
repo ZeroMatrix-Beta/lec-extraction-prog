@@ -144,4 +144,12 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     /// </summary>
     public bool OnlyDoWarmUp { get; set; } = false;
     public YouTubeTranscriptionTask[] YouTubeTasks { get; set; } = [];
+
+    /// <summary>
+    /// [AI Context] Thought summaries for Stage 1, one file per part. The cache-warming handshake sends
+    /// the same IncludeThoughts value so its request config stays identical to Part 1's, but its
+    /// thoughts are not logged: it only echoes a fixed sentence.
+    /// [Human] Gedanken-Zusammenfassungen für die Transkription (eine Datei pro Teil).
+    /// </summary>
+    public ThoughtSummaryConfig ThoughtSummaries { get; set; } = new();
 }

@@ -657,7 +657,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             }
             state.AnyPartSentToApi = true;
 
-            segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles);
+            segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, state.GeneratedTexFiles, targetPartPath);
             InteractiveDelay.LastGenerationCompletionTimeUtc = DateTime.UtcNow;
 
             state.FileTotalTokens += segmentTranscript.Usage;
@@ -674,7 +674,8 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     partStartTimeSeconds: partStartTimeSeconds,
                     usage: segmentTranscript.Usage,
                     model: _config.CurrentModel,
-                    generation: _config.Generation);
+                    generation: _config.Generation,
+                    thoughtsFileName: segmentTranscript.ThoughtsFile != null ? Path.GetFileName(segmentTranscript.ThoughtsFile) : null);
                 state.PartSummaries.Add(TexDocumentWriter.SummarizePartHeader(partHeader));
 
                 string partSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, partHeader, fromCache: false);

@@ -117,10 +117,11 @@ public partial class LatexRefinementSession {
 
     /// <summary>
     /// [AI Context] Assembles the GenerateContentConfig for a refinement step: cached content or plain
-    /// system instruction (mutually exclusive), plus thinking config.
+    /// system instruction (mutually exclusive), plus thinking config (with thought summaries when the
+    /// step's ThoughtSummaries asks for them).
     /// [Human] Baut die Anfrage-Konfiguration für einen Refinement-Schritt.
     /// </summary>
-    private static GenerateContentConfig BuildStepRequestConfig(BackendParameters backendParams, string? cacheName, string systemInstructionText) {
+    private static GenerateContentConfig BuildStepRequestConfig(BackendParameters backendParams, string? cacheName, string systemInstructionText, bool includeThoughts) {
         var requestConfig = new GenerateContentConfig {
             Temperature = backendParams.Temperature,
             TopP = backendParams.TopP,
@@ -135,20 +136,18 @@ public partial class LatexRefinementSession {
             requestConfig.SystemInstruction = new() { Role = "system", Parts = [new() { Text = systemInstructionText }] };
         }
 
-        if (ModelCapabilities.SupportsThinking(backendParams.CurrentModel)) {
-            bool isGemini25 = backendParams.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-            if (!isGemini25 && !string.IsNullOrEmpty(backendParams.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = backendParams.ThinkingLevel };
-            }
-            else if (backendParams.ThinkingBudget.HasValue) {
-                int budget = backendParams.ThinkingBudget.Value;
-                if (budget > 32768) budget = 32768;
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-            }
-        }
+        requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
+            backendParams.CurrentModel, backendParams.ThinkingBudget, backendParams.ThinkingLevel, includeThoughts);
 
         return requestConfig;
     }
+
+    /// <summary>The short stage name a step's thoughts file carries (what <c>lecx thoughts --stage</c> matches).</summary>
+    private string ThoughtStageKey(RefinementStepConfig stepConfig) =>
+        ReferenceEquals(stepConfig, _config.Step1MergeAndTimestamp) ? "merge"
+        : ReferenceEquals(stepConfig, _config.Step2SpeechRefinement) ? "speech"
+        : ReferenceEquals(stepConfig, _config.Step3LastRefinement) ? "final"
+        : "refinement";
 
     /// <summary>
     /// [AI Context] Dumps the full conversation history Gemini will read into a log file, for debugging.
@@ -215,7 +214,7 @@ public partial class LatexRefinementSession {
     /// [Human] Streamt einen Refinement-Schritt inkl. Continue-Anfragen und summiert deren Tokens.
     /// </summary>
     private async Task<(string FullResponseText, TokenUsage Usage)> StreamAndCollectAsync(
-        RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName) {
+        RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName, ThoughtLog thoughts) {
         TokenUsage totalUsage = default;
 
         string fullResponseText = "";
@@ -248,9 +247,9 @@ public partial class LatexRefinementSession {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                   streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
                   onChunkReceived: async (chunk) => {
-                      string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                      string text = thoughts.Absorb(chunk);
 
-                      if (string.IsNullOrEmpty(text) && chunk.Candidates != null && chunk.Candidates.Count > 0) {
+                      if (string.IsNullOrEmpty(text) && !thoughts.IsEnabled && chunk.Candidates != null && chunk.Candidates.Count > 0) {
                           Ui.Detail($"Empty text in chunk. FinishReason: {chunk.Candidates[0].FinishReason}", "DEBUG");
                       }
 
@@ -269,6 +268,7 @@ public partial class LatexRefinementSession {
                   onRetry: () => {
                       chunkResp = "";
                       usage = new UsageReport();
+                      thoughts.DiscardRequest();
                   },
                   highDemandDelay: rateLimitDelay,
                   resumeOnPartialProgress: true
@@ -290,6 +290,7 @@ public partial class LatexRefinementSession {
             if (usage.WasReported) {
                 Ui.Info(usage.DescribeOutputBudget(backendParams.MaxOutputTokens), "Tokens");
             }
+            await thoughts.EndRequestAsync(budget.RequestNumber, usage);
 
             if (string.IsNullOrWhiteSpace(chunkResp)) {
                 if (emptyResponseRetries < 3) {

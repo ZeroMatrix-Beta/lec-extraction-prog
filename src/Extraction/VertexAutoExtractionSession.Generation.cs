@@ -53,7 +53,9 @@ public partial class VertexAutoExtractionSession {
         return new SegmentUpload(true, parsedPrompt, attachmentParts);
     }
 
-    private async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
+    /// <param name="partOutputPath">The part's .tex path; its thoughts file goes beside it. Without it no
+    /// thoughts file is written, whatever ThoughtSummaries says.</param>
+    private async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, string? partOutputPath = null) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partFile, partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
         await LogTokenCountsAsync(requestConfig, attachmentParts, history, previousTexFiles, partNumber);
@@ -64,7 +66,9 @@ public partial class VertexAutoExtractionSession {
         }
         logContext += $"\n\n[Prompt]:\n{parsedPrompt ?? ""}";
 
-        return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext);
+        var thoughts = new ThoughtLog(_config.ThoughtSummaries, $"extract-part{partNumber}", $"{TexDocumentWriter.TranscriptionStep}, part {partNumber}",
+            _config.CurrentModel, partOutputPath, _sessionLogger.ChatLogFilePath);
+        return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext, thoughts);
     }
 
     private async Task<(GenerateContentConfig RequestConfig, List<Content> History)> BuildGenerationRequestAsync(string partFile, int partNumber, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
@@ -135,17 +139,8 @@ public partial class VertexAutoExtractionSession {
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
-            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-            }
-            else if (_config.ThinkingBudget.HasValue) {
-                int budget = _config.ThinkingBudget.Value;
-                if (budget > 32768) budget = 32768;
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-            }
-        }
+        requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
+            _config.CurrentModel, _config.ThinkingBudget, _config.ThinkingLevel, _config.ThoughtSummaries?.Enabled == true);
 
         return (requestConfig, history);
     }
@@ -225,7 +220,7 @@ public partial class VertexAutoExtractionSession {
         }
     }
 
-    private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext) {
+    private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext, ThoughtLog thoughts) {
         string fullResponse = "";
         var budget = new ContinueBudget(_config.MaxContinueRequests);
         int interactionInputTokens = 0;
@@ -251,7 +246,7 @@ public partial class VertexAutoExtractionSession {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                     streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
                     onChunkReceived: async (chunk) => {
-                        string txt = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                        string txt = thoughts.Absorb(chunk);
                         Ui.Raw(txt);
                         chunkResp += txt;
 
@@ -261,6 +256,7 @@ public partial class VertexAutoExtractionSession {
                         }
 
                         usage.Absorb(chunk.UsageMetadata);
+                        usage.RecordFinishReason(chunk.Candidates?[0]?.FinishReason?.ToString());
                         if (chunk.UsageMetadata != null) {
                             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -277,6 +273,7 @@ public partial class VertexAutoExtractionSession {
                         requestOutputTokens = 0;
                         requestCachedTokens = 0;
                         usage = new UsageReport();
+                        thoughts.DiscardRequest();
                     },
                     highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
                     resumeOnPartialProgress: true
@@ -328,6 +325,8 @@ public partial class VertexAutoExtractionSession {
             }
 
             fullResponse += chunkResp;
+            // Before the chat-log entry, so in chat_log.md the summary precedes the answer it led to.
+            await thoughts.EndRequestAsync(budget.RequestNumber, usage);
             await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.CurrentModel, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);
 
             bool segmentComplete = SegmentCompleteRegex().IsMatch(chunkResp);
@@ -361,6 +360,7 @@ public partial class VertexAutoExtractionSession {
             }
         }
 
-        return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens, interactionThinkingTokens, interactionRequests));
+        return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens, interactionThinkingTokens, interactionRequests),
+            thoughts.FilePath);
     }
 }

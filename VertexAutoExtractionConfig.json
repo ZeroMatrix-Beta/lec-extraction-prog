@@ -76,5 +76,12 @@
   "UseGoogleSearch": false,
   "FfmpegPreset": "ultrafast",
   // Options: "ultrafast" (fastest, 2-4x speedup), "veryfast", "fast", "medium"
-  "YouTubeTasks": []
+  "YouTubeTasks": [],
+  // Gemini's thought summaries for Stage 1: console, chat_log.md, and/or <part>-thoughts.md (read with `lecx thoughts`).
+  "ThoughtSummaries": {
+    "Enabled": false,
+    "ToConsole": true,
+    "ToExistingLog": false,
+    "ToSeparateFile": true
+  }
 }

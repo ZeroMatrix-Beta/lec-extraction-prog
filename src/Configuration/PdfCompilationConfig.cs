@@ -22,4 +22,11 @@ public class PdfCompilationConfig {
         get => MaxFixRounds;
         set => MaxFixRounds = value;
     }
+
+    /// <summary>
+    /// [AI Context] Thought summaries for the AI repair rounds. The repair runs on step 3's model and
+    /// generation settings, but this switch is its own, so the repair can be watched without step 3.
+    /// [Human] Gedanken-Zusammenfassungen der KI-Reparatur (eigener Schalter).
+    /// </summary>
+    public ThoughtSummaryConfig ThoughtSummaries { get; set; } = new();
 }

@@ -430,7 +430,12 @@ public partial class LatexRefinementSession {
 
         string systemInstructionText = await ResolveSystemInstructionTextAsync(stepConfig);
         string? cacheName = await EnsureContextCacheAsync(backendParams, systemInstructionText, outputFileName, cacheStateFileName);
-        var requestConfig = BuildStepRequestConfig(backendParams, cacheName, systemInstructionText);
+        var requestConfig = BuildStepRequestConfig(backendParams, cacheName, systemInstructionText, stepConfig.ThoughtSummaries?.Enabled == true);
+
+        // The step's existing log is the prompt log written just below; the thoughts file sits beside
+        // the output under the name the step intends, even if the output itself later gets "-copyN".
+        var thoughts = new ThoughtLog(stepConfig.ThoughtSummaries, ThoughtStageKey(stepConfig), stepLabel, backendParams.CurrentModel,
+            Path.Combine(targetOutputFolder, outputFileName), Path.Combine(targetOutputFolder, $"{outputFileName}-prompt-log.md"));
 
         var lastUserMsg = history.LastOrDefault(c => c.Role == "user");
         if (lastUserMsg != null && lastUserMsg.Parts != null) {
@@ -443,7 +448,7 @@ public partial class LatexRefinementSession {
         int totalInputLength = CountInputLatexLength(history);
 
         var (fullResponseText, usage) =
-            await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName);
+            await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName, thoughts);
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
             if (expectedSpokenClean > 0 || expectedMathStroke > 0) {
@@ -493,7 +498,8 @@ public partial class LatexRefinementSession {
             body = TexDocumentWriter.RestorePartHeaders(body, TexDocumentWriter.ExtractPartHeaders(inputText));
 
             string stepHeader = TexDocumentWriter.BuildRefinementHeader(
-                stepLabel, outputFileName, Path.GetFileName(inputFile), usage, backendParams.CurrentModel, backendParams.Generation);
+                stepLabel, outputFileName, Path.GetFileName(inputFile), usage, backendParams.CurrentModel, backendParams.Generation,
+                thoughts.FilePath != null ? Path.GetFileName(thoughts.FilePath) : null);
 
             await System.IO.File.WriteAllTextAsync(outPath, TexDocumentWriter.StackLayers(stepHeader, inheritedLayers, body));
             Ui.Success($"Ergebnis gespeichert unter: {outPath}", "Refinement");

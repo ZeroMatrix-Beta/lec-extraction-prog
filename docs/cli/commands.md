@@ -169,6 +169,56 @@ lecx chat --backend vertex
 | `--no-system-prompt` | Do not load any system instruction file |
 | `--no-history` | Do not preload history attachments |
 
+## `lecx status` — free
+
+Progress per lecture folder: parts transcribed, steps 1-3 done, PDF size, `tmp/` size.
+
+```bash
+lecx status --folder "D:/lecture-videos/analysis2/extracted_output" --json
+```
+
+`--folder <dir>` (a lecture folder or a folder of them; defaults to the configured target
+folder) · `--video <name>` (one lecture).
+
+## `lecx clean` — free, deletes files
+
+| Option | Meaning |
+|---|---|
+| `--tmp` | Delete the `tmp/` folders (FFmpeg segments and cache) |
+| `--copies` | Keep the newest of duplicate `-copy-N.tex` files, archive the older ones |
+| `--folder <dir>` · `--video <name>` | Which lectures, as for `status` |
+| `--force` | Also touch files changed in the last 10 minutes |
+
+## `lecx quota` — free
+
+API-key profiles, which env variable each maps to, and the daily Free-Tier quota use.
+
+## `lecx thoughts` — free
+
+Reads the `<output>-thoughts.md` files the stages write when `ThoughtSummaries.Enabled`
+and `ToSeparateFile` are on (config, or `--thoughts` on the run). Gemini's condensed
+summary of its reasoning, one section per request (first request and each continue),
+with thinking tokens, output tokens and finish reason.
+
+```bash
+lecx thoughts list --folder "<output-folder>" --json
+lecx thoughts show --folder "<lecture-folder>" --stage speech --request 1
+lecx thoughts show "<lecture-folder>/step3-<name>-offset-speech_refined.tex" --json
+```
+
+| Option | Meaning |
+|---|---|
+| `[path]` (`show`) | A thoughts file, the `.tex` output it belongs to (needs not exist), or a folder |
+| `--folder <dir>` · `--video <name>` | Where to look. Defaults to the configured target folder |
+| `--stage <key>` | `extract-partN`, `merge`, `speech`, `final`, `pdf-repair-N`; a prefix (`extract`, `pdf`) matches all |
+| `--request <n>` (`show`) | Only that request |
+
+`show` prints the newest match; exits `2` when nothing matches.
+
+**`--thoughts on|off|all|console,log,file`** on `run`, `extract run`, `refine run`,
+`pdf compile` and `batch` turns the summaries on or off for every stage of that run
+(not saved). `log` = the stage's existing log, `file` = the `-thoughts.md` file.
+
 ## `lecx ask`
 
 **Not implemented.** Registered so the intended shape is visible; refuses with exit `2`.

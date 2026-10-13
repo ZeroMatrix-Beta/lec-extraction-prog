@@ -123,6 +123,7 @@ public static class CliBootstrapper {
         root.Add(CleanCommand.Build());
         root.Add(StatusCommand.Build());
         root.Add(QuotaCommand.Build());
+        root.Add(ThoughtsCommand.Build());
 
         foreach (var planned in PlannedCommands.Build()) {
             root.Add(planned);

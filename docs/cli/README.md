@@ -59,7 +59,7 @@ re-pays for — every segment. `--resume-window <hours>` widens it, `--force` ig
 
 | Free | Paid |
 |---|---|
-| `plan`, `config`, `media probe/segment/audio`, any `--dry-run` | `run`, `extract run`, `refine run`, `batch`, `pdf compile` (unless `--fix-loop 0`) |
+| `plan`, `config`, `status`, `quota`, `thoughts`, `clean`, `media probe/segment/audio`, any `--dry-run` | `run`, `extract run`, `refine run`, `batch`, `pdf compile` (unless `--fix-loop 0`) |
 
 ## Exit codes
 

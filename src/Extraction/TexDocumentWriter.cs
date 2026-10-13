@@ -45,8 +45,10 @@ public static partial class TexDocumentWriter {
     /// the lecture, and its token usage.
     /// [Human] Header-Block einer einzelnen .tex-Teildatei.
     /// </summary>
+    /// <param name="thoughtsFileName">The part's thoughts file, when thought summaries were written; a
+    /// reader of the .tex finds them from here.</param>
     public static string BuildPartHeader(int partNumber, int totalParts, string sourcePartFileName, double partStartTimeSeconds,
-        TokenUsage usage, string model, GenerationParameters generation) {
+        TokenUsage usage, string model, GenerationParameters generation, string? thoughtsFileName = null) {
         var lines = new List<string> {
             $"{TranscriptionStep}, part {partNumber} of {totalParts}",
             $"Source part: {sourcePartFileName}"
@@ -54,7 +56,14 @@ public static partial class TexDocumentWriter {
         lines.AddRange(ModelLines(model, generation));
         lines.Add($"Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         lines.Add($"PART_START_SECONDS: {partStartTimeSeconds.ToString("F2", CultureInfo.InvariantCulture)}");
+        AddThoughtsLine(lines, thoughtsFileName);
         return Layer(lines, TokenLines(usage, "Token Usage"));
+    }
+
+    private static void AddThoughtsLine(List<string> lines, string? thoughtsFileName) {
+        if (!string.IsNullOrEmpty(thoughtsFileName)) {
+            lines.Add($"Thought summaries: {thoughtsFileName}");
+        }
     }
 
     /// <summary>
@@ -87,14 +96,16 @@ public static partial class TexDocumentWriter {
     /// [AI Context] The layer of one refinement step's output.
     /// [Human] Header-Block eines Refinement-Schritts.
     /// </summary>
+    /// <param name="thoughtsFileName">The step's thoughts file, when thought summaries were written.</param>
     public static string BuildRefinementHeader(string stepLabel, string outputFileName, string? inputFileName,
-        TokenUsage usage, string model, GenerationParameters generation) {
+        TokenUsage usage, string model, GenerationParameters generation, string? thoughtsFileName = null) {
         var lines = new List<string> { stepLabel, $"Output: {outputFileName}" };
         if (!string.IsNullOrEmpty(inputFileName)) {
             lines.Add($"Input: {inputFileName}");
         }
         lines.AddRange(ModelLines(model, generation));
         lines.Add($"Processed on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        AddThoughtsLine(lines, thoughtsFileName);
         return Layer(lines, TokenLines(usage, "Token Usage"));
     }
 

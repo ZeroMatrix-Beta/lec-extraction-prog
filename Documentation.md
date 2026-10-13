@@ -56,7 +56,19 @@ The `ThinkingBudget` determines the maximum number of output tokens the model is
 ### Thinking Level
 The `ThinkingLevel` is an `enum` (`MINIMAL`, `LOW`, `MEDIUM`, `HIGH`) that dictates the depth of reasoning.
 - **Model Compatibility:** `ThinkingLevel` is fully supported by the newer **Gemini 3.x** frontier models. However, models like **Gemini 2.5 Pro** do not support the `thinkingLevel` parameter and will reject the request if it is included.
-- **Code implementation:** The `requestConfig` builder checks the model name (`_config.Model`). If the model is a `gemini-3` variant, both `ThinkingLevel` and `ThinkingBudget` are applied. If the model is a `gemini-2.5` variant, the application silently strips the `ThinkingLevel` and relies entirely on the `ThinkingBudget` to avoid `thinking_level is not supported` errors.
+- **Code implementation:** `ThinkingConfigFactory.Build` (one place for every stage). On a `gemini-3` model with a `ThinkingLevel` set, **only the level is sent: `ThinkingBudget` is ignored and does not cap the request** (Step 2's `ThinkingBudget: 4096` has no effect on `MEDIUM`). The budget, clamped to 32768, is sent only to `gemini-2.5` models or when no level is set. Thinking tokens count against `MaxOutputTokens` together with the answer.
+
+### Thought Summaries (`ThoughtSummaries`)
+Every generating stage has its own block: `AiStudioAutoExtractionConfig` / `VertexAutoExtractionConfig` (Stage 1, one file per part), `Step1MergeAndTimestamp`, `Step2SpeechRefinement`, `Step3LastRefinement` and `PdfCompilation` (AI repair rounds) in `LatexRefinementSessionConfig`.
+
+```json
+"ThoughtSummaries": { "Enabled": false, "ToConsole": true, "ToExistingLog": false, "ToSeparateFile": true }
+```
+
+- `Enabled` sends `ThinkingConfig.IncludeThoughts = true`: Gemini returns a condensed summary of its reasoning as parts marked `Thought`. Billing is unchanged (thinking tokens are billed either way). `ResponseParts.Split` keeps the summary out of the `.tex` output and out of the continue history.
+- `ToConsole`: printed dimmed while it streams. `ToExistingLog`: appended to the stage's own log: Stage 1 `chat_log.md` (needs `CreateLogFiles`), a step's `<output>-prompt-log.md`, the PDF repair's `compile-log-step5-last_tryN.txt`. `ToSeparateFile`: `<output stem>-thoughts.md` beside the output, one section per request with thinking/output tokens and finish reason; a second run writes `-thoughts-2.md`. The output's `.tex` header names the file (`Thought summaries: ...`).
+- CLI: `--thoughts on|off|all|console,log,file` on `run`, `extract run`, `refine run`, `pdf compile`, `batch` (this run only). Read with `lecx thoughts list` / `lecx thoughts show [path] --stage speech --request 1 --json` (see `docs/cli/commands.md`).
+- The AI Studio warm-up handshake sends the same `IncludeThoughts` (identical config for the prefix cache) but its thoughts are dropped; the Vertex history acknowledgement never requests them. The chat sessions do not support thought summaries yet.
 
 ---
 
@@ -443,7 +455,15 @@ Das `ThinkingBudget` bestimmt die maximale Anzahl von Ausgabe-Token, die das Mod
 ### Thinking Level
 Das `ThinkingLevel` ist ein `enum` (`MINIMAL`, `LOW`, `MEDIUM`, `HIGH`), das die Tiefe des Nachdenkens vorschreibt.
 - **Modell-Kompatibilität:** `ThinkingLevel` wird von den neueren **Gemini 3.x** Frontier-Modellen voll unterstützt. Modelle wie **Gemini 2.5 Pro** unterstützen den Parameter `thinkingLevel` jedoch nicht und lehnen die Anfrage ab, wenn er enthalten ist.
-- **Code-Implementierung:** Der `requestConfig` Builder prüft den Modellnamen (`_config.Model`). Wenn das Modell eine `gemini-3`-Variante ist, werden sowohl `ThinkingLevel` als auch `ThinkingBudget` angewendet. Wenn das Modell eine `gemini-2.5`-Variante ist, entfernt die Anwendung stillschweigend das `ThinkingLevel` und verlässt sich vollständig auf das `ThinkingBudget`, um `thinking_level is not supported` Fehler zu vermeiden.
+- **Code-Implementierung:** `ThinkingConfigFactory.Build` (eine Stelle für alle Stufen). Bei einem `gemini-3`-Modell mit gesetztem `ThinkingLevel` wird **nur das Level gesendet: `ThinkingBudget` wird ignoriert und begrenzt die Anfrage nicht** (Step 2s `ThinkingBudget: 4096` wirkt bei `MEDIUM` nicht). Das Budget (auf 32768 begrenzt) geht nur an `gemini-2.5`-Modelle oder wenn kein Level gesetzt ist. Denk-Tokens zählen zusammen mit der Antwort gegen `MaxOutputTokens`.
+
+### Gedanken-Zusammenfassungen (`ThoughtSummaries`)
+Jede generierende Stufe hat einen eigenen Block: `AiStudioAutoExtractionConfig` / `VertexAutoExtractionConfig` (Stage 1, eine Datei pro Teil), `Step1MergeAndTimestamp`, `Step2SpeechRefinement`, `Step3LastRefinement` und `PdfCompilation` (KI-Reparatur) in `LatexRefinementSessionConfig`.
+
+- `Enabled` sendet `ThinkingConfig.IncludeThoughts = true`: Gemini liefert eine verdichtete Zusammenfassung seines Nachdenkens als `Thought`-Parts. Kosten unverändert. `ResponseParts.Split` hält sie aus dem `.tex` und der Continue-History heraus.
+- `ToConsole`: gedimmt in der Konsole. `ToExistingLog`: an das Log der Stufe angehängt (Stage 1 `chat_log.md`, Schritt `<output>-prompt-log.md`, PDF-Reparatur `compile-log-step5-last_tryN.txt`). `ToSeparateFile`: `<output stem>-thoughts.md` neben der Ausgabe, ein Abschnitt pro Request mit Denk-/Output-Tokens und FinishReason; ein zweiter Lauf schreibt `-thoughts-2.md`. Der `.tex`-Header nennt die Datei.
+- CLI: `--thoughts on|off|all|console,log,file` bei `run`, `extract run`, `refine run`, `pdf compile`, `batch` (nur dieser Lauf). Lesen mit `lecx thoughts list` / `lecx thoughts show [Pfad] --stage speech --request 1 --json`.
+- Der AI-Studio-Warm-up sendet dasselbe `IncludeThoughts` (identische Config für den Prefix-Cache), verwirft aber seine Gedanken; Vertex' History-Bestätigung fordert keine an. Die Chat-Sessions unterstützen es noch nicht.
 
 ---
 

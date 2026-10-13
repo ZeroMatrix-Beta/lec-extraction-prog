@@ -376,7 +376,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     };
 
                     string texOutput = (await TranscribeSegmentToLatexAsync(
-                        task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
+                        task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles,
+                        Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex")
                     )).LatexBody;
 
                     if (!string.IsNullOrWhiteSpace(texOutput)) {
@@ -443,17 +444,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
             }
         }
-        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
-            bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-            if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-            }
-            else if (_config.ThinkingBudget.HasValue) {
-                int budget = _config.ThinkingBudget.Value;
-                if (budget > 32768) budget = 32768;
-                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-            }
-        }
+        // Never with thought summaries: this answer becomes a model turn of the session preamble.
+        requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(_config.CurrentModel, _config.ThinkingBudget, _config.ThinkingLevel);
 
         Ui.Step($"Warte auf Bestätigung der History von {_config.CurrentModel}...");
         int initialBackoff = _config.RateLimitDelaySeconds > 0 ? _config.RateLimitDelaySeconds : 45;
@@ -699,7 +691,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                 }
             }
 
-            segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles);
+            segmentTranscript = await TranscribeSegmentToLatexAsync(safePartPath, i + 1, file, parsedPrompt, attachmentParts, generatedTexFiles, targetPartPath);
 
             fileTotalTokens += segmentTranscript.Usage;
 
@@ -713,7 +705,8 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     partStartTimeSeconds: partStartTimeSeconds,
                     usage: segmentTranscript.Usage,
                     model: _config.CurrentModel,
-                    generation: _config.Generation);
+                    generation: _config.Generation,
+                    thoughtsFileName: segmentTranscript.ThoughtsFile != null ? Path.GetFileName(segmentTranscript.ThoughtsFile) : null);
                 partSummaries.Add(TexDocumentWriter.SummarizePartHeader(partHeader));
 
                 string partSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, partHeader, fromCache: false);

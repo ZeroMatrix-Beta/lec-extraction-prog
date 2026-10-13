@@ -94,8 +94,9 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
             string parsedPrompt = BuildFragmentPrompt(frag, partNum);
             var attachmentParts = new List<Part> { Part.FromUri(task.VideoUrl, "video/mp4") };
 
+            string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
             string texOutput = (await _host.TranscribeSegmentToLatexAsync(
-                task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles
+                task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles, targetPartPath
             )).LatexBody;
 
             if (string.IsNullOrWhiteSpace(texOutput)) continue;
@@ -103,7 +104,6 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
             string cleanTex = LatexResponseCleaner.CleanLatexResponse(texOutput);
             fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
 
-            string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
             string partContent = cleanTex;
             if (!partContent.StartsWith("% Startzeit:") && !partContent.StartsWith("% Zeitstempel:")) {
                 partContent = $"% Startzeit: {frag.StartTime} | Ende: {frag.EndTime}\n\n" + partContent;

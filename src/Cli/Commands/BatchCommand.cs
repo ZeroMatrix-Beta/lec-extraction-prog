@@ -45,7 +45,8 @@ public static class BatchCommand {
             PlanCommand.Folder, PlanCommand.From, PlanCommand.Limit, PlanCommand.ResumeWindow, PlanCommand.Force,
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
             ExtractionOptions.Speed, ExtractionOptions.VideoFps,
-            ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
+            ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay,
+            ThoughtOptions.Thoughts
         };
 
         command.SetAction(async (parseResult, cancellationToken) => {
@@ -264,6 +265,10 @@ public static class BatchCommand {
         Forward(arguments, "--file-activation-delay", parseResult.GetValue(ExtractionOptions.FileActivationDelay)?.ToString());
         Forward(arguments, "--resume-window", parseResult.GetValue(PlanCommand.ResumeWindow)?.ToString(System.Globalization.CultureInfo.InvariantCulture));
         Forward(arguments, "--stop-after", parseResult.GetValue(RunCommand.StopAfter));
+        Forward(arguments, "--thoughts", parseResult.GetValue(ThoughtOptions.Thoughts));
+
+        // Without it a child would read the default config folder, not the one this batch was given.
+        Forward(arguments, "--config-dir", parseResult.GetValue(CliOptions.ConfigDir));
 
         if (parseResult.GetValue(PlanCommand.Force)) {
             arguments.Add("--force");

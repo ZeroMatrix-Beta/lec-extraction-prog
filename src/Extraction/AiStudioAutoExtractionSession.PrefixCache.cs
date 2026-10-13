@@ -235,14 +235,9 @@ public partial class AiStudioAutoExtractionSession {
                 requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
                 Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
             } else {
-                bool isGemini25 = _config.CurrentModel.Contains("2.5", StringComparison.OrdinalIgnoreCase);
-                if (!isGemini25 && !string.IsNullOrEmpty(_config.ThinkingLevel)) {
-                    requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingLevel = _config.ThinkingLevel };
-                } else if (_config.ThinkingBudget.HasValue) {
-                    int budget = _config.ThinkingBudget.Value;
-                    if (budget > 32768) budget = 32768;
-                    requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = budget };
-                }
+                // IncludeThoughts too, for the same reason; the handshake's own thoughts are dropped below.
+                requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
+                    _config.CurrentModel, _config.ThinkingBudget, _config.ThinkingLevel, IncludesThoughts);
             }
         }
 
@@ -288,7 +283,8 @@ public partial class AiStudioAutoExtractionSession {
             bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
-                    string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                    // The answer only: with IncludeThoughts on, Parts[0] can be a thought summary.
+                    string txt = ResponseParts.Split(chunk).Answer;
                     responseText += txt;
                     usage.Absorb(chunk.UsageMetadata);
                     if (chunk.UsageMetadata != null) {

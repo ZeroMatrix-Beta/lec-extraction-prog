@@ -39,7 +39,8 @@ public static class RunCommand {
             ExtractionOptions.Out, ExtractionOptions.Parts, ExtractionOptions.Overlap,
             ExtractionOptions.Speed, ExtractionOptions.Preset,
             ExtractionOptions.Model, ExtractionOptions.Profile,
-            ExtractionOptions.VideoFps, ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay
+            ExtractionOptions.VideoFps, ExtractionOptions.SkipTokenCounting, ExtractionOptions.FileActivationDelay,
+            ThoughtOptions.Thoughts
         };
 
         if (chainRefinement) {
@@ -156,7 +157,9 @@ public static class RunCommand {
             }
         }
 
-        string modelToUse = parseResult.GetValue(ExtractionOptions.Model) ?? config.CurrentModel;
+        // Only an explicit --model reaches the refinement steps. Without it, which model they use is
+        // UseChosenModelForRestOfPipeline's decision (the session applies it when it chains).
+        string? modelToUse = parseResult.GetValue(ExtractionOptions.Model);
         if (!string.IsNullOrWhiteSpace(modelToUse)) {
             foreach (var step in new[] { refinementConfig.Step1MergeAndTimestamp, refinementConfig.Step2SpeechRefinement, refinementConfig.Step3LastRefinement }) {
                 if (step != null) {
@@ -164,6 +167,8 @@ public static class RunCommand {
                 }
             }
         }
+
+        ThoughtOptions.Apply(refinementConfig, parseResult);
 
         return new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, refinementConfig) {
             ResumeWindow = TimeSpan.FromHours(resumeWindowHours)

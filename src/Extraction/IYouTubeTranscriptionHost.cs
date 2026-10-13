@@ -23,11 +23,13 @@ public interface IYouTubeTranscriptionHost {
     Task<bool> EnsureSessionSetupAsync();
 
     /// <summary>Sends one segment to the model and returns its LaTeX body plus token usage.</summary>
+    /// <param name="partOutputPath">Where the part's .tex will be written; its thoughts file goes beside it.</param>
     Task<SegmentTranscript> TranscribeSegmentToLatexAsync(
         string partFile,
         int partNumber,
         string originalFileName,
         string? parsedPrompt,
         List<Part> attachmentParts,
-        List<string> previousTexFiles);
+        List<string> previousTexFiles,
+        string? partOutputPath = null);
 }
