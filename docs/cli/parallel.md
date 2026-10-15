@@ -98,9 +98,10 @@ Because the two names have separate daily budgets (and, going by the limit's nam
 workers at once: one on `--model gemini-3.8-flash`, one on `--model gemini-3.7-flash`. Four
 keys give eight independent budgets (8 × 20 requests a day). `lecx batch` cannot express this,
 since it refuses two workers on one profile; run two queue loops instead, one per model name,
-sharing one job list. This was first run on 2026-10-15 with
-`D:\lecture-videos\analysis2\extracted_output\rerun-logs\run-queue4.sh` plus a second
-instance (`run-queue-37.sh`) that adds four 3.7 workers to the same queue.
+sharing one job list. This was first run on 2026-10-15: `run-queue3.sh` (four 3.8 workers;
+`run-queue4.sh` is its copy with the `PerDay` fix) plus `run-queue-37.sh`, which adds four
+3.7 workers to the same queue, all in
+`D:\lecture-videos\analysis2\extracted_output\rerun-logs\`.
 
 Things to watch with eight: the upload of eight ~130 MB segments at once needs a stable
 connection, and "high demand" (HTTP 503) hits both names alike, because both are served by
