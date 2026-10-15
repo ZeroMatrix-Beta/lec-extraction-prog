@@ -273,6 +273,12 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             Ui.Success("'Hello' Roundtrip erfolgreich.");
         }
 
+        // Vertex only: the explicit cache holds the finished system instruction and history, so it is
+        // created once both are loaded (and deleted here if caching was switched off).
+        if (_backend.ContextCache != null) {
+            await _backend.ContextCache.InitializeAsync(_systemInstructionText, _historyParts);
+        }
+
         return true;
     }
 
@@ -360,14 +366,22 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
 
 
 
-    private List<Part> GetValidSystemInstructionParts() {
+    private List<Part> GetValidSystemInstructionParts() =>
+        BuildSystemInstructionParts(_systemInstructionText, _historyParts, _config.LoadHistoryIntoSystemInstruction, _backend.SystemInstructionAcceptsFiles);
+
+    /// <summary>
+    /// [AI Context] The system instruction's parts: its text, then the history when it is loaded into
+    /// the system instruction. A backend whose system instruction takes text only (Vertex) keeps the
+    /// history's files out; they reach the model through its explicit context cache instead.
+    /// [Human] Die Teile der System Instruction; bei Vertex ohne History-Dateien.
+    /// </summary>
+    public static List<Part> BuildSystemInstructionParts(string systemInstructionText, IReadOnlyList<Part> historyParts, bool loadHistoryIntoSystemInstruction, bool acceptsFiles) {
         var sysParts = new List<Part>();
-        if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
-        if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            // A backend whose system instruction takes text only (Vertex) keeps the history files out.
-            sysParts.AddRange(_backend.SystemInstructionAcceptsFiles
-                ? _historyParts
-                : _historyParts.Where(p => p.FileData == null && p.InlineData == null && !string.IsNullOrEmpty(p.Text)));
+        if (!string.IsNullOrWhiteSpace(systemInstructionText)) sysParts.Add(new() { Text = systemInstructionText });
+        if (loadHistoryIntoSystemInstruction && historyParts.Count > 0) {
+            sysParts.AddRange(acceptsFiles
+                ? historyParts
+                : historyParts.Where(p => p.FileData == null && p.InlineData == null && !string.IsNullOrEmpty(p.Text)));
         }
         return sysParts;
     }
@@ -503,23 +517,29 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             }
             if (_config.UseChosenModelForRestOfPipeline) {
                 Ui.Info($"UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...", "AutoExtraction");
-                void ApplyModelParametersTo(BackendParameters? target) {
-                    if (target == null) return;
-                    target.CurrentModel = _config.CurrentModel;
-                    target.Temperature = _config.Temperature;
-                    target.TopP = _config.TopP;
-                    target.TopK = _config.TopK;
-                    target.MaxOutputTokens = _config.MaxOutputTokens;
-                    target.ThinkingBudget = _config.ThinkingBudget;
-                    target.ThinkingLevel = _config.ThinkingLevel;
-                }
-                // The parameter set the refinement will actually read.
-                foreach (var step in new[] { _latexRefinementConfig.Step1MergeAndTimestamp, _latexRefinementConfig.Step2SpeechRefinement, _latexRefinementConfig.Step3LastRefinement }) {
-                    if (step != null) ApplyModelParametersTo(useVertex ? step.Vertex : step.AiStudio);
-                }
+                ApplyChosenModelToRefinement(_latexRefinementConfig, _config, useVertex);
             }
         }
         return _backend.CreateRefinementClient(_latexRefinementConfig!);
+    }
+
+    /// <summary>
+    /// [AI Context] Copies the extraction's model and generation parameters onto every refinement
+    /// step - onto the parameter set the refinement will read (Vertex or AI Studio), in memory only.
+    /// [Human] Übernimmt Modell und Parameter der Extraktion für alle Refinement-Schritte.
+    /// </summary>
+    public static void ApplyChosenModelToRefinement(LatexRefinementSessionConfig refinement, IAutoExtractionConfig extraction, bool useVertex) {
+        foreach (var step in new[] { refinement.Step1MergeAndTimestamp, refinement.Step2SpeechRefinement, refinement.Step3LastRefinement }) {
+            var target = step == null ? null : useVertex ? step.Vertex : step.AiStudio;
+            if (target == null) continue;
+            target.CurrentModel = extraction.CurrentModel;
+            target.Temperature = extraction.Temperature;
+            target.TopP = extraction.TopP;
+            target.TopK = extraction.TopK;
+            target.MaxOutputTokens = extraction.MaxOutputTokens;
+            target.ThinkingBudget = extraction.ThinkingBudget;
+            target.ThinkingLevel = extraction.ThinkingLevel;
+        }
     }
 
     /// <summary>
@@ -605,6 +625,10 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             }
 
             state.AudioTrackExtractor.EnsureStarted(_config.GenerateAudioFile);
+
+            if (_backend.ContextCache != null) {
+                await _backend.ContextCache.EnsureValidAsync(_systemInstructionText, _historyParts);
+            }
 
             if (i > 0) {
                 int rateLimitDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;

@@ -22,6 +22,8 @@ public sealed class AiStudioExtractionBackend(Client client, AiStudioAutoExtract
 
     public bool RefinementUsesVertex => false;
 
+    public ExplicitContextCache? ContextCache => null;
+
     public void DescribeEndpoint() {
         if (config.ActiveApiProfile == 0) {
             Ui.Detail("API-Key:         Dedizierter Key für automatisierte Extraktion");

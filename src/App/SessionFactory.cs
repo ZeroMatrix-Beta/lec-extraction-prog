@@ -219,7 +219,7 @@ public static class SessionFactory {
                     var attachmentHandler = new AttachmentUploader(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
                     var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
                     var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
-                    var session = new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
+                    var session = new AutoExtractionSession(new VertexExtractionBackend(client, config), config, attachmentHandler, sessionLogger, latexRefinementConfig);
                     await session.StartAsync();
                     return false;
                 }

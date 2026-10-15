@@ -34,6 +34,9 @@ public interface IExtractionBackend {
     /// </summary>
     bool SystemInstructionAcceptsFiles { get; }
 
+    /// <summary>Vertex's explicit CachedContent cache; null on AI Studio, which has only the implicit one.</summary>
+    ExplicitContextCache? ContextCache { get; }
+
     /// <summary>Deletes files a run left on the platform; run before and after every run.</summary>
     Task CleanUpRemoteFilesAsync();
 

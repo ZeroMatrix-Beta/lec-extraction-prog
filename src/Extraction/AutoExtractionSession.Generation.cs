@@ -80,9 +80,16 @@ public partial class AutoExtractionSession {
             MaxOutputTokens = _config.MaxOutputTokens
         };
 
-        var sysParts = GetValidSystemInstructionParts();
-        if (sysParts.Count > 0) {
-            requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+        // Vertex's explicit cache already holds the system instruction; the two are mutually exclusive.
+        string? cachedContent = _backend.ContextCache?.Name;
+        if (!string.IsNullOrEmpty(cachedContent)) {
+            requestConfig.CachedContent = cachedContent;
+        }
+        else {
+            var sysParts = GetValidSystemInstructionParts();
+            if (sysParts.Count > 0) {
+                requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
+            }
         }
 
         requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
