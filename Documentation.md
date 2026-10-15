@@ -356,6 +356,7 @@ Cross-cutting concerns like session logging and string utilities.
 - **`GoogleAiClientBuilder`**: Encapsulates the raw HTTP `HttpClient` construction and API-key/credential resolution for both AI Studio and Vertex.
 - **`AttachmentUploader`**: A sophisticated file discovery system (was `AttachmentHandler`). When a user types `/attach file.pdf`, this class searches through a list of fallback directories (the `HistoryPreloadPaths` and `IncludePaths`), finds the file, and prepares it for upload.
 - **`ApiRetryPolicy`**: Contains logic to gracefully handle HTTP transient errors, such as rate limits (HTTP 429) or temporary server errors (HTTP 503). Was `ApiResilience`.
+- **`GenerationLoop`**: The one streaming request loop behind Stage 1 (AI Studio and Vertex), the refinement steps and the PDF repair: streams through `ApiRetryPolicy`, sums each request's `UsageReport`, writes the thought summaries via `ThoughtLog` (an aborted request as `ABORTED`), sends a blank answer again, and sends continue prompts until the stage's completion marker arrives or the `ContinueBudget` runs out. What differs per stage (marker, continue wording, token lines, chat log, delays, console labels) goes in through `GenerationLoopOptions`. A fix to the loop belongs here, not in a stage.
 - **`ApiKeyProfileResolver`**: Resolves an API-key profile index (0-3) to its environment-variable name.
 - **`PrefixCacheAnchor`**: Loads and caches `dummy-part0.tex`, the shared implicit-prefix-cache anchor used by both extraction sessions.
 - **`GcsWorkspace`**: The shared Vertex GCS bucket cleanup routine.
@@ -757,6 +758,7 @@ Querschnittsbelange wie Session-Logging und String-Hilfsfunktionen.
 - **`GoogleAiClientBuilder`**: Kapselt die rohe HTTP `HttpClient`-Erstellung sowie die API-Key-/Credential-Auflösung für AI Studio und Vertex.
 - **`AttachmentUploader`**: Ein hochentwickeltes Dateisuchsystem (vormals `AttachmentHandler`). Wenn ein Benutzer `/attach file.pdf` eingibt, durchsucht diese Klasse eine Liste von Fallback-Ordnern, findet die Datei und bereitet sie für den Upload vor.
 - **`ApiRetryPolicy`**: Enthält Logik, um temporäre HTTP-Fehler anmutig zu behandeln, wie z.B. Ratenlimits (HTTP 429) oder temporäre Serverfehler (HTTP 503). Vormals `ApiResilience`.
+- **`GenerationLoop`**: Die eine Streaming-Schleife hinter Stage 1 (AI Studio und Vertex), den Refinement-Schritten und der PDF-Reparatur: streamt über `ApiRetryPolicy`, summiert den `UsageReport` jeder Anfrage, schreibt die Gedanken-Zusammenfassungen über `ThoughtLog` (eine abgebrochene Anfrage als `ABORTED`), schickt eine leere Antwort erneut und sendet Continue-Prompts, bis der Abschluss-Marker der Stufe kommt oder das `ContinueBudget` aufgebraucht ist. Was je Stufe verschieden ist (Marker, Continue-Text, Token-Zeilen, Chat-Log, Wartezeiten, Konsolen-Texte), kommt über `GenerationLoopOptions` hinein. Eine Korrektur an der Schleife gehört hierher, nicht in eine Stufe.
 - **`ApiKeyProfileResolver`**: Löst ein API-Key-Profil (0-3) zum Namen der zugehörigen Umgebungsvariable auf.
 - **`PrefixCacheAnchor`**: Lädt und cached `dummy-part0.tex`, den gemeinsamen impliziten-Prefix-Cache-Anker, genutzt von beiden Extraktions-Sessions.
 - **`GcsWorkspace`**: Die gemeinsame Bereinigungsroutine für den Vertex-GCS-Bucket.
@@ -820,3 +822,27 @@ Zwei Schalter sind implementiert und getestet, aber ihr Default beruht auf
   (Inline) und `false` (Upload) laufen lassen und den Default aus dem
   gemessenen Token-/Zeitverbrauch setzen.
   *Aktueller Config-Wert: `false` (Upload-Modus).*
+
+### Struktur-Roadmap (offen)
+
+Schritt 1, die vier Streaming-Schleifen zu einer zusammenzuführen, ist erledigt
+(`GenerationLoop`, siehe Abschnitt 6). Offen, je ein eigener Durchgang ohne
+Verhaltensänderung:
+
+2. **Die beiden Extraktions-Sessions zusammenführen.** `AiStudioAutoExtractionSession`
+   und `VertexAutoExtractionSession` sind je ~1.500 Zeilen paralleler Code. Daraus
+   eine Session mit einer kleinen Backend-Schnittstelle (Upload, Löschen, Client)
+   machen und `IAutoExtractionConfig` auf alles erweitern, was die beiden
+   Config-Klassen gemeinsam haben.
+3. **Gespeicherte Einstellungen von Laufzeit-Optionen trennen.** CLI-Overrides,
+   `--thoughts` und `UseChosenModelForRestOfPipeline` ändern heute die geladene
+   Config, die `ConfigLoader` zurückschreibt, und machen so `*Config.json`
+   schmutzig. Einstellungen read-only machen und ein Run-Options-Objekt aus
+   Einstellungen plus Overrides bauen. Dabei wandern die globalen veränderlichen
+   Statics in Instanz-Zustand: `AttachmentUploader.HasJustUploaded`,
+   `InteractiveDelay.LastGenerationCompletionTimeUtc`,
+   `ApiRetryPolicy.DefaultHighDemandDelaySeconds`/`DelayAsync`,
+   `ConfigStore.SaveEnabled`/`DirectoryOverride`.
+4. **(Niedrige Priorität) Ein JSON-Manifest pro Vorlesung**, statt die
+   Header-Kommentare der .tex-Dateien (`PART_START_SECONDS`, Thought summaries)
+   mit Regexen zurückzulesen.
