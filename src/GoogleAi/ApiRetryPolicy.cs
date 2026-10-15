@@ -91,8 +91,10 @@ public static partial class ApiRetryPolicy {
                 await foreach (var chunk in responseStream.WithCancellation(cancellationToken)) {
                     if (cancellationToken.IsCancellationRequested) break;
                     chunksReceivedThisAttempt++;
-                    string text = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
-                    charactersReceivedThisAttempt += text.Length;
+                    // Answer text only: with IncludeThoughts on, chunk.Text also carries the thought
+                    // summary, and a stream cut during thinking would look like partial output and be
+                    // "continued" from an empty answer instead of retried.
+                    charactersReceivedThisAttempt += ResponseParts.Split(chunk).Answer.Length;
                     await onChunkReceived(chunk);
                 }
 

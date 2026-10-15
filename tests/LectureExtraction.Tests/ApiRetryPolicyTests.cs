@@ -112,6 +112,31 @@ public class ApiRetryPolicyTests : IDisposable {
     }
 
     [Fact]
+    public async Task A_stream_cut_while_still_thinking_is_retried_not_resumed() {
+        // With IncludeThoughts on, the thought summary arrives as text parts before the answer.
+        // Counting it as progress turned a cut during thinking into a "continue" of an empty
+        // answer (seen 2026-10-15, 02-16 part 4: 8,864 thought characters, 0 output tokens).
+        int attempts = 0;
+        int retries = 0;
+
+        bool result = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => {
+                attempts++;
+                return attempts == 1
+                    ? Thoughts(["**Inspecting the Instructions**\n", "I'm now diving deep into the board."], new ServerError("unavailable", 503, "UNAVAILABLE"))
+                    : Stream(["\\section{Gruppen}"], null);
+            },
+            _ => Task.CompletedTask,
+            CancellationToken.None,
+            onRetry: () => retries++,
+            resumeOnPartialProgress: true);
+
+        Assert.True(result);
+        Assert.Equal(2, attempts);
+        Assert.Equal(1, retries);
+    }
+
+    [Fact]
     public async Task OnRetry_runs_once_before_each_new_attempt() {
         int attempts = 0;
         int retries = 0;
@@ -255,6 +280,19 @@ public class ApiRetryPolicyTests : IDisposable {
             await Task.Yield();
             yield return new GenerateContentResponse {
                 Candidates = [new Candidate { Content = new Content { Role = "model", Parts = [new Part { Text = text }] } }]
+            };
+        }
+        if (thenThrow != null) {
+            throw thenThrow;
+        }
+    }
+
+    /// <summary>Like <see cref="Stream"/>, but every part is a thought-summary part.</summary>
+    private static async IAsyncEnumerable<GenerateContentResponse> Thoughts(string[] texts, Exception? thenThrow, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        foreach (string text in texts) {
+            await Task.Yield();
+            yield return new GenerateContentResponse {
+                Candidates = [new Candidate { Content = new Content { Role = "model", Parts = [new Part { Text = text, Thought = true }] } }]
             };
         }
         if (thenThrow != null) {
