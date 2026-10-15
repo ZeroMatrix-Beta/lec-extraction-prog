@@ -171,14 +171,49 @@ lecx chat --backend vertex
 
 ## `lecx status` — free
 
-Progress per lecture folder: parts transcribed, steps 1-3 done, PDF size, `tmp/` size.
+Progress per lecture folder: how far it got, the next stage, PDF size, `tmp/` size. One row
+per lecture, labelled `2026-02-16 Mo W1` (date, weekday from the name, week).
 
 ```bash
 lecx status --folder "D:/lecture-videos/analysis2/extracted_output" --json
 ```
 
 `--folder <dir>` (a lecture folder or a folder of them; defaults to the configured target
-folder) · `--video <name>` (one lecture).
+folder) · `--video <name>` (one lecture). The JSON keeps the per-stage booleans and adds
+`nextStep` (`Transcribe`, `Merge`, `Speech`, `Polish`, `Pdf`, `Done`, `NotStarted`) and
+`nextInput` (the file that stage reads).
+
+## `lecx finish` — paid
+
+Brings every **started** lecture to a PDF from wherever it stopped. For each folder it runs
+the one command that continues it, as if typed:
+
+| Folder holds | Runs |
+|---|---|
+| some parts, no combined `step1-*-all*.tex` | `run --video <video> --resume --out <root>` (reuses every part, however old) |
+| the combined file | `refine run --tex <newest step1-*-all-offset*.tex>` |
+| `step2-*merged*.tex` | `refine run --tex <it> --step 2 --through-end` |
+| `step3-*speech_refined*.tex` | `refine run --tex <it> --step 3 --through-end` |
+| `step4-*final*.tex`, no PDF | `pdf compile --tex <it>` |
+
+The newest file of a stage wins, `-copy-N` re-runs included; the `-main.tex` copies a compile
+leaves behind are skipped. Folders without any `.tex` (not started) are left to `run`.
+
+```bash
+lecx finish --folder "D:/lecture-videos/analysis2/extracted_output" --dry-run   # table + exact commands, free
+lecx finish --folder "<one lecture folder>"
+```
+
+| Option | Meaning |
+|---|---|
+| `--folder` · `--video` | Which lectures, as for `status` |
+| `--source <dir>` | Where the videos are, for unfinished transcriptions. Defaults to the configured source folder, then two levels up from the lecture folder |
+| `--limit <n>` | At most n lectures, chronologically |
+| `--profile` · `--model` · `--thoughts` | Passed to every command it runs |
+
+Exits `0` when every lecture reached a PDF, `6` when some did, otherwise the first failing
+command's code. A `4` (key) or `3` (prompt) stops it, since every later lecture would fail
+the same way.
 
 ## `lecx clean` — free, deletes files
 

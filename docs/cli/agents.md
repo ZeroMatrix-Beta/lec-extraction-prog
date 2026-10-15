@@ -106,6 +106,18 @@ lecx pdf compile   --tex <refined>.tex --fix-loop 0 --json # --fix-loop 0 keeps 
 `lecx run` does all of this in one go, because the pipeline already chains internally.
 Use the separate commands when you want to inspect or intervene between stages.
 
+## Finishing what is started
+
+`lecx status` names each lecture's next stage; `lecx finish` runs it. Use `finish`, not
+`run`, for any lecture that already has output — it picks the right step file and command
+per folder (see [commands.md](commands.md#lecx-finish--paid)):
+
+```bash
+lecx status --folder "D:/lecture-videos/analysis2/extracted_output"
+lecx finish --folder "D:/lecture-videos/analysis2/extracted_output" --dry-run   # free: table + exact commands
+lecx finish --folder "D:/lecture-videos/analysis2/extracted_output" --limit 2
+```
+
 ---
 
 ## Things that will surprise you
@@ -152,13 +164,17 @@ the 503s counted (perhaps those that failed after Google had started generating)
 was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
 console is the place to check.
 
-**After a refinement failure, retry with `refine run`, not `run`.** `run` reuses the finished
+**After a refinement failure, continue with `finish`, not `run`.** `run` reuses the finished
 parts, but it combines them again and starts the refinement at step 1. Because the first
 combined file is still there, the second one is written as `step1-<name>-all-offset-copy-1.tex`,
 and every later file carries that stem (`step2-<name>-all-offset-copy-1-offset-merged.tex`, …).
 The merge is paid for twice and the names no longer match the table in
-[pipeline.md](pipeline.md). Continue from the last finished step instead:
-`refine run --tex <that step's input> --step N --through-end`.
+[pipeline.md](pipeline.md). `lecx finish --folder <lecture>` continues from the last finished
+step; by hand that is `refine run --tex <that step's input> --step N --through-end`. `plan`
+flags videos that are already in refinement.
+
+**Output to a file or pipe is not wrapped.** Log lines and model text go out as single lines;
+tables and rules are laid out for 160 columns. In a console window nothing changed.
 
 **The output folder and the `.tex` stem differ.** The folder is
 `<target>/<name-without-compression-suffix>/`, but the parts inside are
