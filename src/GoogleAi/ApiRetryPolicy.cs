@@ -361,10 +361,10 @@ public static partial class ApiRetryPolicy {
 
     /// <summary>The German message when a request can never fit its per-minute token limit.</summary>
     public static string DescribeRequestOverPerMinuteLimit(long requestTokens, long limit) =>
-        $"Die Anfrage hat {requestTokens:N0} Eingabe-Tokens, das Limit dieses Modells und Keys ist {limit:N0} pro Minute. " +
-        "Warten hilft nicht, die Anfrage passt so nie hinein. Auswege: ein anderes Modell (--model, z.B. gemini-3.7-flash), " +
-        "InlinePrecedingLecTexParts = false (vorherige Teile hochladen statt einbetten), den Prefix-Cache-Warm-up einschalten " +
-        "(gecachte Tokens zählen nicht) oder ein bezahlter Key.";
+        $"Die Anfrage hat {requestTokens:N0} Eingabe-Tokens, das Limit dieses Keys und Modells ist {limit:N0} pro Minute. " +
+        "Warten hilft nicht, die Anfrage passt so nie hinein. Sie muss kleiner werden: weniger History (HistoryPreloadPaths), " +
+        "keine vorherigen Teile mitschicken (DebugSendReferenceFile = false), oder ein bezahlter Key. Ob ein Prefix-Cache-Warm-up hilft " +
+        "(zählen gecachte Tokens mit?), ist nicht belegt. Das Limit eines Keys kann sich mit der Zeit ändern.";
 
     [GeneratedRegex(@"limit:\s*(\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex QuotaLimitRegex();

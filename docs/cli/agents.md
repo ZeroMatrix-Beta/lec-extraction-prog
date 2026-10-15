@@ -180,13 +180,18 @@ the 503s counted (perhaps those that failed after Google had started generating)
 was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
 console is the place to check.
 
-**A part bigger than the per-minute token limit fails fast, with the way out in the message.**
-The free tier caps input tokens per minute per model (250,000 on `gemini-3.8-flash`). A late part
-inlines all earlier parts, so its request can exceed that on its own (part 4 of a 4-part lecture:
-~393k tokens). Retrying cannot help, so after the second refusal the part fails with
-`Die Anfrage hat N Eingabe-Tokens, das Limit ... ist L pro Minute` and the video exits `6`. Fixes:
-`--model gemini-3.7-flash` (passed the same parts on 2026-10-15), `InlinePrecedingLecTexParts: false`,
-the prefix-cache warm-up (cached tokens do not count), or a paid key.
+**A request bigger than the per-minute token limit fails fast.** The free tier caps input
+tokens per minute per model and key. On 2026-10-15/16 that was 250,000 on both `gemini-3.8-flash`
+and `gemini-3.7-flash` (`GenerateContentInputTokensPerModelPerMinute-FreeTier`), while on
+2026-10-13 the same key (profile 3) on 3.7 still took 340,000–352,000 fresh tokens per part. A
+part's request here is ~340k (system instruction + history ≈ 270k, plus the video) and grows by
+~12k per earlier part, so under 250k **no part fits** without making the request smaller.
+Retrying cannot help, so after the second refusal the part fails with
+`Die Anfrage hat N Eingabe-Tokens, das Limit … ist L pro Minute` and the video exits `6`. Ways to
+shrink it: less history (`HistoryPreloadPaths`), no earlier parts (`DebugSendReferenceFile: false`),
+or a paid key. Not settled: whether cached tokens (prefix-cache warm-up) count against the limit,
+and whether uploading earlier parts instead of inlining them changes anything (uploaded files are
+still input tokens).
 
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
