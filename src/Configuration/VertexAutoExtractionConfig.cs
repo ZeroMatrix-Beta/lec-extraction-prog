@@ -88,6 +88,14 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     /// </summary>
     int IAutoExtractionConfig.VideoPartDelaySeconds => RateLimitDelaySeconds;
 
+    /// <summary>
+    /// [AI Context] Runs the pre-merge VertexAutoExtractionSession instead of AutoExtractionSession with
+    /// the Vertex backend. The old class is kept unchanged as the reference implementation: neither
+    /// Vertex path has had a real run since the 2026-10-15 merge, so the first test can compare them.
+    /// [Human] Nutzt die alte Vertex-Session statt der zusammengeführten (zum Vergleichen beim ersten Test).
+    /// </summary>
+    public bool UseLegacyVertexSession { get; set; } = false;
+
     // The settings below came with the merge into AutoExtractionSession (2026-10-15). They mean the
     // same as on AiStudioAutoExtractionConfig and start from its defaults.
     public bool StripCommentsFromReferenceContext { get; set; } = true;

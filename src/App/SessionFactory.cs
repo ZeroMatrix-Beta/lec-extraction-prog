@@ -219,8 +219,14 @@ public static class SessionFactory {
                     var attachmentHandler = new AttachmentUploader(client, config.SourceFolder, [config.SourceFolder], false, config.GcsBucketName, config.GoogleVideoFps);
                     var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
                     var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
-                    var session = new AutoExtractionSession(new VertexExtractionBackend(client, config), config, attachmentHandler, sessionLogger, latexRefinementConfig);
-                    await session.StartAsync();
+                    // Both Vertex sessions stay until a real run shows which one to keep.
+                    if (config.UseLegacyVertexSession) {
+                        Ui.Info("UseLegacyVertexSession = true: Starte die alte VertexAutoExtractionSession.", "Vertex");
+                        await new VertexAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig).StartAsync();
+                    }
+                    else {
+                        await new AutoExtractionSession(new VertexExtractionBackend(client, config), config, attachmentHandler, sessionLogger, latexRefinementConfig).StartAsync();
+                    }
                     return false;
                 }
             }

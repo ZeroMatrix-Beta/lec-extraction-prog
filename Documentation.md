@@ -319,6 +319,7 @@ The project lives under `src/`, one folder per bounded context, namespaced `Lect
 Responsible for the fully automated batch-processing pipeline. It orchestrates FFmpeg processing and AI inference sequentially or concurrently.
 - **`AutoExtractionSession`**: Manages the extraction pipeline on AI Studio and Vertex. It uses a **Producer-Consumer pattern** (via `System.Threading.Channels`), allowing FFmpeg to process the next chunk while Gemini is analyzing the current one. Split across three files: the core pipeline (`.cs`), the per-segment request and streaming half (`.Generation.cs`, through `GenerationLoop`), and the implicit prefix-cache warm-up (`.PrefixCache.cs`). Until 2026-10-15 each platform had its own session class; they had drifted apart, and the merge kept AI Studio's pipeline for both.
 - **`IExtractionBackend`**: What differs per platform: client, names, endpoint line, remote file cleanup, audio pre-upload, whether the system instruction takes files, and the refinement client. `AiStudioExtractionBackend` uses the File API; `VertexExtractionBackend` uploads to Google Cloud Storage and purges the bucket before and after every run (`GcsWorkspace`) to prevent storage cost blowouts, keeps history files out of the text-only system instruction, and owns **`ExplicitContextCache`** (the CachedContent API, which part requests reference while it is active). The Vertex path has not been run against the real API since the merge.
+- **`VertexAutoExtractionSession`**: The pre-merge Vertex session, kept unchanged as the reference implementation. It runs instead of the merged path when `UseLegacyVertexSession` is true in `VertexAutoExtractionConfig.json` (default false), so the first real Vertex run can compare the two before one is retired.
 - **`VideoSegmentProducer`**: The shared FFmpeg producer half of the pipeline (splitting, resume-from-disk caching), used by both sessions.
 - **`TexDocumentWriter`**: Builds the `.tex` part/combined-file headers shared by both sessions.
 - **`ExtractionHelpers`**: What's left after splitting out the pieces below — `ResolveNonClashingTexPath` and `LogSystemInstructionDumpAsync`.
@@ -721,6 +722,7 @@ Der gesamte Code liegt unter `src/`, ein Ordner pro Bounded Context, mit dem Nam
 Verantwortlich für die vollautomatisierte Batch-Verarbeitungs-Pipeline. Orchestriert FFmpeg-Verarbeitung und KI-Inferenz sequenziell oder nebenläufig.
 - **`AutoExtractionSession`**: Verwaltet die Extraktions-Pipeline auf AI Studio und Vertex. Nutzt ein **Producer-Consumer-Muster** (via `System.Threading.Channels`), was es FFmpeg ermöglicht, den nächsten Chunk zu verarbeiten, während Gemini den aktuellen analysiert. Aufgeteilt auf drei Dateien: die Kern-Pipeline (`.cs`), die Anfrage- und Streaming-Hälfte pro Segment (`.Generation.cs`, über `GenerationLoop`) und den impliziten Prefix-Cache-Warmup (`.PrefixCache.cs`). Bis 2026-10-15 hatte jede Plattform ihre eigene Session-Klasse; die beiden waren auseinandergedriftet, und die Zusammenführung hat für beide die AI-Studio-Pipeline übernommen.
 - **`IExtractionBackend`**: Was je Plattform verschieden ist: Client, Namen, Endpoint-Zeile, Aufräumen hochgeladener Dateien, Audio-Vorab-Upload, ob die System Instruction Dateien annimmt, und der Refinement-Client. `AiStudioExtractionBackend` nutzt die File API; `VertexExtractionBackend` lädt in den Google Cloud Storage hoch und leert den Bucket vor und nach jedem Lauf (`GcsWorkspace`), um explodierende Speicherkosten zu verhindern, hält History-Dateien aus der reinen Text-System-Instruction heraus und besitzt den **`ExplicitContextCache`** (die CachedContent-API, auf die Part-Anfragen verweisen, solange er aktiv ist). Der Vertex-Pfad ist seit der Zusammenführung nicht gegen die echte API gelaufen.
+- **`VertexAutoExtractionSession`**: Die Vertex-Session von vor der Zusammenführung, unverändert als Referenz behalten. Sie läuft statt des zusammengeführten Pfads, wenn `UseLegacyVertexSession` in `VertexAutoExtractionConfig.json` true ist (Standard false), damit der erste echte Vertex-Lauf beide vergleichen kann, bevor eine wegfällt.
 - **`VideoSegmentProducer`**: Die gemeinsame FFmpeg-Producer-Hälfte der Pipeline (Splitting, Resume-from-Disk-Caching), genutzt von beiden Sessions.
 - **`TexDocumentWriter`**: Baut die `.tex`-Teil-/Gesamtdatei-Header, gemeinsam genutzt von beiden Sessions.
 - **`ExtractionHelpers`**: Was übrig blieb, nachdem die untenstehenden Teile herausgelöst wurden — `ResolveNonClashingTexPath` und `LogSystemInstructionDumpAsync`.
@@ -838,6 +840,9 @@ Erledigt:
    abgedeckt. Dabei auch klären, ob Vertex Dateien in der System Instruction annimmt
    (heute bleiben History-Dateien dort heraus, wie vorher) und ob der explizite
    Context-Cache bei der jetzigen Reihenfolge (am Ende des Setups) greift.
+   Die alte `VertexAutoExtractionSession` bleibt bis dahin unverändert erhalten
+   (`UseLegacyVertexSession: true` in `VertexAutoExtractionConfig.json` startet sie),
+   damit der Testlauf beide vergleichen kann. Erst danach entscheiden, ob sie wegfällt.
 
 Offen, je ein eigener Durchgang ohne Verhaltensänderung:
 

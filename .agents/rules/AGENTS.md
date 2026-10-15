@@ -38,6 +38,9 @@
    - One `AutoExtractionSession` serves AI Studio and Vertex; what differs per platform is an
      `IExtractionBackend` (`AiStudioExtractionBackend`, `VertexExtractionBackend`, the latter with
      `ExplicitContextCache`). A fix to the pipeline goes into the session, never into one backend only.
+   - The pre-merge `VertexAutoExtractionSession` is kept unchanged as the reference until a real Vertex
+     run compares it with the merged path (`UseLegacyVertexSession` selects it). Do not delete it
+     without the user's say-so.
    - `AutoExtractionSession` is split into:
      - `AutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
      - `AutoExtractionSession.Generation.cs`: Per-segment upload, request building, streaming (through `GenerationLoop`).
