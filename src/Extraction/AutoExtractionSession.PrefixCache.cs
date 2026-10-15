@@ -248,6 +248,7 @@ public partial class AutoExtractionSession {
         // proper backoff — preventing a situation where CountTokens succeeds but the subsequent
         // GenerateContent fails immediately because the token budget was already exhausted by counting.
         // SkipTokenCountingDuringWarmUp=true skips this block entirely to conserve quota budget.
+        long? countedTokens = null;
         if (!_config.SkipTokenCountingDuringWarmUp) {
             try {
                 var warmupContents = new List<Content>();
@@ -261,6 +262,7 @@ public partial class AutoExtractionSession {
                     retryContext: $"CountTokens {stepLabel}",
                     highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null);
                 int totalToks = counted?.TotalTokens ?? 0;
+                countedTokens = totalToks > 0 ? totalToks : null;
                 int estNew = _lastWarmupInputTokens > 0 ? Math.Max(0, totalToks - _lastWarmupInputTokens) : totalToks;
                 string prefix = string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]";
                 Ui.Info($"{prefix} Voraussichtlich NEU zu berechnen: {estNew:N0} | Total Prompt: {totalToks:N0}", "Tokens");
@@ -290,7 +292,9 @@ public partial class AutoExtractionSession {
                 },
                 cancellationToken: CancellationToken.None,
                 retryContext: "Cache-Warming Handshake",
-                highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null
+                highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
+                // The counted size lets the retry policy stop when a per-minute token limit is smaller than the handshake.
+                requestInputTokens: countedTokens
             );
 
             if (success) {
