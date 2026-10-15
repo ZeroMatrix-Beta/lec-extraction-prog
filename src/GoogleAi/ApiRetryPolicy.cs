@@ -364,7 +364,7 @@ public static partial class ApiRetryPolicy {
         $"Die Anfrage hat {requestTokens:N0} Eingabe-Tokens, das Limit dieses Keys und Modells ist {limit:N0} pro Minute. " +
         "Warten hilft nicht, die Anfrage passt so nie hinein. Sie muss kleiner werden: weniger History (HistoryPreloadPaths), " +
         "keine vorherigen Teile mitschicken (DebugSendReferenceFile = false), oder ein bezahlter Key. Ob ein Prefix-Cache-Warm-up hilft " +
-        "(zählen gecachte Tokens mit?), ist nicht belegt. Das Limit eines Keys kann sich mit der Zeit ändern.";
+        "(zählen gecachte Tokens mit?), ist nicht belegt (die gemeldete "Gecacht"-Zahl ist nicht verlässlich, siehe Documentation.md 4.4).";
 
     [GeneratedRegex(@"limit:\s*(\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex QuotaLimitRegex();
