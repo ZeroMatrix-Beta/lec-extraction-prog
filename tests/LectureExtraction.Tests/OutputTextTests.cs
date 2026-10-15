@@ -9,6 +9,7 @@ public class OutputTextTests {
     [Theory]
     [InlineData("Warte auf Rate-Limits (Token Refill)...", "Warte auf Rate-Limits (Token Refill) (64s)")]
     [InlineData("Server-Verarbeitung", "Warte 64s: Server-Verarbeitung")]
+    [InlineData("Warte 64 Sekunden nach Datei-Aktivierung...", "Warte 64 Sekunden nach Datei-Aktivierung")]
     public void A_wait_line_says_Warte_once(string message, string expected) {
         Assert.Equal(expected, InteractiveDelay.DescribeWait(64, message));
     }

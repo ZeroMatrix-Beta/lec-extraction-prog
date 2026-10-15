@@ -162,10 +162,12 @@ public static class InteractiveDelay {
     /// The one line a redirected wait prints. Most callers' messages already open with "Warte ...",
     /// which made "Warte 64s: Warte 64 Sekunden nach ..."; those get the seconds appended instead.
     /// </summary>
-    public static string DescribeWait(int seconds, string message) =>
-        message.StartsWith("Warte", StringComparison.OrdinalIgnoreCase)
-            ? $"{message.TrimEnd('.', ' ')} ({seconds}s)"
-            : $"Warte {seconds}s: {message}";
+    public static string DescribeWait(int seconds, string message) {
+        if (!message.StartsWith("Warte", StringComparison.OrdinalIgnoreCase)) return $"Warte {seconds}s: {message}";
+        string trimmed = message.TrimEnd('.', ' ');
+        // "Warte 64 Sekunden nach ..." already says how long.
+        return trimmed.Contains($"{seconds} Sekunden", StringComparison.Ordinal) ? trimmed : $"{trimmed} ({seconds}s)";
+    }
 
     /// <summary>
     /// Waits for one line on <paramref name="reader"/> and returns true when it arrives. At end of
