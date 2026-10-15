@@ -13,9 +13,10 @@ namespace LectureExtraction.Tests;
 
 /// <summary>
 /// [AI Context] Tests token-optimization file filtering: montage pictures are retained while
-/// individual non-montage pictures (and draft files) prefixed with "deleted-" are excluded
+/// individual non-montage pictures (and draft files) prefixed with "ignored-" (or a legacy
+/// "ignore-", "deleted-", "delted-") are excluded
 /// from system instructions and history preloads sent to Gemini.
-/// [Human] Testet das Herausfiltern von mit "deleted-" markierten Nicht-Montage-Bildern
+/// [Human] Testet das Herausfiltern von mit "ignored-" markierten Nicht-Montage-Bildern
 /// bei der System-Instruction- und History-Erstellung.
 /// </summary>
 [Collection(ConsoleTestCollection.Name)]
@@ -47,6 +48,9 @@ public class HistoryFileResolverTests {
     [InlineData("ignore-slide2.png", true)]
     [InlineData("IGNORE-diagram.png", true)]
     [InlineData("ignored-notes.md", true)]
+    [InlineData("ignored-auswahlaxiom.jpg", true)]
+    [InlineData("IGNORED-board.png", true)]
+    [InlineData("not-ignored-board.png", false)]
     [InlineData("montage-slide1.png", false)]
     [InlineData("slide1.png", false)]
     [InlineData("environments.md", false)]

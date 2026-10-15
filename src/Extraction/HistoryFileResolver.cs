@@ -15,7 +15,9 @@ public static class HistoryFileResolver {
         ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff", ".heic", ".heif", ".svg"
     };
 
-    private static readonly string[] s_ignoredPrefixes = ["deleted-", "delted-", "ignore-", "ignored-"];
+    // "ignored-" is the prefix the prompt-engineering repo uses; the others are legacy spellings
+    // (its montage sources were "deleted-" until 2026-10-16) and stay accepted.
+    private static readonly string[] s_ignoredPrefixes = ["ignored-", "ignore-", "deleted-", "delted-"];
 
     /// <summary>
     /// [AI Context] Determines whether a file path points to an image/picture based on its extension.
@@ -27,12 +29,12 @@ public static class HistoryFileResolver {
     }
 
     /// <summary>
-    /// [AI Context] Determines whether a file is marked as ignored/deleted/non-montage (prefixed with
-    /// "deleted-", "delted-", "ignore-", or "ignored-").
+    /// [AI Context] Determines whether a file is marked as ignored/non-montage (prefixed with
+    /// "ignored-", or the legacy "ignore-", "deleted-", "delted-").
     /// In token-optimized prompt directories, montage pictures are included while individual
     /// non-montage pictures are marked with an ignore/delete prefix to exclude them
     /// from system instructions sent to Gemini.
-    /// [Human] Prüft, ob eine Datei als ignoriert oder gelöscht markiert ist (Präfix "deleted-", "delted-", "ignore-" oder "ignored-").
+    /// [Human] Prüft, ob eine Datei als ignoriert oder gelöscht markiert ist (Präfix "ignored-", oder alt "ignore-", "deleted-", "delted-").
     /// Nicht-Montage-Bilder mit diesem Präfix werden nicht in die System Instruction übernommen, um Tokens zu sparen.
     /// </summary>
     public static bool IsIgnoredPromptFile(string filePath) {
@@ -51,7 +53,7 @@ public static class HistoryFileResolver {
 
     /// <summary>
     /// Resolves an array of mixed file/directory paths into a distinct list of absolute file paths,
-    /// filtering out non-montage pictures and other files marked with "deleted-".
+    /// filtering out non-montage pictures and other files marked with "ignored-" (or a legacy prefix).
     /// </summary>
     public static List<string> ResolveHistoryFiles(string[] paths) {
         List<string> allHistoryFiles = [];
