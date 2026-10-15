@@ -35,12 +35,13 @@
    prompt, do not call Spectre directly — route it through `Ui`, or it will crash
    unattended runs instead of failing with a readable message.
 11. **Extraction Session Structure**:
-   - `AiStudioAutoExtractionSession` is split into:
-     - `AiStudioAutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
-     - `AiStudioAutoExtractionSession.PrefixCache.cs`: Prefix cache initialization and warm-up logic (`TryLoadSystemInstructionWithHistoryAsync`, `WarmUpWithBatchedHistoryAsync`).
-   - `VertexAutoExtractionSession` is split into:
-     - `VertexAutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
-     - `VertexAutoExtractionSession.PrefixCache.cs`: Prefix cache initialization and warm-up logic.
+   - One `AutoExtractionSession` serves AI Studio and Vertex; what differs per platform is an
+     `IExtractionBackend` (`AiStudioExtractionBackend`, `VertexExtractionBackend`, the latter with
+     `ExplicitContextCache`). A fix to the pipeline goes into the session, never into one backend only.
+   - `AutoExtractionSession` is split into:
+     - `AutoExtractionSession.cs`: Core pipeline execution, file processing, transcription, and YouTube workflows.
+     - `AutoExtractionSession.Generation.cs`: Per-segment upload, request building, streaming (through `GenerationLoop`).
+     - `AutoExtractionSession.PrefixCache.cs`: Prefix cache initialization and warm-up logic (`TryLoadSystemInstructionWithHistoryAsync`, `WarmUpWithBatchedHistoryAsync`).
 
 ## 12. Operational Runbook: Converting & Processing Lecture Videos
 When the user asks to process/convert lecture videos, **do not spend turns searching code or re-reading pipeline internals**. Follow this exact runbook:

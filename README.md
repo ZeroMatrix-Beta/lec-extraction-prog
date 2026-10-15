@@ -107,8 +107,7 @@ All code lives under `src/`, one folder per bounded context, namespaced `Lecture
 #### ⚙️ 1. `LectureExtraction.Extraction` (The Batch Pipeline)
 An automated pipeline for processing video folders.
 
-- **`AiStudioAutoExtractionSession`**: Utilizes a **Producer-Consumer pattern** via `System.Threading.Channels`. FFmpeg processes videos in a background task (Producer) while Gemini processes the output sequentially via the API (Consumer) to improve throughput.
-- **`VertexAutoExtractionSession`**: The enterprise batch processor. Features cleanup routines that purge temporary Google Cloud Storage buckets after *each video chunk* to prevent unnecessary cloud storage billing.
+- **`AutoExtractionSession`**: Utilizes a **Producer-Consumer pattern** via `System.Threading.Channels`. FFmpeg processes videos in a background task (Producer) while Gemini processes the output sequentially via the API (Consumer) to improve throughput. One session for both platforms: an `IExtractionBackend` (`AiStudioExtractionBackend`, `VertexExtractionBackend`) carries what differs, e.g. Vertex's purge of the temporary Google Cloud Storage bucket before and after every run to prevent unnecessary cloud storage billing.
 
 #### 💬 2. `LectureExtraction.Chat` & `LectureExtraction.Refinement` (Interactive & Post-Processing)
 Handles all manual interactions, file resolution, and the final LaTeX assembly.
@@ -289,8 +288,7 @@ Der gesamte Code liegt unter `src/`, ein Ordner pro Bounded Context, mit dem Nam
 #### ⚙️ 1. `LectureExtraction.Extraction` (Die Batch Pipeline)
 Eine automatisierte Pipeline zur Verarbeitung von Video-Ordnern.
 
-- **`AiStudioAutoExtractionSession`**: Nutzt ein **Producer-Consumer-Muster** via `System.Threading.Channels`. FFmpeg verarbeitet Videos im Hintergrund (Producer), während Gemini die Ergebnisse sequenziell abarbeitet (Consumer), um den Durchsatz zu verbessern.
-- **`VertexAutoExtractionSession`**: Der Enterprise-Batch-Prozessor. Verfügt über Bereinigungsroutinen, die temporäre Google Cloud Storage Buckets nach *jedem einzelnen Video-Teil* löschen, um unnötige Cloud-Kosten zu verhindern.
+- **`AutoExtractionSession`**: Nutzt ein **Producer-Consumer-Muster** via `System.Threading.Channels`. FFmpeg verarbeitet Videos im Hintergrund (Producer), während Gemini die Ergebnisse sequenziell abarbeitet (Consumer), um den Durchsatz zu verbessern. Eine Session für beide Plattformen: ein `IExtractionBackend` (`AiStudioExtractionBackend`, `VertexExtractionBackend`) trägt die Unterschiede, z.B. bei Vertex das Leeren des temporären Google Cloud Storage Buckets vor und nach jedem Lauf, um unnötige Cloud-Kosten zu verhindern.
 
 #### 💬 2. `LectureExtraction.Chat` & `LectureExtraction.Refinement` (Interaktiv & Post-Processing)
 Kümmert sich um manuelle Interaktionen, Dateiauflösung und den finalen LaTeX-Zusammenbau.
