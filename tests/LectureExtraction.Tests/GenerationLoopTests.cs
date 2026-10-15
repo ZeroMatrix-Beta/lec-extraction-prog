@@ -192,7 +192,52 @@ public class GenerationLoopTests : IDisposable {
             });
 
         Assert.Equal(Marker, result.Text);
-        Assert.Contains("Noch keine Antwort", _console.Output);
+        Assert.Contains("Noch keine Daten vom Server", _console.Output);
+    }
+
+    private static GenerationLoopOptions SingleRequest(TimeSpan firstChunkTimeout) => new() {
+        MaxContinueRequests = 1,
+        AnnounceRequest = (_, _) => { },
+        IsComplete = text => text.Contains(Marker),
+        BuildContinuePrompt = text => text,
+        WaitBeforeContinueAsync = () => Task.FromResult(true),
+        BudgetStopSuffix = "",
+        RetryContext = "test",
+        FirstChunkTimeout = firstChunkTimeout,
+    };
+
+    [Fact]
+    public async Task An_attempt_that_delivers_nothing_is_abandoned_and_sent_again() {
+        var history = new List<Content> { UserTurn("refine") };
+        int calls = 0;
+
+        var result = await GenerationLoop.RunAsync(history,
+            _ => ++calls == 1 ? Slow(TimeSpan.FromSeconds(5), Answer("never seen")) : Stream([Answer(Marker)]),
+            ThoughtLog.Inert(), SingleRequest(TimeSpan.FromMilliseconds(100)));
+
+        Assert.Equal(2, calls);
+        Assert.Equal(Marker, result.Text);
+        Assert.Contains("Keine Daten vom Server", _console.Output);
+    }
+
+    [Fact]
+    public async Task A_stream_that_has_started_is_never_cut_by_the_first_chunk_timeout() {
+        var history = new List<Content> { UserTurn("refine") };
+        int calls = 0;
+
+        var result = await GenerationLoop.RunAsync(history,
+            _ => { calls++; return StartsThenPauses(Answer("begin "), TimeSpan.FromMilliseconds(400), Answer(Marker)); },
+            ThoughtLog.Inert(), SingleRequest(TimeSpan.FromMilliseconds(100)));
+
+        Assert.Equal(1, calls);
+        Assert.Equal($"begin {Marker}", result.Text);
+    }
+
+    private static async IAsyncEnumerable<GenerateContentResponse> StartsThenPauses(GenerateContentResponse first, TimeSpan pause, GenerateContentResponse second,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        yield return first;
+        await Task.Delay(pause, cancellationToken);
+        yield return second;
     }
 
     private static async IAsyncEnumerable<GenerateContentResponse> Slow(TimeSpan delay, GenerateContentResponse chunk,

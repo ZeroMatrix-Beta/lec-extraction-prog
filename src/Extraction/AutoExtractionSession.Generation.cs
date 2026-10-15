@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Google.GenAI.Types;
+using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction.Model;
 using LectureExtraction.GoogleAi;
@@ -82,7 +83,7 @@ public partial class AutoExtractionSession {
     public async Task<SegmentTranscript> TranscribeSegmentToLatexAsync(string partFile, int partNumber, string originalFileName, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles, string? partOutputPath = null) {
         var (requestConfig, history) = await BuildGenerationRequestAsync(partNumber, parsedPrompt, attachmentParts, previousTexFiles);
 
-        await LogTokenCountsAsync(requestConfig, attachmentParts, history, previousTexFiles, partNumber);
+        int? promptTokens = await LogTokenCountsAsync(requestConfig, attachmentParts, history, previousTexFiles, partNumber);
 
         string logContext = $"[Part {partNumber}] {Path.GetFileName(originalFileName)}\n[Angehängtes Video]: {Path.GetFileName(partFile)}";
         if (previousTexFiles.Count > 0) {
@@ -92,7 +93,7 @@ public partial class AutoExtractionSession {
 
         var thoughts = new ThoughtLog(_config.ThoughtSummaries, $"extract-part{partNumber}", $"{TexDocumentWriter.TranscriptionStep}, part {partNumber}",
             _config.CurrentModel, partOutputPath, _sessionLogger.ChatLogFilePath);
-        return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext, thoughts);
+        return await StreamAndCollectAsync(requestConfig, history, partNumber, originalFileName, partFile, logContext, thoughts, promptTokens);
     }
 
     private async Task<(GenerateContentConfig RequestConfig, List<Content> History)> BuildGenerationRequestAsync(int partNumber, string? parsedPrompt, List<Part> attachmentParts, List<string> previousTexFiles) {
@@ -228,8 +229,9 @@ public partial class AutoExtractionSession {
         return builder.ToString();
     }
 
-    private async Task LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
-        if (_config.SkipTokenCountingDuringWarmUp) return;
+    private async Task<int?> LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
+        if (_config.SkipTokenCountingDuringWarmUp) return null;
+        int? countedPromptTokens = null;
 
         try {
             var videoContents = new List<Content> { new() { Role = "user", Parts = attachmentParts } };
@@ -249,6 +251,7 @@ public partial class AutoExtractionSession {
                 maxRetries: 8, initialBackoff: 20, retryContext: $"CountTokens Part {partNumber} (total)");
             int promptToks = totalCount?.TotalTokens ?? 0;
             Ui.Info($"[Part {partNumber} Prompt] Total Prompt-Tokens (ganzer Prompt): {promptToks:N0} (Video: {vidToks:N0} Tokens)", "Tokens");
+            countedPromptTokens = promptToks > 0 ? promptToks : null;
 
             if (_config.VerboseConsoleOutput) {
                 var userPromptParts = history[^1].Parts;
@@ -275,6 +278,7 @@ public partial class AutoExtractionSession {
         catch (Exception ex) {
             Ui.Warn($"Fehler beim Zählen der Prompt-Token: [Exception gefangen] {ex.Describe()}", "Token-Analyse");
         }
+        return countedPromptTokens;
     }
 
     /// <summary>
@@ -284,12 +288,14 @@ public partial class AutoExtractionSession {
     /// </summary>
     private bool IncludesThoughts => _config.ThoughtSummaries?.Enabled == true;
 
-    private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext, ThoughtLog thoughts) {
+    private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext, ThoughtLog thoughts, int? promptTokens) {
         var result = await GenerationLoop.RunAsync(history,
             h => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, h, requestConfig),
             thoughts,
             new GenerationLoopOptions {
                 MaxContinueRequests = _config.MaxContinueRequests,
+                RequestInputTokens = promptTokens,
+                FirstChunkTimeout = AppConfig.FirstChunkTimeout,
                 AnnounceRequest = (request, max) =>
                     Ui.Step($"Sende Anfrage für Part {partNumber} an {_backend.ProviderName} ({_config.CurrentModel}) (Request {request}/{max})..."),
                 RetryContext = $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",

@@ -180,6 +180,20 @@ the 503s counted (perhaps those that failed after Google had started generating)
 was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
 console is the place to check.
 
+**A part bigger than the per-minute token limit fails fast, with the way out in the message.**
+The free tier caps input tokens per minute per model (250,000 on `gemini-3.8-flash`). A late part
+inlines all earlier parts, so its request can exceed that on its own (part 4 of a 4-part lecture:
+~393k tokens). Retrying cannot help, so after the second refusal the part fails with
+`Die Anfrage hat N Eingabe-Tokens, das Limit ... ist L pro Minute` and the video exits `6`. Fixes:
+`--model gemini-3.7-flash` (passed the same parts on 2026-10-15), `InlinePrecedingLecTexParts: false`,
+the prefix-cache warm-up (cached tokens do not count), or a paid key.
+
+**A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
+`Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
+(appsettings.json, default 10, `0` = off) the attempt is abandoned and retried after 30 s. On
+2026-10-15 one request stalled for 20 minutes and its retry then answered normally. A stream that
+has started delivering is never cut.
+
 **After a refinement failure, continue with `finish`, not `run`.** `run` reuses the finished
 parts, but it combines them again and starts the refinement at step 1. Because the first
 combined file is still there, the second one is written as `step1-<name>-all-offset-copy-1.tex`,

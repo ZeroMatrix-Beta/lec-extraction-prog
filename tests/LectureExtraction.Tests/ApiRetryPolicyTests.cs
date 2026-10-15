@@ -267,6 +267,47 @@ public class ApiRetryPolicyTests : IDisposable {
         Assert.Empty(_waits);
     }
 
+    // The 429 a 392,711-token part got on 2026-10-15, as the SDK reported it.
+    private const string PerMinuteTokenMessage =
+        "You exceeded your current quota, please check your plan and billing details. Quota exceeded for metric: " +
+        "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 250000, model: gemini-3.8-flash " +
+        "Please retry in 31.322840295s [GenerateContentInputTokensPerModelPerMinute-FreeTier (limit: 250000)]";
+
+    [Fact]
+    public void The_per_minute_token_limit_is_read_from_the_error_and_not_from_a_daily_quota() {
+        Assert.Equal(250000, ApiRetryPolicy.PerMinuteInputTokenLimit(new ClientError(PerMinuteTokenMessage, 429, "RESOURCE_EXHAUSTED")));
+        Assert.Null(ApiRetryPolicy.PerMinuteInputTokenLimit(new ClientError(DailyQuotaMessage, 429, "RESOURCE_EXHAUSTED")));
+    }
+
+    [Fact]
+    public async Task A_request_larger_than_the_per_minute_token_limit_stops_after_the_second_refusal() {
+        int attempts = 0;
+
+        await Assert.ThrowsAsync<ClientError>(() => ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => { attempts++; return Stream([], new ClientError(PerMinuteTokenMessage, 429, "RESOURCE_EXHAUSTED")); },
+            _ => Task.CompletedTask,
+            CancellationToken.None,
+            requestInputTokens: 392_711));
+
+        // One wait (the window may have been full from earlier requests), then no more.
+        Assert.Equal(2, attempts);
+        Assert.Single(_waits);
+    }
+
+    [Fact]
+    public async Task A_request_within_the_per_minute_token_limit_keeps_waiting_it_out() {
+        int attempts = 0;
+
+        await Assert.ThrowsAsync<ClientError>(() => ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => { attempts++; return Stream([], new ClientError(PerMinuteTokenMessage, 429, "RESOURCE_EXHAUSTED")); },
+            _ => Task.CompletedTask,
+            CancellationToken.None,
+            maxRetries: 4,
+            requestInputTokens: 120_000));
+
+        Assert.Equal(4, attempts);
+    }
+
     [Fact]
     public void ApiStatusCode_reads_a_wrapped_error() {
         var wrapped = new InvalidOperationException("outer", new ClientError("inner", 429, "RESOURCE_EXHAUSTED"));

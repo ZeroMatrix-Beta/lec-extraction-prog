@@ -48,4 +48,7 @@ public static class AppConfig {
 
     // --- Feature-Schalter (Feature Flags) ---
     public static bool IsVertexAiEnabled => _options.IsVertexAiEnabled;
+
+    /// <summary>How long a model request may stay silent before GenerationLoop sends it again (FirstChunkTimeoutMinutes).</summary>
+    public static TimeSpan FirstChunkTimeout => TimeSpan.FromMinutes(Math.Max(0, _options.FirstChunkTimeoutMinutes));
 }

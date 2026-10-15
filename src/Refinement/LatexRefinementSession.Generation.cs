@@ -229,6 +229,7 @@ public partial class LatexRefinementSession {
                 },
                 RetryContext = outputFileName,
                 InitialBackoff = rateLimitDelay,
+                FirstChunkTimeout = AppConfig.FirstChunkTimeout,
                 HighDemandDelay = rateLimitDelay,
                 CancelledAsWarning = true,
                 ReportRequest = request => {

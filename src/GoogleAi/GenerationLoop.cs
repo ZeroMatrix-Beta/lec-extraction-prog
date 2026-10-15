@@ -78,6 +78,18 @@ public sealed class GenerationLoopOptions {
 
     /// <summary>How long a request may stream nothing before a line says it is still waiting; zero turns it off.</summary>
     public TimeSpan SilenceNoticeInterval { get; init; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// How long an attempt may deliver no chunk at all before it is abandoned and sent again; zero turns
+    /// it off (then only the client's 20-minute HTTP timeout applies). A started stream is never cut.
+    /// </summary>
+    public TimeSpan FirstChunkTimeout { get; init; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// The first request's counted input tokens (a lower bound for continues). Lets the retry policy
+    /// stop when a per-minute token limit is smaller than the request itself; null when not counted.
+    /// </summary>
+    public long? RequestInputTokens { get; init; }
 }
 
 /// <summary>
@@ -139,7 +151,7 @@ public static class GenerationLoop {
             var heartbeat = new StreamHeartbeat(options.SilenceNoticeInterval);
             try {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                    streamFactory: () => generate(history),
+                    streamFactory: () => WithFirstChunkTimeout(generate(history), options.FirstChunkTimeout),
                     onChunkReceived: chunk => {
                         heartbeat.Touch();
                         string answer = thoughts.Absorb(chunk);
@@ -158,14 +170,15 @@ public static class GenerationLoop {
                     initialBackoff: options.InitialBackoff ?? 130,
                     retryContext: options.RetryContext,
                     onRetry: () => {
-                        heartbeat.Touch();
+                        heartbeat.Restart();
                         text = "";
                         grounding = null;
                         usage = new UsageReport();
                         thoughts.DiscardRequest();
                     },
                     highDemandDelay: options.HighDemandDelay,
-                    resumeOnPartialProgress: true
+                    resumeOnPartialProgress: true,
+                    requestInputTokens: options.RequestInputTokens
                 );
             }
             catch (Exception ex) {
@@ -239,16 +252,16 @@ public static class GenerationLoop {
     }
 
     /// <summary>
-    /// [AI Context] Says so when a request has streamed nothing for a while. A thinking model with
-    /// thought summaries off sends nothing until it starts answering - minutes for a whole lecture -
-    /// and in a log that silence looked exactly like a hang (seen on 2026-10-15: 5+ minutes after
-    /// "Sende Anfrage neu" with no line at all). Quiet during the retry policy's own waits, which
-    /// print their own line.
+    /// [AI Context] Says so when a request has streamed nothing for a while; in a log that silence
+    /// looked exactly like a hang. It does not guess why: on 2026-10-15 one silence was a long thinking
+    /// phase (5+ minutes, then the answer), another a stalled request that delivered nothing for 20
+    /// minutes although thought summaries were on (its retry then needed only 3,600 thinking tokens).
+    /// Quiet during the retry policy's own waits, which print their own line.
     /// [Human] Meldet sich, wenn eine Anfrage lange nichts liefert, damit Stille nicht wie ein Hänger aussieht.
     /// </summary>
     private sealed class StreamHeartbeat : IDisposable {
         private readonly TimeSpan _interval;
-        private readonly DateTime _startedUtc = DateTime.UtcNow;
+        private DateTime _startedUtc = DateTime.UtcNow;
         private readonly Timer? _timer;
         private long _lastActivityTicks = DateTime.UtcNow.Ticks;
 
@@ -261,6 +274,12 @@ public static class GenerationLoop {
 
         public void Touch() => Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
 
+        /// <summary>A new attempt: the minutes count from its start, not the first attempt's.</summary>
+        public void Restart() {
+            _startedUtc = DateTime.UtcNow;
+            Touch();
+        }
+
         private void Check() {
             if (InteractiveDelay.IsInSmartDelay) {
                 Touch();
@@ -270,10 +289,50 @@ public static class GenerationLoop {
             if (silent < _interval) return;
             Touch();
             int minutes = (int)Math.Round((DateTime.UtcNow - _startedUtc).TotalMinutes);
-            Ui.Detail($"Noch keine Antwort ({minutes} min seit Anfrage-Start). Das Modell denkt vermutlich noch; ohne Gedanken-Zusammenfassungen ist das still. Strg+C bricht ab.", "API");
+            Ui.Detail($"Noch keine Daten vom Server ({minutes} min seit Anfrage-Start): lange Denkphase oder Warteschlange beim Server. Strg+C bricht ab.", "API");
         }
 
         public void Dispose() => _timer?.Dispose();
+    }
+
+    /// <summary>
+    /// [AI Context] Ends an attempt that delivers no chunk at all within <paramref name="timeout"/> with
+    /// a <see cref="TimeoutException"/>, which the retry policy answers with a short wait and a new
+    /// attempt. On 2026-10-15 a request stalled for the client's full 20-minute HTTP timeout and its
+    /// retry then streamed normally. Once the first chunk arrives the stream runs unlimited, so a long
+    /// answer is never cut; thought chunks count as arrivals. The abandoned request is not cancelled at
+    /// the server (the SDK call takes no token here); it is left to its own HTTP timeout.
+    /// [Human] Bricht einen Versuch ab, der zu lange gar nichts liefert, damit der Retry früher kommt.
+    /// </summary>
+    internal static async IAsyncEnumerable<GenerateContentResponse> WithFirstChunkTimeout(
+        IAsyncEnumerable<GenerateContentResponse> source, TimeSpan timeout,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        var enumerator = source.GetAsyncEnumerator(cancellationToken);
+        bool abandoned = false;
+        try {
+            var first = enumerator.MoveNextAsync().AsTask();
+            if (timeout > TimeSpan.Zero) {
+                using var timer = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                var finished = await Task.WhenAny(first, Task.Delay(timeout, timer.Token));
+                if (finished != first) {
+                    abandoned = true;
+                    _ = first.ContinueWith(t => _ = t.Exception, TaskScheduler.Default); // observe a late fault
+                    throw new TimeoutException($"Keine Daten vom Server innerhalb von {timeout.TotalMinutes:0.#} min (FirstChunkTimeoutMinutes).");
+                }
+                timer.Cancel();
+            }
+            if (!await first) yield break;
+            yield return enumerator.Current;
+            while (await enumerator.MoveNextAsync()) {
+                yield return enumerator.Current;
+            }
+        }
+        finally {
+            // Disposing while the abandoned MoveNext is still pending would throw; let it finish on its own.
+            if (!abandoned) {
+                await enumerator.DisposeAsync();
+            }
+        }
     }
 
     private static void PrintGroundingSources(GroundingMetadata grounding) {

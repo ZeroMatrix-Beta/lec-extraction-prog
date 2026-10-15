@@ -13,4 +13,8 @@ public class AppConfigOptions {
 
     // [AI Context] Master kill switch for Google Cloud Vertex AI to prevent accidental billing/costs.
     public bool IsVertexAiEnabled { get; set; } = false;
+
+    // [AI Context] Minutes a model request may deliver no data at all before it is abandoned and sent
+    // again (GenerationLoop). 0 leaves only the 20-minute HTTP timeout.
+    public int FirstChunkTimeoutMinutes { get; set; } = 10;
 }

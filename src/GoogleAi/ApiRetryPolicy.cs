@@ -75,11 +75,13 @@ public static partial class ApiRetryPolicy {
         int? highDemandDelay = null,
         bool resumeOnPartialProgress = false,
         int minCharactersToResume = 20,
-        int? maxTotalAttempts = null) {
+        int? maxTotalAttempts = null,
+        long? requestInputTokens = null) {
         int totalAttemptLimit = Math.Max(1, maxTotalAttempts ?? maxRetries * 2);
         string contextMsg = ContextPrefix(retryContext);
         int backoff = initialBackoff;
         int consecutiveFailuresWithoutProgress = 0;
+        int perMinuteTokenRefusals = 0;
         int attempt = 0;
 
         while (true) {
@@ -114,6 +116,21 @@ public static partial class ApiRetryPolicy {
                 var ex = (rawEx is OperationCanceledException || rawEx.InnerException is OperationCanceledException)
                     ? new TimeoutException("The API request timed out before returning any data.", rawEx)
                     : rawEx;
+                // A per-minute input-token limit smaller than the request itself: once a wait has cleared
+                // the minute window and the server still refuses, no further wait can help (2026-10-15:
+                // a 392,711-token part against a 250,000/min free-tier limit, retried for 19 minutes).
+                // The first refusal still gets its wait, because a cache hit can make the billed fresh
+                // tokens fewer than the counted total.
+                long? perMinuteLimit = PerMinuteInputTokenLimit(ex);
+                if (perMinuteLimit != null && requestInputTokens is long tokens && tokens > perMinuteLimit) {
+                    perMinuteTokenRefusals++;
+                    if (perMinuteTokenRefusals >= 2) {
+                        Ui.Error($"{ex.Describe()}", "API");
+                        Ui.Error(DescribeRequestOverPerMinuteLimit(tokens, perMinuteLimit.Value), "Quota");
+                        throw;
+                    }
+                }
+
                 if (!IsTransientError(ex)) {
                     Ui.Error($"{ex.Describe()}", "API");
                     if (IsDailyQuotaExhausted(ex)) {
@@ -326,6 +343,31 @@ public static partial class ApiRetryPolicy {
             || text.Contains("quota", StringComparison.OrdinalIgnoreCase);
         return isQuotaError && text.Contains("PerDay", StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// [AI Context] The limit of a per-minute input-token quota named in a 429 (e.g. "limit: 250000"
+    /// with the quota id "GenerateContentInputTokensPerModelPerMinute-FreeTier"), or null for any
+    /// other error, request-count quotas included.
+    /// [Human] Das Token-pro-Minute-Limit aus einer 429-Fehlermeldung, sonst null.
+    /// </summary>
+    public static long? PerMinuteInputTokenLimit(Exception ex) {
+        string text = ex.ToString();
+        bool perMinuteTokens = text.Contains("InputTokens", StringComparison.OrdinalIgnoreCase)
+            && text.Contains("PerMinute", StringComparison.OrdinalIgnoreCase);
+        if (!perMinuteTokens) return null;
+        var match = QuotaLimitRegex().Match(text);
+        return match.Success && long.TryParse(match.Groups[1].Value, out long limit) ? limit : null;
+    }
+
+    /// <summary>The German message when a request can never fit its per-minute token limit.</summary>
+    public static string DescribeRequestOverPerMinuteLimit(long requestTokens, long limit) =>
+        $"Die Anfrage hat {requestTokens:N0} Eingabe-Tokens, das Limit dieses Modells und Keys ist {limit:N0} pro Minute. " +
+        "Warten hilft nicht, die Anfrage passt so nie hinein. Auswege: ein anderes Modell (--model, z.B. gemini-3.7-flash), " +
+        "InlinePrecedingLecTexParts = false (vorherige Teile hochladen statt einbetten), den Prefix-Cache-Warm-up einschalten " +
+        "(gecachte Tokens zählen nicht) oder ein bezahlter Key.";
+
+    [GeneratedRegex(@"limit:\s*(\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex QuotaLimitRegex();
 
     /// <summary>The server closed the stream mid-response (truncated JSON in the streamed body).</summary>
     private static bool IsInterruptedStream(Exception ex) {

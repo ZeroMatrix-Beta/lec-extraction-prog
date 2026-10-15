@@ -522,6 +522,7 @@ public partial class LatexRefinementSession {
                     Ui.Info($"Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {request}/{max})...", "API"),
                 RetryContext = outputFileName,
                 InitialBackoff = fixDelay,
+                FirstChunkTimeout = AppConfig.FirstChunkTimeout,
                 HighDemandDelay = fixDelay,
                 CancelledAsWarning = true,
                 EmptyAnswerRetries = 3,
