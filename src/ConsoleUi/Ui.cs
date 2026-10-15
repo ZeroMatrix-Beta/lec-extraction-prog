@@ -107,8 +107,11 @@ public static class Ui {
         EnsureNewLine();
         var panel = new Panel($"[bold]{Markup.Escape(title)}[/]")
             .Border(IsTerminalOutput ? BoxBorder.Rounded : BoxBorder.Ascii)
-            .BorderColor(Color.Cyan1)
-            .Expand();
+            .BorderColor(Color.Cyan1);
+        // Full width in a console window; in a log it would be a 160-column box around one word.
+        if (IsTerminalOutput) {
+            panel.Expand();
+        }
         AnsiConsole.Write(panel);
     }
 

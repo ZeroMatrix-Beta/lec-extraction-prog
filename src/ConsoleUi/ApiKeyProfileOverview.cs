@@ -34,14 +34,21 @@ public static class ApiKeyProfileOverview {
         int maxProfiles = Math.Max(envNames.Length, 5);
         var items = new List<ProfileOverviewItem>();
 
+        // Each session has its own key list, so its profile number means a row of that list, not of
+        // this one; comparing numbers marked profile 0 as the refinement key while the refinement
+        // actually used API_KEY-latex-refinement. Compare the key each session resolves instead.
+        string extractionKey = ApiKeyProfileResolver.Resolve(autoExtConfig.ActiveApiProfile, envNames);
+        string chatKey = ApiKeyProfileResolver.Resolve(chatConfig.ActiveApiProfile, chatConfig.AiStudioApiKeyEnvNames);
+        string refinementKey = Extraction.RefinementUiHelper.ResolveRefinementKeyEnvName(latexConfig);
+
         for (int i = 0; i < maxProfiles; i++) {
             string envName = ApiKeyProfileResolver.Resolve(i, envNames);
             bool isPresent = GoogleAiClientBuilder.IsApiKeyPresent(envName);
 
             var activeIn = new List<string>();
-            if (autoExtConfig.ActiveApiProfile == i) activeIn.Add("🚀 Auto-Extraktion");
-            if (chatConfig.ActiveApiProfile == i) activeIn.Add("🌐 Direct Chat");
-            if (latexConfig.AiStudioActiveApiProfile == i) activeIn.Add("✍️ LaTeX Refinement");
+            if (extractionKey == envName) activeIn.Add("🚀 Auto-Extraktion");
+            if (chatKey == envName) activeIn.Add("🌐 Direct Chat");
+            if (refinementKey == envName) activeIn.Add("✍️ LaTeX Refinement");
 
             string purpose = i switch {
                 0 => "Dedizierter Extraktions-Key",
@@ -88,7 +95,7 @@ public static class ApiKeyProfileOverview {
         table.Title($"[bold cyan]Google AI Studio — API-Key Profile & Quota-Übersicht[/]\n[dim]Free Tier: 20 Anfragen / Tag pro Projekt pro Modell | Reset in {timeUntilReset} (02:00 Uhr MEZ / 00:00 UTC)[/]");
 
         table.AddColumn(new TableColumn("[bold]Profil[/]").Centered());
-        table.AddColumn(new TableColumn("[bold]Umgebungsvariable[/]"));
+        table.AddColumn(new TableColumn("[bold]Umgebungsvariable[/]").NoWrap());
         table.AddColumn(new TableColumn("[bold]Key-Status[/]").Centered());
         table.AddColumn(new TableColumn("[bold]Aktiv in Konfiguration[/]"));
         table.AddColumn(new TableColumn("[bold]gemini-3.8-flash[/]").Centered());

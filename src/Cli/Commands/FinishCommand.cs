@@ -55,11 +55,11 @@ public static class FinishCommand {
             }
 
             if (context.DryRun) {
-                CliOutput.Payload(context, new { dryRun = true, actions = actions.Select(Describe) }, () => RenderPlan(actions));
+                CliOutput.Payload(context, new { dryRun = true, actions = actions.Select(Describe) }, () => RenderPlan(actions, withCommands: true));
                 return ExitCodes.Success;
             }
 
-            RenderPlan(actions);
+            RenderPlan(actions, withCommands: false);
             var results = new List<(FinishAction Action, int ExitCode, LectureProgress After)>();
             for (int i = 0; i < actions.Count; i++) {
                 var action = actions[i];
@@ -164,16 +164,22 @@ public static class FinishCommand {
         command = a.Arguments == null ? null : CommandLine(a.Arguments), problem = a.Problem
     };
 
-    private static void RenderPlan(IReadOnlyList<FinishAction> actions) {
+    private static void RenderPlan(IReadOnlyList<FinishAction> actions, bool withCommands) {
         Ui.Grid($"lecx finish: {actions.Count} Vorlesung(en)", ["Vorlesung", "Stand", "Als Nächstes", "Eingabe"], actions.Select(a => (IReadOnlyList<string>)[
             LectureLabel.Short(a.Lecture),
             a.Reached,
             LectureProgress.StageLabel(a.Stage),
-            a.Input != null ? Path.GetFileName(a.Input) : a.Problem ?? "Video (Teile werden wiederverwendet)"
+            a.Input != null ? ShortFileName(a.Input, a.Lecture) : a.Problem ?? "Video (Teile werden wiederverwendet)"
         ]));
-        foreach (var a in actions.Where(a => a.Arguments != null)) {
+        foreach (var a in actions.Where(a => withCommands && a.Arguments != null)) {
             Ui.Detail(CommandLine(a.Arguments!));
         }
+    }
+
+    /// <summary>A step file's name with the lecture name elided ("step2-…-all-offset-merged.tex"); the row names the lecture.</summary>
+    public static string ShortFileName(string path, string lecture) {
+        string name = Path.GetFileName(path);
+        return lecture.Length > 0 ? name.Replace(lecture, "…", StringComparison.OrdinalIgnoreCase) : name;
     }
 
     private static async System.Threading.Tasks.Task<int> InvokeAsync(string[] arguments) {

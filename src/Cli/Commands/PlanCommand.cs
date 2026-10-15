@@ -166,15 +166,29 @@ public static class PlanCommand {
             ("Videos", plan.VideoCount.ToString()),
             ("Segmente je Video", $"{plan.SegmentsPerVideo?.ToString() ?? "auto, nach Videolänge"} ({plan.OverlapSeconds}s Overlap, {plan.SpeedMultiplier}x{(plan.GoogleVideoFps.HasValue ? $", {plan.GoogleVideoFps.Value:0.###} FPS" : "")})"),
             ("Offene Anfragen", plan.PendingRequests.ToString()),
-            ("Wiederverwendbar", $"{plan.ResumableSegments} (Fenster: {plan.ResumeWindowHours}h)"),
+            ("Wiederverwendbar", $"{plan.ResumableSegments} (Fenster: {(plan.ResumeWindowHours >= 87600 ? "unbegrenzt, --resume" : $"{plan.ResumeWindowHours}h")})"),
             ("Refinement danach", plan.RefinementFollows ? "ja" : "nein")
         ]);
 
-        foreach (var video in plan.Videos) {
-            string state = video.PendingSegments == 0
-                ? "vollständig vorhanden"
-                : $"{video.PendingSegments} von {video.SegmentCount} offen";
-            Ui.Detail($"{video.FileName} — {state}");
+        // The folder's stage beside the parts: a video whose parts are all there may still be anywhere
+        // in refinement, and 'run' would then merge again (copy-1 names, paid twice) where 'finish'
+        // continues from the step it stopped at.
+        int continuedElsewhere = 0;
+        Ui.Grid("Videos", ["Vorlesung", "Teile", "Offen", "Stand im Ordner"], plan.Videos.Select(video => {
+            string folder = Path.Combine(plan.TargetFolder, ExtractionHelpers.ComputeOutputFolderName(video.FileName));
+            var progress = Directory.Exists(folder) ? LectureProgress.Scan(folder) : null;
+            if (progress?.NextStage is LectureStage.Merge or LectureStage.Speech or LectureStage.Polish or LectureStage.Pdf or LectureStage.Done) {
+                continuedElsewhere++;
+            }
+            return (IReadOnlyList<string>)[
+                LectureLabel.Short(video.FileName),
+                video.SegmentCount.ToString(),
+                video.PendingSegments == 0 ? "-" : video.PendingSegments.ToString(),
+                progress == null ? "-" : progress.NextStage == LectureStage.Done ? "PDF fertig" : progress.ReachedLabel
+            ];
+        }).ToList());
+        if (continuedElsewhere > 0) {
+            Ui.Detail($"{continuedElsewhere} Video(s) sind schon im Refinement oder fertig: 'run' würde sie neu zusammenführen; 'lecx finish' setzt beim offenen Schritt fort.");
         }
 
         foreach (string warning in plan.Warnings) {
