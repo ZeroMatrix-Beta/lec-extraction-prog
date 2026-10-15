@@ -147,7 +147,7 @@ within `--resume-window` requests only the missing part and the refinement. Whet
 attempts count against the free-tier daily quota is **not settled**. In the maintainer's
 experience they usually do not. But on 2026-10-15 one key was refused with
 `GenerateRequestsPerDay…` on `gemini-3.8-flash` after about 9 requests that were not 503
-(4 warm-ups, 2 answers, 2 stream breaks, 1 continue) and about 20 that were. So either part of
+(4 warm-ups, 1 complete answer, 2 stream breaks, 1 continue) and about 20 that were. So either part of
 the 503s counted (perhaps those that failed after Google had started generating), or the key
 was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
 console is the place to check.
