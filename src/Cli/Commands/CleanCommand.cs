@@ -33,23 +33,28 @@ public static partial class CleanCommand {
         Description = "Keep the newest of duplicate -copy-N.tex files as canonical and archive older copies."
     };
 
+    public static readonly Option<bool> Pdfs = new("--pdfs") {
+        Description = "Keep one finished PDF per lecture (<lecture>.pdf) and archive byte-identical copies of it."
+    };
+
     public static readonly Option<bool> Force = new("--force") {
         Description = "Force cleanup even if files were modified within the last 10 minutes."
     };
 
     public static Command Build() {
-        var command = new Command("clean", "Clean intermediate FFmpeg files or archive duplicate -copy-N files.") {
-            Video, Folder, Tmp, Copies, Force
+        var command = new Command("clean", "Clean intermediate FFmpeg files, archive duplicate -copy-N files or duplicate PDFs.") {
+            Video, Folder, Tmp, Copies, Pdfs, Force
         };
 
         command.SetAction(parseResult => {
             var context = CliOptions.ReadContext(parseResult);
             bool cleanTmp = parseResult.GetValue(Tmp);
             bool cleanCopies = parseResult.GetValue(Copies);
+            bool cleanPdfs = parseResult.GetValue(Pdfs);
             bool force = parseResult.GetValue(Force);
 
-            if (!cleanTmp && !cleanCopies) {
-                Ui.Error("Mindestens eine Option muss angegeben werden: --tmp oder --copies.", "clean");
+            if (!cleanTmp && !cleanCopies && !cleanPdfs) {
+                Ui.Error("Mindestens eine Option muss angegeben werden: --tmp, --copies oder --pdfs.", "clean");
                 Ui.Detail("Beispiel: lecx clean --folder \"<pfad>\" --tmp");
                 return ExitCodes.Usage;
             }
@@ -108,6 +113,13 @@ public static partial class CleanCommand {
                     var (archivedCount, archivedBytes) = ProcessCopies(dir, context.DryRun);
                     dirCopiesArchived += archivedCount;
                     dirBytesFreed += archivedBytes;
+                }
+
+                // 3. One finished PDF per lecture
+                if (cleanPdfs) {
+                    var (archivedPdfs, pdfBytes, _) = ProcessPdfs(dir, context.DryRun);
+                    dirCopiesArchived += archivedPdfs;
+                    dirBytesFreed += pdfBytes;
                 }
 
                 totalBytesFreed += dirBytesFreed;
@@ -228,6 +240,68 @@ public static partial class CleanCommand {
         }
 
         return (count, bytes);
+    }
+
+    /// <summary>
+    /// [AI Context] Leaves one finished PDF per lecture, &lt;lecture&gt;.pdf. Until 2026-10-15 a run wrote
+    /// the same PDF twice (beside step 3's .tex and as the "final" copy), and a re-run named the final
+    /// one after its -copy-N stem. Creates &lt;lecture&gt;.pdf from the newest finished PDF when it is
+    /// missing, then archives only byte-identical copies of it; a PDF that differs (an older draft, a
+    /// precheck build) is left where it is.
+    /// [Human] Behält ein fertiges PDF pro Vorlesung und archiviert identische Kopien.
+    /// </summary>
+    public static (int ArchivedCount, long ArchivedBytes, bool Created) ProcessPdfs(string dir, bool dryRun) {
+        string lecture = Path.GetFileName(dir);
+        string canonical = Path.Combine(dir, lecture + ".pdf");
+        var others = Directory.GetFiles(dir, "*.pdf")
+            .Where(f => !string.Equals(f, canonical, StringComparison.OrdinalIgnoreCase))
+            .Where(f => !Path.GetFileNameWithoutExtension(f).EndsWith("-main", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        bool created = false;
+        string? source = canonical;
+        if (!File.Exists(canonical)) {
+            // Only what a finished run writes: the final copy (named after the lecture) or step 4's.
+            source = others
+                .Where(f => Path.GetFileName(f).StartsWith(lecture, StringComparison.OrdinalIgnoreCase)
+                            || Path.GetFileName(f).StartsWith("step4-", StringComparison.OrdinalIgnoreCase)
+                            || Path.GetFileName(f).StartsWith("step5-", StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(File.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+            if (source == null) return (0, 0, false);
+            created = true;
+            if (dryRun) {
+                Ui.Detail($"[Dry-Run] Würde {Path.GetFileName(source)} als {lecture}.pdf übernehmen", "clean");
+            }
+            else {
+                File.Copy(source, canonical);
+                Ui.Success($"{lecture}.pdf aus {Path.GetFileName(source)} erstellt", "clean");
+            }
+        }
+
+        var duplicates = others.Where(f => SameBytes(f, source)).ToList();
+        long bytes = duplicates.Sum(f => new FileInfo(f).Length);
+        if (duplicates.Count == 0) return (0, 0, created);
+
+        string archiveDir = Path.Combine(dir, "archive", DateTime.UtcNow.ToString("yyyyMMdd-HHmmss"));
+        if (dryRun) {
+            Ui.Detail($"[Dry-Run] Würde {duplicates.Count} identische PDF-Kopie(n) in {lecture} archivieren: {string.Join(", ", duplicates.Select(Path.GetFileName))}", "clean");
+            return (duplicates.Count, bytes, created);
+        }
+
+        Directory.CreateDirectory(archiveDir);
+        foreach (string file in duplicates) {
+            File.Move(file, Path.Combine(archiveDir, Path.GetFileName(file)), overwrite: true);
+        }
+        Ui.Success($"Archiviert: {duplicates.Count} identische PDF-Kopie(n) nach archive/{Path.GetFileName(archiveDir)}/ ({FormatBytes(bytes)})", "clean");
+        return (duplicates.Count, bytes, created);
+    }
+
+    private static bool SameBytes(string a, string b) {
+        var infoA = new FileInfo(a);
+        var infoB = new FileInfo(b);
+        if (infoA.Length != infoB.Length) return false;
+        return File.ReadAllBytes(a).AsSpan().SequenceEqual(File.ReadAllBytes(b));
     }
 
     private static long GetDirectorySize(string path) {

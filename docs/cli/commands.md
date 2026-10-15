@@ -221,6 +221,7 @@ the same way.
 |---|---|
 | `--tmp` | Delete the `tmp/` folders (FFmpeg segments and cache) |
 | `--copies` | Keep the newest of duplicate `-copy-N.tex` files, archive the older ones |
+| `--pdfs` | Keep one finished PDF per lecture, `<lecture>.pdf` (created from the newest final copy if missing), and archive byte-identical copies. Runs before 2026-10-15 wrote each PDF twice. Combine with `--dry-run` to preview |
 | `--folder <dir>` · `--video <name>` | Which lectures, as for `status` |
 | `--force` | Also touch files changed in the last 10 minutes |
 
