@@ -116,11 +116,11 @@ public static partial class ApiRetryPolicy {
                 var ex = (rawEx is OperationCanceledException || rawEx.InnerException is OperationCanceledException)
                     ? new TimeoutException("The API request timed out before returning any data.", rawEx)
                     : rawEx;
-                // A per-minute input-token limit smaller than the request itself: once a wait has cleared
-                // the minute window and the server still refuses, no further wait can help (2026-10-15:
-                // a 392,711-token part against a 250,000/min free-tier limit, retried for 19 minutes).
-                // The first refusal still gets its wait, because a cache hit can make the billed fresh
-                // tokens fewer than the counted total.
+                // A per-minute input-token limit smaller than the request itself. Cached tokens do not count
+                // against it (2026-10-16: gemini-3.5-flash-lite, limit 250,000, accepted handshakes of 274k and
+                // 310k total with 129k and 38k fresh), so such a request passes only with a cache hit. The first
+                // refusal gets its wait; a second one means the cache missed again, and the retries that
+                // followed on 2026-10-15 (19 minutes for a 392,711-token part) were all refused.
                 long? perMinuteLimit = PerMinuteInputTokenLimit(ex);
                 if (perMinuteLimit != null && requestInputTokens is long tokens && tokens > perMinuteLimit) {
                     perMinuteTokenRefusals++;
@@ -359,12 +359,12 @@ public static partial class ApiRetryPolicy {
         return match.Success && long.TryParse(match.Groups[1].Value, out long limit) ? limit : null;
     }
 
-    /// <summary>The German message when a request can never fit its per-minute token limit.</summary>
+    /// <summary>The German message when a request over its per-minute token limit was refused twice (no cache hit).</summary>
     public static string DescribeRequestOverPerMinuteLimit(long requestTokens, long limit) =>
-        $"Die Anfrage hat {requestTokens:N0} Eingabe-Tokens, das Limit dieses Keys und Modells ist {limit:N0} pro Minute. " +
-        "Warten hilft nicht, die Anfrage passt so nie hinein. Sie muss kleiner werden: weniger History (HistoryPreloadPaths), " +
-        "keine vorherigen Teile mitschicken (DebugSendReferenceFile = false), oder ein bezahlter Key. Ob ein Prefix-Cache-Warm-up hilft " +
-        "(zählen gecachte Tokens mit?), ist nicht belegt (die gemeldete 'Gecacht'-Zahl ist nicht verlässlich, siehe Documentation.md 4.4).";
+        $"Die Anfrage hat {requestTokens:N0} Eingabe-Tokens, das Limit dieses Keys und Modells ist {limit:N0} pro Minute, " +
+        "und sie wurde zweimal abgelehnt. Gecachte Tokens zählen nicht mit, sie passt also nur mit einem Cache-Treffer - und der kam zweimal nicht. " +
+        "Auswege: Prefix-Cache-Warm-up einschalten (EnableImplicitPrefixCacheWarmup; der Cache greift aber nicht immer), " +
+        "weniger History (HistoryPreloadPaths), keine vorherigen Teile mitschicken (DebugSendReferenceFile = false) oder ein bezahlter Key.";
 
     [GeneratedRegex(@"limit:\s*(\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex QuotaLimitRegex();

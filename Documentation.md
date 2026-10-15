@@ -181,7 +181,7 @@ The cached-token count Google reports (`CachedContentTokenCount`, shown as "Geca
 
 Consequences:
 - The warm-up can make a hit more likely; it never guarantees one.
-- Do not plan rate limits (e.g. the free tier's 250k input tokens per minute) or cost on the assumption that cached tokens will not count.
+- Cached tokens do not count against the free tier's 250k input tokens per minute (shown 2026-10-16 by accepted requests of 274k and 310k total; see docs/cli/agents.md). But do not plan rate limits or cost on a cache hit: it may not come, and a request over the limit is then refused.
 - Do not judge a prompt-layout or warm-up change by the cache figure of a single run.
 
 ---
@@ -578,7 +578,7 @@ Die von Google gemeldete Zahl gecachter Tokens (`CachedContentTokenCount`, als "
 
 Folgen:
 - Der Warm-Up macht einen Hit wahrscheinlicher, garantiert ihn aber nie.
-- Rate-Limits (z. B. 250k Input-Tokens pro Minute im Free Tier) und Kosten nicht darauf planen, dass gecachte Tokens nicht zählen.
+- Gecachte Tokens zählen nicht gegen die 250k Input-Tokens pro Minute im Free Tier (2026-10-16 belegt durch angenommene Anfragen mit 274k und 310k insgesamt; siehe docs/cli/agents.md). Rate-Limits und Kosten aber nicht auf einen Cache-Treffer planen: er kann ausbleiben, und eine Anfrage über dem Limit wird dann abgelehnt.
 - Eine Änderung am Prompt-Aufbau oder Warm-Up nicht anhand der Cache-Zahl eines einzelnen Laufs beurteilen.
 
 ---

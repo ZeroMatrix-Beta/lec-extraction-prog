@@ -180,22 +180,24 @@ the 503s counted (perhaps those that failed after Google had started generating)
 was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
 console is the place to check.
 
-**A request bigger than the per-minute token limit fails fast.** The free tier caps input
-tokens per minute per model and key: 250,000 on both `gemini-3.8-flash` and `gemini-3.7-flash`
-(`GenerateContentInputTokensPerModelPerMinute-FreeTier`, seen 2026-10-15/16). A part's request
-here is ~340k (system instruction + history ≈ 270k, plus the video) and grows by ~12k per earlier
-part. Retrying cannot help, so after the second refusal the part fails with
-`Die Anfrage hat N Eingabe-Tokens, das Limit … ist L pro Minute` and the video exits `6`. Ways to
-shrink it: less history (`HistoryPreloadPaths`), no earlier parts (`DebugSendReferenceFile: false`),
-or a paid key.
+**A request over the per-minute token limit passes only with a cache hit.** The free tier caps
+input tokens per minute per model and key: 250,000 on `gemini-3.8-flash`, `gemini-3.7-flash` and
+`gemini-3.5-flash-lite` (`GenerateContentInputTokensPerModelPerMinute-FreeTier`, seen 2026-10-15/16).
+A part's request here is ~340k (system instruction + history ≈ 270k, plus the video) and grows by
+~12k per earlier part.
 
-Not settled, and **do not settle it from the "Gecacht" figure**: Google's reported cached-token
-count is not reliable ([Documentation.md §4.4](../../Documentation.md)). On 2026-10-13 the same
-key took parts of 340k–352k tokens that reported "Gecacht: 0". Either the limit was higher then,
-or those requests were in fact cached and reported as 0, which would mean cached tokens do not
-count. Only Google's accept/refuse is evidence: a request whose counted total exceeds the limit
-and is **accepted** shows that not all of it counted. A refusal next to a reported cache hit
-proves little.
+**Cached tokens do not count against that limit.** Shown by Google's accept/refuse, not by the
+"Gecacht" figure: on 2026-10-16 `gemini-3.5-flash-lite` (limit 250,000) accepted warm-up handshakes
+of 274,357 and 309,995 tokens a minute apart, with 129k and 38k fresh. So the warm-up
+(`EnableImplicitPrefixCacheWarmup`) is what lets an oversized request through. It is no guarantee:
+the cache is best-effort ([Documentation.md §4.4](../../Documentation.md)), and the 390k part-4
+request right after those handshakes, with the same prefix plus the video, was refused twice. That
+the 2026-10-13 parts (340k–352k, "Gecacht: 0") went through suggests they were cached and the
+figure was wrong.
+
+After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
+abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
+earlier parts (`DebugSendReferenceFile: false`), or a paid key.
 
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
