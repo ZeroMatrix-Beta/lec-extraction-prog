@@ -231,7 +231,7 @@ public partial class LatexRefinementSession {
                 CancelledAsWarning = true,
                 ReportRequest = request => {
                     var usage = request.Usage;
-                    Ui.Info(usage.Describe($"[Request {request.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
+                    Ui.Info(usage.Describe($"[Request {request.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}", tag: "").TrimStart(), "Tokens");
                     if (usage.WasReported) {
                         Ui.Info(usage.DescribeOutputBudget(backendParams.MaxOutputTokens), "Tokens");
                     }

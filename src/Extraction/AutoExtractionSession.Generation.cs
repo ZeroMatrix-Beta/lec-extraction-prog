@@ -328,7 +328,7 @@ public partial class AutoExtractionSession {
 
         int freshReqTokens = Math.Max(0, usage.PromptTokens - usage.CachedTokens);
 
-        Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
+        Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {usage.CandidateTokens:N0}", tag: "").TrimStart(), "Tokens");
         if (_config.VerboseConsoleOutput) {
             var part = request.Total;
             Ui.Detail($"[Part Total Tokens]    Total Prompt: {part.Input:N0} | Gecacht: {part.Cached:N0} | Frisch: {part.Fresh:N0} | Output: {part.Output:N0}");
