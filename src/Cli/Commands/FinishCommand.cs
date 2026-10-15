@@ -33,7 +33,7 @@ public static class FinishCommand {
 
     public static Command Build() {
         var command = new Command("finish", "Continue every started lecture from where it stopped, through to the PDF. Paid; --dry-run shows the commands it would run.") {
-            StatusCommand.Video, StatusCommand.Folder, Source, Limit,
+            StatusCommand.Video, StatusCommand.Folder, Source, Limit, RunCommand.CleanTmp,
             ExtractionOptions.Profile, ExtractionOptions.Model, ThoughtOptions.Thoughts
         };
 
@@ -73,6 +73,9 @@ public static class FinishCommand {
                 }
 
                 var after = LectureProgress.Scan(action.Folder);
+                if (after.NextStage == LectureStage.Done && parseResult.GetValue(RunCommand.CleanTmp)) {
+                    DeleteTmp(action.Folder);
+                }
                 results.Add((action, exitCode, after));
 
                 // A missing key or an unanswerable prompt will fail every following lecture the same way.
@@ -173,6 +176,20 @@ public static class FinishCommand {
         ]));
         foreach (var a in actions.Where(a => withCommands && a.Arguments != null)) {
             Ui.Detail(CommandLine(a.Arguments!));
+        }
+    }
+
+    /// <summary>Deletes a finished lecture's tmp/ (FFmpeg segments); a later run would cut them again if needed.</summary>
+    private static void DeleteTmp(string lectureFolder) {
+        string tmp = Path.Combine(lectureFolder, "tmp");
+        if (!Directory.Exists(tmp)) return;
+        try {
+            long bytes = new DirectoryInfo(tmp).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
+            Directory.Delete(tmp, recursive: true);
+            Ui.Detail($"tmp/ gelöscht ({CleanCommand.FormatBytes(bytes)})", "finish");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            Ui.Warn($"tmp/ von {Path.GetFileName(lectureFolder)} konnte nicht gelöscht werden: {ex.Describe()}", "finish");
         }
     }
 

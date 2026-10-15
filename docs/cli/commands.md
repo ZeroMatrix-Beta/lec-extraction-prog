@@ -209,6 +209,7 @@ lecx finish --folder "<one lecture folder>"
 | `--folder` · `--video` | Which lectures, as for `status` |
 | `--source <dir>` | Where the videos are, for unfinished transcriptions. Defaults to the configured source folder, then two levels up from the lecture folder |
 | `--limit <n>` | At most n lectures, chronologically |
+| `--clean-tmp` | Delete a lecture's `tmp/` (FFmpeg segments, ~0.5 GB) once it has its PDF |
 | `--profile` · `--model` · `--thoughts` | Passed to every command it runs |
 
 Exits `0` when every lecture reached a PDF, `6` when some did, otherwise the first failing
