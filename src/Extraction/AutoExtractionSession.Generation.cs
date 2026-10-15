@@ -35,11 +35,7 @@ public partial class AutoExtractionSession {
         string durationString = ExtractionHelpers.FormatDurationForPrompt(partDurationSeconds);
         string fullDurationString = ExtractionHelpers.FormatDurationForPrompt(fullOriginalVideoDuration);
 
-        string weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday ?? "Unknown";
-        string weekInfo = dateInfo.WeekInfo ?? "N/A";
-        string dateMetadata = partNumber == 1
-            ? $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({weekday}), and week number ({weekInfo}) are important metadata since this is part 1 of the lecture."
-            : $"The lecture took place on {dateContext} (Day of the week: {weekday}).";
+        string dateMetadata = LectureMetadataText(dateInfo, dateContext, partNumber);
 
         string prompt =
             $"<parameter name=\"lecture_metadata\">{dateMetadata}</parameter>\n" +
@@ -52,6 +48,33 @@ public partial class AutoExtractionSession {
         if (!uploadSuccess || attachmentParts.Count == 0) return new SegmentUpload(false, null, []);
 
         return new SegmentUpload(true, parsedPrompt, attachmentParts);
+    }
+
+    /// <summary>
+    /// [AI Context] The lecture_metadata parameter: date, weekday and week from the video's file name.
+    /// When the name states no weekday, the model is told so - derived from the date when there is
+    /// one, otherwise explicitly unknown - instead of reading "day of the week (Unknown)" with no
+    /// reason given and filling in a guess. A name that states its weekday gets the old text unchanged.
+    /// [Human] Datums-Angaben für den Prompt; sagt Gemini, wenn der Wochentag nicht im Dateinamen steht.
+    /// </summary>
+    public static string LectureMetadataText(VideoDateParser.VideoDateInfo dateInfo, string dateContext, int partNumber) {
+        string? weekday = dateInfo.WeekdayEnglish ?? dateInfo.Weekday;
+        string weekdayNote = "";
+        if (weekday == null) {
+            if (dateInfo.Date != DateTime.MinValue) {
+                weekday = dateInfo.Date.DayOfWeek.ToString();
+                weekdayNote = $" The file name does not state the day of the week; {weekday} is derived from the date.";
+            }
+            else {
+                weekday = "Unknown";
+                weekdayNote = " The file name states neither the day of the week nor a date to derive it from, so the day of the week is unknown. Do not guess it: where the system instructions ask for it, say that it is unknown.";
+            }
+        }
+
+        string weekInfo = dateInfo.WeekInfo ?? "N/A";
+        return partNumber == 1
+            ? $"The lecture being transcribed is from {dateContext}. Please note that the exact date, day of the week ({weekday}), and week number ({weekInfo}) are important metadata since this is part 1 of the lecture.{weekdayNote}"
+            : $"The lecture took place on {dateContext} (Day of the week: {weekday}).{weekdayNote}";
     }
 
     /// <param name="partOutputPath">The part's .tex path; its thoughts file goes beside it. Without it no
