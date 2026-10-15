@@ -506,111 +506,38 @@ public partial class LatexRefinementSession {
     }
 
     private async Task<(string Text, TokenUsage Usage)> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName, ThoughtLog thoughts) {
-        string fullResponseText = "";
-        TokenUsage totalUsage = default;
-        var budget = new ContinueBudget(_config.Step3LastRefinement?.MaxContinueRequests ?? 10);
-        int emptyResponseRetries = 0;
+        string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
+        int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds > 0 ? _config.Step3LastRefinement.RateLimitDelaySeconds : 130;
 
-        using var cancelScope = new ConsoleCancelScope();
-
-        while (true) {
-            string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
-
-            int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds > 0 ? _config.Step3LastRefinement.RateLimitDelaySeconds : 130;
-            double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < fixDelay && !InteractiveDelay.IsInSmartDelay) {
-                int waitRemaining = (int)Math.Ceiling(fixDelay - secondsSinceLastGen);
-                Ui.Detail($"Warte verbleibende {waitRemaining} Sekunden vor dem PDF-Fix-Request...", "Rate-Limit & Quota");
-                if (!await InteractiveDelay.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)...")) {
-                    break;
-                }
-            }
-            AttachmentUploader.HasJustUploaded = false;
-
-            Ui.Info($"Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...", "API");
-
-            string chunkResp = "";
-            bool callSuccess = false;
-            var usage = new UsageReport();
-
-            try {
-                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
-                  onChunkReceived: async (chunk) => {
-                      string text = thoughts.Absorb(chunk);
-                      Ui.Raw(text);
-                      chunkResp += text;
-                      usage.Absorb(chunk.UsageMetadata);
-                      usage.RecordFinishReason(ResponseParts.FinishReason(chunk));
-                      await Task.CompletedTask;
-                  },
-                  cancellationToken: cancelScope.Token,
-                  initialBackoff: fixDelay,
-                  retryContext: outputFileName,
-                  onRetry: () => { chunkResp = ""; usage = new UsageReport(); thoughts.DiscardRequest(); },
-                  highDemandDelay: fixDelay,
-                  resumeOnPartialProgress: true
-                );
-            }
-            catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.Describe()}", "Abbruch");
-                break;
-            }
-
-            if (!callSuccess) {
-                Ui.Warn("Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
-                break;
-            }
-
-            // Every completed request is billed, an empty answer included.
-            totalUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens, usage.ThoughtTokens, Requests: 1);
-            await thoughts.EndRequestAsync(budget.RequestNumber, usage);
-
-            if (string.IsNullOrWhiteSpace(chunkResp)) {
-                if (emptyResponseRetries < 3) {
-                    emptyResponseRetries++;
-                    Ui.Error("Das Modell hat eine komplett leere Antwort zurückgegeben (z.B. wegen MALFORMED_RESPONSE oder Safety-Filtern).");
-                    Ui.Detail($"Warte 5 Sekunden vor Versuch {emptyResponseRetries}/3...");
-                    try {
-                        await Task.Delay(5000, cancelScope.Token);
-                    }
-                    catch (OperationCanceledException) {
-                        break;
-                    }
-                    continue;
-                }
-                else {
-                    Ui.Error("Das Modell hat nach 3 Versuchen weiterhin eine komplett leere Antwort zurückgegeben. Der Vorgang wird abgebrochen.");
-                    break;
-                }
-            }
-
-            emptyResponseRetries = 0;
-            fullResponseText += chunkResp;
-            bool isComplete = chunkResp.Contains("% [SYSTEM] Refinement complete", StringComparison.OrdinalIgnoreCase);
-            if (isComplete) break;
-
-            if (!budget.TryContinue(chunkResp, out string stopReason)) {
-                Ui.Warn($"{stopReason} Breche den PDF-Fix ab.");
-                break;
-            }
-
-            string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{ContinueBudget.EchoTail(chunkResp, _config.ContinuePromptEchoCharacters)}\n\n" +
-                "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Just print the very next character.";
-
-            Ui.Info("Unerwartetes Ende der Antwort. Bereite Continue-Prompt vor...", "PDF-Fix");
-            history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
-            history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
-
-            Ui.Detail($"Warte {fixDelay} Sekunden vor der Fortsetzung...", "Timer");
-            if (!await InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...")) {
-                break;
-            }
-        }
-
-        await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
-        return (fullResponseText, totalUsage);
+        var result = await GenerationLoop.RunAsync(history,
+            h => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, h, requestConfig),
+            thoughts,
+            new GenerationLoopOptions {
+                MaxContinueRequests = _config.Step3LastRefinement?.MaxContinueRequests ?? 10,
+                BeforeRequestAsync = () => WaitOutRateLimitAsync(fixDelay,
+                    "vor dem PDF-Fix-Request...", "Warte auf Rate-Limits (Token-Refill Schutz vor PDF-Fix-Request)..."),
+                AnnounceRequest = (request, max) =>
+                    Ui.Info($"Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {request}/{max})...", "API"),
+                RetryContext = outputFileName,
+                InitialBackoff = fixDelay,
+                HighDemandDelay = fixDelay,
+                CancelledAsWarning = true,
+                EmptyAnswerRetries = 3,
+                IsComplete = text => text.Contains(RefinementCompleteMarker, StringComparison.OrdinalIgnoreCase),
+                BudgetStopSuffix = "Breche den PDF-Fix ab.",
+                BuildContinuePrompt = response => {
+                    string continuePrompt = GenerationLoop.CutShortPrompt(response,
+                        "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Just print the very next character.",
+                        _config.ContinuePromptEchoCharacters);
+                    Ui.Info("Unerwartetes Ende der Antwort. Bereite Continue-Prompt vor...", "PDF-Fix");
+                    return continuePrompt;
+                },
+                WaitBeforeContinueAsync = () => {
+                    Ui.Detail($"Warte {fixDelay} Sekunden vor der Fortsetzung...", "Timer");
+                    return InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...");
+                },
+            });
+        return (result.Text, result.Usage);
     }
 
     private async Task<bool> RunExternalAgentRepairLoopAsync(string finalTexFile, string baseName, string targetFolder, string preambleText, string initialLog) {
