@@ -76,11 +76,19 @@ public partial class VertexAutoExtractionSession {
             requestConfig.SystemInstruction = new Content { Role = "system", Parts = sysParts };
         }
 
-        // [AI Context] Opt-in (finding F9), guarded by SupportsThinking - see the AI Studio twin.
-        // [Human] Nur wenn konfiguriert und vom Modell unterstützt.
-        if (_config.DisableThinkingDuringWarmUp && ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
-            requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
-            Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
+        // [AI Context] The same thinking config as Part 1 (level/budget and IncludeThoughts), like the
+        // AI Studio twin: a bit-identical request config is what lets the prefix cache hit. Before, the
+        // handshake sent none at all. DisableThinkingDuringWarmUp=true overrides to ThinkingBudget=0
+        // (opt-in, finding F9). The handshake's own thoughts are dropped below.
+        // [Human] Gleiche Thinking-Konfiguration wie Part 1, damit der Warmup-Prefix gecacht wird.
+        if (ModelCapabilities.SupportsThinking(_config.CurrentModel)) {
+            if (_config.DisableThinkingDuringWarmUp) {
+                requestConfig.ThinkingConfig = new ThinkingConfig { ThinkingBudget = 0 };
+                Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
+            } else {
+                requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
+                    _config.CurrentModel, _config.ThinkingBudget, _config.ThinkingLevel, IncludesThoughts);
+            }
         }
 
         string handshakeText = $"[Cache-Warming Handshake] System instruction and instructions loaded. Please acknowledge with exactly: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'";
@@ -132,7 +140,7 @@ public partial class VertexAutoExtractionSession {
             bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
                 onChunkReceived: async (chunk) => {
-                    string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                    string txt = ResponseParts.Split(chunk).Answer;
                     responseText += txt;
                     usage.Absorb(chunk.UsageMetadata);
                     if (chunk.UsageMetadata != null) {

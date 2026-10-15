@@ -140,10 +140,17 @@ public partial class VertexAutoExtractionSession {
             }
         }
         requestConfig.ThinkingConfig = ThinkingConfigFactory.Build(
-            _config.CurrentModel, _config.ThinkingBudget, _config.ThinkingLevel, _config.ThoughtSummaries?.Enabled == true);
+            _config.CurrentModel, _config.ThinkingBudget, _config.ThinkingLevel, IncludesThoughts);
 
         return (requestConfig, history);
     }
+
+    /// <summary>
+    /// [AI Context] Whether Stage 1 requests thought summaries. The warm-up handshake reads it too, so
+    /// its request config stays identical to the real part's (as in the AI Studio session).
+    /// [Human] Ob die Transkription Gedanken-Zusammenfassungen anfordert.
+    /// </summary>
+    private bool IncludesThoughts => _config.ThoughtSummaries?.Enabled == true;
 
     /// <summary>
     /// [AI Context] The read-only warning that introduces the preceding parts' LaTeX, whether that
@@ -250,7 +257,7 @@ public partial class VertexAutoExtractionSession {
                         Ui.Raw(txt);
                         chunkResp += txt;
 
-                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+                        var metadata = ResponseParts.Grounding(chunk);
                         if (metadata != null) {
                             accumulatedGrounding = metadata;
                         }

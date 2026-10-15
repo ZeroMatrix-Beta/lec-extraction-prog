@@ -17,7 +17,7 @@ namespace LectureExtraction.GoogleAi;
 /// </summary>
 public static class ResponseParts {
     public static (string Answer, string Thought) Split(GenerateContentResponse? chunk) {
-        var parts = chunk?.Candidates is { Count: > 0 } candidates ? candidates[0]?.Content?.Parts : null;
+        var parts = FirstCandidate(chunk)?.Content?.Parts;
         if (parts == null || parts.Count == 0) {
             return (chunk?.Text ?? "", "");
         }
@@ -35,5 +35,16 @@ public static class ResponseParts {
 
     /// <summary>The chunk's finish reason (STOP, MAX_TOKENS...), or null - also for an empty candidate list.</summary>
     public static string? FinishReason(GenerateContentResponse? chunk) =>
-        chunk?.Candidates is { Count: > 0 } candidates ? candidates[0]?.FinishReason?.ToString() : null;
+        FirstCandidate(chunk)?.FinishReason?.ToString();
+
+    /// <summary>The chunk's grounding (Google Search sources), or null - also for an empty candidate list.</summary>
+    public static GroundingMetadata? Grounding(GenerateContentResponse? chunk) =>
+        FirstCandidate(chunk)?.GroundingMetadata;
+
+    /// <summary>
+    /// The first candidate, or null. <c>chunk.Candidates?[0]</c> is not the same: it throws on an
+    /// empty list, which then aborts the stream as a non-transient error.
+    /// </summary>
+    public static Candidate? FirstCandidate(GenerateContentResponse? chunk) =>
+        chunk?.Candidates is { Count: > 0 } candidates ? candidates[0] : null;
 }

@@ -127,7 +127,8 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
 
     /// <summary>
     /// [AI Context] Vertex counterpart of the AI Studio setting: thought summaries for Stage 1, one file
-    /// per part. The history acknowledgement and the warm-up handshake never request them.
+    /// per part. The warm-up handshake sends the same IncludeThoughts value so its request config stays
+    /// identical to Part 1's, but drops its thoughts; the history acknowledgement never requests them.
     /// [Human] Gedanken-Zusammenfassungen für die Transkription (eine Datei pro Teil).
     /// </summary>
     public ThoughtSummaryConfig ThoughtSummaries { get; set; } = new();

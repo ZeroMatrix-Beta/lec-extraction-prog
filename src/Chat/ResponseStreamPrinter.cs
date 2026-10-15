@@ -84,11 +84,11 @@ public sealed class ResponseStreamPrinter {
                 bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                     streamFactory: () => client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
                     onChunkReceived: async (chunk) => {
-                        string chunkText = chunk.Text ?? chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                        string chunkText = ResponseParts.Split(chunk).Answer;
                         Ui.Raw(chunkText);
                         fullResponse += chunkText;
 
-                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+                        var metadata = ResponseParts.Grounding(chunk);
                         if (metadata != null) {
                             accumulatedGrounding = metadata;
                         }

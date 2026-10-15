@@ -33,6 +33,7 @@ public sealed class ThoughtLog {
     private readonly StringBuilder _current = new();
     private readonly List<ThoughtRequestRecord> _requests = [];
     private bool _thoughtOpenOnConsole;
+    private int _streamRestarts;
     private bool _warnedNoExistingLog;
 
     /// <param name="settings">The stage's settings; a disabled config makes this log inert.</param>
@@ -74,7 +75,9 @@ public sealed class ThoughtLog {
             _current.Append(thought);
             if (_settings.ToConsole) {
                 if (!_thoughtOpenOnConsole) {
-                    Ui.Detail("Gedanken-Zusammenfassung:", "Thoughts");
+                    // After a stream restart the summary starts over; say so, so the reader does not
+                    // take it for a second summary of the same request.
+                    Ui.Detail(_streamRestarts > 0 ? $"Gedanken-Zusammenfassung (nach Neustart {_streamRestarts}):" : "Gedanken-Zusammenfassung:", "Thoughts");
                     _thoughtOpenOnConsole = true;
                 }
                 Ui.Thought(thought);
@@ -93,6 +96,7 @@ public sealed class ThoughtLog {
     public void DiscardRequest() {
         _current.Clear();
         _thoughtOpenOnConsole = false;
+        _streamRestarts++;
     }
 
     /// <summary>Closes the current request and writes it to every configured file target.</summary>
@@ -135,6 +139,7 @@ public sealed class ThoughtLog {
 
         var record = new ThoughtRequestRecord(requestNumber, DateTimeOffset.Now, thoughtTokens, outputTokens, finishReason, _current.ToString().Trim(), attempt);
         _current.Clear();
+        _streamRestarts = 0;
         _requests.Add(record);
 
         if (_settings.ToSeparateFile && _outputPath != null) {
@@ -151,9 +156,21 @@ public sealed class ThoughtLog {
             }
         }
 
-        string where = FilePath != null ? $" -> {Path.GetFileName(FilePath)}" : "";
-        string attemptNote = attempt > 1 ? $" (Versuch {attempt})" : "";
-        Ui.Detail($"Request {requestNumber}{attemptNote}: {thoughtTokens:N0} Denk-Tokens, Zusammenfassung {record.Text.Length:N0} Zeichen{where}", "Thoughts");
+        Ui.Detail(DescribeEnd(record, FilePath), "Thoughts");
+    }
+
+    /// <summary>
+    /// [AI Context] The one console line per ended request. The thinking tokens are not repeated: the
+    /// stage's own token line just above already shows them (and for an aborted request none were
+    /// reported). Exposed for tests.
+    /// [Human] Konsolenzeile nach jeder Anfrage: Versuch, Länge der Zusammenfassung, Datei.
+    /// </summary>
+    public static string DescribeEnd(ThoughtRequestRecord record, string? filePath) {
+        string attempt = record.Attempt > 1 ? $" (Versuch {record.Attempt})" : "";
+        string aborted = record.FinishReason == AbortedFinishReason ? " abgebrochen, Tokens nicht gemeldet" : "";
+        string summary = record.Text.Length > 0 ? $"Zusammenfassung {record.Text.Length:N0} Zeichen" : "keine Zusammenfassung erhalten";
+        string where = filePath != null ? $" -> {Path.GetFileName(filePath)}" : "";
+        return $"Request {record.Request}{attempt}{aborted}: {summary}{where}";
     }
 
     /// <summary>

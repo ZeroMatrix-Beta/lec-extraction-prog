@@ -284,7 +284,7 @@ public partial class AiStudioAutoExtractionSession {
                         Ui.Raw(txt);
                         chunkResp += txt;
 
-                        var metadata = chunk.Candidates?[0]?.GroundingMetadata;
+                        var metadata = ResponseParts.Grounding(chunk);
                         if (metadata != null) {
                             accumulatedGrounding = metadata;
                         }

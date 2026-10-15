@@ -76,6 +76,8 @@ public class ResponsePartsTests {
     public void FinishReason_is_null_for_an_empty_candidate_list() {
         Assert.Null(ResponseParts.FinishReason(new GenerateContentResponse { Candidates = [] }));
         Assert.Null(ResponseParts.FinishReason(null));
+        Assert.Null(ResponseParts.Grounding(new GenerateContentResponse { Candidates = [] }));
+        Assert.Equal("", ResponseParts.Split(new GenerateContentResponse { Candidates = [] }).Answer);
     }
 
     [Fact]
@@ -277,6 +279,33 @@ public class ThoughtLogTests {
         finally {
             Directory.Delete(folder, recursive: true);
         }
+    });
+
+    [Fact]
+    public void The_end_line_names_attempt_abort_and_file_but_not_the_thinking_tokens() {
+        var normal = new ThoughtRequestRecord(1, DateTimeOffset.Now, 4321, 10, "STOP", "abc");
+        var resent = normal with { Attempt = 2, Text = "" };
+        var aborted = normal with { Request = 3, ThoughtTokens = 0, FinishReason = ThoughtLog.AbortedFinishReason };
+
+        Assert.Equal("Request 1: Zusammenfassung 3 Zeichen -> out-thoughts.md", ThoughtLog.DescribeEnd(normal, @"C:\x\out-thoughts.md"));
+        Assert.Equal("Request 1 (Versuch 2): keine Zusammenfassung erhalten", ThoughtLog.DescribeEnd(resent, null));
+        Assert.Equal("Request 3 abgebrochen, Tokens nicht gemeldet: Zusammenfassung 3 Zeichen", ThoughtLog.DescribeEnd(aborted, null));
+    }
+
+    [Fact]
+    public Task A_summary_after_a_stream_restart_is_marked_as_such() => WithConsole(async console => {
+        var settings = new ThoughtSummaryConfig { Enabled = true, ToConsole = true, ToSeparateFile = false };
+        var log = new ThoughtLog(settings, "final", "Final", "m", null, null);
+
+        log.Absorb(ResponsePartsTests.Chunk(("first", true)));
+        Assert.DoesNotContain("Neustart", console.Output);
+        log.DiscardRequest();
+        log.Absorb(ResponsePartsTests.Chunk(("again", true)));
+        Assert.Contains("nach Neustart 1", console.Output);
+
+        await log.EndRequestAsync(1, Usage(1, 1, "STOP"));
+        log.Absorb(ResponsePartsTests.Chunk(("next request", true)));
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(console.Output, "nach Neustart"));
     });
 
     [Fact]

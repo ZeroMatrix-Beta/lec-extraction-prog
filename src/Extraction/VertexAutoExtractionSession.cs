@@ -464,7 +464,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                 streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, _sessionPreamble, requestConfig),
                 onChunkReceived: chunk => {
-                    string txt = chunk.Candidates?[0]?.Content?.Parts?[0]?.Text ?? "";
+                    string txt = ResponseParts.Split(chunk).Answer;
                     Ui.Raw(txt);
                     fullResponse += txt;
                     usage.Absorb(chunk.UsageMetadata);
