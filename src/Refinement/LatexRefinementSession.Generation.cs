@@ -208,142 +208,87 @@ public partial class LatexRefinementSession {
     /// </summary>
     private async Task<(string FullResponseText, TokenUsage Usage)> StreamAndCollectAsync(
         RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName, ThoughtLog thoughts) {
-        TokenUsage totalUsage = default;
+        string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
+        int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
 
-        string fullResponseText = "";
-        var budget = new ContinueBudget(stepConfig.MaxContinueRequests);
-        int emptyResponseRetries = 0;
-
-        using var cancelScope = new ConsoleCancelScope();
-
-        while (true) {
-            string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
-
-            int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
-            double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
-            if (secondsSinceLastGen < rateLimitDelay && !InteractiveDelay.IsInSmartDelay) {
-                int waitRemaining = (int)Math.Ceiling(rateLimitDelay - secondsSinceLastGen);
-                Ui.Detail($"Warte verbleibende {waitRemaining} Sekunden vor dem nächsten API-Aufruf...", "Rate-Limit & Quota");
-                if (!await InteractiveDelay.SmartDelayAsync(waitRemaining, "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)...")) {
-                    break;
-                }
-            }
-            AttachmentUploader.HasJustUploaded = false;
-
-            Ui.Info($"Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...", "API");
-
-            string chunkResp = "";
-            bool callSuccess = false;
-            var usage = new UsageReport();
-
-            try {
-                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                  streamFactory: () => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, history, requestConfig),
-                  onChunkReceived: async (chunk) => {
-                      string text = thoughts.Absorb(chunk);
-
-                      if (string.IsNullOrEmpty(text) && !thoughts.IsEnabled && chunk.Candidates != null && chunk.Candidates.Count > 0) {
-                          Ui.Detail($"Empty text in chunk. FinishReason: {chunk.Candidates[0].FinishReason}", "DEBUG");
-                      }
-
-                      Ui.Raw(text);
-                      chunkResp += text;
-
-                      // Per request, the last chunk carrying usage wins; requests are summed below.
-                      usage.Absorb(chunk.UsageMetadata);
-                      usage.RecordFinishReason(ResponseParts.FinishReason(chunk));
-
-                      await Task.CompletedTask;
-                  },
-                  cancellationToken: cancelScope.Token,
-                  initialBackoff: rateLimitDelay,
-                  retryContext: outputFileName,
-                  onRetry: () => {
-                      chunkResp = "";
-                      usage = new UsageReport();
-                      thoughts.DiscardRequest();
-                  },
-                  highDemandDelay: rateLimitDelay,
-                  resumeOnPartialProgress: true
-                );
-            }
-            catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden: {ex.Describe()}", "Abbruch");
-                break;
-            }
-
-            if (!callSuccess) {
-                Ui.Warn("Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
-                break;
-            }
-
-            // Every completed request is billed, an empty answer included.
-            totalUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens, usage.ThoughtTokens, Requests: 1);
-            Ui.Info(usage.Describe($"[Request {budget.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
-            if (usage.WasReported) {
-                Ui.Info(usage.DescribeOutputBudget(backendParams.MaxOutputTokens), "Tokens");
-            }
-            await thoughts.EndRequestAsync(budget.RequestNumber, usage);
-
-            if (string.IsNullOrWhiteSpace(chunkResp)) {
-                if (emptyResponseRetries < 3) {
-                    emptyResponseRetries++;
-                    Ui.Error("Das Modell hat eine komplett leere Antwort zurückgegeben (z.B. wegen MALFORMED_RESPONSE oder Safety-Filtern).");
-                    Ui.Detail($"Warte 5 Sekunden vor Versuch {emptyResponseRetries}/3...");
-                    try {
-                        await Task.Delay(5000, cancelScope.Token);
+        var result = await GenerationLoop.RunAsync(history,
+            h => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, h, requestConfig),
+            thoughts,
+            new GenerationLoopOptions {
+                MaxContinueRequests = stepConfig.MaxContinueRequests,
+                BeforeRequestAsync = () => WaitOutRateLimitAsync(rateLimitDelay,
+                    "vor dem nächsten API-Aufruf...", "Warte auf Rate-Limits (Token-Refill Schutz vor API-Aufruf)..."),
+                AnnounceRequest = (request, max) =>
+                    Ui.Info($"Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {request}/{max})...", "API"),
+                OnChunk = (chunk, text) => {
+                    if (string.IsNullOrEmpty(text) && !thoughts.IsEnabled && chunk.Candidates != null && chunk.Candidates.Count > 0) {
+                        Ui.Detail($"Empty text in chunk. FinishReason: {chunk.Candidates[0].FinishReason}", "DEBUG");
                     }
-                    catch (OperationCanceledException) {
-                        break;
+                },
+                RetryContext = outputFileName,
+                InitialBackoff = rateLimitDelay,
+                HighDemandDelay = rateLimitDelay,
+                CancelledAsWarning = true,
+                ReportRequest = request => {
+                    var usage = request.Usage;
+                    Ui.Info(usage.Describe($"[Request {request.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
+                    if (usage.WasReported) {
+                        Ui.Info(usage.DescribeOutputBudget(backendParams.MaxOutputTokens), "Tokens");
                     }
-                    continue;
-                }
-                else {
-                    Ui.Error("Das Modell hat nach 3 Versuchen weiterhin eine komplett leere Antwort zurückgegeben. Der Vorgang wird abgebrochen.");
-                    break;
-                }
-            }
+                },
+                EmptyAnswerRetries = 3,
+                IsComplete = text => text.Contains(RefinementCompleteMarker, StringComparison.OrdinalIgnoreCase),
+                BudgetStopSuffix = "Breche dieses Refinement ab.",
+                BuildContinuePrompt = BuildRefinementContinuePrompt,
+                WaitBeforeContinueAsync = async () => {
+                    Ui.Detail($"Warte {rateLimitDelay} Sekunden (Token Refill)...", "Rate-Limit");
+                    if (!await InteractiveDelay.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
+                        Ui.Warn("Warten durch Benutzer abgebrochen.");
+                        return false;
+                    }
+                    return true;
+                },
+            });
+        return (result.Text, result.Usage);
+    }
 
-            emptyResponseRetries = 0;
-            fullResponseText += chunkResp;
+    /// <summary>The line the refinement and PDF-repair prompts ask the model to end its answer with.</summary>
+    private const string RefinementCompleteMarker = "% [SYSTEM] Refinement complete";
 
-            bool isComplete = chunkResp.Contains("% [SYSTEM] Refinement complete", StringComparison.OrdinalIgnoreCase);
+    private string BuildRefinementContinuePrompt(string response) {
+        // The step prompts demand raw LaTeX, so a trailing fence means the model wrapped its answer
+        // anyway and probably believes it is done - the usual way the completion marker gets lost.
+        bool closedBlock = response.TrimEnd().EndsWith("```");
+        string continuePrompt = GenerationLoop.CutShortPrompt(response,
+            "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Output raw LaTeX only, without Markdown code fences. Do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.",
+            _config.ContinuePromptEchoCharacters);
 
-            if (isComplete) {
-                break;
-            }
-
-            if (!budget.TryContinue(chunkResp, out string stopReason)) {
-                Ui.Warn($"{stopReason} Breche dieses Refinement ab.");
-                break;
-            }
-
-            // The step prompts demand raw LaTeX, so a trailing fence means the model wrapped its answer
-            // anyway and probably believes it is done - the usual way the completion marker gets lost.
-            bool closedBlock = chunkResp.TrimEnd().EndsWith("```");
-            string continuePrompt = $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{ContinueBudget.EchoTail(chunkResp, _config.ContinuePromptEchoCharacters)}\n\n" +
-                "Please \"continue\" exactly where you left off. Start typing the VERY NEXT CHARACTER that would come after your last output. Do not repeat anything you already wrote. Output raw LaTeX only, without Markdown code fences. Do not open a new environment, and do not open new math delimiters if you were already inside one. Just print the very next character.";
-
-            if (closedBlock) {
-                continuePrompt += "\n\n[WARNING] Your output ended with a Markdown code fence (```), which the raw LaTeX output contract forbids, and without the '% [SYSTEM] Refinement complete' marker. If you have not finished refining the ENTIRE document, DO NOT just send the marker! Continue with the remaining content as raw LaTeX, without any code fence. If you have finished, output only the marker.";
-            }
-
-            Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "Refinement");
-            Ui.Detail($"Sende folgenden Continue-Prompt:\n{continuePrompt}");
-
-            history.Add(new Content { Role = "model", Parts = [new Part { Text = chunkResp }] });
-            history.Add(new Content { Role = "user", Parts = [new Part { Text = continuePrompt }] });
-
-            Ui.Detail($"Warte {rateLimitDelay} Sekunden (Token Refill)...", "Rate-Limit");
-            if (!await InteractiveDelay.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
-                Ui.Warn("Warten durch Benutzer abgebrochen.");
-                break;
-            }
+        if (closedBlock) {
+            continuePrompt += "\n\n[WARNING] Your output ended with a Markdown code fence (```), which the raw LaTeX output contract forbids, and without the '% [SYSTEM] Refinement complete' marker. If you have not finished refining the ENTIRE document, DO NOT just send the marker! Continue with the remaining content as raw LaTeX, without any code fence. If you have finished, output only the marker.";
         }
 
-        await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
-        return (fullResponseText, totalUsage);
+        Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "Refinement");
+        Ui.Detail($"Sende folgenden Continue-Prompt:\n{continuePrompt}");
+        return continuePrompt;
+    }
+
+    /// <summary>
+    /// [AI Context] Waits out what is left of <paramref name="delaySeconds"/> since the last
+    /// generation finished, then clears HasJustUploaded. Runs before every refinement and PDF-repair
+    /// request; false (the wait was cancelled) ends the stream loop.
+    /// [Human] Wartet vor einer Anfrage den Rest der Rate-Limit-Pause ab.
+    /// </summary>
+    private static async Task<bool> WaitOutRateLimitAsync(int delaySeconds, string announcementEnd, string spinnerMessage) {
+        double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
+        if (secondsSinceLastGen < delaySeconds && !InteractiveDelay.IsInSmartDelay) {
+            int waitRemaining = (int)Math.Ceiling(delaySeconds - secondsSinceLastGen);
+            Ui.Detail($"Warte verbleibende {waitRemaining} Sekunden {announcementEnd}", "Rate-Limit & Quota");
+            if (!await InteractiveDelay.SmartDelayAsync(waitRemaining, spinnerMessage)) {
+                return false;
+            }
+        }
+        AttachmentUploader.HasJustUploaded = false;
+        return true;
     }
 
     private async Task<string?> CreateContextCacheAsync(BackendParameters backendParams, string systemInstructionText, string outputFileName, string checksum, string cacheStateFileName, bool isRecreate) {
