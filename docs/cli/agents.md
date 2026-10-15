@@ -143,9 +143,14 @@ A script that drives `lecx` must `cd` into the repository root first, and pass `
 
 **"High demand" (HTTP 503) gives up after 8 attempts and loses only that part.** The video then
 ends with exit `6`. The parts finished before it are on disk, so running the same video again
-within `--resume-window` requests only the missing part and the refinement. Every one of those
-attempts counts against the free-tier daily quota: on 2026-10-15 one key used up its 20
-requests on `gemini-3.8-flash` with 16 retries after 503 and only 5 answers.
+within `--resume-window` requests only the missing part and the refinement. Whether the 503
+attempts count against the free-tier daily quota is **not settled**. In the maintainer's
+experience they usually do not. But on 2026-10-15 one key was refused with
+`GenerateRequestsPerDay…` on `gemini-3.8-flash` after about 9 requests that were not 503
+(4 warm-ups, 2 answers, 2 stream breaks, 1 continue) and about 20 that were. So either part of
+the 503s counted (perhaps those that failed after Google had started generating), or the key
+was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
+console is the place to check.
 
 **After a refinement failure, retry with `refine run`, not `run`.** `run` reuses the finished
 parts, but it combines them again and starts the refinement at step 1. Because the first
