@@ -210,10 +210,16 @@ lecx thoughts show "<lecture-folder>/step3-<name>-offset-speech_refined.tex" --j
 |---|---|
 | `[path]` (`show`) | A thoughts file, the `.tex` output it belongs to (needs not exist), or a folder |
 | `--folder <dir>` · `--video <name>` | Where to look. Defaults to the configured target folder |
-| `--stage <key>` | `extract-partN`, `merge`, `speech`, `final`, `pdf-repair-N`; a prefix (`extract`, `pdf`) matches all |
-| `--request <n>` (`show`) | Only that request |
+| `--stage <key>` | `extract-partN`, `merge`, `speech`, `final`, `pdf-repair-N`; a prefix (`extract`, `pdf`) matches all. A number matches only itself: `extract-part1` is not parts 10-19 |
+| `--request <n>` (`show`) | Only that request, every attempt of it |
 
-`show` prints the newest match; exits `2` when nothing matches.
+`show` prints the newest match; exits `2` when nothing matches. Given a `.tex` with a
+header, it opens the thoughts file that header names (`Thought summaries: ...`), so a
+re-run step's `-copyN` output finds its own file; a header without that line means the
+output has none. Without a header it takes the newest `<stem>-thoughts*.md` beside it.
+
+A request sent again after an empty answer appears as `Request N · attempt 2`; a request
+the stage gave up on mid-stream has finish reason `ABORTED` and 0 tokens (not reported).
 
 **`--thoughts on|off|all|console,log,file`** on `run`, `extract run`, `refine run`,
 `pdf compile` and `batch` turns the summaries on or off for every stage of that run

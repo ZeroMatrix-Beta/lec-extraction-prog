@@ -94,9 +94,7 @@ public static class RunCommand {
             if (allSucceeded && parseResult.GetValue(CleanTmp)) {
                 foreach (string video in videos) {
                     string folderName = ExtractionHelpers.ComputeOutputFolderName(video);
-                    string targetFolder = string.IsNullOrWhiteSpace(config.TargetFolder)
-                        ? Path.Combine(config.SourceFolder, "extracted_output", folderName)
-                        : Path.Combine(config.TargetFolder, folderName);
+                    string targetFolder = Path.Combine(ExtractionHelpers.OutputRoot(config), folderName);
                     string tmpPath = Path.Combine(targetFolder, "tmp");
                     if (Directory.Exists(tmpPath)) {
                         try {

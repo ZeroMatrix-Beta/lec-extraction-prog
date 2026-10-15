@@ -90,7 +90,7 @@ public static class ThoughtsCommand {
                 Print($"# {file.Path}");
                 foreach (var r in requests) {
                     Print("");
-                    Print($"## Request {r.Request} · {r.ThoughtTokens.ToString("N0", CultureInfo.InvariantCulture)} thinking tokens · {r.OutputTokens.ToString("N0", CultureInfo.InvariantCulture)} output tokens{(r.FinishReason != null ? $" · {r.FinishReason}" : "")}");
+                    Print($"## {ThoughtFile.RequestHeading(r)}");
                     Print("");
                     Print(string.IsNullOrWhiteSpace(r.Text) ? "(no summary returned)" : r.Text);
                 }
@@ -122,9 +122,26 @@ public static class ThoughtsCommand {
         summaryCharacters = file.Requests.Sum(r => r.Text?.Length ?? 0)
     };
 
-    /// <summary>Exposed for tests: does <paramref name="stageKey"/> match the <c>--stage</c> filter?</summary>
-    public static bool StageMatches(string stageKey, string? filter) =>
-        string.IsNullOrWhiteSpace(filter) || stageKey.StartsWith(filter.Trim(), StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Exposed for tests: does <paramref name="stageKey"/> match the <c>--stage</c> filter? A prefix
+    /// (<c>extract</c>, <c>pdf</c>) matches every key it starts, but a filter ending in a number matches
+    /// only that whole number: <c>extract-part1</c> is part 1, not parts 10-19 too.
+    /// </summary>
+    public static bool StageMatches(string stageKey, string? filter) {
+        if (string.IsNullOrWhiteSpace(filter)) {
+            return true;
+        }
+        string prefix = filter.Trim();
+        if (!stageKey.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+        return stageKey.Length == prefix.Length || !char.IsAsciiDigit(prefix[^1]) || !char.IsAsciiDigit(stageKey[prefix.Length]);
+    }
+
+    // Hidden files are not skipped, like the plain overload this replaced; inaccessible folders are.
+    private static readonly EnumerationOptions ScanOptions = new() {
+        RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = 0
+    };
 
     /// <summary>Exposed for tests: every parseable thoughts file under <paramref name="root"/>, oldest first.</summary>
     public static List<ThoughtFileContent> FindIn(string root, string? stageFilter) {
@@ -133,11 +150,9 @@ public static class ThoughtsCommand {
         }
 
         var found = new List<ThoughtFileContent>();
-        foreach (string path in Directory.EnumerateFiles(root, $"*{ThoughtFile.FileSuffix}*.md", SearchOption.AllDirectories)) {
-            if (!ThoughtFile.IsThoughtFile(path)) {
-                continue;
-            }
-            var content = ThoughtFile.Read(path);
+        foreach (string path in Directory.EnumerateFiles(root, $"*{ThoughtFile.FileSuffix}*.md", ScanOptions)) {
+            // A file a running stage is appending to, or one without access, is skipped rather than fatal.
+            var content = ThoughtFile.TryRead(path);
             if (content != null && StageMatches(content.Header.StageKey, stageFilter)) {
                 found.Add(content);
             }
@@ -150,9 +165,7 @@ public static class ThoughtsCommand {
 
     private static string ResolveRoot(ParseResult parseResult) {
         var config = (AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig));
-        string configuredRoot = string.IsNullOrWhiteSpace(config.TargetFolder)
-            ? Path.Combine(config.SourceFolder, "extracted_output")
-            : config.TargetFolder;
+        string configuredRoot = ExtractionHelpers.OutputRoot(config);
 
         if (parseResult.GetValue(Video) is string video && !string.IsNullOrWhiteSpace(video)) {
             if (Directory.Exists(video)) {
@@ -183,16 +196,27 @@ public static class ThoughtsCommand {
                 return ThoughtFile.Read(full);
             }
 
-            // An output file: its thoughts sit beside it as <stem>-thoughts[-N].md; take the newest.
-            // The output need not exist - a step whose answer was cut off still wrote its thoughts.
             string folder = Path.GetDirectoryName(full) ?? ".";
             if (!Directory.Exists(folder)) {
                 return null;
             }
+
+            // An output with a header names its own thoughts file there. Only that is exact: a step
+            // whose output became "<stem>-copyN" keeps the thoughts name it intended, so the stem
+            // search below would miss it, or return another run's file for the original.
+            if (File.Exists(full)) {
+                string tex = File.ReadAllText(full);
+                if (TexDocumentWriter.SplitHeaderLayers(tex).Layers.Length > 0) {
+                    string? named = TexDocumentWriter.ThoughtsFileNameOf(tex);
+                    return named != null ? ThoughtFile.TryRead(Path.Combine(folder, named)) : null;
+                }
+            }
+
+            // No header to ask: the thoughts sit beside the output as <stem>-thoughts[-N].md; take
+            // the newest. The output need not exist - a step whose answer was cut off still wrote them.
             string stem = Path.GetFileNameWithoutExtension(full);
             return Directory.EnumerateFiles(folder, $"{stem}{ThoughtFile.FileSuffix}*.md")
-                .Where(ThoughtFile.IsThoughtFile)
-                .Select(ThoughtFile.Read)
+                .Select(ThoughtFile.TryRead)
                 .OfType<ThoughtFileContent>()
                 .OrderBy(f => f.Header.Started)
                 .LastOrDefault();

@@ -7,6 +7,7 @@ using Google.GenAI.Types;
 using LectureExtraction.Cli;
 using LectureExtraction.Cli.Commands;
 using LectureExtraction.Configuration;
+using LectureExtraction.Extraction;
 using LectureExtraction.GoogleAi;
 using Spectre.Console;
 using Spectre.Console.Testing;
@@ -70,6 +71,12 @@ public class ResponsePartsTests {
             Content = new Content { Role = "model", Parts = [.. parts.Select(p => new Part { Text = p.Text, Thought = p.Thought ? true : null })] }
         }]
     };
+
+    [Fact]
+    public void FinishReason_is_null_for_an_empty_candidate_list() {
+        Assert.Null(ResponseParts.FinishReason(new GenerateContentResponse { Candidates = [] }));
+        Assert.Null(ResponseParts.FinishReason(null));
+    }
 
     [Fact]
     public void Thought_parts_are_split_from_the_answer() {
@@ -226,6 +233,68 @@ public class ThoughtLogTests {
     });
 
     [Fact]
+    public Task An_empty_answer_sent_again_is_a_second_attempt_of_the_same_request() => WithConsole(async _ => {
+        string folder = Directory.CreateTempSubdirectory("thoughts-attempt-").FullName;
+        try {
+            var settings = new ThoughtSummaryConfig { Enabled = true, ToConsole = false, ToSeparateFile = true };
+            var log = new ThoughtLog(settings, "final", "Final", "m", Path.Combine(folder, "out.tex"), null);
+
+            log.Absorb(ResponsePartsTests.Chunk(("first try", true)));
+            await log.EndRequestAsync(1, Usage(1, 0, "MALFORMED_FUNCTION_CALL"));
+            log.Absorb(ResponsePartsTests.Chunk(("second try", true)));
+            await log.EndRequestAsync(1, Usage(2, 9, "STOP"));
+            log.Absorb(ResponsePartsTests.Chunk(("the continue", true)));
+            await log.EndRequestAsync(2, Usage(3, 9, "STOP"));
+
+            var requests = ThoughtFile.Read(log.FilePath!)!.Requests;
+            Assert.Equal(new[] { (1, 1), (1, 2), (2, 1) }, requests.Select(r => (r.Request, r.Attempt)));
+            Assert.Equal("second try", requests[1].Text);
+            Assert.Contains("Request 1 · attempt 2 ·", File.ReadAllText(log.FilePath!));
+        }
+        finally {
+            Directory.Delete(folder, recursive: true);
+        }
+    });
+
+    [Fact]
+    public Task An_aborted_request_keeps_its_thoughts() => WithConsole(async _ => {
+        string folder = Directory.CreateTempSubdirectory("thoughts-abort-").FullName;
+        try {
+            var settings = new ThoughtSummaryConfig { Enabled = true, ToConsole = false, ToSeparateFile = true };
+            var log = new ThoughtLog(settings, "speech", "Speech", "m", Path.Combine(folder, "out.tex"), null);
+
+            log.Absorb(ResponsePartsTests.Chunk(("done", true)));
+            await log.EndRequestAsync(1, Usage(1, 1, "MAX_TOKENS"));
+            await log.EndAbortedRequestAsync(2); // nothing pending: no record
+            log.Absorb(ResponsePartsTests.Chunk(("thinking when the stream died", true)));
+            await log.EndAbortedRequestAsync(2);
+
+            var requests = ThoughtFile.Read(log.FilePath!)!.Requests;
+            Assert.Equal(2, requests.Count);
+            Assert.Equal("thinking when the stream died", requests[1].Text);
+            Assert.Equal(ThoughtLog.AbortedFinishReason, requests[1].FinishReason);
+        }
+        finally {
+            Directory.Delete(folder, recursive: true);
+        }
+    });
+
+    [Fact]
+    public Task A_log_written_later_is_not_reported_missing() => WithConsole(async console => {
+        var settings = new ThoughtSummaryConfig { Enabled = true, ToConsole = false, ToExistingLog = true, ToSeparateFile = false };
+        var later = new ThoughtLog(settings, "pdf-repair-1", "PDF repair", "m", null, existingLogPath: null, existingLogWrittenLater: true);
+        var none = new ThoughtLog(settings, "final", "Final", "m", null, existingLogPath: null);
+
+        later.Absorb(ResponsePartsTests.Chunk(("t", true)));
+        await later.EndRequestAsync(1, Usage(1, 1, "STOP"));
+        Assert.DoesNotContain("ToExistingLog", console.Output);
+
+        none.Absorb(ResponsePartsTests.Chunk(("t", true)));
+        await none.EndRequestAsync(1, Usage(1, 1, "STOP"));
+        Assert.Contains("ToExistingLog", console.Output);
+    });
+
+    [Fact]
     public Task Thoughts_for_a_log_written_later_are_appended_on_request() => WithConsole(async _ => {
         string folder = Directory.CreateTempSubdirectory("thoughts-later-").FullName;
         try {
@@ -320,8 +389,45 @@ public class ThoughtsCommandTests {
     [InlineData("pdf-repair-1", "pdf", true)]
     [InlineData("final", "speech", false)]
     [InlineData("merge", null, true)]
+    [InlineData("extract-part1", "extract-part1", true)]
+    [InlineData("extract-part10", "extract-part1", false)]
+    [InlineData("extract-part12", "extract-part", true)]
+    [InlineData("pdf-repair-12", "pdf-repair-1", false)]
+    [InlineData("Extract-Part3", "extract-part3", true)]
     public void Stage_filter_is_a_case_insensitive_prefix(string key, string? filter, bool expected) {
         Assert.Equal(expected, ThoughtsCommand.StageMatches(key, filter));
+    }
+
+    [Fact]
+    public void Only_the_top_header_layer_names_the_files_thoughts() {
+        var generation = new GenerationParameters();
+        string part = TexDocumentWriter.BuildPartHeader(1, 2, "v-part1.mp4", 0, default, "m", generation, "v-part1-thoughts.md");
+        string withoutOwn = TexDocumentWriter.StackLayers(
+            TexDocumentWriter.BuildRefinementHeader(TexDocumentWriter.MergeStep, "step2.tex", "step1.tex", default, "m", generation), part, "body");
+        string withOwn = TexDocumentWriter.StackLayers(
+            TexDocumentWriter.BuildRefinementHeader(TexDocumentWriter.MergeStep, "step2-copy1.tex", "step1.tex", default, "m", generation, "step2-thoughts-2.md"), part, "body");
+
+        Assert.Null(TexDocumentWriter.ThoughtsFileNameOf(withoutOwn));
+        Assert.Equal("step2-thoughts-2.md", TexDocumentWriter.ThoughtsFileNameOf(withOwn));
+        Assert.Null(TexDocumentWriter.ThoughtsFileNameOf("no header at all"));
+    }
+
+    [Fact]
+    public void FindIn_skips_a_file_it_cannot_read_instead_of_failing() {
+        string root = Directory.CreateTempSubdirectory("thoughts-locked-").FullName;
+        try {
+            var header = new ThoughtFileHeader("speech", "Speech", "step3.tex", "m", DateTimeOffset.Now);
+            string path = Path.Combine(root, "step3-thoughts.md");
+            File.WriteAllText(path, ThoughtFile.FormatHeader(header));
+
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) {
+                Assert.Empty(ThoughtsCommand.FindIn(root, null));
+            }
+            Assert.Single(ThoughtsCommand.FindIn(root, null));
+        }
+        finally {
+            Directory.Delete(root, recursive: true);
+        }
     }
 
     [Fact]

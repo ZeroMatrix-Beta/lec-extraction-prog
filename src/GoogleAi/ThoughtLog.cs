@@ -16,8 +16,9 @@ namespace LectureExtraction.GoogleAi;
 ///
 /// <para>Use per stream: <see cref="Absorb"/> on every chunk (it returns the chunk's answer text, so
 /// thought text can never reach the output or the history), <see cref="DiscardRequest"/> from the
-/// retry callback, <see cref="EndRequestAsync"/> once per completed request. Files are written per
-/// request, so a run that dies later keeps what it already has.</para>
+/// retry callback, <see cref="EndRequestAsync"/> once per completed request, and
+/// <see cref="EndAbortedRequestAsync"/> once after the loop. Files are written per request, so a run
+/// that dies later keeps what it already has, the request it died on included.</para>
 ///
 /// <para>With <c>Enabled</c> off every method is a no-op apart from <see cref="Absorb"/>'s split,
 /// which then returns exactly the text the old readers did.</para>
@@ -28,6 +29,7 @@ public sealed class ThoughtLog {
     private readonly ThoughtFileHeader _header;
     private readonly string? _outputPath;
     private readonly string? _existingLogPath;
+    private readonly bool _existingLogWrittenLater;
     private readonly StringBuilder _current = new();
     private readonly List<ThoughtRequestRecord> _requests = [];
     private bool _thoughtOpenOnConsole;
@@ -40,10 +42,14 @@ public sealed class ThoughtLog {
     /// <param name="outputPath">The output file the thoughts belong to; the thoughts file goes beside it.</param>
     /// <param name="existingLogPath">The stage's own log, appended to per request; null when it has none
     /// it can write to as the request ends (see <see cref="AppendAllToAsync"/>).</param>
-    public ThoughtLog(ThoughtSummaryConfig? settings, string stageKey, string stageLabel, string model, string? outputPath, string? existingLogPath) {
+    /// <param name="existingLogWrittenLater">True when the stage has a log but writes it only after its
+    /// requests and then calls <see cref="AppendAllToAsync"/> (the PDF repair): no "no log" notice.</param>
+    public ThoughtLog(ThoughtSummaryConfig? settings, string stageKey, string stageLabel, string model, string? outputPath, string? existingLogPath,
+        bool existingLogWrittenLater = false) {
         _settings = settings ?? new ThoughtSummaryConfig();
         _outputPath = outputPath;
         _existingLogPath = existingLogPath;
+        _existingLogWrittenLater = existingLogWrittenLater;
         _header = new ThoughtFileHeader(stageKey, stageLabel, outputPath != null ? Path.GetFileName(outputPath) : stageKey, model, DateTimeOffset.Now);
     }
 
@@ -90,7 +96,28 @@ public sealed class ThoughtLog {
     }
 
     /// <summary>Closes the current request and writes it to every configured file target.</summary>
-    public async Task EndRequestAsync(int requestNumber, UsageReport usage) {
+    public Task EndRequestAsync(int requestNumber, UsageReport usage) =>
+        WriteRequestAsync(requestNumber, usage.ThoughtTokens, usage.CandidateTokens, usage.FinishReason);
+
+    /// <summary>
+    /// [AI Context] Call once after the stream loop. When the loop left through an error or a cancel,
+    /// the request it was on never reached <see cref="EndRequestAsync"/>; its summary is written here,
+    /// marked <c>ABORTED</c>, instead of being lost - often the request worth reading. A no-op when
+    /// every request was ended normally or the aborted one returned no thoughts.
+    /// [Human] Schreibt die Gedanken einer abgebrochenen Anfrage, statt sie zu verwerfen.
+    /// </summary>
+    public async Task EndAbortedRequestAsync(int requestNumber) {
+        if (!IsEnabled || _current.Length == 0) {
+            return;
+        }
+        // The usage of a stream that died is not known.
+        await WriteRequestAsync(requestNumber, 0, 0, AbortedFinishReason);
+    }
+
+    /// <summary>Finish reason recorded for a request the stage gave up on mid-stream.</summary>
+    public const string AbortedFinishReason = "ABORTED";
+
+    private async Task WriteRequestAsync(int requestNumber, int thoughtTokens, int outputTokens, string? finishReason) {
         if (!IsEnabled) {
             return;
         }
@@ -100,7 +127,13 @@ public sealed class ThoughtLog {
             _thoughtOpenOnConsole = false;
         }
 
-        var record = new ThoughtRequestRecord(requestNumber, DateTimeOffset.Now, usage.ThoughtTokens, usage.CandidateTokens, usage.FinishReason, _current.ToString().Trim());
+        // An empty answer is sent again under the same request number; the attempt keeps them apart.
+        int attempt = 1;
+        foreach (var earlier in _requests) {
+            if (earlier.Request == requestNumber) attempt++;
+        }
+
+        var record = new ThoughtRequestRecord(requestNumber, DateTimeOffset.Now, thoughtTokens, outputTokens, finishReason, _current.ToString().Trim(), attempt);
         _current.Clear();
         _requests.Add(record);
 
@@ -112,14 +145,15 @@ public sealed class ThoughtLog {
             if (_existingLogPath != null) {
                 await AppendAsync(_existingLogPath, ThoughtFile.FormatForExistingLog(_header, record));
             }
-            else if (!_warnedNoExistingLog) {
+            else if (!_existingLogWrittenLater && !_warnedNoExistingLog) {
                 _warnedNoExistingLog = true;
                 Ui.Detail($"ToExistingLog: Für {_header.Stage} gibt es kein Log, in das jetzt geschrieben werden kann.", "Thoughts");
             }
         }
 
         string where = FilePath != null ? $" -> {Path.GetFileName(FilePath)}" : "";
-        Ui.Detail($"Request {requestNumber}: {usage.ThoughtTokens:N0} Denk-Tokens, Zusammenfassung {record.Text.Length:N0} Zeichen{where}", "Thoughts");
+        string attemptNote = attempt > 1 ? $" (Versuch {attempt})" : "";
+        Ui.Detail($"Request {requestNumber}{attemptNote}: {thoughtTokens:N0} Denk-Tokens, Zusammenfassung {record.Text.Length:N0} Zeichen{where}", "Thoughts");
     }
 
     /// <summary>

@@ -301,7 +301,7 @@ public partial class LatexRefinementSession {
             history.Add(new Content { Role = "user", Parts = round2Parts });
 
             Ui.Info("Verwende Multi-Turn-Struktur für Schritt 1 (Simulation von Audio + Textsegmenten).", "Step 1");
-            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, TexDocumentWriter.MergeStep, inputFiles[0], history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, TexDocumentWriter.MergeStep, "merge", inputFiles[0], history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
         else {
             var parts = new List<Part>();
@@ -317,7 +317,7 @@ public partial class LatexRefinementSession {
                 parts.Add(new Part { Text = $"<input_file name=\"{Path.GetFileName(file)}\">\n{content}\n</input_file>" });
             }
             AttachmentUploader.HasJustUploaded = false;
-            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, TexDocumentWriter.MergeStep, inputFiles[0], parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
+            result = await RunRefinementStepAsync(_config.Step1MergeAndTimestamp, TexDocumentWriter.MergeStep, "merge", inputFiles[0], parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep1);
         }
 
         if (_config.UseVertex) {
@@ -375,7 +375,7 @@ public partial class LatexRefinementSession {
 
             Ui.Info("Verwende Multi-Turn-Struktur für Schritt 2 (Simulation von Text-Dokument + Audio-Refinement).", "Step 2");
             AttachmentUploader.HasJustUploaded = false;
-            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, TexDocumentWriter.SpeechStep, inputFile, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, TexDocumentWriter.SpeechStep, "speech", inputFile, history, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
         }
         else {
             var parts = new List<Part> {
@@ -383,7 +383,7 @@ public partial class LatexRefinementSession {
                 new() { Text = $"<input_tex>\n{content}\n</input_tex>" }
             };
             AttachmentUploader.HasJustUploaded = false;
-            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, TexDocumentWriter.SpeechStep, inputFile, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
+            result = await RunRefinementStepAsync(_config.Step2SpeechRefinement, TexDocumentWriter.SpeechStep, "speech", inputFile, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep2);
         }
 
         if (_config.UseVertex) {
@@ -408,7 +408,7 @@ public partial class LatexRefinementSession {
 
         string outputFileName = $"step4-{baseName}-offset-final.tex";
         AttachmentUploader.HasJustUploaded = false;
-        var result = await RunRefinementStepAsync(_config.Step3LastRefinement, TexDocumentWriter.FinalStep, inputFile, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
+        var result = await RunRefinementStepAsync(_config.Step3LastRefinement, TexDocumentWriter.FinalStep, "final", inputFile, parts, targetFolder, outputFileName, ContextCacheStateManager.StateFileLatexStep3);
 
         if (_config.UseVertex) {
             await CleanupBucketAsync();
@@ -417,15 +417,16 @@ public partial class LatexRefinementSession {
         return result;
     }
 
-    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, string stepLabel, string inputFile, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
+    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, string stepLabel, string thoughtStageKey, string inputFile, List<Part> userPromptParts, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         var finalPromptParts = new List<Part>(userPromptParts);
         var history = new List<Content> { new() { Role = "user", Parts = finalPromptParts } };
-        return await RunRefinementStepAsync(stepConfig, stepLabel, inputFile, history, targetOutputFolder, outputFileName, cacheStateFileName);
+        return await RunRefinementStepAsync(stepConfig, stepLabel, thoughtStageKey, inputFile, history, targetOutputFolder, outputFileName, cacheStateFileName);
     }
 
     /// <param name="stepLabel">The step name heading this step's header layer (a <see cref="TexDocumentWriter"/> constant).</param>
+    /// <param name="thoughtStageKey">The short stage name its thoughts file carries (<c>merge</c>, <c>speech</c>, <c>final</c>), what <c>lecx thoughts --stage</c> matches.</param>
     /// <param name="inputFile">The file the step works on: its header layers and per-part blocks are carried into the output.</param>
-    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, string stepLabel, string inputFile, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
+    private async Task<string?> RunRefinementStepAsync(RefinementStepConfig stepConfig, string stepLabel, string thoughtStageKey, string inputFile, List<Content> history, string targetOutputFolder, string outputFileName, string cacheStateFileName) {
         BackendParameters backendParams = _config.UseVertex ? stepConfig.Vertex : stepConfig.AiStudio;
 
         string systemInstructionText = await ResolveSystemInstructionTextAsync(stepConfig);
@@ -434,7 +435,7 @@ public partial class LatexRefinementSession {
 
         // The step's existing log is the prompt log written just below; the thoughts file sits beside
         // the output under the name the step intends, even if the output itself later gets "-copyN".
-        var thoughts = new ThoughtLog(stepConfig.ThoughtSummaries, ThoughtStageKey(stepConfig), stepLabel, backendParams.CurrentModel,
+        var thoughts = new ThoughtLog(stepConfig.ThoughtSummaries, thoughtStageKey, stepLabel, backendParams.CurrentModel,
             Path.Combine(targetOutputFolder, outputFileName), Path.Combine(targetOutputFolder, $"{outputFileName}-prompt-log.md"));
 
         var lastUserMsg = history.LastOrDefault(c => c.Role == "user");
@@ -499,7 +500,7 @@ public partial class LatexRefinementSession {
 
             string stepHeader = TexDocumentWriter.BuildRefinementHeader(
                 stepLabel, outputFileName, Path.GetFileName(inputFile), usage, backendParams.CurrentModel, backendParams.Generation,
-                thoughts.FilePath != null ? Path.GetFileName(thoughts.FilePath) : null);
+                Path.GetFileName(thoughts.FilePath));
 
             await System.IO.File.WriteAllTextAsync(outPath, TexDocumentWriter.StackLayers(stepHeader, inheritedLayers, body));
             Ui.Success($"Ergebnis gespeichert unter: {outPath}", "Refinement");

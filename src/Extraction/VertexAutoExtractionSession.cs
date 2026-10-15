@@ -706,7 +706,7 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
                     usage: segmentTranscript.Usage,
                     model: _config.CurrentModel,
                     generation: _config.Generation,
-                    thoughtsFileName: segmentTranscript.ThoughtsFile != null ? Path.GetFileName(segmentTranscript.ThoughtsFile) : null);
+                    thoughtsFileName: Path.GetFileName(segmentTranscript.ThoughtsFile));
                 partSummaries.Add(TexDocumentWriter.SummarizePartHeader(partHeader));
 
                 string partSeparator = TexDocumentWriter.BuildPartSeparator(i + 1, partHeader, fromCache: false);

@@ -120,7 +120,7 @@ public static class StatusCommand {
         string? folder = parseResult.GetValue(Folder);
         string root = !string.IsNullOrWhiteSpace(folder)
             ? Path.GetFullPath(folder)
-            : (string.IsNullOrWhiteSpace(config.TargetFolder) ? Path.Combine(config.SourceFolder, "extracted_output") : config.TargetFolder);
+            : ExtractionHelpers.OutputRoot(config);
 
         if (!Directory.Exists(root)) return [];
 

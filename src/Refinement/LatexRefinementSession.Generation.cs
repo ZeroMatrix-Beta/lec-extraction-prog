@@ -142,13 +142,6 @@ public partial class LatexRefinementSession {
         return requestConfig;
     }
 
-    /// <summary>The short stage name a step's thoughts file carries (what <c>lecx thoughts --stage</c> matches).</summary>
-    private string ThoughtStageKey(RefinementStepConfig stepConfig) =>
-        ReferenceEquals(stepConfig, _config.Step1MergeAndTimestamp) ? "merge"
-        : ReferenceEquals(stepConfig, _config.Step2SpeechRefinement) ? "speech"
-        : ReferenceEquals(stepConfig, _config.Step3LastRefinement) ? "final"
-        : "refinement";
-
     /// <summary>
     /// [AI Context] Dumps the full conversation history Gemini will read into a log file, for debugging.
     /// Failure here is non-fatal -- only the log write is skipped.
@@ -258,7 +251,7 @@ public partial class LatexRefinementSession {
 
                       // Per request, the last chunk carrying usage wins; requests are summed below.
                       usage.Absorb(chunk.UsageMetadata);
-                      usage.RecordFinishReason(chunk.Candidates?[0]?.FinishReason?.ToString());
+                      usage.RecordFinishReason(ResponseParts.FinishReason(chunk));
 
                       await Task.CompletedTask;
                   },
@@ -349,7 +342,7 @@ public partial class LatexRefinementSession {
             }
         }
 
-
+        await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
         return (fullResponseText, totalUsage);
     }
 

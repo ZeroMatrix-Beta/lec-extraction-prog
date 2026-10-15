@@ -15,7 +15,8 @@ namespace LectureExtraction.GoogleAi;
 public sealed record ThoughtFileHeader(string StageKey, string Stage, string Output, string Model, DateTimeOffset Started, int Version = ThoughtFile.FormatVersion);
 
 /// <summary>One request's thought summary and the usage the server reported for it.</summary>
-public sealed record ThoughtRequestRecord(int Request, DateTimeOffset Time, int ThoughtTokens, int OutputTokens, string? FinishReason, string Text);
+/// <param name="Attempt">1 normally; 2, 3... when an empty answer made the stage send the same request again.</param>
+public sealed record ThoughtRequestRecord(int Request, DateTimeOffset Time, int ThoughtTokens, int OutputTokens, string? FinishReason, string Text, int Attempt = 1);
 
 /// <summary>A parsed thoughts file.</summary>
 public sealed record ThoughtFileContent(string Path, ThoughtFileHeader Header, IReadOnlyList<ThoughtRequestRecord> Requests);
@@ -69,7 +70,7 @@ public static partial class ThoughtFile {
     public static string FormatRequest(ThoughtRequestRecord record) {
         // The text is the section below the marker, not part of it.
         string json = JsonSerializer.Serialize(new {
-            record.Request, record.Time, record.ThoughtTokens, record.OutputTokens, record.FinishReason
+            record.Request, record.Attempt, record.Time, record.ThoughtTokens, record.OutputTokens, record.FinishReason
         }, JsonOptions);
         return $"<!-- {RequestMarker} {json} -->\n" +
                $"## {RequestHeading(record)}\n\n" +
@@ -88,8 +89,13 @@ public static partial class ThoughtFile {
 
     private const string NoSummary = "(no summary returned)";
 
-    private static string RequestHeading(ThoughtRequestRecord record) {
-        var heading = new StringBuilder($"Request {record.Request} · {record.ThoughtTokens.ToString("N0", CultureInfo.InvariantCulture)} thinking tokens");
+    /// <summary>The human heading of a request, e.g. <c>Request 1 · attempt 2 · 12,345 thinking tokens · ...</c>.</summary>
+    public static string RequestHeading(ThoughtRequestRecord record) {
+        var heading = new StringBuilder($"Request {record.Request}");
+        if (record.Attempt > 1) {
+            heading.Append($" · attempt {record.Attempt}");
+        }
+        heading.Append($" · {record.ThoughtTokens.ToString("N0", CultureInfo.InvariantCulture)} thinking tokens");
         heading.Append($" · {record.OutputTokens.ToString("N0", CultureInfo.InvariantCulture)} output tokens");
         if (!string.IsNullOrWhiteSpace(record.FinishReason)) {
             heading.Append($" · {record.FinishReason}");
@@ -116,6 +122,22 @@ public static partial class ThoughtFile {
     public static ThoughtFileContent? Read(string path) {
         string text = File.ReadAllText(path).Replace("\r\n", "\n");
         return Parse(path, text);
+    }
+
+    /// <summary>
+    /// <see cref="Read"/> for directory scans: null instead of an exception when the file is not a
+    /// thoughts file or cannot be read right now (a running stage appending to it, no access).
+    /// </summary>
+    public static ThoughtFileContent? TryRead(string path) {
+        if (!IsThoughtFile(path)) {
+            return null;
+        }
+        try {
+            return Read(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {
+            return null;
+        }
     }
 
     public static ThoughtFileContent? Parse(string path, string text) {

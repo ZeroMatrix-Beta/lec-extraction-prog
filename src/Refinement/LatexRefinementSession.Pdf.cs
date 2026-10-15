@@ -422,9 +422,10 @@ public partial class LatexRefinementSession {
         string retryLogPath = Path.Combine(targetFolder, $"compile-log-step5-last_try{roundNumber}.txt");
 
         // The round's compile log is its existing log, but it is written only after the answer has
-        // been compiled, so the thoughts are appended to it then rather than per request.
+        // been compiled, so the thoughts are appended to it then rather than per request. A round
+        // that never compiles (empty or rejected answer) still gets that file, holding only them.
         var thoughts = new ThoughtLog(thoughtSettings, $"pdf-repair-{roundNumber}", $"{TexDocumentWriter.PdfRepairStep}, round {roundNumber}",
-            backendParams.CurrentModel, Path.Combine(targetFolder, noPreambleFileName), existingLogPath: null);
+            backendParams.CurrentModel, Path.Combine(targetFolder, noPreambleFileName), existingLogPath: null, existingLogWrittenLater: true);
 
         var (fullResponseText, usage) = await StreamFixResponseAsync(history, requestConfig, backendParams, standaloneFileName, thoughts);
 
@@ -452,6 +453,7 @@ public partial class LatexRefinementSession {
                 string rejectedPath = Path.Combine(targetFolder, $"step5-{baseName}-offset-last_try{roundNumber}-rejected.tex");
                 await System.IO.File.WriteAllTextAsync(rejectedPath, bodyOnlyText);
                 Ui.Error($"Fix-Versuch #{roundNumber} verworfen: {rejectReason} Gespeichert unter: {Path.GetFileName(rejectedPath)}");
+                await thoughts.AppendAllToAsync(retryLogPath);
                 return (false, null, null);
             }
 
@@ -460,7 +462,7 @@ public partial class LatexRefinementSession {
             string noPreamblePath = Path.Combine(targetFolder, noPreambleFileName);
             string repairHeader = TexDocumentWriter.BuildRefinementHeader(
                 $"{TexDocumentWriter.PdfRepairStep}, round {roundNumber}", noPreambleFileName, null, usage, backendParams.CurrentModel, backendParams.Generation,
-                thoughts.FilePath != null ? Path.GetFileName(thoughts.FilePath) : null);
+                Path.GetFileName(thoughts.FilePath));
             await System.IO.File.WriteAllTextAsync(noPreamblePath, TexDocumentWriter.StackLayers(
                 repairHeader, TexDocumentWriter.SplitHeaderLayers(originalBodyTex).Layers, TexDocumentWriter.SplitHeaderLayers(bodyOnlyText).Body));
             Ui.Info($"Gefixte LaTeX-Datei (Versuch #{roundNumber}) gespeichert unter: {noPreamblePath}");
@@ -499,6 +501,7 @@ public partial class LatexRefinementSession {
                 return (false, bodyOnlyText, retryLogContent);
             }
         }
+        await thoughts.AppendAllToAsync(retryLogPath);
         return (false, null, null);
     }
 
@@ -538,7 +541,7 @@ public partial class LatexRefinementSession {
                       Ui.Raw(text);
                       chunkResp += text;
                       usage.Absorb(chunk.UsageMetadata);
-                      usage.RecordFinishReason(chunk.Candidates?[0]?.FinishReason?.ToString());
+                      usage.RecordFinishReason(ResponseParts.FinishReason(chunk));
                       await Task.CompletedTask;
                   },
                   cancellationToken: cancelScope.Token,
@@ -606,6 +609,7 @@ public partial class LatexRefinementSession {
             }
         }
 
+        await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
         return (fullResponseText, totalUsage);
     }
 

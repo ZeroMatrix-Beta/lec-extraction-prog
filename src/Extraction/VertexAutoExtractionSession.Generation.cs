@@ -256,7 +256,7 @@ public partial class VertexAutoExtractionSession {
                         }
 
                         usage.Absorb(chunk.UsageMetadata);
-                        usage.RecordFinishReason(chunk.Candidates?[0]?.FinishReason?.ToString());
+                        usage.RecordFinishReason(ResponseParts.FinishReason(chunk));
                         if (chunk.UsageMetadata != null) {
                             if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
                             if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
@@ -360,6 +360,7 @@ public partial class VertexAutoExtractionSession {
             }
         }
 
+        await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
         return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens, interactionThinkingTokens, interactionRequests),
             thoughts.FilePath);
     }

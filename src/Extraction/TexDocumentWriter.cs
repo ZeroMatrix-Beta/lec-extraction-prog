@@ -60,10 +60,29 @@ public static partial class TexDocumentWriter {
         return Layer(lines, TokenLines(usage, "Token Usage"));
     }
 
+    private const string ThoughtsLinePrefix = "Thought summaries: ";
+
     private static void AddThoughtsLine(List<string> lines, string? thoughtsFileName) {
         if (!string.IsNullOrEmpty(thoughtsFileName)) {
-            lines.Add($"Thought summaries: {thoughtsFileName}");
+            lines.Add(ThoughtsLinePrefix + thoughtsFileName);
         }
+    }
+
+    /// <summary>
+    /// [AI Context] The thoughts file named in the top header layer of <paramref name="tex"/>, or null.
+    /// Only the top layer is this file's own; the layers below were inherited from its inputs and
+    /// name their stages' thoughts files, not this one's.
+    /// [Human] Name der Gedanken-Datei aus dem obersten Header-Block.
+    /// </summary>
+    public static string? ThoughtsFileNameOf(string tex) {
+        string[] lines = SplitHeaderLayers(tex).Layers.Split('\n');
+        for (int index = 1; index < lines.Length && lines[index].TrimEnd() != LayerRule; index++) {
+            string line = lines[index].StartsWith("% ", StringComparison.Ordinal) ? lines[index][2..] : lines[index];
+            if (line.StartsWith(ThoughtsLinePrefix, StringComparison.Ordinal)) {
+                return line[ThoughtsLinePrefix.Length..].Trim();
+            }
+        }
+        return null;
     }
 
     /// <summary>

@@ -32,4 +32,8 @@ public static class ResponseParts {
         }
         return (answer.ToString(), thought.ToString());
     }
+
+    /// <summary>The chunk's finish reason (STOP, MAX_TOKENS...), or null - also for an empty candidate list.</summary>
+    public static string? FinishReason(GenerateContentResponse? chunk) =>
+        chunk?.Candidates is { Count: > 0 } candidates ? candidates[0]?.FinishReason?.ToString() : null;
 }
