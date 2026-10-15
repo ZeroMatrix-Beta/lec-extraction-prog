@@ -74,6 +74,13 @@ public static class StatusCommand {
         ]);
         Ui.Grid($"Vorlesungs-Status ({progress.Count} Ordner)", ["Vorlesung", "Stand", "Als Nächstes", "PDF", "tmp"], rows);
 
+        long tmpOfFinished = progress.Where(p => p.NextStage == LectureStage.Done).Sum(p => p.TmpBytes);
+        long tmpTotal = progress.Sum(p => p.TmpBytes);
+        if (tmpTotal > 0) {
+            string reclaim = tmpOfFinished > 0 ? $", davon {CleanCommand.FormatBytes(tmpOfFinished)} bei fertigen Vorlesungen ('lecx clean --tmp --video <name>')" : "";
+            Ui.Detail($"tmp/ insgesamt: {CleanCommand.FormatBytes(tmpTotal)}{reclaim}.");
+        }
+
         int open = progress.Count(p => p.NextStage is not (LectureStage.Done or LectureStage.NotStarted));
         if (open > 0) {
             Ui.Detail($"{open} Vorlesung(en) begonnen, aber nicht fertig: 'lecx finish --dry-run' zeigt, was als Nächstes laufen würde.");
