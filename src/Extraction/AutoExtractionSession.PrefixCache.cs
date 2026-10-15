@@ -325,7 +325,7 @@ public partial class AutoExtractionSession {
             }
         }
         catch (Exception ex) {
-            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Describe()}. Fahre trotzdem fort.", "Cache-Warming");
+            Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Describe()}. Das Setup wird abgebrochen.", "Cache-Warming");
             int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
             Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
             await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
