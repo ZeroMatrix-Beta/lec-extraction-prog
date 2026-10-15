@@ -552,6 +552,20 @@ public partial class LatexRefinementSession {
     [System.Text.RegularExpressions.GeneratedRegex(@"<input_(?:file|tex)\b[^>]*>(.*?)</input_(?:file|tex)>", System.Text.RegularExpressions.RegexOptions.Singleline)]
     private static partial System.Text.RegularExpressions.Regex InputPayloadRegex();
 
+    /// <summary>
+    /// [AI Context] Name of the finished PDF the pipeline copies out for the reader. It is the lecture
+    /// folder's name whenever the base name starts with it: a base name derived from a re-run's files
+    /// keeps tails like "-all-offset-copy-1" (GetCleanBaseName strips only a trailing "-all"), and on
+    /// 2026-10-15 the deliverable came out as "<lecture>-all-offset-copy-1.pdf". The intermediate step
+    /// files keep using the base name, so their names do not change.
+    /// [Human] Dateiname des fertigen PDFs: der Name des Vorlesungsordners.
+    /// </summary>
+    public static string FinalPdfFileName(string targetFolder, string baseName) {
+        string folderName = Path.GetFileName(Path.TrimEndingDirectorySeparator(targetFolder));
+        bool isLectureFolder = folderName.Length > 0 && baseName.StartsWith(folderName, StringComparison.OrdinalIgnoreCase);
+        return (isLectureFolder ? folderName : baseName) + ".pdf";
+    }
+
     private static string GetCleanBaseName(string filePath) {
         string name = Path.GetFileNameWithoutExtension(filePath);
         if (name.Length > 6 && name.StartsWith("step", StringComparison.OrdinalIgnoreCase) && char.IsDigit(name[4]) && name[5] == '-') {

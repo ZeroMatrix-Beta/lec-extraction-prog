@@ -26,7 +26,7 @@ is why every stage is separately runnable and why a run can resume partway throu
    │ 4. PDF (LaTeX + optional AI repair)      │  lecx pdf compile
    └───┬──────────────────────────────────────┘
        │
-     .pdf
+     <name>.pdf   (one file, named after the lecture folder)
 ```
 
 `lecx run` performs all four, because the pipeline chains internally: a successful

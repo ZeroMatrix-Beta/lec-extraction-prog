@@ -94,17 +94,7 @@ public partial class LatexRefinementSession {
                 Ui.Success($"PDF erfolgreich erstellt im Zielordner: {targetFolder}");
 
                 string compiledPdfPath = Path.ChangeExtension(wrapperPath, ".pdf");
-                if (System.IO.File.Exists(compiledPdfPath)) {
-                    string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
-                    System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
-                    Ui.Info($"PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
-
-                    if (stepPrefix == "step4") {
-                        string finalCleanPdfPath = Path.Combine(targetFolder, baseName + ".pdf");
-                        System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
-                        Ui.Info($"Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
-                    }
-                }
+                PublishPdf(compiledPdfPath, Path.Combine(targetFolder, inputBaseName + ".pdf"), targetFolder, baseName, isFinal: stepPrefix == "step4");
 
                 CleanupHelperFiles(targetFolder, finalTexFile, true);
 
@@ -315,6 +305,27 @@ public partial class LatexRefinementSession {
         }
     }
 
+    /// <summary>
+    /// [AI Context] Copies a compiled PDF (the wrapper's output, which CleanupHelperFiles deletes) to
+    /// where it is read. The deliverable goes to one place only, &lt;lecture&gt;.pdf: it used to be copied
+    /// beside the step's .tex as well, so every finished lecture held two identical PDFs. A precheck
+    /// compile (step 3) is no deliverable and keeps its copy beside its own file.
+    /// [Human] Legt das kompilierte PDF ab - das fertige PDF nur einmal, als &lt;Vorlesung&gt;.pdf.
+    /// </summary>
+    private static void PublishPdf(string compiledPdfPath, string stepPdfPath, string targetFolder, string baseName, bool isFinal) {
+        if (!System.IO.File.Exists(compiledPdfPath)) return;
+
+        if (!isFinal) {
+            System.IO.File.Copy(compiledPdfPath, stepPdfPath, true);
+            Ui.Info($"PDF kopiert zu: {Path.GetFileName(stepPdfPath)}");
+            return;
+        }
+
+        string finalPdfPath = Path.Combine(targetFolder, FinalPdfFileName(targetFolder, baseName));
+        System.IO.File.Copy(compiledPdfPath, finalPdfPath, true);
+        Ui.Info($"Finales PDF: {Path.GetFileName(finalPdfPath)}");
+    }
+
     private static void CleanupHelperFiles(string targetFolder, string finalTexFile, bool compilationSuccess = true) {
         try {
             string inputBaseName = Path.GetFileNameWithoutExtension(finalTexFile);
@@ -482,16 +493,7 @@ public partial class LatexRefinementSession {
 
             if (retrySuccess) {
                 Ui.Success($"PDF erfolgreich im Fix-Versuch #{roundNumber} (step5) erstellt: {targetFolder}");
-                string compiledPdfPath = Path.ChangeExtension(standalonePath, ".pdf");
-                if (System.IO.File.Exists(compiledPdfPath)) {
-                    string cleanPdfPath = Path.ChangeExtension(noPreamblePath, ".pdf");
-                    System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
-                    Ui.Info($"PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
-
-                    string finalCleanPdfPath = Path.Combine(targetFolder, baseName + ".pdf");
-                    System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
-                    Ui.Info($"Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
-                }
+                PublishPdf(Path.ChangeExtension(standalonePath, ".pdf"), Path.ChangeExtension(noPreamblePath, ".pdf"), targetFolder, baseName, isFinal: true);
                 CleanupHelperFiles(targetFolder, noPreamblePath, true);
                 return (true, bodyOnlyText, retryLogContent);
             }
@@ -616,15 +618,7 @@ public partial class LatexRefinementSession {
                 System.IO.File.Copy(tryTexPath, finalTexFile, true);
                 Ui.Success($"Finale Datei aktualisiert mit erfolgreichem Fix: {Path.GetFileName(finalTexFile)}");
 
-                if (System.IO.File.Exists(compiledPdfPath)) {
-                    string cleanPdfPath = Path.Combine(targetFolder, inputBaseName + ".pdf");
-                    System.IO.File.Copy(compiledPdfPath, cleanPdfPath, true);
-                    Ui.Info($"PDF kopiert zu: {Path.GetFileName(cleanPdfPath)}");
-
-                    string finalCleanPdfPath = Path.Combine(targetFolder, baseName + ".pdf");
-                    System.IO.File.Copy(compiledPdfPath, finalCleanPdfPath, true);
-                    Ui.Info($"Finales PDF kopiert zu: {Path.GetFileName(finalCleanPdfPath)}");
-                }
+                PublishPdf(compiledPdfPath, Path.Combine(targetFolder, inputBaseName + ".pdf"), targetFolder, baseName, isFinal: true);
 
                 // Cleanup only temporary wrapper auxiliary files, preserving -try{round}.tex, -try{round}.pdf, and logs
                 CleanupHelperFiles(targetFolder, tryTexPath, true);
