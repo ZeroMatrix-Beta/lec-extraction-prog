@@ -77,13 +77,34 @@ refinement steps), so one key gets through about two lectures per model per day.
   plan a batch on it.
 - **An exhausted key fails fast and the run moves on.** The part request is retried once,
   then the video is abandoned (`allSucceeded: false`). Every further video on that key fails
-  the same way a few minutes later (after cutting and upload). A queue loop must therefore **stop the worker** on the first
-  `FreeTier (limit: 20)` error. Otherwise one exhausted key drains the whole queue, marking
-  every lecture it touches as failed.
-- **`gemini-3.7-flash` is a second budget for the same model.** User report, 2026-10-13:
-  requests to `gemini-3.7-flash` are answered by `gemini-3.8-flash`, so a worker can switch to
-  `--model gemini-3.7-flash` when 3.8's quota on its key is used up. (Not verified from the
-  API response; the `.tex` header records the requested name.)
+  the same way a few minutes later (after cutting and upload). A queue loop must therefore
+  **stop the worker** on the first daily-quota error. Otherwise one exhausted key drains the
+  whole queue, marking every lecture it touches as failed.
+- **Match `PerDay`, not `FreeTier`.** The per-minute limit
+  `GenerateContentInputTokensPerModelPerMinute-FreeTier (limit: 250000)` carries the same
+  `FreeTier (limit` text. The app simply waits it out (`Please retry in 41s`) and the run
+  succeeds, so a script that greps for `FreeTier` reports a false "quota exhausted" for a
+  lecture that finished. Only `GenerateRequestsPerDayPerProjectPerModel` means the day is over.
+- **`gemini-3.7-flash` is mapped to `gemini-3.8-flash`, with its own quota.** Requests to
+  `gemini-3.7-flash` are answered by `gemini-3.8-flash` (user's observation; Google documents
+  the same kind of routing for `gemini-3.5-flash` → `gemini-3.6-flash` on its "What's new in
+  Gemini 3.5" page). The quota is still counted **per requested model name**: on 2026-10-13
+  profiles 2 and 3 were refused for 3.8 after their daily 20 and served `gemini-3.7-flash`
+  right away. The `.tex` header records the requested name, 3.7.
+
+## Eight workers on four keys
+
+Because the two names have separate daily budgets (and, going by the limit's name `PerModelPerMinute`, separate per-minute ones too), each key can run **two**
+workers at once: one on `--model gemini-3.8-flash`, one on `--model gemini-3.7-flash`. Four
+keys give eight independent budgets (8 × 20 requests a day). `lecx batch` cannot express this,
+since it refuses two workers on one profile; run two queue loops instead, one per model name,
+sharing one job list. This was first run on 2026-10-15 with
+`D:\lecture-videos\analysis2\extracted_output\rerun-logs\run-queue4.sh` plus a second
+instance (`run-queue-37.sh`) that adds four 3.7 workers to the same queue.
+
+Things to watch with eight: the upload of eight ~130 MB segments at once needs a stable
+connection, and "high demand" (HTTP 503) hits both names alike, because both are served by
+the same 3.8 backend.
 
 ## Doing it by hand
 
