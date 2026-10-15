@@ -221,7 +221,9 @@ public partial class LatexRefinementSession {
                 AnnounceRequest = (request, max) =>
                     Ui.Info($"Sende Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {request}/{max})...", "API"),
                 OnChunk = (chunk, text) => {
-                    if (string.IsNullOrEmpty(text) && !thoughts.IsEnabled && chunk.Candidates != null && chunk.Candidates.Count > 0) {
+                    // The last chunk of every normal answer is empty with STOP; only other reasons say anything.
+                    if (string.IsNullOrEmpty(text) && !thoughts.IsEnabled && chunk.Candidates != null && chunk.Candidates.Count > 0
+                        && !string.Equals(ResponseParts.FinishReason(chunk), "STOP", StringComparison.OrdinalIgnoreCase)) {
                         Ui.Detail($"Empty text in chunk. FinishReason: {chunk.Candidates[0].FinishReason}", "DEBUG");
                     }
                 },
