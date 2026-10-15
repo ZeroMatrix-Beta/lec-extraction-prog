@@ -30,6 +30,13 @@ public static partial class ApiRetryPolicy {
     /// </summary>
     public static Func<int, string, Task<bool>> DelayAsync { get; set; } = InteractiveDelay.SmartDelayAsync;
 
+    /// <summary>What a retry message opens with: the step's context and a colon, or nothing.</summary>
+    private static string ContextPrefix(string retryContext) =>
+        string.IsNullOrWhiteSpace(retryContext) ? "" : $"{retryContext}: ";
+
+    /// <summary>The Enter hint, only where a keyboard can answer it; an unattended run has none.</summary>
+    private static string EnterHint => Ui.PromptSource.IsInteractive ? " (Oder drücke Enter für sofortigen Retry)" : "";
+
     /// <summary>
     /// [AI Context] Executes a streaming API call with a robust retry mechanism.
     /// On each retry, the optional <paramref name="onRetry"/> callback is invoked BEFORE the new attempt
@@ -70,7 +77,7 @@ public static partial class ApiRetryPolicy {
         int minCharactersToResume = 20,
         int? maxTotalAttempts = null) {
         int totalAttemptLimit = Math.Max(1, maxTotalAttempts ?? maxRetries * 2);
-        string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
+        string contextMsg = ContextPrefix(retryContext);
         int backoff = initialBackoff;
         int consecutiveFailuresWithoutProgress = 0;
         int attempt = 0;
@@ -82,7 +89,7 @@ public static partial class ApiRetryPolicy {
 
             try {
                 if (attempt > 1) {
-                    Ui.Warn($"{contextMsg} Sende Anfrage neu (Versuch {attempt}). Die bisherige Teilantwort wird verworfen...", "API Retry");
+                    Ui.Warn($"{contextMsg}Sende Anfrage neu (Versuch {attempt}). Die bisherige Teilantwort wird verworfen...", "API Retry");
                     onRetry?.Invoke();
                 }
 
@@ -118,7 +125,7 @@ public static partial class ApiRetryPolicy {
                 }
 
                 if (resumeOnPartialProgress && charactersReceivedThisAttempt >= minCharactersToResume) {
-                    Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.Describe()}).", "Stream Unterbrochen");
+                    Ui.Warn($"{contextMsg}Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.Describe()}).", "Stream Unterbrochen");
                     Ui.Info($"Da bereits {charactersReceivedThisAttempt:N0} Zeichen empfangen wurden, wird der Text behalten und per 'Continue' fortgesetzt.", "Auto-Resume");
                     return true;
                 }
@@ -174,8 +181,8 @@ public static partial class ApiRetryPolicy {
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 if (attempt > 1) {
-                    string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
-                    Ui.Detail($"{contextMsg} Sending request (Attempt {attempt}/{maxRetries})...", "API Retry");
+                    string contextMsg = ContextPrefix(retryContext);
+                    Ui.Detail($"{contextMsg}Sending request (Attempt {attempt}/{maxRetries})...", "API Retry");
                 }
                 SessionCostLedger.RecordRequest(isGeneration: false, attempt);
                 return await apiCall();
@@ -349,18 +356,18 @@ public static partial class ApiRetryPolicy {
         int waitTime;
         int nextBackoff;
 
-        string contextMsg = string.IsNullOrWhiteSpace(retryContext) ? "" : $" [Current Step: {retryContext}]";
+        string contextMsg = ContextPrefix(retryContext);
         string delayMessage = "Warte auf Server-Bestätigung / Verarbeitung...";
 
         if (ex is TimeoutException || ex.InnerException is TimeoutException) {
             waitTime = 30;
-            Ui.Warn($"{contextMsg} API-Anfrage hat das Zeitlimit überschritten ({ex.Describe()}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Timeout");
+            Ui.Warn($"{contextMsg}API-Anfrage hat das Zeitlimit überschritten ({ex.Describe()}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}){EnterHint}", "Timeout");
             nextBackoff = currentBackoff + 15;
             delayMessage = "Warte auf erneuten Versuch nach Timeout...";
         }
         else if (IsNetworkConnectionError(ex)) {
             waitTime = 300; // 5 Minuten
-            Ui.Warn($"{contextMsg} Verbindung zum Google-Server unterbrochen ({ex.Describe()}).", "Netzwerk-Fehler");
+            Ui.Warn($"{contextMsg}Verbindung zum Google-Server unterbrochen ({ex.Describe()}).", "Netzwerk-Fehler");
             Ui.Detail("Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
             Ui.Detail($"--> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {nextAttempt}/{maxAttempts})");
             delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
@@ -375,12 +382,12 @@ public static partial class ApiRetryPolicy {
             string timeDesc = highDemandWait % 60 == 0 && highDemandWait > 0
                 ? (highDemandWait == 60 ? "1 Minute" : $"{highDemandWait / 60} Minuten")
                 : $"{highDemandWait} Sekunden";
-            Ui.Warn($"{contextMsg} Das Modell ist stark nachgefragt. Warte {timeDesc}... (Versuch {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Hohe Auslastung");
+            Ui.Warn($"{contextMsg}Das Modell ist stark nachgefragt. Warte {timeDesc}... (Versuch {nextAttempt}/{maxAttempts}){EnterHint}", "Hohe Auslastung");
             nextBackoff = waitTime;
         }
         else if (IsInterruptedStream(ex)) {
             waitTime = 20;
-            Ui.Warn($"{contextMsg} Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.Describe()}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Stream Unterbrochen");
+            Ui.Warn($"{contextMsg}Der Datenstream wurde vom Server vorzeitig unterbrochen ({ex.Describe()}). Warte {waitTime}s vor erneutem Versuch... (Versuch {nextAttempt}/{maxAttempts}){EnterHint}", "Stream Unterbrochen");
             nextBackoff = 30;
         }
         else {
@@ -389,17 +396,17 @@ public static partial class ApiRetryPolicy {
                 var retryMatch = MyRegex().Match(ex.Message);
                 if (retryMatch.Success && int.TryParse(retryMatch.Groups[1].Value, out int serverSuggestedDelay)) {
                     waitTime = serverSuggestedDelay + 20;
-                    Ui.Warn($"{contextMsg} API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Rate Limit");
+                    Ui.Warn($"{contextMsg}API schlägt Wartezeit von {serverSuggestedDelay}s vor. Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {nextAttempt}/{maxAttempts}){EnterHint}", "Rate Limit");
                 }
                 else {
                     waitTime = currentBackoff; // Use the initial backoff from the caller
-                    Ui.Warn($"{contextMsg} Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Rate Limit / Überlastung");
+                    Ui.Warn($"{contextMsg}Initiale Wartezeit: {waitTime} Sekunden... (Nächster Versuch: {nextAttempt}/{maxAttempts}){EnterHint}", "Rate Limit / Überlastung");
                 }
                 nextBackoff = waitTime;
             }
             else {
                 waitTime = currentBackoff + 30;
-                Ui.Warn($"{contextMsg} Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {nextAttempt}/{maxAttempts}) (Oder drücke Enter für sofortigen Retry)", "Rate Limit");
+                Ui.Warn($"{contextMsg}Inkrementiere Wartezeit. Warte {waitTime} Sekunden... (Nächster Versuch: {nextAttempt}/{maxAttempts}){EnterHint}", "Rate Limit");
                 nextBackoff = waitTime;
             }
         }

@@ -68,7 +68,7 @@ public static class InteractiveDelay {
                     // Where Spectre cannot redraw - a log file, a pipe, any redirected stream - every
                     // countdown update would become a line of its own, 64 for a 64 s wait. One line
                     // up front says the same.
-                    Ui.Info($"Warte {seconds}s: {message}", "Delay");
+                    Ui.Info(DescribeWait(seconds, message), "Delay");
                     completed = await WaitOutAsync(seconds, listenForEnter: !isUnattended, () => delayCanceled, _ => { });
                 }
 
@@ -157,6 +157,15 @@ public static class InteractiveDelay {
 
         return await delayTask;
     }
+
+    /// <summary>
+    /// The one line a redirected wait prints. Most callers' messages already open with "Warte ...",
+    /// which made "Warte 64s: Warte 64 Sekunden nach ..."; those get the seconds appended instead.
+    /// </summary>
+    public static string DescribeWait(int seconds, string message) =>
+        message.StartsWith("Warte", StringComparison.OrdinalIgnoreCase)
+            ? $"{message.TrimEnd('.', ' ')} ({seconds}s)"
+            : $"Warte {seconds}s: {message}";
 
     /// <summary>
     /// Waits for one line on <paramref name="reader"/> and returns true when it arrives. At end of
