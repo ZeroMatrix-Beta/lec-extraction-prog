@@ -70,6 +70,22 @@ lecx plan --folder ... --json 2>/dev/null | jq .pendingRequests
 
 Without `--json`, human-readable logging goes to stdout and there is nothing to parse.
 
+### For now: always pass `--thoughts file`
+
+**Current standing instruction from the maintainer (2026-10-15):** every paid command (`run`,
+`extract run`, `refine run`, `pdf compile`, `finish`, `batch`) gets `--thoughts file`, so each
+stage leaves an `<output>-thoughts.md` beside its output. Not every stage has thought summaries
+on in its config (step 2, speech, does not), and without the file a continue or an odd answer
+can only be explained from token counts afterwards, not from the model's reasoning. It does
+not change the request beyond asking for the summaries, and it is not saved to config.
+
+```bash
+lecx finish --folder "<lecture folder>" --thoughts file
+lecx thoughts show --folder "<lecture folder>" --stage speech
+```
+
+This holds until the maintainer says otherwise.
+
 ---
 
 ## A safe working loop
