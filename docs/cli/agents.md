@@ -143,7 +143,17 @@ A script that drives `lecx` must `cd` into the repository root first, and pass `
 
 **"High demand" (HTTP 503) gives up after 8 attempts and loses only that part.** The video then
 ends with exit `6`. The parts finished before it are on disk, so running the same video again
-within `--resume-window` requests only the missing part and the refinement.
+within `--resume-window` requests only the missing part and the refinement. Every one of those
+attempts counts against the free-tier daily quota: on 2026-10-15 one key used up its 20
+requests on `gemini-3.8-flash` with 16 retries after 503 and only 5 answers.
+
+**After a refinement failure, retry with `refine run`, not `run`.** `run` reuses the finished
+parts, but it combines them again and starts the refinement at step 1. Because the first
+combined file is still there, the second one is written as `step1-<name>-all-offset-copy-1.tex`,
+and every later file carries that stem (`step2-<name>-all-offset-copy-1-offset-merged.tex`, …).
+The merge is paid for twice and the names no longer match the table in
+[pipeline.md](pipeline.md). Continue from the last finished step instead:
+`refine run --tex <that step's input> --step N --through-end`.
 
 **The output folder and the `.tex` stem differ.** The folder is
 `<target>/<name-without-compression-suffix>/`, but the parts inside are
