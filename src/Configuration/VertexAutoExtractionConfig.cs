@@ -82,6 +82,24 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public bool EnableImplicitPrefixCacheWarmup { get; set; } = false;
 
     /// <summary>
+    /// [AI Context] The shared session's wait between parts, between continues and after a warm-up
+    /// handshake. Vertex keeps its own key for it, RateLimitDelaySeconds, so existing JSON stays valid.
+    /// [Human] Wartezeit zwischen Teilen und Continue-Anfragen; in Vertex heisst sie RateLimitDelaySeconds.
+    /// </summary>
+    int IAutoExtractionConfig.VideoPartDelaySeconds => RateLimitDelaySeconds;
+
+    // The settings below came with the merge into AutoExtractionSession (2026-10-15). They mean the
+    // same as on AiStudioAutoExtractionConfig and start from its defaults.
+    public bool StripCommentsFromReferenceContext { get; set; } = true;
+    public bool DebugHelloRoundtrip { get; set; } = false;
+    public int HistoryBatchCount { get; set; } = 0;
+    public int SystemInstructionDelaySeconds { get; set; } = 65;
+    public int HistoryRateLimitDelaySeconds { get; set; } = 65;
+    public bool MergeSystemInstructionAndFirstHistoryBatch { get; set; } = false;
+    public bool MergeAllConsecutiveHistoryBatches { get; set; } = false;
+    public bool SendDummyFileWithEachWarmUpRound { get; set; } = false;
+
+    /// <summary>
     /// [AI Context] Vertex counterpart: delay in seconds when the model returns a "high demand" error.
     /// Defaults to 180 seconds (3 minutes) if unspecified, or can be configured to e.g. 64 seconds.
     /// [Human] Wartezeit in Sekunden, wenn das Modell überlastet ist ("high demand").

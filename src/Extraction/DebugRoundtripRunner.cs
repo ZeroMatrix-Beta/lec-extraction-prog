@@ -37,7 +37,7 @@ public static class DebugRoundtripRunner {
     private const string HelloPrompt = "Hi, this is a debug roundtrip. Please reply with a short 'Hello' or 'Hi'.";
 
     public static async Task<DebugRoundtripResult> RunAsync(
-        Client client, AiStudioAutoExtractionConfig config, List<Part> systemInstructionParts) {
+        Client client, IAutoExtractionConfig config, List<Part> systemInstructionParts) {
 
         Ui.Detail("Starte 'Hello' Roundtrip (DebugHelloRoundtrip = true)...");
 

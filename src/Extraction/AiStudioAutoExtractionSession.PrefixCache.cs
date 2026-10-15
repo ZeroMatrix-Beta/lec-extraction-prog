@@ -159,7 +159,7 @@ public partial class AiStudioAutoExtractionSession {
     /// uploaded as files, which that text does not contain), and warm-up is enabled at all.
     /// [Human] Entscheidet, ob vor dem ersten gesendeten Teil (Teil 2+) ein Resume-Warm-up nötig ist.
     /// </summary>
-    public static bool ShouldWarmUpResumedPart(AiStudioAutoExtractionConfig config, int partNumber, int precedingPartsOnDisk) =>
+    public static bool ShouldWarmUpResumedPart(IAutoExtractionConfig config, int partNumber, int precedingPartsOnDisk) =>
         partNumber > 1
         && precedingPartsOnDisk > 0
         && config.EnableImplicitPrefixCacheWarmup
