@@ -75,6 +75,9 @@ public sealed class GenerationLoopOptions {
 
     /// <summary>The pause before a blank answer is sent again.</summary>
     public TimeSpan EmptyAnswerRetryDelay { get; init; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>How long a request may stream nothing before a line says it is still waiting; zero turns it off.</summary>
+    public TimeSpan SilenceNoticeInterval { get; init; } = TimeSpan.FromMinutes(2);
 }
 
 /// <summary>
@@ -133,10 +136,12 @@ public static class GenerationLoop {
             var usage = new UsageReport();
             bool callSuccess;
 
+            var heartbeat = new StreamHeartbeat(options.SilenceNoticeInterval);
             try {
                 callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
                     streamFactory: () => generate(history),
                     onChunkReceived: chunk => {
+                        heartbeat.Touch();
                         string answer = thoughts.Absorb(chunk);
                         options.OnChunk?.Invoke(chunk, answer);
                         Ui.Raw(answer);
@@ -153,6 +158,7 @@ public static class GenerationLoop {
                     initialBackoff: options.InitialBackoff ?? 130,
                     retryContext: options.RetryContext,
                     onRetry: () => {
+                        heartbeat.Touch();
                         text = "";
                         grounding = null;
                         usage = new UsageReport();
@@ -165,6 +171,9 @@ public static class GenerationLoop {
             catch (Exception ex) {
                 Ui.Error($"{options.UnrecoverableErrorPrefix}{ex.Describe()}", "Abbruch");
                 break;
+            }
+            finally {
+                heartbeat.Dispose();
             }
 
             if (options.ShowGroundingSources && grounding != null) {
@@ -227,6 +236,44 @@ public static class GenerationLoop {
 
         await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
         return new GenerationLoopResult(fullText, total);
+    }
+
+    /// <summary>
+    /// [AI Context] Says so when a request has streamed nothing for a while. A thinking model with
+    /// thought summaries off sends nothing until it starts answering - minutes for a whole lecture -
+    /// and in a log that silence looked exactly like a hang (seen on 2026-10-15: 5+ minutes after
+    /// "Sende Anfrage neu" with no line at all). Quiet during the retry policy's own waits, which
+    /// print their own line.
+    /// [Human] Meldet sich, wenn eine Anfrage lange nichts liefert, damit Stille nicht wie ein Hänger aussieht.
+    /// </summary>
+    private sealed class StreamHeartbeat : IDisposable {
+        private readonly TimeSpan _interval;
+        private readonly DateTime _startedUtc = DateTime.UtcNow;
+        private readonly Timer? _timer;
+        private long _lastActivityTicks = DateTime.UtcNow.Ticks;
+
+        public StreamHeartbeat(TimeSpan interval) {
+            _interval = interval;
+            if (interval > TimeSpan.Zero) {
+                _timer = new Timer(_ => Check(), null, interval, interval);
+            }
+        }
+
+        public void Touch() => Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
+
+        private void Check() {
+            if (InteractiveDelay.IsInSmartDelay) {
+                Touch();
+                return;
+            }
+            var silent = DateTime.UtcNow - new DateTime(Interlocked.Read(ref _lastActivityTicks), DateTimeKind.Utc);
+            if (silent < _interval) return;
+            Touch();
+            int minutes = (int)Math.Round((DateTime.UtcNow - _startedUtc).TotalMinutes);
+            Ui.Detail($"Noch keine Antwort ({minutes} min seit Anfrage-Start). Das Modell denkt vermutlich noch; ohne Gedanken-Zusammenfassungen ist das still. Strg+C bricht ab.", "API");
+        }
+
+        public void Dispose() => _timer?.Dispose();
     }
 
     private static void PrintGroundingSources(GroundingMetadata grounding) {

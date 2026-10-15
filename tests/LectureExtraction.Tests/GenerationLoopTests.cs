@@ -176,6 +176,32 @@ public class GenerationLoopTests : IDisposable {
     }
 
     [Fact]
+    public async Task A_request_that_streams_nothing_for_a_while_says_it_is_still_waiting() {
+        var history = new List<Content> { UserTurn("refine") };
+
+        var result = await GenerationLoop.RunAsync(history, _ => Slow(TimeSpan.FromMilliseconds(400), Answer(Marker)), ThoughtLog.Inert(),
+            new GenerationLoopOptions {
+                MaxContinueRequests = 1,
+                AnnounceRequest = (_, _) => { },
+                IsComplete = text => text.Contains(Marker),
+                BuildContinuePrompt = text => text,
+                WaitBeforeContinueAsync = () => Task.FromResult(true),
+                BudgetStopSuffix = "",
+                RetryContext = "test",
+                SilenceNoticeInterval = TimeSpan.FromMilliseconds(100),
+            });
+
+        Assert.Equal(Marker, result.Text);
+        Assert.Contains("Noch keine Antwort", _console.Output);
+    }
+
+    private static async IAsyncEnumerable<GenerateContentResponse> Slow(TimeSpan delay, GenerateContentResponse chunk,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default) {
+        await Task.Delay(delay, cancellationToken);
+        yield return chunk;
+    }
+
+    [Fact]
     public void The_cut_short_prompt_quotes_the_tail_and_appends_the_instruction() {
         string prompt = GenerationLoop.CutShortPrompt(new string('x', 600) + "END", "Go on.", 10);
 
