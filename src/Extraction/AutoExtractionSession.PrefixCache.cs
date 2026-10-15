@@ -277,7 +277,6 @@ public partial class AutoExtractionSession {
 
         try {
             string responseText = "";
-            int inputTokens = 0, outputTokens = 0, cachedTokens = 0;
             var usage = new UsageReport();
 
             bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
@@ -287,11 +286,6 @@ public partial class AutoExtractionSession {
                     string txt = ResponseParts.Split(chunk).Answer;
                     responseText += txt;
                     usage.Absorb(chunk.UsageMetadata);
-                    if (chunk.UsageMetadata != null) {
-                        if (chunk.UsageMetadata.PromptTokenCount.HasValue) inputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                        if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) outputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                        if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) cachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                    }
                     await Task.CompletedTask;
                 },
                 cancellationToken: CancellationToken.None,
@@ -300,10 +294,9 @@ public partial class AutoExtractionSession {
             );
 
             if (success) {
+                int inputTokens = usage.PromptTokens, outputTokens = usage.CandidateTokens, cachedTokens = usage.CachedTokens;
                 int freshTokens = Math.Max(0, inputTokens - cachedTokens);
-                _sessionTotalInputTokens += inputTokens;
-                _sessionTotalOutputTokens += outputTokens;
-                _sessionTotalCachedTokens += cachedTokens;
+                _sessionUsage += new TokenUsage(inputTokens, outputTokens, cachedTokens);
                 _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, freshTokens);
 
                 int newlyAdded = cachedTokens > 0 ? Math.Max(0, inputTokens - cachedTokens) : (_lastWarmupInputTokens > 0 ? Math.Max(0, inputTokens - _lastWarmupInputTokens) : freshTokens);

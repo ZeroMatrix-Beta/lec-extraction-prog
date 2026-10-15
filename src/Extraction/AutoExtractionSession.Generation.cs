@@ -301,18 +301,15 @@ public partial class AutoExtractionSession {
     /// </summary>
     private void ReportPartRequest(GenerationRequest request, int partNumber) {
         var usage = request.Usage;
-        _sessionTotalInputTokens += usage.PromptTokens;
-        _sessionTotalOutputTokens += usage.CandidateTokens;
-        _sessionTotalCachedTokens += usage.CachedTokens;
+        _sessionUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens);
 
         int freshReqTokens = Math.Max(0, usage.PromptTokens - usage.CachedTokens);
-        int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
 
         Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
         if (_config.VerboseConsoleOutput) {
             var part = request.Total;
             Ui.Detail($"[Part Total Tokens]    Total Prompt: {part.Input:N0} | Gecacht: {part.Cached:N0} | Frisch: {part.Fresh:N0} | Output: {part.Output:N0}");
-            Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+            Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionUsage.Input:N0} | Gecacht: {_sessionUsage.Cached:N0} | Frisch: {_sessionUsage.Fresh:N0} | Output: {_sessionUsage.Output:N0}");
         }
     }
 

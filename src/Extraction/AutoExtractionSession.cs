@@ -50,9 +50,8 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
     private readonly List<Content> _sessionPreamble = [];
     private bool _historyWasLoaded = false;
-    private int _sessionTotalInputTokens = 0;
-    private int _sessionTotalOutputTokens = 0;
-    private int _sessionTotalCachedTokens = 0;
+    // Every request this session sent, warm-ups and debug roundtrip included; printed in verbose mode.
+    private TokenUsage _sessionUsage;
     private int _sessionMaxFreshTokens = 0;
     private int _lastWarmupInputTokens = 0;
 
@@ -260,9 +259,7 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
 
             // The runner reports usage rather than mutating these itself, so the session stays the
             // single writer of its own counters and preamble.
-            _sessionTotalInputTokens += roundtrip.Usage.Input;
-            _sessionTotalOutputTokens += roundtrip.Usage.Output;
-            _sessionTotalCachedTokens += roundtrip.Usage.Cached;
+            _sessionUsage += roundtrip.Usage;
             _sessionMaxFreshTokens = Math.Max(_sessionMaxFreshTokens, roundtrip.Usage.Fresh);
             _sessionPreamble.Add(roundtrip.UserTurn!);
             _sessionPreamble.Add(roundtrip.ModelTurn!);
