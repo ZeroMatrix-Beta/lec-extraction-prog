@@ -29,7 +29,7 @@
   "FfmpegPreset": "ultrafast",
   // Options: "ultrafast" (fastest, 2-4x speedup), "veryfast", "fast", "medium"
   // "VideoPartDelaySeconds": 135,
-  "VideoPartDelaySeconds": 74,
+  "VideoPartDelaySeconds": 64,
   // "SystemInstructionDelaySeconds": 130,
   "SystemInstructionDelaySeconds": 64,
   // "FileActivationDelaySeconds": 140,
