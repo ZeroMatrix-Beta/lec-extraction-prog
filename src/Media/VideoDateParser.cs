@@ -66,6 +66,10 @@ public static partial class VideoDateParser {
     [GeneratedRegex(@"(?:^|[-_.\s])(week|woche)[-_.\s]*(\d+)(?:[-_.\s]|$)", RegexOptions.IgnoreCase)]
     private static partial Regex WeekRegex();
 
+    /// <summary>Whether <paramref name="name"/> contains a date Parse can read - without Parse's warning when it does not.</summary>
+    public static bool HasDate(string name) =>
+        YyyyMmDdRegex().IsMatch(name) || MmDdYyyyRegex().IsMatch(name) || MmDdOnlyRegex().IsMatch(name);
+
     public static VideoDateInfo Parse(string filePath) {
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
 

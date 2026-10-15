@@ -42,28 +42,28 @@ public static class Ui {
         EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
-        AnsiConsole.MarkupLine($"{prefix}[blue][[INFO]][/] {text}");
+        WriteLogLine($"{prefix}[blue][[INFO]][/] {text}");
     }
 
     public static void Warn(string msg, string? scope = null) {
         EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
-        AnsiConsole.MarkupLine($"{prefix}[yellow][[WARNUNG]][/] {text}");
+        WriteLogLine($"{prefix}[yellow][[WARNUNG]][/] {text}");
     }
 
     public static void Error(string msg, string? scope = null) {
         EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
-        AnsiConsole.MarkupLine($"{prefix}[red][[FEHLER]][/] {text}");
+        WriteLogLine($"{prefix}[red][[FEHLER]][/] {text}");
     }
 
     public static void Success(string msg, string? scope = null) {
         EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]] [/]" : "";
-        AnsiConsole.MarkupLine($"{prefix}[green][[OK]][/] {text}");
+        WriteLogLine($"{prefix}[green][[OK]][/] {text}");
     }
 
     // Structure
@@ -94,7 +94,7 @@ public static class Ui {
         EnsureNewLine();
         string text = Markup.Escape(msg);
         string prefix = scope != null ? $"[silver][[{Markup.Escape(scope)}]][/] " : "";
-        AnsiConsole.MarkupLine($"  {prefix}[grey]{text}[/]");
+        WriteLogLine($"  {prefix}[grey]{text}[/]");
     }
 
     /// <summary>
@@ -121,13 +121,38 @@ public static class Ui {
     public static void Raw(string text) {
         if (!string.IsNullOrEmpty(text)) {
             _isLineOpen = !text.EndsWith('\n');
-            AnsiConsole.Write(new Text(text));
+            WriteVerbatim(text, Style.Plain);
         }
     }
 
     public static void RawLine(string text = "") {
         _isLineOpen = false;
-        AnsiConsole.Write(new Text(text + "\n"));
+        WriteVerbatim(text + "\n", Style.Plain);
+    }
+
+    /// <summary>
+    /// [AI Context] One log line. In a console window Spectre renders it with colour; in a file or
+    /// pipe it goes to the writer as plain text, because Spectre hard-wraps at its assumed width there
+    /// and split every path, command line and lecture name across lines - in batch worker logs and
+    /// in what an agent captures, which nobody reads at a fixed width. No colour is lost: a
+    /// redirected stream gets none anyway.
+    /// [Human] Eine Logzeile; in Datei/Pipe ohne harten Zeilenumbruch.
+    /// </summary>
+    private static void WriteLogLine(string markup) {
+        if (IsTerminalOutput) {
+            AnsiConsole.MarkupLine(markup);
+            return;
+        }
+        AnsiConsole.Profile.Out.Writer.WriteLine(Markup.Remove(markup));
+    }
+
+    /// <summary>Verbatim text (model output, LaTeX); unwrapped in a file or pipe, like <see cref="WriteLogLine"/>.</summary>
+    private static void WriteVerbatim(string text, Style style) {
+        if (IsTerminalOutput) {
+            AnsiConsole.Write(new Text(text, style));
+            return;
+        }
+        AnsiConsole.Profile.Out.Writer.Write(text);
     }
 
     /// <summary>
@@ -138,7 +163,7 @@ public static class Ui {
     public static void Thought(string text) {
         if (!string.IsNullOrEmpty(text)) {
             _isLineOpen = !text.EndsWith('\n');
-            AnsiConsole.Write(new Text(text, new Style(decoration: Decoration.Dim | Decoration.Italic)));
+            WriteVerbatim(text, new Style(decoration: Decoration.Dim | Decoration.Italic));
         }
     }
 
@@ -286,6 +311,26 @@ public static class Ui {
     public static T Ask<T>(string question, T defaultValue) => PromptSource.AskValue(question, defaultValue);
 
     // Data
+    /// <summary>
+    /// [AI Context] A table with real columns, for lists of like items (lectures, profiles). Table()
+    /// above is for one item's properties; forcing a list into its two columns packed every field of a
+    /// row into one wrapped cell.
+    /// [Human] Tabelle mit eigenen Spalten, für Listen gleichartiger Einträge.
+    /// </summary>
+    public static void Grid(string title, IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows) {
+        var table = new Table().Border(IsTerminalOutput ? TableBorder.Rounded : TableBorder.Ascii);
+        foreach (string header in headers) {
+            table.AddColumn($"[bold]{Markup.Escape(header)}[/]");
+        }
+        if (!string.IsNullOrEmpty(title)) {
+            table.Title(Markup.Escape(title));
+        }
+        foreach (var row in rows) {
+            table.AddRow(row.Select(cell => Markup.Escape(cell)).ToArray());
+        }
+        AnsiConsole.Write(table);
+    }
+
     public static void Table(string title, IEnumerable<(string Key, string Value)> rows) {
         var table = new Table().Border(IsTerminalOutput ? TableBorder.Rounded : TableBorder.Ascii);
         table.AddColumn("[bold]Eigenschaft[/]");

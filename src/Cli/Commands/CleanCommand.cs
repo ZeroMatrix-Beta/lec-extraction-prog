@@ -55,7 +55,7 @@ public static partial class CleanCommand {
             }
 
             var config = (AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig));
-            List<string> candidateDirs = ResolveTargetDirectories(parseResult, config);
+            List<string> candidateDirs = LectureFolders.Resolve(parseResult.GetValue(Video), parseResult.GetValue(Folder), config);
 
             if (candidateDirs.Count == 0) {
                 Ui.Warn("Keine Vorlesungsordner zum Bereinigen gefunden.", "clean");
@@ -137,42 +137,6 @@ public static partial class CleanCommand {
         });
 
         return command;
-    }
-
-    private static List<string> ResolveTargetDirectories(ParseResult parseResult, AiStudioAutoExtractionConfig config) {
-        string? video = parseResult.GetValue(Video);
-        if (!string.IsNullOrWhiteSpace(video)) {
-            string baseName = ExtractionHelpers.ComputeOutputFolderName(video);
-            string candidate = Path.Combine(config.TargetFolder, baseName);
-            if (Directory.Exists(candidate)) return [candidate];
-            if (Directory.Exists(video)) return [video];
-            return [];
-        }
-
-        string? folder = parseResult.GetValue(Folder);
-        string root = !string.IsNullOrWhiteSpace(folder)
-            ? Path.GetFullPath(folder)
-            : ExtractionHelpers.OutputRoot(config);
-
-        if (!Directory.Exists(root)) return [];
-
-        // If the directory itself is a lecture directory (contains step1 or tmp)
-        if (Directory.Exists(Path.Combine(root, "tmp")) || Directory.GetFiles(root, "step1-*.tex").Length > 0) {
-            return [root];
-        }
-
-        // Otherwise scan subdirectories
-        var subdirs = Directory.GetDirectories(root);
-        List<string> result = [];
-        foreach (string subdir in subdirs) {
-            if (Directory.Exists(Path.Combine(subdir, "tmp")) ||
-                Directory.GetFiles(subdir, "step1-*.tex").Length > 0 ||
-                Directory.GetFiles(subdir, "*.pdf").Length > 0) {
-                result.Add(subdir);
-            }
-        }
-
-        return result;
     }
 
     private static bool IsRecentlyActive(string dir) {

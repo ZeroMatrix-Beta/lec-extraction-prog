@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.IO;
 using System.Linq;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
@@ -12,6 +10,8 @@ namespace LectureExtraction.Cli.Commands;
 /// <summary>
 /// [AI Context] Implements the 'lecx status' command to quickly inspect pipeline progress
 /// (transcription parts, refinement steps 1-3, compiled PDF, tmp cache size) across lecture folders.
+/// Reads each folder through <see cref="LectureProgress"/>, the same scan `finish` acts on, and names
+/// the next stage, so "what is left" and "what finish would do" are one answer.
 /// [Human] Zeigt den Status und Fortschritt von Vorlesungen (Transkription, Refinement, PDF) an.
 /// </summary>
 public static class StatusCommand {
@@ -24,7 +24,7 @@ public static class StatusCommand {
     };
 
     public static Command Build() {
-        var command = new Command("status", "Inspect extraction, refinement and PDF progress for lecture directories.") {
+        var command = new Command("status", "Inspect extraction, refinement and PDF progress for lecture directories, and the next stage of each.") {
             Video, Folder
         };
 
@@ -32,121 +32,51 @@ public static class StatusCommand {
             var context = CliOptions.ReadContext(parseResult);
             var config = (AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig));
 
-            List<string> candidateDirs = ResolveTargetDirectories(parseResult, config);
-
+            List<string> candidateDirs = LectureFolders.Resolve(parseResult.GetValue(Video), parseResult.GetValue(Folder), config);
             if (candidateDirs.Count == 0) {
                 Ui.Warn("Keine Vorlesungsordner gefunden.", "status");
                 return ExitCodes.Success;
             }
 
-            var statuses = new List<LectureStatusInfo>();
+            var progress = candidateDirs.Select(LectureProgress.Scan).ToList();
+            var statuses = progress.Select(ToInfo).ToList();
 
-            foreach (string dir in candidateDirs.OrderBy(d => Path.GetFileName(d))) {
-                string lecture = Path.GetFileName(dir);
-
-                var partFiles = Directory.GetFiles(dir, "step1-*-part*.tex");
-                int partsCount = partFiles.Length > 0
-                    ? partFiles.Select(f => Path.GetFileName(f)).Where(f => !f.Contains("-offset")).Distinct().Count()
-                    : 0;
-
-                bool stitched = Directory.GetFiles(dir, "step1-*-all*.tex").Length > 0;
-                bool step1Merged = Directory.GetFiles(dir, "step2-*-merged.tex").Length > 0;
-                bool step2Speech = Directory.GetFiles(dir, "step3-*-speech_refined.tex").Length > 0;
-                bool step3Polish = Directory.GetFiles(dir, "step4-*-final.tex").Length > 0;
-
-                string? pdfPath = Directory.GetFiles(dir, "*.pdf")
-                    .FirstOrDefault(f => Path.GetFileName(f).Equals($"{lecture}.pdf", StringComparison.OrdinalIgnoreCase))
-                    ?? Directory.GetFiles(dir, "step4-*-final.pdf").FirstOrDefault()
-                    ?? Directory.GetFiles(dir, "step5-*-last_try*.pdf").FirstOrDefault();
-
-                long pdfSize = pdfPath != null && File.Exists(pdfPath) ? new FileInfo(pdfPath).Length : 0;
-                bool pdfReady = pdfSize > 0;
-
-                string tmpDir = Path.Combine(dir, "tmp");
-                long tmpBytes = Directory.Exists(tmpDir) ? GetDirectorySize(tmpDir) : 0;
-
-                statuses.Add(new LectureStatusInfo(
-                    Lecture: lecture,
-                    PartsCount: partsCount,
-                    Stitched: stitched,
-                    Step1Merged: step1Merged,
-                    Step2SpeechRefined: step2Speech,
-                    Step3Polish: step3Polish,
-                    PdfReady: pdfReady,
-                    PdfPath: pdfPath,
-                    PdfSize: pdfSize,
-                    PdfSizeHuman: pdfReady ? CleanCommand.FormatBytes(pdfSize) : "-",
-                    TmpBytes: tmpBytes,
-                    TmpSizeHuman: tmpBytes > 0 ? CleanCommand.FormatBytes(tmpBytes) : "0 B"
-                ));
-            }
-
-            CliOutput.Payload(context, statuses, () => RenderTable(statuses));
+            CliOutput.Payload(context, statuses, () => RenderTable(progress));
             return ExitCodes.Success;
         });
 
         return command;
     }
 
-    private static void RenderTable(IReadOnlyList<LectureStatusInfo> statuses) {
-        Ui.Step($"Vorlesungs-Status ({statuses.Count} Ordner)");
+    private static LectureStatusInfo ToInfo(LectureProgress p) => new(
+        Lecture: p.Lecture,
+        PartsCount: p.PartsCount,
+        Stitched: p.CombinedTex != null,
+        Step1Merged: p.MergedTex != null,
+        Step2SpeechRefined: p.SpeechTex != null,
+        Step3Polish: p.FinalTex != null,
+        PdfReady: p.Pdf != null,
+        PdfPath: p.Pdf,
+        PdfSize: p.Pdf != null ? new System.IO.FileInfo(p.Pdf).Length : 0,
+        PdfSizeHuman: p.Pdf != null ? CleanCommand.FormatBytes(new System.IO.FileInfo(p.Pdf).Length) : "-",
+        TmpBytes: p.TmpBytes,
+        TmpSizeHuman: p.TmpBytes > 0 ? CleanCommand.FormatBytes(p.TmpBytes) : "0 B",
+        NextStep: p.NextStage.ToString(),
+        NextInput: p.NextInput);
 
-        var rows = new List<(string Label, string Value)>();
-        foreach (var s in statuses) {
-            string progress = s.PdfReady ? "100% (PDF)" :
-                              s.Step3Polish ? "Step 3 (Polish)" :
-                              s.Step2SpeechRefined ? "Step 2 (Speech)" :
-                              s.Step1Merged ? "Step 1 (Merge)" :
-                              s.Stitched ? "Transkribiert" :
-                              s.PartsCount > 0 ? $"{s.PartsCount} Teile" : "Leer";
+    private static void RenderTable(IReadOnlyList<LectureProgress> progress) {
+        var rows = progress.Select(p => (IReadOnlyList<string>)[
+            LectureLabel.Short(p.Lecture),
+            p.ReachedLabel,
+            p.NextStage == LectureStage.Done ? "-" : LectureProgress.StageLabel(p.NextStage),
+            p.Pdf != null ? CleanCommand.FormatBytes(new System.IO.FileInfo(p.Pdf).Length) : "-",
+            p.TmpBytes > 0 ? CleanCommand.FormatBytes(p.TmpBytes) : "-"
+        ]);
+        Ui.Grid($"Vorlesungs-Status ({progress.Count} Ordner)", ["Vorlesung", "Stand", "Als Nächstes", "PDF", "tmp"], rows);
 
-            string details = $"Status: {progress} | PDF: {s.PdfSizeHuman} | Tmp: {s.TmpSizeHuman}";
-            rows.Add((s.Lecture, details));
-        }
-
-        Ui.Table("Status-Übersicht", rows);
-    }
-
-    private static List<string> ResolveTargetDirectories(ParseResult parseResult, AiStudioAutoExtractionConfig config) {
-        string? video = parseResult.GetValue(Video);
-        if (!string.IsNullOrWhiteSpace(video)) {
-            string baseName = ExtractionHelpers.ComputeOutputFolderName(video);
-            string candidate = Path.Combine(config.TargetFolder, baseName);
-            if (Directory.Exists(candidate)) return [candidate];
-            if (Directory.Exists(video)) return [video];
-            return [];
-        }
-
-        string? folder = parseResult.GetValue(Folder);
-        string root = !string.IsNullOrWhiteSpace(folder)
-            ? Path.GetFullPath(folder)
-            : ExtractionHelpers.OutputRoot(config);
-
-        if (!Directory.Exists(root)) return [];
-
-        if (Directory.Exists(Path.Combine(root, "tmp")) || Directory.GetFiles(root, "step1-*.tex").Length > 0) {
-            return [root];
-        }
-
-        var subdirs = Directory.GetDirectories(root);
-        List<string> result = [];
-        foreach (string subdir in subdirs) {
-            if (Directory.Exists(Path.Combine(subdir, "tmp")) ||
-                Directory.GetFiles(subdir, "step1-*.tex").Length > 0 ||
-                Directory.GetFiles(subdir, "*.pdf").Length > 0) {
-                result.Add(subdir);
-            }
-        }
-
-        return result;
-    }
-
-    private static long GetDirectorySize(string path) {
-        try {
-            return new DirectoryInfo(path).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
-        }
-        catch {
-            return 0;
+        int open = progress.Count(p => p.NextStage is not (LectureStage.Done or LectureStage.NotStarted));
+        if (open > 0) {
+            Ui.Detail($"{open} Vorlesung(en) begonnen, aber nicht fertig: 'lecx finish --dry-run' zeigt, was als Nächstes laufen würde.");
         }
     }
 }
@@ -163,4 +93,6 @@ public sealed record LectureStatusInfo(
     long PdfSize,
     string PdfSizeHuman,
     long TmpBytes,
-    string TmpSizeHuman);
+    string TmpSizeHuman,
+    string NextStep,
+    string? NextInput);

@@ -55,6 +55,7 @@ public static class CliBootstrapper {
         if (context.Json) {
             RouteLoggingToStandardError();
         }
+        WidenRedirectedOutput();
 
         try {
             // The library's default handler would catch every exception itself, print it as
@@ -100,6 +101,21 @@ public static class CliBootstrapper {
         });
     }
 
+    /// <summary>
+    /// [AI Context] Width for output that goes to a file or pipe. Spectre assumes 80 columns there,
+    /// so every log line longer than that (paths, lecture names, token lines) was hard-wrapped
+    /// mid-word, and tables squeezed their cells into fragments. A batch worker's log and an agent's
+    /// capture are read later, not on an 80-column screen. A real console keeps its own width.
+    /// [Human] Breitere Ausgabe, wenn sie in eine Datei oder Pipe geht (statt 80 Spalten).
+    /// </summary>
+    public const int RedirectedOutputWidth = 160;
+
+    private static void WidenRedirectedOutput() {
+        if (!Ui.IsTerminalOutput) {
+            AnsiConsole.Profile.Width = RedirectedOutputWidth;
+        }
+    }
+
     /// <summary>Exposed for tests, which assert the shape of the tree without running anything.</summary>
     public static RootCommand BuildRootCommand() {
         var root = new RootCommand(Description);
@@ -122,6 +138,7 @@ public static class CliBootstrapper {
         root.Add(ChatCommand.Build());
         root.Add(CleanCommand.Build());
         root.Add(StatusCommand.Build());
+        root.Add(FinishCommand.Build());
         root.Add(QuotaCommand.Build());
         root.Add(ThoughtsCommand.Build());
 

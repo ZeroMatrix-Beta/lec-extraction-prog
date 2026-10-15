@@ -30,7 +30,7 @@ public static partial class ExtractionHelpers {
     /// <c>&lt;SourceFolder&gt;/extracted_output</c> when none is set. Every CLI command that looks for
     /// outputs (status, clean, thoughts, run --clean-tmp) resolves it here, so they agree.
     /// </summary>
-    public static string OutputRoot(AiStudioAutoExtractionConfig config) =>
+    public static string OutputRoot(IAutoExtractionConfig config) =>
         string.IsNullOrWhiteSpace(config.TargetFolder) ? Path.Combine(config.SourceFolder, "extracted_output") : config.TargetFolder;
 
     /// <summary>The folder a video's outputs are written to, relative to the target folder.</summary>
