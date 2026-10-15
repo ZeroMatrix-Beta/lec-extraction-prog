@@ -21,31 +21,26 @@ using Spectre.Console;
 namespace LectureExtraction.Extraction;
 
 /// <summary>
-/// [AI Context] Orchestrates the fully automated transcription pipeline. 
+/// [AI Context] Orchestrates the fully automated transcription pipeline, on AI Studio or Vertex.
 /// Combines local FFmpeg preprocessing (producer) with Gemini API sequential extraction (consumer).
+/// What differs between the two platforms sits behind <see cref="IExtractionBackend"/>; until
+/// 2026-10-15 each had its own session class (AiStudioAutoExtractionSession, VertexAutoExtractionSession).
 /// Split into partial classes:
-/// - AiStudioAutoExtractionSession.cs (core pipeline, file batching, YouTube transcription)
-/// - AiStudioAutoExtractionSession.PrefixCache.cs (implicit prefix cache warming & history loading)
+/// - AutoExtractionSession.cs (core pipeline, file batching, YouTube transcription)
+/// - AutoExtractionSession.Generation.cs (per-segment upload, request building, streaming)
+/// - AutoExtractionSession.PrefixCache.cs (implicit prefix cache warming & history loading)
 /// Member Index:
 /// - StartAsync: Validates folders, prompts mode selection (batch, single, youtube), and begins execution.
 /// - SetupContextAndProcessAsync: Ensures system instructions/preamble are loaded then processes files.
 /// - ProcessFilesAsync: Producer/consumer loop for MP4 video segment extraction.
 /// - ProcessYouTubeTasksAsync: YouTube video download and transcription pipeline.
-/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos.
+/// [Human] Die Hauptklasse für die automatisierte Verarbeitung eines ganzen Ordners voller Vorlesungsvideos,
+/// für AI Studio und Vertex.
 /// </summary>
-public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) : IYouTubeTranscriptionHost {
-    public static readonly string[] AvailableModels = [
-        "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3-flash-preview",
-        "gemini-2.5-flash"
-    ];
-
-
-    private readonly Client _client = client;
-    private readonly AiStudioAutoExtractionConfig _config = config;
+public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtractionConfig config, AttachmentUploader attachmentHandler, SessionLogger sessionLogger, LatexRefinementSessionConfig latexRefinementConfig) : IYouTubeTranscriptionHost {
+    private readonly IExtractionBackend _backend = backend;
+    private readonly Client _client = backend.Client;
+    private readonly IAutoExtractionConfig _config = config;
     private readonly AttachmentUploader _attachmentHandler = attachmentHandler;
     private readonly SessionLogger _sessionLogger = sessionLogger;
     private readonly LatexRefinementSessionConfig _latexRefinementConfig = latexRefinementConfig;
@@ -124,12 +119,19 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             return true;
         }
 
-        if (!await EnsureSessionSetupAsync()) return false;
-        if (_config.OnlyDoWarmUp) {
-            Ui.Success("WarmUp & Context Setup abgeschlossen (OnlyDoWarmUp = true). Beende Session ohne Videoextraktion.", "Cache-Warming");
-            return true;
+        // Leftovers of a crashed run go first; the finally clears this run's uploads even on an exception.
+        await _backend.CleanUpRemoteFilesAsync();
+        try {
+            if (!await EnsureSessionSetupAsync()) return false;
+            if (_config.OnlyDoWarmUp) {
+                Ui.Success("WarmUp & Context Setup abgeschlossen (OnlyDoWarmUp = true). Beende Session ohne Videoextraktion.", "Cache-Warming");
+                return true;
+            }
+            return await ProcessFilesAsync([.. files]);
         }
-        return await ProcessFilesAsync([.. files]);
+        finally {
+            await _backend.CleanUpRemoteFilesAsync();
+        }
     }
 
     /// <summary>
@@ -165,15 +167,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
             return;
         }
 
-        Ui.Step("Automatisierte Extraktion (AI Studio)");
+        Ui.Step($"Automatisierte Extraktion ({_backend.Name})");
         Ui.Detail($"Quelle (Source): {_config.SourceFolder}");
         Ui.Detail($"Ziel (Target):   {_config.TargetFolder}");
-        if (_config.ActiveApiProfile == 0) {
-            Ui.Detail("API-Key:         Dedizierter Key für automatisierte Extraktion");
-        }
-        else {
-            Ui.Detail($"API-Key:         Profil {_config.ActiveApiProfile} (API_KEY-ai-studio-test-project-{_config.ActiveApiProfile})");
-        }
+        _backend.DescribeEndpoint();
 
         string[] videoFilesToProcess = ExtractionHelpers.DeduplicatePreferCompressed(Directory.GetFiles(_config.SourceFolder, "*.mp4")).ToArray();
         foreach (var videoFile in videoFilesToProcess) {
@@ -206,7 +203,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                 }
 
                 case ExtractionMode.YouTube:
-                    await new YouTubeTaskRunner(_config, this).RunAsync();
+                    await _backend.CleanUpRemoteFilesAsync();
+                    try {
+                        await new YouTubeTaskRunner(_config, this).RunAsync();
+                    }
+                    finally {
+                        await _backend.CleanUpRemoteFilesAsync();
+                    }
                     return;
 
                 default: {
@@ -361,7 +364,10 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         var sysParts = new List<Part>();
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) sysParts.Add(new() { Text = _systemInstructionText });
         if (_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            sysParts.AddRange(_historyParts);
+            // A backend whose system instruction takes text only (Vertex) keeps the history files out.
+            sysParts.AddRange(_backend.SystemInstructionAcceptsFiles
+                ? _historyParts
+                : _historyParts.Where(p => p.FileData == null && p.InlineData == null && !string.IsNullOrEmpty(p.Text)));
         }
         return sysParts;
     }
@@ -489,14 +495,16 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
         if (!_config.GoIntoLatexRefinement) return null;
 
         if (_latexRefinementConfig != null) {
-            _latexRefinementConfig.UseVertex = false;
+            bool useVertex = _backend.RefinementUsesVertex;
+            _latexRefinementConfig.UseVertex = useVertex;
             if (!_config.NumberOfParts.IsAuto && (int)_config.NumberOfParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
                 Ui.Info($"NumberOfParts = {_config.NumberOfParts} (<= 1). Deaktiviere Schritt 1 (Merger) für die LatexRefinementSession.", "AutoExtraction");
                 _latexRefinementConfig.Step1MergeAndTimestamp.Enabled = false;
             }
             if (_config.UseChosenModelForRestOfPipeline) {
                 Ui.Info($"UseChosenModelForRestOfPipeline = true. Übernehme Modell '{_config.CurrentModel}' und Parameter im Arbeitsspeicher für das Refinement...", "AutoExtraction");
-                void ApplyModelParametersTo(BackendParameters target) {
+                void ApplyModelParametersTo(BackendParameters? target) {
+                    if (target == null) return;
                     target.CurrentModel = _config.CurrentModel;
                     target.Temperature = _config.Temperature;
                     target.TopP = _config.TopP;
@@ -505,19 +513,13 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                     target.ThinkingBudget = _config.ThinkingBudget;
                     target.ThinkingLevel = _config.ThinkingLevel;
                 }
-                if (_latexRefinementConfig.Step1MergeAndTimestamp?.AiStudio != null) ApplyModelParametersTo(_latexRefinementConfig.Step1MergeAndTimestamp.AiStudio);
-                if (_latexRefinementConfig.Step2SpeechRefinement?.AiStudio != null) ApplyModelParametersTo(_latexRefinementConfig.Step2SpeechRefinement.AiStudio);
-                if (_latexRefinementConfig.Step3LastRefinement?.AiStudio != null) ApplyModelParametersTo(_latexRefinementConfig.Step3LastRefinement.AiStudio);
+                // The parameter set the refinement will actually read.
+                foreach (var step in new[] { _latexRefinementConfig.Step1MergeAndTimestamp, _latexRefinementConfig.Step2SpeechRefinement, _latexRefinementConfig.Step3LastRefinement }) {
+                    if (step != null) ApplyModelParametersTo(useVertex ? step.Vertex : step.AiStudio);
+                }
             }
         }
-        string? extractedRefinementEnvName = (_latexRefinementConfig?.AiStudioApiKeyEnvNames != null && _latexRefinementConfig.AiStudioApiKeyEnvNames.Length > _latexRefinementConfig.AiStudioActiveApiProfile)
-            ? _latexRefinementConfig.AiStudioApiKeyEnvNames[_latexRefinementConfig.AiStudioActiveApiProfile]
-            : null;
-        string envName = !string.IsNullOrEmpty(extractedRefinementEnvName)
-            ? extractedRefinementEnvName
-            : "API_KEY-latex-refinement";
-        string refinementApiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
-        return GoogleAiClientBuilder.BuildAiStudioClient(refinementApiKey);
+        return _backend.CreateRefinementClient(_latexRefinementConfig!);
     }
 
     /// <summary>
@@ -641,7 +643,7 @@ public partial class AiStudioAutoExtractionSession(Client client, AiStudioAutoEx
                                            ?? Path.Combine(fileSpecificOutputFolder, Path.GetFileNameWithoutExtension(file) + "_audio.aac");
                         if (System.IO.File.Exists(audioPath)) {
                             Ui.Info($"Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...", "Pre-Upload");
-                            var handler = new AttachmentUploader(state.RefinementClient ?? _client, fileSpecificOutputFolder, [fileSpecificOutputFolder], true, "", null, false, _config.FileActivationDelaySeconds, _config.VideoUploadTimeoutSeconds, _config.VideoUploadMaxRetries);
+                            var handler = _backend.CreateAudioUploader(state.RefinementClient, fileSpecificOutputFolder);
                             var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
                             if (audioUploadOk) return attached;
                         }

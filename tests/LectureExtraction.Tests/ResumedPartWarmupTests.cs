@@ -20,37 +20,37 @@ public class ResumedPartWarmupTests {
     [InlineData(2, 1)]
     [InlineData(4, 3)]
     public void Warms_up_a_resumed_part_with_inlined_predecessors(int partNumber, int precedingOnDisk) {
-        Assert.True(AiStudioAutoExtractionSession.ShouldWarmUpResumedPart(DefaultConfig(), partNumber, precedingOnDisk));
+        Assert.True(AutoExtractionSession.ShouldWarmUpResumedPart(DefaultConfig(), partNumber, precedingOnDisk));
     }
 
     [Fact]
     public void Skips_part_one() {
-        Assert.False(AiStudioAutoExtractionSession.ShouldWarmUpResumedPart(DefaultConfig(), 1, 0));
+        Assert.False(AutoExtractionSession.ShouldWarmUpResumedPart(DefaultConfig(), 1, 0));
     }
 
     [Fact]
     public void Skips_when_no_predecessor_is_on_disk() {
-        Assert.False(AiStudioAutoExtractionSession.ShouldWarmUpResumedPart(DefaultConfig(), 3, 0));
+        Assert.False(AutoExtractionSession.ShouldWarmUpResumedPart(DefaultConfig(), 3, 0));
     }
 
     [Fact]
     public void Skips_when_predecessors_are_uploaded_instead_of_inlined() {
         var config = DefaultConfig();
         config.InlinePrecedingLecTexParts = false;
-        Assert.False(AiStudioAutoExtractionSession.ShouldWarmUpResumedPart(config, 4, 3));
+        Assert.False(AutoExtractionSession.ShouldWarmUpResumedPart(config, 4, 3));
     }
 
     [Fact]
     public void Skips_when_reference_context_is_off() {
         var config = DefaultConfig();
         config.DebugSendReferenceFile = false;
-        Assert.False(AiStudioAutoExtractionSession.ShouldWarmUpResumedPart(config, 4, 3));
+        Assert.False(AutoExtractionSession.ShouldWarmUpResumedPart(config, 4, 3));
     }
 
     [Fact]
     public void Skips_when_warm_up_is_disabled() {
         var config = DefaultConfig();
         config.EnableImplicitPrefixCacheWarmup = false;
-        Assert.False(AiStudioAutoExtractionSession.ShouldWarmUpResumedPart(config, 4, 3));
+        Assert.False(AutoExtractionSession.ShouldWarmUpResumedPart(config, 4, 3));
     }
 }

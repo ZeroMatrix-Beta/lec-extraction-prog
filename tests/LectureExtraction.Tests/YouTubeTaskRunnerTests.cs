@@ -5,7 +5,7 @@ namespace LectureExtraction.Tests;
 
 /// <summary>
 /// Covers the per-fragment prompt construction that moved out of
-/// <c>AiStudioAutoExtractionSession.ProcessYouTubeTasksAsync</c> when
+/// <c>AutoExtractionSession</c>'s YouTube mode when
 /// <see cref="YouTubeTaskRunner"/> was extracted (Phase 11).
 ///
 /// <para>This text goes straight into a paid request and shapes what the model transcribes, but it

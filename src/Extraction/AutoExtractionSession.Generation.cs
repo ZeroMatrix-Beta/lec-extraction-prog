@@ -14,19 +14,19 @@ using LectureExtraction.Infrastructure;
 namespace LectureExtraction.Extraction;
 
 /// <summary>
-/// [AI Context] Everything the AI Studio session does for a single video segment once FFmpeg has
+/// [AI Context] Everything the extraction session does for a single video segment once FFmpeg has
 /// produced it: uploading the segment and building its prompt, assembling the generation request
 /// (system instruction, history, reference context, thinking config), the optional per-part token
 /// diagnostic, and streaming the response back while accumulating usage.
 ///
-/// <para>Split out of AiStudioAutoExtractionSession (Phase 11), mirroring the same cut made in
+/// <para>Split out of the session (Phase 11), mirroring the same cut made in
 /// LatexRefinementSession. The boundary is per-segment model interaction versus batch
 /// orchestration - the pipeline half decides which videos and parts get processed and in what
 /// order, this half decides what one request looks like.</para>
 /// [Human] Alles, was für einen einzelnen Video-Teil passiert: Upload, Prompt- und Request-Aufbau,
 /// Token-Diagnose und Streaming. Vom Batch-Ablauf getrennt.
 /// </summary>
-public partial class AiStudioAutoExtractionSession {
+public partial class AutoExtractionSession {
 
     private async Task<SegmentUpload> UploadSegmentAndBuildPromptAsync(string partFile, int partNumber, int totalParts, string originalFileName, double fullOriginalVideoDuration) {
         var dateInfo = VideoDateParser.Parse(originalFileName);
@@ -261,7 +261,7 @@ public partial class AiStudioAutoExtractionSession {
             new GenerationLoopOptions {
                 MaxContinueRequests = _config.MaxContinueRequests,
                 AnnounceRequest = (request, max) =>
-                    Ui.Step($"Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {request}/{max})..."),
+                    Ui.Step($"Sende Anfrage für Part {partNumber} an {_backend.ProviderName} ({_config.CurrentModel}) (Request {request}/{max})..."),
                 RetryContext = $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
                 HighDemandDelay = _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
                 UnrecoverableErrorPrefix = "Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: ",

@@ -163,7 +163,7 @@ public static class SessionFactory {
                     };
                     var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
                     var latexRefinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
-                    var session = new AiStudioAutoExtractionSession(client, config, attachmentHandler, sessionLogger, latexRefinementConfig);
+                    var session = new AutoExtractionSession(new AiStudioExtractionBackend(client, config), config, attachmentHandler, sessionLogger, latexRefinementConfig);
                     await session.StartAsync();
                     return false;
                 }

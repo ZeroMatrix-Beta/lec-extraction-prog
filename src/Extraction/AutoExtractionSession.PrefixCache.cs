@@ -20,9 +20,9 @@ using LectureExtraction.Refinement;
 namespace LectureExtraction.Extraction;
 
 /// <summary>
-/// [AI Context] AI-Studio-only implicit prefix-cache priming: loads the dummy-part0.tex anchor and sends
+/// [AI Context] Implicit prefix-cache priming: loads the dummy-part0.tex anchor and sends
 /// warm-up handshakes (single-shot or staged/batched) to pre-fill Google's implicit prefix cache before
-/// real video processing begins. Split out of AiStudioAutoExtractionSession.cs (Phase 4.5).
+/// real video processing begins. Split out of the session (Phase 4.5).
 /// Member Index:
 /// - WarmUpWithBatchedHistoryAsync: Staged cache warming by grouping history files into batches.
 /// - PrimePrefixCacheAsync: Session warm-up handshake (system instruction + dummy anchor).
@@ -30,7 +30,7 @@ namespace LectureExtraction.Extraction;
 /// - SendWarmupHandshakeAsync: Sends one handshake, records usage, waits for the token refill.
 /// [Human] Der Cache-Warmup-Teil der Session: dummy-part0.tex laden und Warmup-Handshakes senden.
 /// </summary>
-public partial class AiStudioAutoExtractionSession {
+public partial class AutoExtractionSession {
     /// <summary>
     /// [AI Context] Performs staged cache warming: splits history files into batches and sends
     /// incremental warm-up handshakes between each batch to pre-fill Google's implicit prefix cache.
@@ -117,7 +117,7 @@ public partial class AiStudioAutoExtractionSession {
     }
 
     /// <summary>
-    /// [AI Context] Sends a lightweight handshake request containing the System Instruction to Google AI Studio.
+    /// [AI Context] Sends a lightweight handshake request containing the System Instruction to the backend.
     /// This warms up Google's implicit prefix cache and enforces a token refill delay
     /// before heavy video processing begins, preventing Quota Errors and ensuring high cache hits.
     /// [Human] Wärme-Handshake: Sendet ein kleines Signal an Google, damit die KI die System Instruction vorab in den impliziten Cache laedt.
@@ -202,7 +202,7 @@ public partial class AiStudioAutoExtractionSession {
     // - No video or media is attached — the system instruction's processing rules do not apply.
     // - The model must ONLY echo the acknowledgement string, nothing else.
     private string HandshakeText() =>
-        $"""[Cache-Warming Handshake] This is a technical warmup request to pre-fill the implicit prefix cache (on Google AI Studio servers). No video, audio, or any other media file is attached to this request — the lecture extraction instructions in the system instruction are therefore NOT applicable and must NOT be executed. Do not generate any LaTeX, summaries, or content of any kind. Please acknowledge receipt with exactly this string and nothing else: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'""";
+        $"""[Cache-Warming Handshake] This is a technical warmup request to pre-fill the implicit prefix cache (on {_backend.ProviderName} servers). No video, audio, or any other media file is attached to this request — the lecture extraction instructions in the system instruction are therefore NOT applicable and must NOT be executed. Do not generate any LaTeX, summaries, or content of any kind. Please acknowledge receipt with exactly this string and nothing else: '[AI-Model: {_config.CurrentModel}] Handshake confirmed. Ready.'""";
 
     /// <summary>
     /// [AI Context] Sends one warm-up handshake (the given contents under the session's system
