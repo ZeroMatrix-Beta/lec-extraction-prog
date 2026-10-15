@@ -255,150 +255,82 @@ public partial class AiStudioAutoExtractionSession {
     private bool IncludesThoughts => _config.ThoughtSummaries?.Enabled == true;
 
     private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext, ThoughtLog thoughts) {
-        string fullResponse = "";
-        var budget = new ContinueBudget(_config.MaxContinueRequests);
-        int interactionInputTokens = 0;
-        int interactionOutputTokens = 0;
-        int interactionCachedTokens = 0;
-        int interactionThinkingTokens = 0;
-        int interactionRequests = 0;
-        string currentLogPrompt = logContext;
-
-        using var cancelScope = new ConsoleCancelScope();
-
-        while (true) {
-            Ui.Step($"Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {budget.RequestNumber}/{budget.MaxTotal})...");
-            GroundingMetadata? accumulatedGrounding = null;
-            string chunkResp = "";
-            int requestInputTokens = 0;
-            int requestOutputTokens = 0;
-            int requestCachedTokens = 0;
-            bool callSuccess = false;
-            var usage = new UsageReport();
-
-            try {
-                callSuccess = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                    streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, history, requestConfig),
-                    onChunkReceived: async (chunk) => {
-                        string txt = thoughts.Absorb(chunk);
-                        Ui.Raw(txt);
-                        chunkResp += txt;
-
-                        var metadata = ResponseParts.Grounding(chunk);
-                        if (metadata != null) {
-                            accumulatedGrounding = metadata;
-                        }
-
-                        usage.Absorb(chunk.UsageMetadata);
-                        usage.RecordFinishReason(ResponseParts.FinishReason(chunk));
-                        if (chunk.UsageMetadata != null) {
-                            if (chunk.UsageMetadata.PromptTokenCount.HasValue) requestInputTokens = chunk.UsageMetadata.PromptTokenCount.Value;
-                            if (chunk.UsageMetadata.CandidatesTokenCount.HasValue) requestOutputTokens = chunk.UsageMetadata.CandidatesTokenCount.Value;
-                            if (chunk.UsageMetadata.CachedContentTokenCount.HasValue) requestCachedTokens = chunk.UsageMetadata.CachedContentTokenCount.Value;
-                        }
-                        await Task.CompletedTask;
-                    },
-                    cancellationToken: cancelScope.Token,
-                    retryContext: $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
-                    onRetry: () => {
-                        chunkResp = "";
-                        accumulatedGrounding = null;
-                        requestInputTokens = 0;
-                        requestOutputTokens = 0;
-                        requestCachedTokens = 0;
-                        usage = new UsageReport();
-                        thoughts.DiscardRequest();
-                    },
-                    highDemandDelay: _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
-                    resumeOnPartialProgress: true
-                );
-            }
-            catch (Exception ex) {
-                Ui.Error($"Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: {ex.Describe()}", "Abbruch");
-                break;
-            }
-
-            if (accumulatedGrounding != null) {
-                Ui.Info("Quellen (Google Search Grounding):");
-                if (accumulatedGrounding.WebSearchQueries != null && accumulatedGrounding.WebSearchQueries.Count > 0) {
-                    Ui.Detail($"Suchanfragen: {string.Join(", ", accumulatedGrounding.WebSearchQueries.Select(q => $"\"{q}\""))}");
-                }
-                if (accumulatedGrounding.GroundingChunks != null) {
-                    int refIdx = 1;
-                    foreach (var chunkRef in accumulatedGrounding.GroundingChunks) {
-                        if (chunkRef.Web != null) {
-                            Ui.Detail($"[{refIdx}] {chunkRef.Web.Title} - {chunkRef.Web.Uri}");
-                            refIdx++;
-                        }
+        var result = await GenerationLoop.RunAsync(history,
+            h => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, h, requestConfig),
+            thoughts,
+            new GenerationLoopOptions {
+                MaxContinueRequests = _config.MaxContinueRequests,
+                AnnounceRequest = (request, max) =>
+                    Ui.Step($"Sende Anfrage für Part {partNumber} an Google AI Studio ({_config.CurrentModel}) (Request {request}/{max})..."),
+                RetryContext = $"Teil {partNumber} von {Path.GetFileName(originalFileName)}",
+                HighDemandDelay = _config.HighDemandDelaySeconds > 0 ? _config.HighDemandDelaySeconds : null,
+                UnrecoverableErrorPrefix = "Der Fehler konnte nicht durch einen automatischen Retry behoben werden. Fahre mit nächstem Teil fort. Finaler Fehler: ",
+                ShowGroundingSources = true,
+                ReportRequest = request => ReportPartRequest(request, partNumber),
+                // Thoughts first, so in chat_log.md the summary precedes the answer it led to.
+                AfterRequestAsync = request => LogPartRequestAsync(request, partNumber, logContext),
+                IsComplete = text => VideoCompleteRegex().IsMatch(text),
+                BudgetStopSuffix = $"Breche diesen Teil ab ({partFile}).",
+                BuildContinuePrompt = BuildPartContinuePrompt,
+                WaitBeforeContinueAsync = async () => {
+                    int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
+                    Ui.Detail($"Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen...", "Timer");
+                    if (!await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
+                        Ui.Info("Warten durch Benutzer abgebrochen.");
+                        return false;
                     }
-                }
-            }
+                    return true;
+                },
+            });
 
-            if (!callSuccess) {
-                Ui.Info("Generierung durch Benutzer abgebrochen oder fehlgeschlagen.");
-                break;
-            }
-
-            interactionInputTokens += requestInputTokens;
-            interactionOutputTokens += requestOutputTokens;
-            interactionCachedTokens += requestCachedTokens;
-            interactionThinkingTokens += usage.ThoughtTokens;
-            interactionRequests++;
-            _sessionTotalInputTokens += requestInputTokens;
-            _sessionTotalOutputTokens += requestOutputTokens;
-            _sessionTotalCachedTokens += requestCachedTokens;
-
-            int freshReqTokens = Math.Max(0, requestInputTokens - requestCachedTokens);
-            int freshPartTokens = Math.Max(0, interactionInputTokens - interactionCachedTokens);
-            int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
-
-            Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {requestInputTokens:N0} | Gecacht: {requestCachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {requestOutputTokens:N0}"), "Tokens");
-            if (_config.VerboseConsoleOutput) {
-                Ui.Detail($"[Part Total Tokens]    Total Prompt: {interactionInputTokens:N0} | Gecacht: {interactionCachedTokens:N0} | Frisch: {freshPartTokens:N0} | Output: {interactionOutputTokens:N0}");
-                Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
-            }
-
-            fullResponse += chunkResp;
-            // Before the chat-log entry, so in chat_log.md the summary precedes the answer it led to.
-            await thoughts.EndRequestAsync(budget.RequestNumber, usage);
-            await _sessionLogger.LogChatAsync(currentLogPrompt, currentLogPrompt, _config.CurrentModel, chunkResp, "AutoExtraction", requestInputTokens, requestOutputTokens, requestCachedTokens);
-
-            bool segmentComplete = SegmentCompleteRegex().IsMatch(chunkResp);
-            bool videoComplete = VideoCompleteRegex().IsMatch(chunkResp);
-
-            if (videoComplete) break;
-
-            if (!budget.TryContinue(chunkResp, out string stopReason)) {
-                Ui.Warn($"{stopReason} Breche diesen Teil ab ({partFile}).");
-                break;
-            }
-
-            string continuePrompt = segmentComplete ? "Continue" :
-                $"[IMPORTANT] Your response was cut short. Your last output ended with:\n\n" +
-                $"{ContinueBudget.EchoTail(chunkResp)}\n\n" +
-                "Please \"continue\" exactly where you left off, as raw LaTeX without Markdown code fences, just continuing the text directly.";
-
-            if (segmentComplete) Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");
-            else Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "AutoExtraction");
-
-            Ui.Detail($"[Sende folgenden Continue-Prompt:]\n{continuePrompt}");
-
-            history.Add(new Content { Role = "model", Parts = [new() { Text = chunkResp }] });
-            history.Add(new Content { Role = "user", Parts = [new() { Text = continuePrompt }] });
-            currentLogPrompt = $"[Continue Prompt für Part {partNumber}]:\n{continuePrompt}";
-
-            int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
-            Ui.Detail($"Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen...", "Timer");
-            if (!await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
-                Ui.Info("Warten durch Benutzer abgebrochen.");
-                break;
-            }
-        }
-
-        await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
         AttachmentUploader.HasJustUploaded = false;
-        return new SegmentTranscript(fullResponse, new TokenUsage(interactionInputTokens, interactionOutputTokens, interactionCachedTokens, interactionThinkingTokens, interactionRequests),
-            thoughts.FilePath);
+        return new SegmentTranscript(result.Text, result.Usage, thoughts.FilePath);
+    }
+
+    /// <summary>
+    /// [AI Context] A part request's token lines: the request, and in verbose mode the part and the
+    /// session so far. Also adds the request to the session totals.
+    /// [Human] Token-Zeilen einer Part-Anfrage; zählt sie zur Session-Summe.
+    /// </summary>
+    private void ReportPartRequest(GenerationRequest request, int partNumber) {
+        var usage = request.Usage;
+        _sessionTotalInputTokens += usage.PromptTokens;
+        _sessionTotalOutputTokens += usage.CandidateTokens;
+        _sessionTotalCachedTokens += usage.CachedTokens;
+
+        int freshReqTokens = Math.Max(0, usage.PromptTokens - usage.CachedTokens);
+        int freshSessTokens = Math.Max(0, _sessionTotalInputTokens - _sessionTotalCachedTokens);
+
+        Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {usage.CandidateTokens:N0}"), "Tokens");
+        if (_config.VerboseConsoleOutput) {
+            var part = request.Total;
+            Ui.Detail($"[Part Total Tokens]    Total Prompt: {part.Input:N0} | Gecacht: {part.Cached:N0} | Frisch: {part.Fresh:N0} | Output: {part.Output:N0}");
+            Ui.Detail($"[Session Total Tokens] Total Prompt: {_sessionTotalInputTokens:N0} | Gecacht: {_sessionTotalCachedTokens:N0} | Frisch: {freshSessTokens:N0} | Output: {_sessionTotalOutputTokens:N0}");
+        }
+    }
+
+    /// <summary>Writes a part request to chat_log.md, under the prompt it answered.</summary>
+    private Task LogPartRequestAsync(GenerationRequest request, int partNumber, string logContext) {
+        string prompt = request.ContinuePrompt == null ? logContext : $"[Continue Prompt für Part {partNumber}]:\n{request.ContinuePrompt}";
+        var usage = request.Usage;
+        return _sessionLogger.LogChatAsync(prompt, prompt, _config.CurrentModel, request.Text, "AutoExtraction", usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens);
+    }
+
+    /// <summary>
+    /// [AI Context] A segment-complete marker asks for the next segment with a plain "Continue"; any
+    /// other cut-off answer gets the full continue prompt quoting its tail.
+    /// [Human] Continue-Prompt einer Part-Anfrage: "Continue" nach Segment-Ende, sonst mit Zitat.
+    /// </summary>
+    private static string BuildPartContinuePrompt(string response) {
+        bool segmentComplete = SegmentCompleteRegex().IsMatch(response);
+        string continuePrompt = segmentComplete ? "Continue" : GenerationLoop.CutShortPrompt(response,
+            "Please \"continue\" exactly where you left off, as raw LaTeX without Markdown code fences, just continuing the text directly.");
+
+        if (segmentComplete) Ui.Info("Segment-Limit erreicht. Sende 'Continue'...", "AutoExtraction");
+        else Ui.Info("Unerwartetes Ende der Antwort. Bereite automatisierten 'Continue'-Prompt vor...", "AutoExtraction");
+
+        Ui.Detail($"[Sende folgenden Continue-Prompt:]\n{continuePrompt}");
+        return continuePrompt;
     }
 
 }
