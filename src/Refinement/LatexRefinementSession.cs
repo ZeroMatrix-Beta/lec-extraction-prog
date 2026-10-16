@@ -484,7 +484,7 @@ public partial class LatexRefinementSession {
                 string ext = Path.GetExtension(outputFileName);
                 int copyIndex = 1;
                 while (System.IO.File.Exists(outPath)) {
-                    outPath = Path.Combine(targetOutputFolder, $"{fileNameWithoutExt}-copy{copyIndex}{ext}");
+                    outPath = Path.Combine(targetOutputFolder, $"{fileNameWithoutExt}-copy-{copyIndex}{ext}");
                     copyIndex++;
                 }
                 outputFileName = Path.GetFileName(outPath);
@@ -552,6 +552,9 @@ public partial class LatexRefinementSession {
     [System.Text.RegularExpressions.GeneratedRegex(@"<input_(?:file|tex)\b[^>]*>(.*?)</input_(?:file|tex)>", System.Text.RegularExpressions.RegexOptions.Singleline)]
     private static partial System.Text.RegularExpressions.Regex InputPayloadRegex();
 
+    [System.Text.RegularExpressions.GeneratedRegex(@"-copy-?\d+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex TrailingCopySuffixRegex();
+
     /// <summary>
     /// [AI Context] Name of the finished PDF the pipeline copies out for the reader. It is the lecture
     /// folder's name whenever the base name starts with it: a base name derived from a re-run's files
@@ -566,26 +569,31 @@ public partial class LatexRefinementSession {
         return (isLectureFolder ? folderName : baseName) + ".pdf";
     }
 
-    private static string GetCleanBaseName(string filePath) {
+    public static string GetCleanBaseName(string filePath) {
         string name = Path.GetFileNameWithoutExtension(filePath);
         if (name.Length > 6 && name.StartsWith("step", StringComparison.OrdinalIgnoreCase) && char.IsDigit(name[4]) && name[5] == '-') {
             name = name[6..];
         }
-        string[] suffixes = ["-merged", "-speech_refined", "-final", "-last-fix", "-last-fix-standalone", "-final-attempt", "-final-main", "-last_try-main", "-last_try"];
-        foreach (var suffix in suffixes) {
-            if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
-                name = name[..^suffix.Length];
+        string[] suffixes = ["-merged", "-speech_refined", "-final", "-last-fix", "-last-fix-standalone", "-final-attempt", "-final-main", "-last_try-main", "-last_try", "-offset", "-all"];
+        bool stripped;
+        do {
+            stripped = false;
+            string withoutCopy = TrailingCopySuffixRegex().Replace(name, "");
+            if (withoutCopy.Length != name.Length) {
+                name = withoutCopy;
+                stripped = true;
             }
-        }
+            foreach (var suffix in suffixes) {
+                if (name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) {
+                    name = name[..^suffix.Length];
+                    stripped = true;
+                }
+            }
+        } while (stripped);
+
         int partIdx = name.IndexOf("-part", StringComparison.OrdinalIgnoreCase);
         if (partIdx >= 0) {
             name = name[..partIdx];
-        }
-        if (name.EndsWith("-offset", StringComparison.OrdinalIgnoreCase)) {
-            name = name[..^"-offset".Length];
-        }
-        if (name.EndsWith("-all", StringComparison.OrdinalIgnoreCase)) {
-            name = name[..^"-all".Length];
         }
         return ExtractionHelpers.StripVideoExtensions(name);
     }

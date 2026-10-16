@@ -209,6 +209,9 @@ public class DirectAiChatSessionVertex {
                     initialInput = null;
                 }
                 else {
+                    if (!Console.IsInputRedirected) {
+                        while (Console.KeyAvailable) Console.ReadKey(intercept: true);
+                    }
                     // Deliberately a raw line rather than a Ui prompt - see the AI Studio session's
                     // note: an empty line is a valid no-op here and a Spectre TextPrompt would reject it.
                     Ui.Blank();
@@ -455,28 +458,24 @@ public class DirectAiChatSessionVertex {
         var apiContents = history; // By default, use the original history
 
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
-            config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };
             // Gemma models (pre-v4) don't support the 'system' role.
-            // We prepend the instruction to the first user message instead.
+            // We prepend the instruction to the first user message in a shallow copy on every turn.
             if (ModelCapabilities.RequiresSystemInstructionInFirstUserTurn(selectedModel)) {
-                bool isFirstTurn = !history.Any(c => c.Role == "model");
-                if (isFirstTurn) {
-                    var modifiedHistory = new List<Content>();
-                    bool prepended = false;
-                    foreach (var content in history) {
-                        if (!prepended && content.Role == "user") {
-                            var newParts = content.Parts?.ToList() ?? [];
-                            newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
-                            modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
-                            prepended = true;
-                        }
-                        else {
-                            modifiedHistory.Add(content);
-                        }
+                var modifiedHistory = new List<Content>(history.Count);
+                bool prepended = false;
+                foreach (var content in history) {
+                    if (!prepended && content.Role == "user") {
+                        var newParts = content.Parts?.ToList() ?? [];
+                        newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
+                        modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
+                        prepended = true;
                     }
-                    apiContents = modifiedHistory;
-                    config.SystemInstruction = null;
+                    else {
+                        modifiedHistory.Add(content);
+                    }
                 }
+                apiContents = modifiedHistory;
+                config.SystemInstruction = null;
             }
             else {
                 config.SystemInstruction = new Content { Role = "system", Parts = [new() { Text = _systemInstructionText }] };

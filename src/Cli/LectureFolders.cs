@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
+using LectureExtraction.Media;
 
 namespace LectureExtraction.Cli;
 
@@ -38,6 +40,12 @@ public static class LectureFolders {
             return [root];
         }
 
-        return [.. Directory.GetDirectories(root).Where(LectureProgress.IsLectureFolder).OrderBy(Path.GetFileName)];
+        return [.. Directory.GetDirectories(root)
+            .Where(LectureProgress.IsLectureFolder)
+            .OrderBy(d => {
+                var date = VideoDateParser.Parse(Path.GetFileName(d)).Date;
+                return date != DateTime.MinValue ? date : DateTime.MaxValue;
+            })
+            .ThenBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)];
     }
 }

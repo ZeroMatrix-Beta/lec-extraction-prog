@@ -121,7 +121,12 @@ public static class FinishCommand {
     /// <param name="passThrough">Options appended to every command (profile, model, thoughts, config dir).</param>
     public static List<FinishAction> PlanActions(IEnumerable<LectureProgress> lectures, Func<string, string?> findVideo, IReadOnlyList<string> passThrough) {
         var actions = new List<FinishAction>();
-        foreach (var p in lectures.OrderBy(p => p.Lecture, StringComparer.OrdinalIgnoreCase)) {
+        foreach (var p in lectures
+            .OrderBy(p => {
+                var date = Media.VideoDateParser.Parse(p.Lecture).Date;
+                return date != DateTime.MinValue ? date : DateTime.MaxValue;
+            })
+            .ThenBy(p => p.Lecture, StringComparer.OrdinalIgnoreCase)) {
             string[]? args;
             string? problem = null;
             switch (p.NextStage) {

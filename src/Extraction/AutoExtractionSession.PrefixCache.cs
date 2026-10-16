@@ -282,7 +282,10 @@ public partial class AutoExtractionSession {
             var usage = new UsageReport();
 
             bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                streamFactory: () => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig),
+                streamFactory: () => {
+                    ApiKeyQuotaTracker.RecordClientRequest(_client, _config.CurrentModel, string.IsNullOrEmpty(stepLabel) ? "Warmup Handshake" : stepLabel);
+                    return _client.Models.GenerateContentStreamAsync(_config.CurrentModel, pingContent, requestConfig);
+                },
                 onChunkReceived: async (chunk) => {
                     // The answer only: with IncludeThoughts on, Parts[0] can be a thought summary.
                     string txt = ResponseParts.Split(chunk).Answer;

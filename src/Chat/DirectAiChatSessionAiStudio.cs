@@ -525,25 +525,23 @@ public partial class DirectAiChatSessionAiStudio {
         // Pass the Director's Cut Protocol as an absolute System Instruction
         if (!string.IsNullOrWhiteSpace(_systemInstructionText)) {
             // Gemma models (pre-v4) don't support the 'system' role.
-            // We prepend the instruction to the first user message instead.
+            // We prepend the instruction to the first user message in a shallow copy on every turn.
             if (ModelCapabilities.RequiresSystemInstructionInFirstUserTurn(selectedModel)) {
-                if (!history.Any(c => c.Role == "model")) { // isFirstTurn
-                    var modifiedHistory = new List<Content>();
-                    bool prepended = false;
-                    foreach (var content in history) {
-                        if (!prepended && content.Role == "user") {
-                            var newParts = content.Parts?.ToList() ?? [];
-                            newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
-                            modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
-                            prepended = true;
-                        }
-                        else {
-                            modifiedHistory.Add(content);
-                        }
+                var modifiedHistory = new List<Content>(history.Count);
+                bool prepended = false;
+                foreach (var content in history) {
+                    if (!prepended && content.Role == "user") {
+                        var newParts = content.Parts?.ToList() ?? [];
+                        newParts.Insert(0, new Part { Text = $"System Instruction:\n{_systemInstructionText}\n\n---\n\nUser Request:\n" });
+                        modifiedHistory.Add(new Content { Role = "user", Parts = newParts });
+                        prepended = true;
                     }
-                    apiContents = modifiedHistory;
-                    config.SystemInstruction = null; // Ensure it's not sent in the dedicated field
+                    else {
+                        modifiedHistory.Add(content);
+                    }
                 }
+                apiContents = modifiedHistory;
+                config.SystemInstruction = null; // Ensure it's not sent in the dedicated field
             }
             else {
                 // For all other models (Gemini, Gemma v4+), use the standard system instruction field.

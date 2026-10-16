@@ -28,4 +28,12 @@ public class OutputTextTests {
 
         Assert.Equal("step2-…-all-offset-merged.tex", FinishCommand.ShortFileName($@"D:\out\{lecture}\step2-{lecture}-all-offset-merged.tex", lecture));
     }
+
+    [Theory]
+    [InlineData(@"D:\out\step1-02-18-2026-wednesday-week1-Analysis_II-all-offset-copy-1.tex", "02-18-2026-wednesday-week1-Analysis_II")]
+    [InlineData(@"D:\out\step2-02-18-2026-wednesday-week1-Analysis_II-all-offset-copy-1-offset-merged-copy1.tex", "02-18-2026-wednesday-week1-Analysis_II")]
+    [InlineData(@"D:\out\step4-05-12-25-tuesday-offset-final.tex", "05-12-25-tuesday")]
+    public void Clean_base_name_strips_copy_and_offset_suffixes_in_any_order(string path, string expected) {
+        Assert.Equal(expected, LectureExtraction.Refinement.LatexRefinementSession.GetCleanBaseName(path));
+    }
 }

@@ -127,4 +127,14 @@ public class LectureProgressTests : IDisposable {
     public void The_short_label_is_date_weekday_and_week(string name, string expected) {
         Assert.Equal(expected, LectureLabel.Short(name));
     }
+
+    [Fact]
+    public void Same_stage_lectures_are_ordered_chronologically_by_date_not_month_string() {
+        var actions = FinishCommand.PlanActions([
+            new LectureProgress(Path.Combine(_root, "02-18-2026-wednesday"), 3, "c2026.tex", null, null, null, null, 0),
+            new LectureProgress(Path.Combine(_root, "12-15-2025-monday"), 3, "c2025.tex", null, null, null, null, 0),
+        ], _ => null, []);
+
+        Assert.Equal(["12-15-2025-monday", "02-18-2026-wednesday"], actions.Select(a => a.Lecture));
+    }
 }

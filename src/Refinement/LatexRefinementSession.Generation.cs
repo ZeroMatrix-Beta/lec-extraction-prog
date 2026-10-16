@@ -212,7 +212,10 @@ public partial class LatexRefinementSession {
         int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
 
         var result = await GenerationLoop.RunAsync(history,
-            h => _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, h, requestConfig),
+            h => {
+                ApiKeyQuotaTracker.RecordClientRequest(_client, backendParams.CurrentModel, outputFileName);
+                return _client.Models.GenerateContentStreamAsync(backendParams.CurrentModel, h, requestConfig);
+            },
             thoughts,
             new GenerationLoopOptions {
                 MaxContinueRequests = stepConfig.MaxContinueRequests,

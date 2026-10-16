@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Extraction;
+using LectureExtraction.Infrastructure;
 
 namespace LectureExtraction.Cli.Commands;
 
@@ -97,9 +98,7 @@ public static partial class CleanCommand {
                                 Ui.Success($"Gelöscht: {dirName}/tmp ({FormatBytes(tmpSize)})", "clean");
                             }
                             catch (Exception ex) {
-                                Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                                Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
-                                Ui.Error($"Fehler beim Löschen von {tmpDir} ({ex.GetType().Name}): {ex.Message}", "clean");
+                                Ui.Error($"Fehler beim Löschen von {tmpDir}: {ex.Describe()}", "clean");
                             }
                         }
                         else {
@@ -161,14 +160,15 @@ public static partial class CleanCommand {
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-            Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+            Ui.Warn($"Aktivitätsprüfung für '{dir}' unvollständig: {ex.Describe()}", "clean");
         }
         return false;
     }
 
-    private static (int ArchivedCount, long ArchivedBytes) ProcessCopies(string dir, bool dryRun) {
-        var copyFiles = Directory.GetFiles(dir, "*-copy-*.tex");
+    internal static (int ArchivedCount, long ArchivedBytes) ProcessCopies(string dir, bool dryRun) {
+        var copyFiles = Directory.GetFiles(dir, "*-copy*.tex")
+            .Where(f => CopySuffixRegex().IsMatch(Path.GetFileNameWithoutExtension(f)))
+            .ToArray();
         if (copyFiles.Length == 0) return (0, 0);
 
         // Group by canonical name
@@ -209,8 +209,7 @@ public static partial class CleanCommand {
                         File.Move(file, dest, overwrite: true);
                     }
                     catch (Exception ex) {
-                        Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                        Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                        Ui.Warn($"Kopie '{Path.GetFileName(file)}' konnte nicht archiviert werden: {ex.Describe()}", "clean");
                     }
                 }
             }
@@ -224,8 +223,7 @@ public static partial class CleanCommand {
                     File.Move(newest, dest, overwrite: true);
                 }
                 catch (Exception ex) {
-                    Console.WriteLine($"\n[Exception gefangen] Art der Exception: {ex.GetType().Name}");
-                    Console.WriteLine($"Originaler Fehlertext: {ex.Message}");
+                    Ui.Warn($"Neueste Kopie '{Path.GetFileName(newest)}' konnte nicht übernommen werden: {ex.Describe()}", "clean");
                 }
             }
         }
@@ -308,7 +306,8 @@ public static partial class CleanCommand {
         try {
             return new DirectoryInfo(path).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
         }
-        catch {
+        catch (Exception ex) {
+            Ui.Warn($"Größe von '{path}' konnte nicht berechnet werden: {ex.Describe()}", "clean");
             return 0;
         }
     }
@@ -320,7 +319,7 @@ public static partial class CleanCommand {
         return $"{bytes} B";
     }
 
-    [GeneratedRegex(@"-copy-\d+")]
+    [GeneratedRegex(@"-copy-?\d+")]
     private static partial Regex CopySuffixRegex();
 }
 

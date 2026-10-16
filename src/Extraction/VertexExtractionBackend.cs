@@ -41,7 +41,7 @@ public sealed class VertexExtractionBackend(Client client, VertexAutoExtractionC
     public Task CleanUpRemoteFilesAsync() => GcsWorkspace.PurgeAsync(config.GcsBucketName);
 
     public AttachmentUploader CreateAudioUploader(Client? refinementClient, string folder) =>
-        new(Client, folder, [folder], false, config.GcsBucketName);
+        new(refinementClient ?? Client, folder, [folder], false, config.GcsBucketName);
 
     public Client CreateRefinementClient(LatexRefinementSessionConfig refinementConfig) =>
         GoogleAiClientBuilder.BuildVertexClient(refinementConfig?.VertexProjectId ?? "", refinementConfig?.VertexLocation ?? "");

@@ -102,7 +102,7 @@ public static class RunCommand {
                             Ui.Detail($"Bereinigt (tmp): {folderName}/tmp", "clean-tmp");
                         }
                         catch (Exception ex) {
-                            Ui.Warn($"Konnte tmp-Ordner nicht löschen ({ex.GetType().Name}): {ex.Message}", "clean-tmp");
+                            Ui.Warn($"Konnte tmp-Ordner nicht löschen: {ex.Describe()}", "clean-tmp");
                         }
                     }
                 }

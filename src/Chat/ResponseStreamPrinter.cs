@@ -82,7 +82,10 @@ public sealed class ResponseStreamPrinter {
 
             if (!exceptionCaught) {
                 bool success = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
-                    streamFactory: () => client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config),
+                    streamFactory: () => {
+                        ApiKeyQuotaTracker.RecordClientRequest(client, selectedModel, "Chat");
+                        return client.Models.GenerateContentStreamAsync(model: selectedModel, contents: apiContents, config: config);
+                    },
                     onChunkReceived: async (chunk) => {
                         string chunkText = ResponseParts.Split(chunk).Answer;
                         Ui.Raw(chunkText);

@@ -100,4 +100,30 @@ public class CleanAndStatusCommandTests : IDisposable {
             Directory.Delete(tempDir, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task CleanCommand_Copies_MovesBothHyphenatedAndLegacyCopyFilesToArchive() {
+        string tempDir = Path.Combine(Path.GetTempPath(), "clean_copies_test_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string copyHyphen = Path.Combine(tempDir, "step1-lec-all-offset-copy-1.tex");
+        string copyLegacy = Path.Combine(tempDir, "step2-lec-offset-merged-copy1.tex");
+        string primary = Path.Combine(tempDir, "step1-lec-all-offset.tex");
+        File.WriteAllText(copyHyphen, "% copy-1");
+        File.WriteAllText(copyLegacy, "% copy1");
+        File.WriteAllText(primary, "% primary");
+
+        try {
+            var root = CliBootstrapper.BuildRootCommand();
+            int exitCode = await CliBootstrapper.RunAsync(root, ["clean", "--folder", tempDir, "--copies", "--force"]);
+            Assert.Equal(ExitCodes.Success, exitCode);
+            Assert.False(File.Exists(copyHyphen));
+            Assert.False(File.Exists(copyLegacy));
+            Assert.True(File.Exists(primary));
+            Assert.True(Directory.GetFiles(Path.Combine(tempDir, "archive"), "step1-lec-all-offset-copy-1.tex", SearchOption.AllDirectories).Length > 0);
+            Assert.True(Directory.GetFiles(Path.Combine(tempDir, "archive"), "step2-lec-offset-merged-copy1.tex", SearchOption.AllDirectories).Length > 0);
+        }
+        finally {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
 }

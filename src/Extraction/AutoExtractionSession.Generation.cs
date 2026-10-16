@@ -299,7 +299,10 @@ public partial class AutoExtractionSession {
 
     private async Task<SegmentTranscript> StreamAndCollectAsync(GenerateContentConfig requestConfig, List<Content> history, int partNumber, string originalFileName, string partFile, string logContext, ThoughtLog thoughts, int? promptTokens) {
         var result = await GenerationLoop.RunAsync(history,
-            h => _client.Models.GenerateContentStreamAsync(_config.CurrentModel, h, requestConfig),
+            h => {
+                ApiKeyQuotaTracker.RecordClientRequest(_client, _config.CurrentModel, $"Part {partNumber}: {Path.GetFileNameWithoutExtension(originalFileName)}");
+                return _client.Models.GenerateContentStreamAsync(_config.CurrentModel, h, requestConfig);
+            },
             thoughts,
             new GenerationLoopOptions {
                 MaxContinueRequests = _config.MaxContinueRequests,

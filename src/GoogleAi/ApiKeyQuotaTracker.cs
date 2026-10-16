@@ -73,7 +73,7 @@ public static partial class ApiKeyQuotaTracker {
                 }
             }
             catch (Exception ex) {
-                Ui.Warn($"[Exception gefangen] Art der Exception: {ex.GetType().Name}\nOriginaler Fehlertext: {ex.Message}");
+                Ui.Warn($"Quota-Tracker konnte nicht gelesen werden: {ex.Describe()}", "Quota");
             }
         }
 
@@ -148,7 +148,20 @@ public static partial class ApiKeyQuotaTracker {
             _cachedState = state;
         }
         catch (Exception ex) {
-            Ui.Warn($"[Exception gefangen] Art der Exception: {ex.GetType().Name}\nOriginaler Fehlertext: {ex.Message}");
+            Ui.Warn($"Quota-Tracker konnte nicht gespeichert werden: {ex.Describe()}", "Quota");
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Records a generation request for an AI Studio client whose API key profile was
+    /// resolved via <see cref="GoogleAiClientBuilder"/>. No-op for Vertex clients and test doubles.
+    /// [Human] Zählt eine Anfrage für das API-Key-Profil des verwendeten AI-Studio-Clients.
+    /// </summary>
+    public static void RecordClientRequest(Google.GenAI.Client client, string model, string? note = null) {
+        string? envName = GoogleAiClientBuilder.GetEnvVarName(client);
+        if (!string.IsNullOrEmpty(envName)) {
+            GoogleAiClientBuilder.LastActiveEnvVarName = envName;
+            RecordRequest(envName, model, note);
         }
     }
 
@@ -221,8 +234,9 @@ public static partial class ApiKeyQuotaTracker {
             model = match.Groups["model"].Value;
         }
 
-        if (!string.IsNullOrEmpty(defaultEnvName)) {
-            RecordQuotaExhausted(defaultEnvName, model);
+        string? envName = defaultEnvName ?? GoogleAiClientBuilder.LastActiveEnvVarName;
+        if (!string.IsNullOrEmpty(envName)) {
+            RecordQuotaExhausted(envName, model);
         }
     }
 

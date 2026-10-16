@@ -147,12 +147,16 @@ public static class RefineCommands {
                 return ExitCodes.Success;
             }
 
-            await RefinementUiHelper.RunRefinementAsync(config, null, Path.GetFullPath(tex), null);
+            string fullTex = Path.GetFullPath(tex);
+            bool succeeded = await RefinementUiHelper.RunRefinementAsync(config, null, fullTex, null);
 
-            string pdfPath = Path.ChangeExtension(Path.GetFullPath(tex), ".pdf");
-            bool produced = File.Exists(pdfPath);
+            string targetFolder = Path.GetDirectoryName(fullTex) ?? config.TargetFolder;
+            string finalPdfPath = Path.Combine(targetFolder, Refinement.LatexRefinementSession.FinalPdfFileName(targetFolder, Refinement.LatexRefinementSession.GetCleanBaseName(fullTex)));
+            string stepPdfPath = Path.ChangeExtension(fullTex, ".pdf");
+            string pdfPath = File.Exists(finalPdfPath) ? finalPdfPath : stepPdfPath;
+            bool produced = succeeded && File.Exists(pdfPath);
 
-            CliOutput.Payload(context, new { tex = Path.GetFullPath(tex), pdf = produced ? pdfPath : null, produced },
+            CliOutput.Payload(context, new { tex = fullTex, pdf = produced ? pdfPath : null, produced },
                 () => { /* CompilePdfAsync reports the path it wrote. */ });
 
             return produced ? ExitCodes.Success : ExitCodes.Unexpected;

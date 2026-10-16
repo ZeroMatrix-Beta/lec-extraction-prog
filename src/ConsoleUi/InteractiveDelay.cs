@@ -185,7 +185,7 @@ public static class InteractiveDelay {
             return false;
         }
         catch (Exception ex) {
-            Console.Error.WriteLine($"[{ex.GetType().Name}] {ex.Message}");
+            Ui.Warn($"Fehler beim Lesen der Konsole: {ex.Describe()}", "Delay");
         }
 
         try {
