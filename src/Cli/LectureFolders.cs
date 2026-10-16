@@ -42,10 +42,7 @@ public static class LectureFolders {
 
         return [.. Directory.GetDirectories(root)
             .Where(LectureProgress.IsLectureFolder)
-            .OrderBy(d => {
-                var date = VideoDateParser.Parse(Path.GetFileName(d)).Date;
-                return date != DateTime.MinValue ? date : DateTime.MaxValue;
-            })
+            .OrderBy(d => VideoDateParser.SortDate(Path.GetFileName(d)))
             .ThenBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)];
     }
 }

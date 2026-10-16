@@ -70,6 +70,16 @@ public static partial class VideoDateParser {
     public static bool HasDate(string name) =>
         YyyyMmDdRegex().IsMatch(name) || MmDdYyyyRegex().IsMatch(name) || MmDdOnlyRegex().IsMatch(name);
 
+    /// <summary>
+    /// The date to sort lectures by, or DateTime.MaxValue (sorted last) when the name has none. Checks
+    /// with HasDate first, so sorting a folder list never prints Parse's "date format mismatch" warning.
+    /// </summary>
+    public static DateTime SortDate(string name) {
+        if (!HasDate(name)) return DateTime.MaxValue;
+        var date = Parse(name).Date;
+        return date != DateTime.MinValue ? date : DateTime.MaxValue;
+    }
+
     public static VideoDateInfo Parse(string filePath) {
         string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
 
