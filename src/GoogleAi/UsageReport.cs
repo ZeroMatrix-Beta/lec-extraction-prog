@@ -29,12 +29,16 @@ public sealed class UsageReport {
     public int CandidateTokens { get; private set; }
 
     /// <summary>
-    /// [AI Context] Google's CachedContentTokenCount, reported as-is. Do not rely on it: the implicit
-    /// cache is best-effort and the figure is unreliable - the identical prefix can report a large hit
-    /// in one run and 0 in the next (maintainer's long-standing experience; seen again 2026-10-10,
-    /// 263k vs. 0 for the same 265k handshake). Display it, never base logic, rate-limit planning or
-    /// a verdict on a single run's value. See Documentation.md §4.4.
-    /// [Human] Von Google gemeldete gecachte Tokens - nicht verlässlich, nur zur Anzeige.
+    /// [AI Context] IMPORTANT: Google's CachedContentTokenCount, reported as-is, and NOT to be believed -
+    /// neither a reported hit nor a reported miss. The implicit cache is best-effort and the figure is
+    /// unreliable: the identical prefix can report a large hit in one run and 0 in the next (maintainer's
+    /// long-standing experience; 2026-10-10: 263k vs. 0 for the same 265k handshake; 2026-10-16: the same
+    /// 310k resume handshake reported 271,834 cached one night and 0 the next morning, and both were
+    /// accepted under a 250k/min limit). Display it, never base logic, rate-limit planning, a "fresh
+    /// tokens" verdict or any conclusion about caching on it. Only Google's accept/refuse of a request is
+    /// evidence. See Documentation.md §4.4.
+    /// [Human] WICHTIG: Von Google gemeldete gecachte Tokens - weder ein gemeldeter Treffer noch ein
+    /// gemeldeter Fehlschlag ist glaubwürdig. Nur zur Anzeige.
     /// </summary>
     public int CachedTokens { get; private set; }
     public int ThoughtTokens { get; private set; }

@@ -234,6 +234,7 @@ public partial class LatexRefinementSession {
                 CancelledAsWarning = true,
                 ReportRequest = request => {
                     var usage = request.Usage;
+                    // IMPORTANT: "Gecacht"/"Frisch" come from Google's cache figure, which is unreliable (hit or miss; UsageReport.CachedTokens).
                     Ui.Info(usage.Describe($"[Request {request.RequestNumber}] Total Prompt: {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Output: {usage.CandidateTokens:N0}", tag: "").TrimStart(), "Tokens");
                     if (usage.WasReported) {
                         Ui.Info(usage.DescribeOutputBudget(backendParams.MaxOutputTokens), "Tokens");

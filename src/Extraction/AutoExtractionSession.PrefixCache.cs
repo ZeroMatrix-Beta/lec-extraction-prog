@@ -311,7 +311,8 @@ public partial class AutoExtractionSession {
                     Ui.Detail($"[Gemini Antwort] {responseText.Trim()}");
                 }
 
-                string caller = $"Tatsächlich NEU berechnet: {freshTokens:N0} | Gecacht: {cachedTokens:N0} | Total Prompt: {inputTokens:N0} | Output: {outputTokens:N0}";
+                // IMPORTANT: "Gecacht" and with it "NEU berechnet" are Google's unreliable cache figure (UsageReport.CachedTokens), not facts.
+                string caller = $"NEU berechnet (laut Google): {freshTokens:N0} | Gecacht (laut Google): {cachedTokens:N0} | Total Prompt: {inputTokens:N0} | Output: {outputTokens:N0}";
                 string tag = string.IsNullOrEmpty(stepLabel) ? "[Warmup Result]" : $"[{stepLabel}]";
                 Ui.Info(usage.Describe(caller, tag).TrimStart(), "Tokens");
 

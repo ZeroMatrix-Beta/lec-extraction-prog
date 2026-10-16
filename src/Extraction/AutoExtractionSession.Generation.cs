@@ -332,6 +332,7 @@ public partial class AutoExtractionSession {
         var usage = request.Usage;
         _sessionUsage += new TokenUsage(usage.PromptTokens, usage.CandidateTokens, usage.CachedTokens);
 
+        // IMPORTANT: "Gecacht"/"Frisch" come from Google's cache figure, which is unreliable (hit or miss; UsageReport.CachedTokens).
         int freshReqTokens = Math.Max(0, usage.PromptTokens - usage.CachedTokens);
 
         Ui.Info(usage.Describe($"[Part {partNumber} Request Response] Total Prompt (ganzer Prompt): {usage.PromptTokens:N0} | Gecacht: {usage.CachedTokens:N0} | Frisch: {freshReqTokens:N0} | Output: {usage.CandidateTokens:N0}", tag: "").TrimStart(), "Tokens");

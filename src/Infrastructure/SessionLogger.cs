@@ -134,6 +134,7 @@ public class SessionLogger(SessionLoggerConfig config) {
             // Markdown Verlauf mitprotokollieren
             string logInput = input.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) ? $"[Dateien] {promptText}" : input;
             int freshTokens = Math.Max(0, inputTokens - cachedTokens);
+            // IMPORTANT: "Gecacht"/"Frisch" come from Google's cache figure, which is unreliable (hit or miss; UsageReport.CachedTokens).
             string tokenInfo = (inputTokens > 0 || outputTokens > 0) ? $"\n\n*(Tokens: Total Prompt {inputTokens:N0}, Gecacht {cachedTokens:N0}, Frisch {freshTokens:N0}, Output {outputTokens:N0})*" : "";
             await File.AppendAllTextAsync(GetChatLogFilePath(), $"\n**{userName}:** {logInput}\n\n**{selectedModel}:** {fullResponse}{tokenInfo}\n---\n");
 
