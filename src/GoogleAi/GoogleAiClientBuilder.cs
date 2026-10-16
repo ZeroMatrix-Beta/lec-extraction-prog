@@ -13,7 +13,11 @@ namespace LectureExtraction.GoogleAi;
 /// </summary>
 public static class GoogleAiClientBuilder {
     private static readonly ConditionalWeakTable<Client, string> ClientEnvNames = new();
-    private static string? _lastResolvedEnvVarName;
+    // [AI Context] Which environment variable each resolved key value came from, so BuildAiStudioClient can
+    // tag a client with its key name exactly, whatever was resolved in between (a "last resolved key" static
+    // mis-tagged clients built later, e.g. the uploader's ClientFactory after the refinement key was read).
+    // [Human] Merkt sich zu jedem gelesenen API-Key den Namen seiner Umgebungsvariable.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> EnvNameByKey = new();
 
     /// <summary>The environment variable name of the AI Studio client that most recently sent a request.</summary>
     public static string? LastActiveEnvVarName { get; internal set; }
@@ -32,8 +36,6 @@ public static class GoogleAiClientBuilder {
         // Required because User/Machine level environment variables are not always automatically inherited by the running Process unless explicitly reloaded or restarted.
         // [AI Context] Dynamically resolves the environment variable name based on the requested profile index. No hardcoded switch needed.
         string envVarName = $"API_KEY-ai-studio-test-project-{activeKeyProfile}";
-        _lastResolvedEnvVarName = envVarName;
-
         string? apiKey = System.Environment.GetEnvironmentVariable(envVarName)
                       ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.User)
                       ?? System.Environment.GetEnvironmentVariable(envVarName, EnvironmentVariableTarget.Machine);
@@ -45,6 +47,7 @@ public static class GoogleAiClientBuilder {
             return null;
         }
 
+        EnvNameByKey[apiKey] = envVarName;
         return apiKey;
     }
 
@@ -58,9 +61,9 @@ public static class GoogleAiClientBuilder {
         };
         Ui.Detail("Verbinde mit Google AI Studio API...");
         var client = new Client(apiKey: apiKey, httpOptions: options);
-        if (!string.IsNullOrEmpty(_lastResolvedEnvVarName)) {
-            ClientEnvNames.AddOrUpdate(client, _lastResolvedEnvVarName);
-            LastActiveEnvVarName = _lastResolvedEnvVarName;
+        if (EnvNameByKey.TryGetValue(apiKey, out string? envName)) {
+            ClientEnvNames.AddOrUpdate(client, envName);
+            LastActiveEnvVarName = envName;
         }
         return client;
     }
@@ -70,7 +73,6 @@ public static class GoogleAiClientBuilder {
     /// [Human] Sucht gezielt nach einem API-Key anhand seines exakten Namens in den Umgebungsvariablen (z.B. exklusiv für das LaTeX-Refinement).
     /// </summary>
     public static string? ResolveApiKeyByName(string envVarName) {
-        _lastResolvedEnvVarName = envVarName;
         string? apiKey = LookUpApiKey(envVarName);
 
         Ui.Detail($"Verwende {envVarName}");
@@ -80,6 +82,7 @@ public static class GoogleAiClientBuilder {
             return null;
         }
 
+        EnvNameByKey[apiKey] = envVarName;
         return apiKey;
     }
 
