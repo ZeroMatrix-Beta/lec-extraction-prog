@@ -448,8 +448,20 @@ public partial class LatexRefinementSession {
 
         int totalInputLength = CountInputLatexLength(history);
 
-        var (fullResponseText, usage) =
+        var (fullResponseText, usage, usable) =
             await StreamAndCollectAsync(stepConfig, backendParams, history, requestConfig, outputFileName, thoughts);
+
+        // IMPORTANT: a step whose stream failed for good (or was cancelled, or kept answering blank) holds
+        // only the text before the failure. On 2026-10-16 such a fragment of step 2 (43 of 68 speech blocks,
+        // no completion marker) passed the 60 % integrity check below and step 3 polished it. It is kept as a
+        // truncated file to look at, never as the step's result.
+        // [Human] Bricht ein Schritt mitten in der Antwort ab, ist der Text unvollständig: er wird nur als
+        // abgeschnittene Datei gesichert, nicht als Ergebnis weitergegeben.
+        if (!usable && !string.IsNullOrEmpty(fullResponseText)) {
+            Ui.Error($"Antwort unvollständig: die Anfrage ist endgültig fehlgeschlagen, bevor der Abschlussmarker kam ({fullResponseText.Length:N0} Zeichen). Der Schritt gilt als fehlgeschlagen.", "Refinement");
+            await SaveTruncatedResponseAsync(targetOutputFolder, outputFileName, fullResponseText);
+            return null;
+        }
 
         if (!string.IsNullOrEmpty(fullResponseText)) {
             if (expectedSpokenClean > 0 || expectedMathStroke > 0) {

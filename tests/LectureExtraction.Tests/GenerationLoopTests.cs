@@ -56,6 +56,7 @@ public class GenerationLoopTests : IDisposable {
             Options(o => o with { WaitBeforeContinueAsync = () => { waits++; return Task.FromResult(true); } }));
 
         Assert.Equal($"first halfsecond half\n{Marker}", result.Text);
+        Assert.Equal(GenerationEnd.Completed, result.End);
         Assert.Equal(new TokenUsageSnapshot(230, 30, 40, 12, 2), Snapshot(result));
         Assert.Equal(new[] { 1, 3 }, seen);
         Assert.Equal(1, waits);
@@ -125,6 +126,8 @@ public class GenerationLoopTests : IDisposable {
         var result = await GenerationLoop.RunAsync(history, _ => streams.Dequeue(), thoughts, Options());
 
         Assert.Equal("first half", result.Text);
+        Assert.Equal(GenerationEnd.Failed, result.End);
+        Assert.False(result.IsUsable);
         Assert.Equal(1, result.Usage.Requests);
         var records = ThoughtFile.Read(thoughts.FilePath!)!.Requests;
         Assert.Equal(2, records.Count);
@@ -156,7 +159,32 @@ public class GenerationLoopTests : IDisposable {
 
         Assert.Equal(2, calls);
         Assert.Equal("text 1text 2", result.Text);
+        Assert.Equal(GenerationEnd.BudgetExhausted, result.End);
+        Assert.True(result.IsUsable);
         Assert.Contains("Maximale Anzahl an Requests (2) erreicht. Stop.", _console.Output);
+    }
+
+    [Fact]
+    public async Task Blank_answers_past_the_retries_end_the_loop_as_unusable() {
+        var history = new List<Content> { UserTurn("fix") };
+
+        var result = await GenerationLoop.RunAsync(history, _ => Stream([Answer(" ")]), ThoughtLog.Inert(),
+            Options(o => o with { EmptyAnswerRetries = 2 }));
+
+        Assert.Equal(GenerationEnd.EmptyAnswers, result.End);
+        Assert.False(result.IsUsable);
+    }
+
+    [Fact]
+    public async Task A_continue_wait_that_is_cancelled_leaves_an_unusable_fragment() {
+        var history = new List<Content> { UserTurn("refine") };
+
+        var result = await GenerationLoop.RunAsync(history, _ => Stream([Answer("first half")]), ThoughtLog.Inert(),
+            Options(o => o with { WaitBeforeContinueAsync = () => Task.FromResult(false) }));
+
+        Assert.Equal("first half", result.Text);
+        Assert.Equal(GenerationEnd.Cancelled, result.End);
+        Assert.False(result.IsUsable);
     }
 
     [Fact]

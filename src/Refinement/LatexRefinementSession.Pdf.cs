@@ -543,6 +543,11 @@ public partial class LatexRefinementSession {
                     return InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...");
                 },
             });
+        // A fix that broke off mid-answer is no fix; compiling the fragment would only waste a round.
+        if (!result.IsUsable && result.Text.Length > 0) {
+            Ui.Error($"PDF-Fix-Antwort unvollständig ({result.End}); dieser Fix-Versuch wird verworfen.", "PDF-Fix");
+            return ("", result.Usage);
+        }
         return (result.Text, result.Usage);
     }
 

@@ -332,6 +332,12 @@ public partial class AutoExtractionSession {
             });
 
         AttachmentUploader.HasJustUploaded = false;
+        // IMPORTANT: a part whose stream failed for good is a fragment. Saved, resume would reuse it as finished
+        // forever; returned empty, the part counts as failed and the next run requests it again.
+        if (!result.IsUsable && result.Text.Length > 0) {
+            Ui.Error($"Teil {partNumber} unvollständig ({result.End}): {result.Text.Length:N0} Zeichen werden verworfen, der Teil wird beim nächsten Lauf neu angefragt.", "AutoExtraction");
+            return new SegmentTranscript("", result.Usage, thoughts.FilePath);
+        }
         return new SegmentTranscript(result.Text, result.Usage, thoughts.FilePath);
     }
 

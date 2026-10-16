@@ -206,7 +206,7 @@ public partial class LatexRefinementSession {
     /// apart from the visible output.
     /// [Human] Streamt einen Refinement-Schritt inkl. Continue-Anfragen und summiert deren Tokens.
     /// </summary>
-    private async Task<(string FullResponseText, TokenUsage Usage)> StreamAndCollectAsync(
+    private async Task<(string FullResponseText, TokenUsage Usage, bool Usable)> StreamAndCollectAsync(
         RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName, ThoughtLog thoughts) {
         string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
         int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
@@ -256,7 +256,7 @@ public partial class LatexRefinementSession {
                     return true;
                 },
             });
-        return (result.Text, result.Usage);
+        return (result.Text, result.Usage, result.IsUsable);
     }
 
     /// <summary>The line the refinement and PDF-repair prompts ask the model to end its answer with.</summary>

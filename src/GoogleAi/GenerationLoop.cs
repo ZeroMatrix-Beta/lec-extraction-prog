@@ -98,8 +98,30 @@ public sealed class GenerationLoopOptions {
 /// </summary>
 public sealed record GenerationRequest(int RequestNumber, string Text, UsageReport Usage, TokenUsage Total, GroundingMetadata? Grounding, string? ContinuePrompt);
 
-/// <summary>The joined answer text of every request, and their summed usage.</summary>
-public readonly record struct GenerationLoopResult(string Text, TokenUsage Usage);
+/// <summary>Why <see cref="GenerationLoop"/> stopped.</summary>
+public enum GenerationEnd {
+    /// <summary>The stage's completion marker arrived.</summary>
+    Completed,
+    /// <summary>The model kept answering without the marker until the ContinueBudget ran out.</summary>
+    BudgetExhausted,
+    /// <summary>A request failed for good (the retries gave up); the text so far is incomplete.</summary>
+    Failed,
+    /// <summary>Blank answers until the retries ran out.</summary>
+    EmptyAnswers,
+    /// <summary>Cancelled by the user or a cancelled wait.</summary>
+    Cancelled
+}
+
+/// <summary>
+/// The joined answer text of every request, their summed usage, and why the loop ended.
+/// <para>IMPORTANT: on Failed, EmptyAnswers or Cancelled the text is a fragment - it stops where the
+/// failed request would have continued. On 2026-10-16 a refinement step saved such a fragment (43 of
+/// 68 speech blocks) as its result and the next step polished it; callers must not do that.</para>
+/// </summary>
+public readonly record struct GenerationLoopResult(string Text, TokenUsage Usage, GenerationEnd End) {
+    /// <summary>True when the text may be used as the stage's result: the marker arrived, or the model ran the budget out.</summary>
+    public bool IsUsable => End is GenerationEnd.Completed or GenerationEnd.BudgetExhausted;
+}
 
 /// <summary>
 /// [AI Context] The one streaming request loop behind Stage 1 (AI Studio and Vertex), the refinement
@@ -133,11 +155,13 @@ public static class GenerationLoop {
         var budget = new ContinueBudget(options.MaxContinueRequests);
         int emptyAnswerRetries = 0;
         string? continuePrompt = null;
+        var end = GenerationEnd.Cancelled;
 
         using var cancelScope = new ConsoleCancelScope();
 
         while (true) {
             if (options.BeforeRequestAsync != null && !await options.BeforeRequestAsync()) {
+                end = GenerationEnd.Cancelled;
                 break;
             }
 
@@ -183,6 +207,7 @@ public static class GenerationLoop {
             }
             catch (Exception ex) {
                 Ui.Error($"{options.UnrecoverableErrorPrefix}{ex.Describe()}", "Abbruch");
+                end = GenerationEnd.Failed;
                 break;
             }
             finally {
@@ -197,6 +222,7 @@ public static class GenerationLoop {
                 const string cancelled = "Generierung durch Benutzer abgebrochen oder fehlgeschlagen.";
                 if (options.CancelledAsWarning) Ui.Warn(cancelled);
                 else Ui.Info(cancelled);
+                end = GenerationEnd.Cancelled;
                 break;
             }
 
@@ -218,11 +244,13 @@ public static class GenerationLoop {
                         await Task.Delay(options.EmptyAnswerRetryDelay, cancelScope.Token);
                     }
                     catch (OperationCanceledException) {
+                        end = GenerationEnd.Cancelled;
                         break;
                     }
                     continue;
                 }
                 Ui.Error($"Das Modell hat nach {options.EmptyAnswerRetries} Versuchen weiterhin eine komplett leere Antwort zurückgegeben. Der Vorgang wird abgebrochen.");
+                end = GenerationEnd.EmptyAnswers;
                 break;
             }
 
@@ -230,11 +258,13 @@ public static class GenerationLoop {
             fullText += text;
 
             if (options.IsComplete(text)) {
+                end = GenerationEnd.Completed;
                 break;
             }
 
             if (!budget.TryContinue(text, out string stopReason)) {
                 Ui.Warn($"{stopReason} {options.BudgetStopSuffix}");
+                end = GenerationEnd.BudgetExhausted;
                 break;
             }
 
@@ -243,12 +273,13 @@ public static class GenerationLoop {
             history.Add(new Content { Role = "user", Parts = [new Part { Text = continuePrompt }] });
 
             if (!await options.WaitBeforeContinueAsync()) {
+                end = GenerationEnd.Cancelled;
                 break;
             }
         }
 
         await thoughts.EndAbortedRequestAsync(budget.RequestNumber);
-        return new GenerationLoopResult(fullText, total);
+        return new GenerationLoopResult(fullText, total, end);
     }
 
     /// <summary>

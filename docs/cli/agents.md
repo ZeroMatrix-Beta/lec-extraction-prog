@@ -237,6 +237,22 @@ one process-wide clock, so two runs inside one process would corrupt each other'
 Use `lecx batch`, which spawns one child process per worker. See
 [parallel.md](parallel.md).
 
+**An answer that breaks off is never kept as a result.** When a request fails for good
+mid-answer (say a continue that hits eight `503`s), is cancelled, or keeps coming back blank,
+the text received so far is a fragment. The loop reports that (`GenerationEnd` /
+`GenerationLoopResult.IsUsable`), and every stage treats it as a failure instead of passing it on:
+
+- Stage 1: the part is not written, so the next run (or `finish`) requests it again instead
+  of resuming from a half part.
+- Refinement step: error `Antwort unvollständig`, the fragment goes to the step's
+  truncated-response file for inspection, and the pipeline stops before the next step.
+  Before 2026-10-16 such a fragment (43 of 68 speech blocks) passed the 60 % integrity check
+  and step 3 polished it.
+- PDF fix: that fix attempt is discarded.
+
+A run that stops on the request budget (`MaxContinueRequests`) is *not* treated this way:
+the text is complete up to the budget and is kept as before.
+
 **A menu can never be auto-answered.** If a flow reaches an interactive choice, the run
 fails with exit `3` naming the question rather than picking the first entry. That is
 deliberate: guessing a menu entry is how an unattended run buys the wrong model. Supply
