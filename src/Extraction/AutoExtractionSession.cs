@@ -86,8 +86,22 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     private bool StripsReferenceContextComments =>
         _config.StripCommentsFromReferenceContext && _config.InlinePrecedingLecTexParts;
 
+    // [AI Context] Rule 5 exists only while SlimOlderReferenceParts is in effect, for the same reason as
+    // rule 4: the emptied copies must not read as a style example for speech blocks or figures.
+    private const string SlimmedPartsRule =
+        "5. To save tokens, in every context file except the most recent one the content of each `speech` environment and each `tikzpicture` " +
+        "has been replaced by `% tokenOpt`. That applies to these reference copies only: your own transcription must still contain " +
+        "complete `speech` environments and every figure the system instructions require.\n";
+
+    /// <summary>Whether older inlined preceding parts are slimmed in this session (decides rule 5 too).</summary>
+    private bool SlimsOlderReferenceParts =>
+        _config.SlimOlderReferenceParts && _config.InlinePrecedingLecTexParts;
+
     private string ReferenceContextPreamble =>
-        ReferenceContextPreambleRules + (StripsReferenceContextComments ? StrippedCommentsRule : "") + "\n";
+        ReferenceContextPreambleRules
+        + (StripsReferenceContextComments ? StrippedCommentsRule : "")
+        + (SlimsOlderReferenceParts ? SlimmedPartsRule : "")
+        + "\n";
 
     /// <summary>
     /// [AI Context] Entry point that validates the source/target directories and checks filename formats.

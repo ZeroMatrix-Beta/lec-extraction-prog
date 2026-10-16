@@ -65,6 +65,15 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     /// [Human] Entfernt Kommentare und hidden-Umgebungen aus den eingebetteten Kontext-Dateien.
     /// </summary>
     public bool StripCommentsFromReferenceContext { get; set; } = true;
+
+    /// <summary>
+    /// [AI Context] Empties the `speech` environments and removes the `tikzpicture`s (each replaced by
+    /// `% tokenOpt`) in every inlined preceding part except the most recent one, which stays complete
+    /// (see ReferenceContextSlimmer). Inline path only. Off by default; an experiment from 2026-10-16 to
+    /// bring late parts under the free tier's per-minute token limit.
+    /// [Human] Kürzt ältere Vorgänger-Teile im Kontext (speech-Inhalte und TikZ weg), der letzte bleibt ganz.
+    /// </summary>
+    public bool SlimOlderReferenceParts { get; set; } = false;
     public bool DebugHelloRoundtrip { get; set; } = false;
     public bool VerboseConsoleOutput { get; set; } = false;
     public bool GenerateAudioFile { get; set; } = true;

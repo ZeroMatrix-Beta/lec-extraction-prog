@@ -99,6 +99,7 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     // The settings below came with the merge into AutoExtractionSession (2026-10-15). They mean the
     // same as on AiStudioAutoExtractionConfig and start from its defaults.
     public bool StripCommentsFromReferenceContext { get; set; } = true;
+    public bool SlimOlderReferenceParts { get; set; } = false;
     public bool DebugHelloRoundtrip { get; set; } = false;
     public int HistoryBatchCount { get; set; } = 0;
     public int SystemInstructionDelaySeconds { get; set; } = 65;

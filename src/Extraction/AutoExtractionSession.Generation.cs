@@ -190,8 +190,13 @@ public partial class AutoExtractionSession {
     /// through here, so the preamble's rule 4 is true for all of them.
     /// [Human] Bereitet den Inhalt einer Kontext-Datei auf (ggf. ohne Kommentare).
     /// </summary>
-    private string PrepareReferenceContent(string tex) =>
-        StripsReferenceContextComments ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex) : tex;
+    /// <param name="slim">Also empty speech blocks and drop TikZ (SlimOlderReferenceParts): for every
+    /// preceding part except the most recent one. Runs after the comment stripping, which would
+    /// otherwise remove the `% tokenOpt` markers again.</param>
+    private string PrepareReferenceContent(string tex, bool slim = false) {
+        string prepared = StripsReferenceContextComments ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex) : tex;
+        return slim ? ReferenceContextSlimmer.Slim(prepared) : prepared;
+    }
 
     /// <summary>
     /// [AI Context] Reads the preceding parts' .tex files and wraps each in a reference_context block,
@@ -200,13 +205,17 @@ public partial class AutoExtractionSession {
     /// </summary>
     private async Task<string> BuildInlinedPrecedingPartsAsync(IReadOnlyList<string> previousTexFiles) {
         var builder = new System.Text.StringBuilder();
-        foreach (var previousTexFile in previousTexFiles) {
+        for (int i = 0; i < previousTexFiles.Count; i++) {
+            string previousTexFile = previousTexFiles[i];
             string previousTexFileName = Path.GetFileName(previousTexFile);
             string content = await System.IO.File.ReadAllTextAsync(previousTexFile);
-            string prepared = PrepareReferenceContent(content);
+            // The most recent preceding part stays complete: the current part continues it.
+            bool slim = SlimsOlderReferenceParts && i < previousTexFiles.Count - 1;
+            string prepared = PrepareReferenceContent(content, slim);
+            string what = slim ? "ohne Kommentare/hidden, speech/TikZ gekürzt" : "ohne Kommentare/hidden";
             Ui.Detail(prepared.Length == content.Length
                 ? $"- {previousTexFileName}"
-                : $"- {previousTexFileName} ({content.Length:N0} -> {prepared.Length:N0} Zeichen ohne Kommentare/hidden)");
+                : $"- {previousTexFileName} ({content.Length:N0} -> {prepared.Length:N0} Zeichen {what})");
             builder.Append(ReferenceContextBlock(previousTexFileName, prepared));
         }
         return builder.ToString();

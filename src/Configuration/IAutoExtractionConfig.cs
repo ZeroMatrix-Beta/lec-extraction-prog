@@ -28,6 +28,7 @@ public interface IAutoExtractionConfig {
     bool SendDummyFileDuringTranscription { get; }
     bool InlinePrecedingLecTexParts { get; }
     bool StripCommentsFromReferenceContext { get; }
+    bool SlimOlderReferenceParts { get; }
     bool VerboseConsoleOutput { get; }
     bool OnlyDoWarmUp { get; }
     bool DebugHelloRoundtrip { get; }
