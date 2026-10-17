@@ -59,7 +59,14 @@ public partial class LatexRefinementSession {
         }
 
         if ((_singleFilePathToProcess != null || _multipleFilesToProcess != null) && _extractionConfig != null) {
-            if (!_extractionConfig.GoIntoLatexRefinement || !_extractionConfig.GenerateOffsetFiles || !_extractionConfig.GenerateAudioFile) {
+            int initialPartsCount = _multipleFilesToProcess != null
+                ? _multipleFilesToProcess.Length
+                : _singleFilePathToProcess != null
+                    ? ResolvePartsCount([_singleFilePathToProcess])
+                    : 1;
+            bool requiresOffsetAndAudio = initialPartsCount > 1 && _audioFilePath != null;
+
+            if (!_extractionConfig.GoIntoLatexRefinement || (requiresOffsetAndAudio && (!_extractionConfig.GenerateOffsetFiles || !_extractionConfig.GenerateAudioFile))) {
                 Ui.Warn("LaTeX Refinement übersprungen.", "LaTeX Refinement");
                 Ui.Detail("Grund: Die Voraussetzungen in AutoExtractionConfig sind nicht erfüllt.");
                 return true;

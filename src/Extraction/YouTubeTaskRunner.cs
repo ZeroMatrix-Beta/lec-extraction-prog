@@ -91,7 +91,7 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
             int partNum = i + 1;
             Ui.Step($"Verarbeite Fragment {partNum}/{task.Fragments.Count}: {frag.StartTime} bis {frag.EndTime} ({frag.PartTitle})");
 
-            string parsedPrompt = BuildFragmentPrompt(frag, partNum);
+            string parsedPrompt = BuildFragmentPrompt(frag, partNum, task.Fragments.Count);
             var attachmentParts = new List<Part> { Part.FromUri(task.VideoUrl, "video/mp4") };
 
             string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}-part{partNum}.tex");
@@ -117,20 +117,26 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
             string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
             await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
             Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
+            await _host.RefineYouTubeOutputAsync(combinedPath, task.Fragments.Count);
         }
     }
 
     /// <summary>
     /// [AI Context] Builds the per-fragment instruction. Part 1 is told the lecture date matters;
     /// later parts are told it matters less but should still be stated - the model otherwise either
-    /// omits the date entirely or repeats a full date header on every part.
+    /// omits the date entirely or repeats a full date header on every part. When totalParts == 1,
+    /// explicitly instructs the model to omit the trailing Final Video Cut-off &amp; Board State Checkpoint aiNote.
     /// [Human] Baut die Anweisung für ein Fragment. Teil 1 betont das Datum, spätere Teile nicht.
     /// </summary>
-    public static string BuildFragmentPrompt(YouTubeTimestampFragment frag, int partNum) {
+    public static string BuildFragmentPrompt(YouTubeTimestampFragment frag, int partNum, int totalParts = 0) {
         string dateNotice = (partNum == 1)
             ? "Please note that since this is part 1 of the lecture, the date of the transcription is important."
             : $"The lecture took place... Please note that since this is part {partNum} of the lecture, the date is not so important (but tell it anyway).";
 
-        return $"Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}";
+        string singlePartNotice = (totalParts == 1)
+            ? "\nSince this is a complete single-part video (Part 1 of 1), do NOT emit a trailing `\\begin{aiNote}[Final Video Cut-off \\& Board State Checkpoint]` at the end of the document."
+            : "";
+
+        return $"Please transcribe this lecture and extract all mathematical formulas into LaTeX according to the system instructions.\n\n[IMPORTANT INSTRUCTION FOR YOUTUBE VIDEO]:\nThis is part {partNum} ('{frag.PartTitle}') of the lecture. Please focus ONLY on transcribing and extracting the chosen video fragment starting at timestamp {frag.StartTime} and ending at timestamp {frag.EndTime}.\n{dateNotice}{singlePartNotice}";
     }
 }

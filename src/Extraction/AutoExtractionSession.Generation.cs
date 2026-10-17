@@ -37,11 +37,14 @@ public partial class AutoExtractionSession {
         string fullDurationString = ExtractionHelpers.FormatDurationForPrompt(fullOriginalVideoDuration);
 
         string dateMetadata = LectureMetadataText(dateInfo, dateContext, partNumber);
+        string singlePartCheckpointNote = totalParts == 1
+            ? " Since this is a complete single-part video (Part 1 of 1), do NOT emit a trailing `\\begin{aiNote}[Final Video Cut-off \\& Board State Checkpoint]` at the end of the document."
+            : "";
 
         string prompt =
             $"<parameter name=\"lecture_metadata\">{dateMetadata}</parameter>\n" +
             $"<parameter name=\"source_video\">You must transcribe the video attachment named `{Path.GetFileName(partFile)}` verbatim according to the system instructions. Ensure you transcribe every single spoken word up to the very last second of the video, even if it cuts off mid-sentence.</parameter>\n" +
-            $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long; that is the value for `% End of the video`. For context only, the whole lecture, of which this segment is one part, runs {fullDurationString}; never use that number for a timestamp.</parameter>\n" +
+            $"<parameter name=\"segment_info\">You are currently transcribing Part {partNumber} of {totalParts} from this lecture. This specific video segment is exactly {durationString} long; that is the value for `% End of the video`. For context only, the whole lecture, of which this segment is one part, runs {fullDurationString}; never use that number for a timestamp.{singlePartCheckpointNote}</parameter>\n" +
             $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'speech' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'speech' block perfectly matches the segment length ({durationString}).</parameter>\n" +
             "</context_and_parameters>";
 

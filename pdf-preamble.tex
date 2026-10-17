@@ -571,10 +571,12 @@ bookmarksopen=true
 
 \theoremstyle{remarkthm}
 \newtheorem{remark}[theorem]{Bemerkung}
+\newtheorem{observation}[theorem]{Beobachtung}
 \newtheorem{notation}[theorem]{Notation}
 \newtheorem{summary}[theorem]{Zusammenfassung}
 \newtheorem{goals}[theorem]{Ziele}
 \newtheorem*{remark*}{Bemerkung}
+\newtheorem*{observation*}{Beobachtung}
 \newtheorem*{notation*}{Notation}
 \newtheorem*{summary*}{Zusammenfassung}
 \newtheorem*{goals*}{Ziele}
@@ -607,6 +609,8 @@ bookmarksopen=true
 \Crefname{claim}{Behauptung}{Behauptungen}
 \crefname{remark}{Bemerkung}{Bemerkungen}
 \Crefname{remark}{Bemerkung}{Bemerkungen}
+\crefname{observation}{Beobachtung}{Beobachtungen}
+\Crefname{observation}{Beobachtung}{Beobachtungen}
 \crefname{notation}{Notation}{Notationen}
 \Crefname{notation}{Notation}{Notationen}
 \crefname{summary}{Zusammenfassung}{Zusammenfassungen}
@@ -1076,6 +1080,23 @@ breakable
     \setcounter{table}{\TempTab}%
   \fi
   \markboth{\chaptername\ \thechapter\ \ ---\ \ #2 #4\ \ ---\ \ #5}{}%
+}
+
+% Custom YouTube / Standalone Video Chapter Command:
+% \youtubechapter[Date]{Creator / Channel}{Video Title}
+\NewDocumentCommand{\youtubechapter}{ o m m }{%
+  \IfValueTF{#1}{%
+    \ifblank{#1}{%
+      \chapter[\texorpdfstring{--- \color{ThemePrimary!95!black}#2: #3}{--- #2: #3}]{{\Large\color{ChapSubtitleText}#2} \texorpdfstring{\\[1ex]}{--- } {\LARGE #3}}%
+      \markboth{\chaptername\ \thechapter\ \ ---\ \ #2\ \ ---\ \ #3}{}%
+    }{%
+      \chapter[\texorpdfstring{--- \color{ThemePrimary!95!black}#2 (#1): #3}{--- #2 (#1): #3}]{{\Large\color{ChapSubtitleText}#2\ ---\ #1} \texorpdfstring{\\[1ex]}{--- } {\LARGE #3}}%
+      \markboth{\chaptername\ \thechapter\ \ ---\ \ #2\ (#1)\ \ ---\ \ #3}{}%
+    }%
+  }{%
+    \chapter[\texorpdfstring{--- \color{ThemePrimary!95!black}#2: #3}{--- #2: #3}]{{\Large\color{ChapSubtitleText}#2} \texorpdfstring{\\[1ex]}{--- } {\LARGE #3}}%
+    \markboth{\chaptername\ \thechapter\ \ ---\ \ #2\ \ ---\ \ #3}{}%
+  }%
 }
 
 \titlespacing*{\chapter}{0pt}{-20pt}{40pt}

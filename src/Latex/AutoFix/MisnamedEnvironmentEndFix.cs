@@ -34,7 +34,7 @@ public sealed class MisnamedEnvironmentEndFix : ILatexDocumentFix {
     /// <summary>The inner semantic classifiers of the transcription protocol (environments.md).</summary>
     public static IReadOnlySet<string> TheoremEnvironments { get; } = new HashSet<string>(StringComparer.Ordinal) {
         "definition", "theorem", "lemma", "corollary", "proposition", "axiom", "property", "principle", "fact",
-        "claim", "remark", "example", "examples", "exercise", "notation", "question", "answer"
+        "claim", "remark", "observation", "example", "examples", "exercise", "notation", "question", "answer"
     };
 
     /// <summary>May close <c>speech</c>, <c>content</c>, <c>student</c>, ... (<see cref="RootContainers"/>).</summary>

@@ -48,4 +48,13 @@ public class YouTubeTaskRunnerTests {
     public void PartNumber_IsStatedSoTheModelKnowsWhereItIs() {
         Assert.Contains("This is part 4", YouTubeTaskRunner.BuildFragmentPrompt(Fragment(), partNum: 4));
     }
+
+    [Fact]
+    public void SinglePart_IsToldToOmitTrailingBoardStateCheckpoint() {
+        string singlePrompt = YouTubeTaskRunner.BuildFragmentPrompt(Fragment(), partNum: 1, totalParts: 1);
+        string multiPrompt = YouTubeTaskRunner.BuildFragmentPrompt(Fragment(), partNum: 1, totalParts: 2);
+
+        Assert.Contains("complete single-part video (Part 1 of 1)", singlePrompt);
+        Assert.DoesNotContain("complete single-part video (Part 1 of 1)", multiPrompt);
+    }
 }

@@ -794,6 +794,23 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
         return await refinementSession.StartAsync();
     }
 
+    public async Task<bool> RefineYouTubeOutputAsync(string combinedTexPath, int totalParts) {
+        if (!_config.GoIntoLatexRefinement || _latexRefinementConfig == null) return true;
+
+        var refinementClient = ResolveRefinementClientAndConfigureParams();
+        if (totalParts <= 1 && _latexRefinementConfig.Step1MergeAndTimestamp != null) {
+            Ui.Info($"YouTube-Video hat {totalParts} Teil (<= 1). Überspringe Schritt 1 (Merge) und führe Speech Refinement + Last Refinement aus.", "YouTube Mode");
+        }
+
+        Ui.Step("Starte automatischen Refinement-Prozess für die YouTube-Transkription...", "YouTube Mode");
+        var refinementSession = new LatexRefinementSession(
+            refinementClient ?? _client,
+            RefinementOptions.ForFile(_latexRefinementConfig, combinedTexPath, _config));
+
+        AttachmentUploader.HasJustUploaded = false;
+        return await refinementSession.StartAsync();
+    }
+
     [System.Text.RegularExpressions.GeneratedRegex(@"-speed-[\d\.]+-compressed$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex SpeedCompressedRegex();
 

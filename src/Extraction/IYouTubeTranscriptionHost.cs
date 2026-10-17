@@ -32,4 +32,7 @@ public interface IYouTubeTranscriptionHost {
         List<Part> attachmentParts,
         List<string> previousTexFiles,
         string? partOutputPath = null);
+
+    /// <summary>Runs the LaTeX refinement pipeline on the combined YouTube transcript when GoIntoLatexRefinement is enabled.</summary>
+    Task<bool> RefineYouTubeOutputAsync(string combinedTexPath, int totalParts) => Task.FromResult(true);
 }
