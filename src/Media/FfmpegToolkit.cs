@@ -265,6 +265,43 @@ public static class FfmpegToolkit {
     }
 
     /// <summary>
+    /// The average frame rate of the first video stream, e.g. 25 for a raw ETH recording or 1 for a
+    /// compressed one. -1 if ffprobe can't tell (no video stream, unreadable file, ffprobe missing).
+    /// </summary>
+    public static async Task<double> GetVideoFrameRateAsync(string filePath) {
+        if (!File.Exists(filePath)) return -1;
+
+        var startInfo = new ProcessStartInfo {
+            FileName = "ffprobe",
+            Arguments = $"-v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        try {
+            using var process = Process.Start(startInfo);
+            if (process == null) return -1;
+
+            string output = (await process.StandardOutput.ReadToEndAsync()).Trim();
+            await process.WaitForExitAsync();
+
+            // ffprobe gives a fraction such as "25/1" or "30000/1001", and "0/0" when it doesn't know
+            string[] fraction = output.Split('/');
+            if (fraction.Length == 2 &&
+                double.TryParse(fraction[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double numerator) &&
+                double.TryParse(fraction[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double denominator) &&
+                numerator > 0 && denominator > 0) {
+                return numerator / denominator;
+            }
+        }
+        catch (Exception ex) {
+            Ui.Warn($"Framerate nicht messbar für '{Path.GetFileName(filePath)}' ({ex.Describe()}).", "ffprobe");
+        }
+        return -1;
+    }
+
+    /// <summary>
     /// Reads every packet of the first audio stream without decoding it and returns where the last one
     /// ends. Exact even without a duration header; about a second for a full lecture. -1 on failure.
     /// </summary>

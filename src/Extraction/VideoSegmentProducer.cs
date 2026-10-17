@@ -44,6 +44,8 @@ public static partial class VideoSegmentProducer {
             }
 
             string expectedProcessedVideoPath = Path.Combine(tmpFolderForFile, $"{baseName}-speed-{speed.ToString(CultureInfo.InvariantCulture)}-compressed.mp4");
+            // Decided once per file: the cache branch below must agree with how the cached parts were cut
+            bool isPreCompressed = await ExtractionHelpers.IsAlreadyCompressedAsync(file);
 
             // Audio extraction was moved to the Consumer loop to run in parallel with API calls
 
@@ -95,9 +97,7 @@ public static partial class VideoSegmentProducer {
 
                 // Determine the duration of the video that was actually split (either pre-compressed input or processed output)
                 double speedVideoDuration;
-                bool wasInputFilePreCompressedWhenCached = ExtractionHelpers.IsPreCompressed(file);
-
-                if (wasInputFilePreCompressedWhenCached) {
+                if (isPreCompressed) {
                     // If the input file was pre-compressed, its duration is what was effectively "processed" and split.
                     speedVideoDuration = await FfmpegToolkit.GetVideoDurationAsync(file);
                 }
@@ -117,8 +117,7 @@ public static partial class VideoSegmentProducer {
                 continue;
             }
 
-            // Determine if the file is already in a "compressed" format or already processed in tmp
-            bool isPreCompressed = ExtractionHelpers.IsPreCompressed(file);
+            // Determine if the file is already processed in tmp
             bool isProcessedVideoCached = System.IO.File.Exists(expectedProcessedVideoPath) &&
                 new FileInfo(expectedProcessedVideoPath).Length > 1024 &&
                 (DateTime.Now - new FileInfo(expectedProcessedVideoPath).LastWriteTime) <= cacheDuration;
@@ -126,7 +125,8 @@ public static partial class VideoSegmentProducer {
             string? videoToSplit;
             if (isPreCompressed) {
                 Ui.Blank();
-                Ui.Detail($"{Path.GetFileName(file)} ist bereits als komprimiert markiert. Überspringe Vorverarbeitung, starte direkt Splitting...", "FFmpeg Producer");
+                string why = ExtractionHelpers.IsPreCompressed(file) ? "als komprimiert markiert" : "bereits komprimiert (niedrige Framerate)";
+                Ui.Detail($"{Path.GetFileName(file)} ist {why}. Überspringe Vorverarbeitung, starte direkt Splitting...", "FFmpeg Producer");
                 videoToSplit = file; // Use the original file directly for splitting
             }
             else if (isProcessedVideoCached) {

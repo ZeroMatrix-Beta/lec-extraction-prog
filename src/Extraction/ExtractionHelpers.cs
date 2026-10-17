@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using LectureExtraction.Configuration;
 using LectureExtraction.ConsoleUi;
 using LectureExtraction.Infrastructure;
+using LectureExtraction.Media;
 
 namespace LectureExtraction.Extraction;
 
@@ -94,6 +95,23 @@ public static partial class ExtractionHelpers {
     /// </summary>
     public static bool IsPreCompressed(string pathOrFileName) =>
         PreCompressedRegex().IsMatch(pathOrFileName);
+
+    /// <summary>
+    /// Compression keeps 1 FPS; raw recordings run at 25. Anything at or below this counts as
+    /// compressed, whatever preset, CRF or tool produced it.
+    /// </summary>
+    public const double MaxCompressedFrameRate = 2.0;
+
+    /// <summary>
+    /// Whether a video can be split as-is instead of being compressed first. A "compressed" marker in
+    /// the name settles it without opening the file; otherwise the frame rate decides, so 1 FPS files
+    /// made elsewhere (other presets, other names) aren't compressed a second time.
+    /// </summary>
+    public static async Task<bool> IsAlreadyCompressedAsync(string videoPath) {
+        if (IsPreCompressed(videoPath)) return true;
+        double fps = await FfmpegToolkit.GetVideoFrameRateAsync(videoPath);
+        return fps > 0 && fps <= MaxCompressedFrameRate;
+    }
 
     /// <summary>
     /// If the given video is not pre-compressed, checks if a sibling pre-compressed file

@@ -154,6 +154,16 @@ So a pair can only collide if you hand both paths to a script yourself. `plan` s
 reports `warnings` for that case. To see which file a run will really use, read the
 `videos[].fileName` of `lecx plan --json` — not the filename you passed.
 
+**A 1 FPS video is split as-is, whatever its name.** Before splitting, the producer
+compresses a video unless it is already compressed (`ExtractionHelpers.IsAlreadyCompressedAsync`).
+A `-compressed` / `-speed-N-compressed` name settles that without opening the file. Any other
+name is probed with ffprobe, and an average frame rate of at most 2 FPS
+(`MaxCompressedFrameRate`) counts as compressed: raw ETH recordings run at 25 FPS, every
+compression keeps 1, whichever preset, CRF or tool made it. Only the name counts for
+choosing between a raw file and its sibling above, so a 1 FPS file without the marker is
+not preferred over a raw file of the same lecture; it just isn't compressed again. The log
+says `bereits komprimiert (niedrige Framerate)` when the frame rate decided it.
+
 **Run `lecx` from the repository root — otherwise `run` loses its PDF and corrupts step 3.**
 Two files in the repository root are looked up relative to the *current directory*:
 
