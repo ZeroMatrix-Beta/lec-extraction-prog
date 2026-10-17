@@ -217,8 +217,19 @@ earlier parts (`DebugSendReferenceFile: false`), or a paid key.
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
 (appsettings.json, default 10, `0` = off) the attempt is abandoned and retried after 30 s. On
-2026-10-15 one request stalled for 20 minutes and its retry then answered normally. A stream that
-has started delivering is never cut.
+2026-10-15 one request stalled for 20 minutes and its retry then answered normally.
+
+**A stream that stops mid-answer is continued after the same 10 minutes.** The limit is on silence,
+not length, so a long answer is never cut. Once data has arrived the heartbeat says `Stream liefert
+seit N min nichts mehr`; at the limit the text received so far is kept and a continue request
+picks up from it. Before 2026-10-18 only the first chunk was timed: three refinement streams on three
+keys went silent mid-answer around midnight and waited over an hour, and the heartbeat kept saying
+"Noch keine Daten" although the answer had begun. A process stuck like that (built before the fix)
+never ends on its own: stop it and continue with `lecx finish`.
+
+**`lecx config profiles` can show room on a key Google has already refused.** On 2026-10-17 it
+showed profile 2 at `2/20` for `gemini-3.8-flash` while Google answered `limit: 20` exceeded. The
+counter is the app's own bookkeeping, not Google's; trust the refusal.
 
 **After a refinement failure, continue with `finish`, not `run`.** `run` reuses the finished
 parts, but it combines them again and starts the refinement at step 1. Because the first

@@ -223,8 +223,8 @@ public class GenerationLoopTests : IDisposable {
         Assert.Contains("Noch keine Daten vom Server", _console.Output);
     }
 
-    private static GenerationLoopOptions SingleRequest(TimeSpan firstChunkTimeout) => new() {
-        MaxContinueRequests = 1,
+    private static GenerationLoopOptions SingleRequest(TimeSpan firstChunkTimeout, int maxContinueRequests = 1) => new() {
+        MaxContinueRequests = maxContinueRequests,
         AnnounceRequest = (_, _) => { },
         IsComplete = text => text.Contains(Marker),
         BuildContinuePrompt = text => text,
@@ -249,16 +249,34 @@ public class GenerationLoopTests : IDisposable {
     }
 
     [Fact]
-    public async Task A_stream_that_has_started_is_never_cut_by_the_first_chunk_timeout() {
+    public async Task A_pause_shorter_than_the_timeout_does_not_cut_a_started_stream() {
         var history = new List<Content> { UserTurn("refine") };
         int calls = 0;
 
         var result = await GenerationLoop.RunAsync(history,
-            _ => { calls++; return StartsThenPauses(Answer("begin "), TimeSpan.FromMilliseconds(400), Answer(Marker)); },
-            ThoughtLog.Inert(), SingleRequest(TimeSpan.FromMilliseconds(100)));
+            _ => { calls++; return StartsThenPauses(Answer("begin "), TimeSpan.FromMilliseconds(100), Answer(Marker)); },
+            ThoughtLog.Inert(), SingleRequest(TimeSpan.FromMilliseconds(1000)));
 
         Assert.Equal(1, calls);
         Assert.Equal($"begin {Marker}", result.Text);
+    }
+
+    [Fact]
+    public async Task A_stream_that_stalls_after_starting_keeps_its_text_and_is_continued() {
+        // 2026-10-18: three refinement streams went silent mid-answer and waited over an hour.
+        var history = new List<Content> { UserTurn("refine") };
+        int calls = 0;
+        const string begun = "% Primary Language: English\n\\lecturechapter{...}\n";
+
+        var result = await GenerationLoop.RunAsync(history,
+            _ => ++calls == 1
+                ? StartsThenPauses(Answer(begun), TimeSpan.FromSeconds(5), Answer("never seen"))
+                : Stream([Answer(Marker)]),
+            ThoughtLog.Inert(), SingleRequest(TimeSpan.FromMilliseconds(200), maxContinueRequests: 2));
+
+        Assert.Equal(2, calls);
+        Assert.Equal(begun + Marker, result.Text);
+        Assert.Contains("nichts mehr", _console.Output);
     }
 
     private static async IAsyncEnumerable<GenerateContentResponse> StartsThenPauses(GenerateContentResponse first, TimeSpan pause, GenerateContentResponse second,
