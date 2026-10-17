@@ -560,6 +560,7 @@ pdfauthor={Prof. Rahul Pandharipande}
 % restated one carries its label plus a week tag (def:ring-w2). A recap the lecturer only speaks
 % gets a line of its own; that is the use the transcription prompt teaches.
 \newcommand{\recap}[1]{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faHistory\ Recap:}\ #1\par\smallskip}
+\NewDocumentCommand{\checkline}{ O{Check} m }{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faCheckCircle\ #1:}\ #2\par\smallskip}
 
 % Custom Theorem Styles: one per family, each with its own icon and color (after ta-notes).
 % \NewIconThmStyle{<style>}{<color>}{<icon>}

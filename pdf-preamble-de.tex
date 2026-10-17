@@ -555,6 +555,7 @@ bookmarksopen=true
 % lecturer states again. A transcript uses it for a recap the lecturer only speaks (anything written
 % goes into `content`); a review also puts one before a restatement on the board, citing the first.
 \newcommand{\recap}[1]{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faHistory\ Rückblick:}\ #1\par\smallskip}
+\NewDocumentCommand{\checkline}{ O{Probe} m }{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faCheckCircle\ #1:}\ #2\par\smallskip}
 % Spoken protocol anchors: (...) for minor spoken additions, [...] for major editorial context
 \newcommand{\spokenminor}[1]{\textcolor{TextMetaNote}{(#1)}}
 \newcommand{\spokenmajor}[1]{\textcolor{TextMetaNote}{[#1]}}

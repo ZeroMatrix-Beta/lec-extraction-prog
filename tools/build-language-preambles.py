@@ -4,8 +4,8 @@
     pdf-preamble-en.tex  <- Algebra 1 book preamble (English)
 
 Each output is the source's preamble (everything before \\begin{document}) plus what the pipeline's
-prompts teach but the book does not define yet: the `observation` theorem environment and
-`\\youtubechapter`. Rerun after either book preamble changes:
+prompts teach but the book does not define yet: the `observation` theorem environment,
+`\\checkline` and `\\youtubechapter`. Rerun after either book preamble changes:
 
     py tools/build-language-preambles.py
 """
@@ -76,6 +76,13 @@ def build(lang, source, obs, obs_plural, remark):
         insert_after(lines, BS + "Crefname{remark}",
                      [BS + "crefname{observation}{" + obs + "}{" + obs_plural + "}",
                       BS + "Crefname{observation}{" + obs + "}{" + obs_plural + "}"])
+    if BS + "checkline" not in body:
+        # same layout and color as \recap's line, its own check icon
+        label = "Probe" if lang == "de" else "Check"
+        insert_after(lines, BS + "newcommand{" + BS + "recap}",
+                     [BS + "NewDocumentCommand{" + BS + "checkline}{ O{" + label + "} m }{" + BS + "par" + BS + "smallskip"
+                      + BS + "noindent{" + BS + "sffamily" + BS + "bfseries" + BS + "color{EnvRemark}" + BS + "faCheckCircle"
+                      + BS + " #1:}" + BS + " #2" + BS + "par" + BS + "smallskip}"])
     if BS + "youtubechapter" not in body:
         insert_before(lines, BS + "titlespacing*{" + BS + "chapter}", YOUTUBE_CHAPTER.strip("\n").split("\n") + [""])
 
