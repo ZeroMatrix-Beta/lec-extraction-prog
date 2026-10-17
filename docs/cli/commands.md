@@ -21,12 +21,22 @@ lecx run --folder "D:/lecture-videos/analysis2" --from 03-30-2026
 | `--video <file>` | A single video file to work on |
 | `--folder <dir>` | Every `.mp4` in this folder. Defaults to the configured source folder |
 | `--from <text>` | Skip videos before the first whose filename contains this, in chronological order |
+| `--limit <n>` | At most n videos, in chronological order |
 | `--stop-after extract` | Transcribe only; skip refinement and PDF |
 | `--resume-window <hours>` | How long a finished `.tex` part stays reusable. Default **2** |
+| `--resume` | Reuse finished `.tex` parts whatever their age (an unlimited `--resume-window`) |
 | `--force` | Ignore existing `.tex` parts and re-request every segment |
+| `--clean-tmp` | Delete the lecture's `tmp/` after a successful run |
 | `--out <dir>` | Target folder. Defaults to `<source>/extracted_output` |
 | `--parts <n\|auto>` · `--overlap <s>` · `--speed <x>` · `--preset <p>` | Segment geometry and FFmpeg preset. `auto` = one part per 22.5 min of video: a 45-min lecture gets 2, a 90-min double lecture 4 |
 | `--model <id>` · `--profile <n>` | Model and API-key profile for this run only |
+| `--fps <rate>` | How many frames per second Gemini samples from each uploaded part (`GoogleVideoFps`, AI Studio), e.g. `0.25`, `0.3333333`, `1`. Aliases `--google-video-fps`, `--video-fps`. `plan` reports it as `googleVideoFps` |
+| `--skip-token-counting` | Skip the pre-flight token count, which spends free-tier quota |
+| `--file-activation-delay <s>` | Seconds to wait after an uploaded file becomes active. Default 0 |
+| `--thoughts <mode>` | Thought summaries for every stage, see [`lecx thoughts`](#lecx-thoughts--free) |
+
+`batch` accepts the same selection and segment flags (`--from`, `--limit`, `--parts`, `--fps`,
+`--stop-after`, `--thoughts`, `--force`) and passes them to every worker.
 
 Exits `0` on full success, `6` if some videos succeeded and others failed, `4` if the
 key does not resolve (checked **before** any request).
