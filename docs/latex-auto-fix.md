@@ -40,6 +40,8 @@ src/Latex/
     ├── UndefinedMathCommandFix.cs          ← \mapsfrom → \mathrel{\reflectbox{$\mapsto$}}, \sub → \subset
     ├── UnclosedInlineMathBeforeProseFix.cs ← $x and negatives → $x$ and negatives
     ├── HighlightOptionalColorFix.cs        ← \begin{highlight}[T] → \begin{highlight}{BrickRed}[T]
+    ├── HighlightColorTintFix.cs            ← \begin{highlight}{BrickRed!15} → \begin{highlight}{BrickRed}
+    ├── LeadingAngleBracketCommandFix.cs    ← <coordinate (A) at … → \coordinate (A) at …
     ├── MisnamedEnvironmentEndFix.cs        ← \end{student} closing a speech → \end{speech}
     └── SurplusBraceAfterMetaNoteFix.cs     ← document fix: \inlinemetanote{...}} → \inlinemetanote{...}
 ```
@@ -55,6 +57,8 @@ src/Latex/
 | `UnclosedInlineMathBeforeProseFix` | `Missing $ inserted` after a formula that runs into prose | A closing `$` was dropped before ordinary words: `$x and negatives` → `$x$ and negatives`. Only on a line with an odd number of `$` whose formula holds two plain words in a row; runs before `InlineMetaNoteMathFix`. | 10-07 (AI repair round 1, 2 lines), 09-29 (an older run) |
 | `InlineMetaNoteMathFix` | `Missing $ inserted`, `Extra }, or forgotten $` | Math inside a `\inlinemetanote{writes $...$}` went wrong: a `$` left open, an unclosed `cases`/`aligned`/`matrix` (closed before the last `$`), or a stray `$` right after the note, `{schreibt $F x$}$`. That last one is removed only on a line with an odd number of `$`. | Grundstrukturen FS25: weeks 1 and 2 (stray `$`, 12 notes), week 9 (`cases`) |
 | `HighlightOptionalColorFix` | `Undefined color '['` (xcolor) | `highlight` is the one box whose color comes first (`{ m o }`); the model wrote `\begin{highlight}[Title]` like every other box. Adds `{BrickRed}`. | Grundstrukturen FS25: weeks 2 and 13 |
+| `HighlightColorTintFix` | ``Undefined color `30'`` (xcolor) | The model gave `highlight` a tint, `{BrickRed!15}`; the box mixes its own tints from the argument (`#1!30`), so it became `BrickRed!15!30`. Keeps the bare name. | Information Security 02-22-2024 (16 boxes, steps 3 and 4) |
+| `LeadingAngleBracketCommandFix` | `Missing $ inserted` at `<coordinate` | A rewriting stage replaced a command's `\` by `<`. Only at the start of a line, before a known command name (`coordinate`, `draw`, `node`, `path`, `fill`, `begin`, `end`, `item`, …). | Information Security 02-29-2024 (step 3, and on another line step 4) |
 | `SurplusBraceAfterMetaNoteFix` | `Too many }'s` | One `}` too many after a note whose formula has set braces `\{...\}`. A document fix: it counts braces over the whole file and removes only a `}` that closes nothing, so a `}` closing a group opened lines earlier (a `\footnote{`) stays. | Grundstrukturen FS25: week 11 |
 
 **Not fixed automatically (yet):** missing, run-over and stray `\end{...}`. By decision, a fix is

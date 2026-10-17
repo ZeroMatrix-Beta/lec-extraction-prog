@@ -111,6 +111,42 @@ public partial class NewLatexAutoFixTests {
         Assert.Equal(input, HighlightFix.FixLine(input));
     }
 
+    private static readonly HighlightColorTintFix HighlightTintFix = new();
+
+    [Theory]
+    [InlineData(@"\begin{highlight}{BrickRed!15}[A problem]", @"\begin{highlight}{BrickRed}[A problem]")]
+    [InlineData(@"\begin{highlight}{MidnightBlue!10}", @"\begin{highlight}{MidnightBlue}")]
+    [InlineData(@"\begin{highlight}{BrickRed!50!black}[T]", @"\begin{highlight}{BrickRed}[T]")]
+    public void HighlightColorTintFix_KeepsTheBareColorName(string input, string expected) {
+        Assert.Equal(expected, HighlightTintFix.FixLine(input));
+        Assert.Equal(expected, HighlightTintFix.FixLine(expected));
+    }
+
+    [Fact]
+    public void HighlightColorTintFix_LeavesOtherTintsUntouched() {
+        string input = @"\node[fill=BrickRed!15] at (0,0) {$x$}; \begin{highlight}{ForestGreen}[Title]";
+        Assert.Equal(input, HighlightTintFix.FixLine(input));
+    }
+
+    private static readonly LeadingAngleBracketCommandFix AngleBracketFix = new();
+
+    [Theory]
+    [InlineData("    <coordinate (dcross_L1) at (7.5, -1.5);", @"    \coordinate (dcross_L1) at (7.5, -1.5);")]
+    [InlineData("<draw[->] (0,0) -- (1,0);", @"\draw[->] (0,0) -- (1,0);")]
+    [InlineData("  <end{tikzpicture}", @"  \end{tikzpicture}")]
+    public void LeadingAngleBracketCommandFix_RestoresTheBackslash(string input, string expected) {
+        Assert.Equal(expected, AngleBracketFix.FixLine(input));
+        Assert.Equal(expected, AngleBracketFix.FixLine(expected));
+    }
+
+    [Theory]
+    [InlineData(@"    \draw[<->] (0,0) -- (1,0);")]
+    [InlineData(@"$a <b$ holds")]
+    [InlineData(@"<nodes are drawn later")]
+    public void LeadingAngleBracketCommandFix_LeavesOtherAngleBracketsUntouched(string input) {
+        Assert.Equal(input, AngleBracketFix.FixLine(input));
+    }
+
     [Fact]
     public void InlineMetaNoteMathFix_RemovesTrailingDollarAfterClosedNote() {
         string input = @"Zum Beispiel $Fx$. \inlinemetanote{schreibt $F x$}$ Wie schon gesagt, $x$ ist eine Variable";

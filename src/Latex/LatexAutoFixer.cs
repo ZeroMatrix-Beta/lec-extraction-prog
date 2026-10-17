@@ -59,6 +59,8 @@ public static class LatexAutoFixer {
         new BareHiddenOpeningFix(),
         new UndefinedMathCommandFix(),
         new HighlightOptionalColorFix(),
+        new HighlightColorTintFix(),
+        new LeadingAngleBracketCommandFix(),
     ];
 
     /// <summary>Document fixes, run after all line fixes in this order.</summary>
