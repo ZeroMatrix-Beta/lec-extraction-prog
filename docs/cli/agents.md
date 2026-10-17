@@ -167,7 +167,12 @@ says `bereits komprimiert (niedrige Framerate)` when the frame rate decided it.
 **Run `lecx` from the repository root — otherwise `run` loses its PDF and corrupts step 3.**
 Two files in the repository root are looked up relative to the *current directory*:
 
-- `pdf-preamble.tex` (`PdfCompilation.PreamblePath`, relative). From anywhere else the log says
+- The preambles (`PdfCompilation.PreamblePath*`, relative): `pdf-preamble-de.tex` for a German
+  lecture, `pdf-preamble-en.tex` for an English one, `pdf-preamble.tex` when the language is
+  unknown. The transcript's `% Primary Language:` line decides (else its words); the log names the
+  choice as `Preamble: … (Sprache: …)`. The two language files are generated from the Grundstrukturen
+  and Algebra 1 book preambles: after either changes, run `py tools/build-language-preambles.py`.
+  From anywhere else the log says
   `Preamble-Datei (pdf-preamble.tex) nicht gefunden`. The probe compile before step 3 then
   fails, and step 3 is handed that failure as if it were a LaTeX syntax error to fix. Step 4
   skips the PDF, and the video exits `6` although all text steps finished. Redo step 3 and

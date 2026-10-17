@@ -41,11 +41,13 @@ public partial class LatexRefinementSession {
             return false;
         }
 
-        string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
+        LectureLanguage language = LectureLanguageDetector.Detect(await System.IO.File.ReadAllTextAsync(finalTexFile));
+        string preamblePath = _config.PdfCompilation?.ResolvePreamblePath(language) ?? "pdf-preamble.tex";
         if (!System.IO.File.Exists(preamblePath)) {
             Ui.Warn($"Preamble-Datei ({preamblePath}) nicht gefunden. Überspringe PDF-Generierung.", "LaTeX Refinement");
             return false;
         }
+        Ui.Info($"Preamble: {preamblePath} (Sprache: {language})");
 
         try {
             if (System.IO.File.Exists(finalTexFile)) {
@@ -599,8 +601,8 @@ public partial class LatexRefinementSession {
             await System.IO.File.WriteAllTextAsync(tryTexPath, fixedLatex);
             Ui.Info($"Reparierte Version (Runde {round}) gespeichert unter: {tryTexFileName}");
 
-            string preamblePath = _config.PdfCompilation?.PreamblePath ?? "pdf-preamble.tex";
-            string preamble = System.IO.File.Exists(preamblePath) ? await System.IO.File.ReadAllTextAsync(preamblePath) : preambleText;
+            // the preamble CompilePdfAsync chose for this lecture's language
+            string preamble = preambleText;
 
             string tryWrapperFileName = $"{inputBaseName}-try{round}-main.tex";
             string tryWrapperPath = Path.Combine(targetFolder, tryWrapperFileName);

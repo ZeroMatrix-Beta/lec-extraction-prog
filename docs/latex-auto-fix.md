@@ -14,7 +14,8 @@ to do by hand when they do not help. Written for humans and for AI agents workin
 
 PDF stage (refinement step 4, or `lecx pdf compile`), in `LatexRefinementSession.Pdf.cs`:
 
-1. Compile the final `.tex` with `pdf-preamble.tex`.
+1. Compile the final `.tex` with the preamble for its language (`pdf-preamble-de.tex` /
+   `pdf-preamble-en.tex`, chosen by `% Primary Language:`; `pdf-preamble.tex` when unknown).
 2. On failure: back up the input as `-orig.tex` (and the partial PDF).
 3. **Auto-fix** (only if `ExperimentalLatexAutoFix` is on): run `LatexAutoFixer`. If anything changed,
    compile again. Free and instant.

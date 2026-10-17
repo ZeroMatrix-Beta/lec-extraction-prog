@@ -21,7 +21,10 @@
     // HIGHLY EXPERIMENTAL: own rule-based LaTeX fixes before the AI repair (original kept as -orig.tex)
     "ExperimentalLatexAutoFix": true,
     "Enabled": true,
+    // Picked by the transcript's "% Primary Language:" line (else by its words); PreamblePath when unknown
     "PreamblePath": "pdf-preamble.tex",
+    "PreamblePathGerman": "pdf-preamble-de.tex",
+    "PreamblePathEnglish": "pdf-preamble-en.tex",
     "UseAntiGravityAgent": false,
     "MaxFixRounds": 3,
     "MaxAntiGravityAgentRounds": 3,
