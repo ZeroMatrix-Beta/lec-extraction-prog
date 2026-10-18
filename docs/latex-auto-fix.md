@@ -44,6 +44,7 @@ src/Latex/
     ├── HighlightColorTintFix.cs            ← \begin{highlight}{BrickRed!15} → \begin{highlight}{BrickRed}
     ├── LeadingAngleBracketCommandFix.cs    ← <coordinate (A) at … → \coordinate (A) at …
     ├── MisnamedEnvironmentEndFix.cs        ← \end{student} closing a speech → \end{speech}
+    ├── FloatInBoxFix.cs                    ← document fix: \begin{table}[h!] inside a box → \begin{center}, \captionof
     └── SurplusBraceAfterMetaNoteFix.cs     ← document fix: \inlinemetanote{...}} → \inlinemetanote{...}
 ```
 
@@ -60,6 +61,7 @@ src/Latex/
 | `HighlightOptionalColorFix` | `Undefined color '['` (xcolor) | `highlight` is the one box whose color comes first (`{ m o }`); the model wrote `\begin{highlight}[Title]` like every other box. Adds `{BrickRed}`. | Grundstrukturen FS25: weeks 2 and 13 |
 | `HighlightColorTintFix` | ``Undefined color `30'`` (xcolor) | The model gave `highlight` a tint, `{BrickRed!15}`; the box mixes its own tints from the argument (`#1!30`), so it became `BrickRed!15!30`. Keeps the bare name. | Information Security 02-22-2024 (16 boxes, steps 3 and 4) |
 | `LeadingAngleBracketCommandFix` | `Missing $ inserted` at `<coordinate` | A rewriting stage replaced a command's `\` by `<`. Only at the start of a line, before a known command name (`coordinate`, `draw`, `node`, `path`, `fill`, `begin`, `end`, `item`, …). | Information Security 02-29-2024 (step 3, and on another line step 4) |
+| `FloatInBoxFix` | `LaTeX Error: Not in outer par mode` | A `table` or `figure` float inside a box (`content`, `highlight`, `steps`, …); floats cannot stand in a tcolorbox. A document fix: the float becomes a `center` block, its `\caption` a `\captionof{table}`; a float outside every box stays. | Information Security 02-29-2024 rerun (step 4, `\begin{table}[h!]` in `content`) |
 | `SurplusBraceAfterMetaNoteFix` | `Too many }'s` | One `}` too many after a note whose formula has set braces `\{...\}`. A document fix: it counts braces over the whole file and removes only a `}` that closes nothing, so a `}` closing a group opened lines earlier (a `\footnote{`) stays. | Grundstrukturen FS25: week 11 |
 
 **Not fixed automatically (yet):** missing, run-over and stray `\end{...}`. By decision, a fix is

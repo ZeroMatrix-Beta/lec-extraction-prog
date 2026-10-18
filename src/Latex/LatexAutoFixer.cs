@@ -67,6 +67,7 @@ public static class LatexAutoFixer {
     public static IReadOnlyList<ILatexDocumentFix> DefaultDocumentFixes { get; } = [
         new MisnamedEnvironmentEndFix(),
         new SurplusBraceAfterMetaNoteFix(),
+        new FloatInBoxFix(),
     ];
 
     /// <summary>The repaired text and one German, user-facing line per change.</summary>
