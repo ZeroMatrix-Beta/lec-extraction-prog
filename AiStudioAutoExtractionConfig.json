@@ -27,7 +27,7 @@
   "GoIntoLatexRefinement": true,
   "NumberOfParts": "auto",
   "OverlapSeconds": 240,
-  "GoogleVideoFps": 0.3333333,
+  "GoogleVideoFps": 0.25,
   "UseGoogleSearch": false,
   "FfmpegPreset": "ultrafast",
   // Options: "ultrafast" (fastest, 2-4x speedup), "veryfast", "fast", "medium"
