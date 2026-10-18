@@ -234,7 +234,9 @@ details in [Documentation.md §4.4](../../Documentation.md)). Since 2026-10-18 t
 speech, didactic boxes, `aiNote`s and TikZ (~2–3k tokens each instead of ~5k); the part directly before
 stays complete. That is margin, not a fix: part 4 still needs the cache. First test, 02-23 part 4 on
 a fresh key, warm-up on, no dummy part: context 19.5k, `[Resume Part 4]` (299k) and the request
-(359k, 284k cached) both accepted, one answer to `Video complete`.
+(359k) both accepted, one answer to `Video complete`. The same evening 02-29 and 03-01 part 4
+(364k each) passed too. Google reported 284k, 133k and 285k cached; that figure proves nothing
+either way (see above), only the accept does.
 
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
