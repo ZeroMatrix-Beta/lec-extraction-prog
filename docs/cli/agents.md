@@ -228,6 +228,12 @@ and on resume. With warm-up on, `Schritt 1/1` (284k) was accepted, but the `[Res
 handshake (309k) and part 4 (382k) were refused. Editing the prompt files between runs changes the
 prefix, so a resumed session starts with a prefix Google has never cached.
 
+The earlier parts are the one input you can shrink without losing the lecture: `ReferenceSlimming` in
+`AiStudioAutoExtractionConfig.json` says per kind of part what goes (`OlderParts`, `PrecedingPart`;
+details in [Documentation.md §4.4](../../Documentation.md)). Since 2026-10-18 the older parts lose
+speech, didactic boxes, `aiNote`s and TikZ (~2–3k tokens each instead of ~5k); the part directly before
+stays complete. That is margin, not a fix: part 4 still needs the cache.
+
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
 (appsettings.json, default 10, `0` = off) the attempt is abandoned and retried after 30 s. On

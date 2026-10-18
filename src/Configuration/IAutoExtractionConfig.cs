@@ -29,6 +29,7 @@ public interface IAutoExtractionConfig {
     bool InlinePrecedingLecTexParts { get; }
     bool StripCommentsFromReferenceContext { get; }
     bool SlimOlderReferenceParts { get; }
+    ReferenceSlimmingConfig ReferenceSlimming { get; }
     bool VerboseConsoleOutput { get; }
     bool OnlyDoWarmUp { get; }
     bool DebugHelloRoundtrip { get; }

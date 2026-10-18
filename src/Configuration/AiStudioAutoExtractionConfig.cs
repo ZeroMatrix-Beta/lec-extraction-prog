@@ -67,13 +67,19 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool StripCommentsFromReferenceContext { get; set; } = true;
 
     /// <summary>
-    /// [AI Context] Empties the `speech` environments and removes the `tikzpicture`s (each replaced by
-    /// `% tokenOpt`) in every inlined preceding part except the most recent one, which stays complete
-    /// (see ReferenceContextSlimmer). Inline path only. Off by default; an experiment from 2026-10-16 to
-    /// bring late parts under the free tier's per-minute token limit.
-    /// [Human] Kürzt ältere Vorgänger-Teile im Kontext (speech-Inhalte und TikZ weg), der letzte bleibt ganz.
+    /// [AI Context] Slims every inlined preceding part except the most recent one, which stays complete,
+    /// as ReferenceSlimming says (see ReferenceContextSlimmer). Inline path only. Off by default; an
+    /// experiment from 2026-10-16 to bring late parts under the free tier's per-minute token limit.
+    /// [Human] Kürzt ältere Vorgänger-Teile im Kontext, der letzte bleibt ganz.
     /// </summary>
     public bool SlimOlderReferenceParts { get; set; } = false;
+
+    /// <summary>
+    /// [AI Context] What SlimOlderReferenceParts removes: environments, emptied environments, commands.
+    /// The class defaults reproduce the 2026-10-16 behaviour (speech bodies and TikZ only).
+    /// [Human] Was beim Kürzen älterer Teile entfernt wird.
+    /// </summary>
+    public ReferenceSlimmingConfig ReferenceSlimming { get; set; } = new();
     public bool DebugHelloRoundtrip { get; set; } = false;
     public bool VerboseConsoleOutput { get; set; } = false;
     public bool GenerateAudioFile { get; set; } = true;

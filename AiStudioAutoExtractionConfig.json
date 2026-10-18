@@ -19,9 +19,29 @@
   "InlinePrecedingLecTexParts": true,
   // Removes LaTeX comments and hidden environments from the inlined context files (preamble says so)
   "StripCommentsFromReferenceContext": true,
-  // Older inlined parts lose their speech and tikzpicture contents ("% tokenOpt"); the part just before stays complete.
+  // Slims the inlined parts older than the one just before (ReferenceSlimming.OlderParts below).
   // Keeps late parts under the free tier's 250k tokens/minute limit (tested 2026-10-16).
   "SlimOlderReferenceParts": true,
+  // What is removed, per kind of part. Labels inside removed blocks are kept; sectioning, content and
+  // theorem-like environments are only touched if listed. Unclosed environments are left alone.
+  // Old behaviour (2026-10-16): OlderParts = { "RemoveEnvironments": ["tikzpicture"], "EmptyEnvironments": ["speech"] }.
+  "ReferenceSlimming": {
+    "OlderParts": {
+      "StripCommentsAndHidden": true,
+      "RemoveEnvironments": [ "speech", "overview", "insight", "steps", "note", "student", "pause", "aiNote", "tikzpicture" ],
+      "EmptyEnvironments": [],
+      "RemoveCommands": [ "inlinemetanote" ],
+      "MarkRemovedEnvironments": false
+    },
+    // The part directly before the current one: the current part continues it, so only comments/hidden go.
+    "PrecedingPart": {
+      "StripCommentsAndHidden": true,
+      "RemoveEnvironments": [],
+      "EmptyEnvironments": [],
+      "RemoveCommands": [],
+      "MarkRemovedEnvironments": false
+    }
+  },
   "DebugHelloRoundtrip": false,
   "GenerateAudioFile": true,
   "GoIntoLatexRefinement": true,

@@ -86,12 +86,9 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     private bool StripsReferenceContextComments =>
         _config.StripCommentsFromReferenceContext && _config.InlinePrecedingLecTexParts;
 
-    // [AI Context] Rule 5 exists only while SlimOlderReferenceParts is in effect, for the same reason as
-    // rule 4: the emptied copies must not read as a style example for speech blocks or figures.
-    private const string SlimmedPartsRule =
-        "5. To save tokens, in every context file except the most recent one the content of each `speech` environment and each `tikzpicture` " +
-        "has been replaced by `% tokenOpt`. That applies to these reference copies only: your own transcription must still contain " +
-        "complete `speech` environments and every figure the system instructions require.\n";
+    // [AI Context] Rule 5 exists only while a ReferenceSlimming profile in use removes something, for the
+    // same reason as rule 4: the slimmed copies must not read as a style example for speech blocks, boxes
+    // or figures. Its text names exactly what each profile removes (ReferenceContextSlimmer.RuleText).
 
     /// <summary>Whether older inlined preceding parts are slimmed in this session (decides rule 5 too).</summary>
     private bool SlimsOlderReferenceParts =>
@@ -100,7 +97,10 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     private string ReferenceContextPreamble =>
         ReferenceContextPreambleRules
         + (StripsReferenceContextComments ? StrippedCommentsRule : "")
-        + (SlimsOlderReferenceParts ? SlimmedPartsRule : "")
+        + (_config.InlinePrecedingLecTexParts
+            ? ReferenceContextSlimmer.RuleText(SlimsOlderReferenceParts ? _config.ReferenceSlimming.OlderParts : null,
+                _config.ReferenceSlimming.PrecedingPart, StripsReferenceContextComments)
+            : "")
         + "\n";
 
     /// <summary>

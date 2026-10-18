@@ -193,12 +193,12 @@ public partial class AutoExtractionSession {
     /// through here, so the preamble's rule 4 is true for all of them.
     /// [Human] Bereitet den Inhalt einer Kontext-Datei auf (ggf. ohne Kommentare).
     /// </summary>
-    /// <param name="slim">Also empty speech blocks and drop TikZ (SlimOlderReferenceParts): for every
-    /// preceding part except the most recent one. Runs after the comment stripping, which would
-    /// otherwise remove the `% tokenOpt` markers again.</param>
-    private string PrepareReferenceContent(string tex, bool slim = false) {
+    /// <param name="profile">The ReferenceSlimming profile for this file (OlderParts or PrecedingPart),
+    /// or null for the dummy anchor. Runs after the comment stripping, which would otherwise remove the
+    /// `% tokenOpt` markers again.</param>
+    private string PrepareReferenceContent(string tex, ReferenceSlimProfile? profile = null) {
         string prepared = StripsReferenceContextComments ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex) : tex;
-        return slim ? ReferenceContextSlimmer.Slim(prepared) : prepared;
+        return profile is null ? prepared : ReferenceContextSlimmer.Slim(prepared, profile);
     }
 
     /// <summary>
@@ -212,10 +212,15 @@ public partial class AutoExtractionSession {
             string previousTexFile = previousTexFiles[i];
             string previousTexFileName = Path.GetFileName(previousTexFile);
             string content = await System.IO.File.ReadAllTextAsync(previousTexFile);
-            // The most recent preceding part stays complete: the current part continues it.
-            bool slim = SlimsOlderReferenceParts && i < previousTexFiles.Count - 1;
-            string prepared = PrepareReferenceContent(content, slim);
-            string what = slim ? "ohne Kommentare/hidden, speech/TikZ gekürzt" : "ohne Kommentare/hidden";
+            // The most recent preceding part has its own profile (complete by default): the current part continues it.
+            bool older = i < previousTexFiles.Count - 1;
+            ReferenceSlimProfile? profile = older
+                ? (SlimsOlderReferenceParts ? _config.ReferenceSlimming.OlderParts : null)
+                : _config.ReferenceSlimming.PrecedingPart;
+            string prepared = PrepareReferenceContent(content, profile);
+            string what = profile?.RemovesAnything() == true
+                ? $"gekürzt ({(older ? "OlderParts" : "PrecedingPart")})"
+                : "ohne Kommentare/hidden";
             Ui.Detail(prepared.Length == content.Length
                 ? $"- {previousTexFileName}"
                 : $"- {previousTexFileName} ({content.Length:N0} -> {prepared.Length:N0} Zeichen {what})");
