@@ -78,6 +78,12 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
         "That applies to these reference copies only: it does NOT mean you may omit them. Your own transcription must still contain " +
         "every comment and every `hidden` environment the system instructions require.\n";
 
+    // Rule 4 with a hedge when a ReferenceSlimming profile keeps some header comment lines.
+    private string StrippedCommentsRuleText =>
+        _config.ReferenceSlimming.PrecedingPart.KeepCommentPrefixes.Length > 0 || _config.ReferenceSlimming.OlderParts.KeepCommentPrefixes.Length > 0
+            ? StrippedCommentsRule.Replace("all LaTeX comments and", "all LaTeX comments (except possibly a few header comment lines) and")
+            : StrippedCommentsRule;
+
     /// <summary>
     /// [AI Context] Whether inlined reference context is stripped of comments in this session. The same
     /// answer decides the preamble's rule 4, so warm-up and part requests keep one identical prefix.
@@ -96,7 +102,7 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
 
     private string ReferenceContextPreamble =>
         ReferenceContextPreambleRules
-        + (StripsReferenceContextComments ? StrippedCommentsRule : "")
+        + (StripsReferenceContextComments ? StrippedCommentsRuleText : "")
         + (_config.InlinePrecedingLecTexParts
             ? ReferenceContextSlimmer.RuleText(SlimsOlderReferenceParts ? _config.ReferenceSlimming.OlderParts : null,
                 _config.ReferenceSlimming.PrecedingPart, StripsReferenceContextComments)

@@ -14,7 +14,7 @@
   * Reference Files:
   */
   "DebugSendReferenceFile": true,
-  "SendDummyFileDuringTranscription": true,
+  "SendDummyFileDuringTranscription": false,
   "SendDummyFileWithEachWarmUpRound": true,
   "InlinePrecedingLecTexParts": true,
   // Removes LaTeX comments and hidden environments from the inlined context files (preamble says so)
@@ -33,9 +33,11 @@
       "RemoveCommands": [ "inlinemetanote" ],
       "MarkRemovedEnvironments": false
     },
-    // The part directly before the current one: the current part continues it, so only comments/hidden go.
+    // The part directly before the current one: the current part continues it, so only comments/hidden go,
+    // except the header lines the next part needs (lecturer, language, last words and board).
     "PrecedingPart": {
       "StripCommentsAndHidden": true,
+      "KeepCommentPrefixes": [ "% Lecturer(s):", "% Speaker(s):", "% Primary Language:", "% Final words:", "% Final board:" ],
       "RemoveEnvironments": [],
       "EmptyEnvironments": [],
       "RemoveCommands": [],

@@ -18,6 +18,13 @@ public class LatexCommentStripperTests {
     }
 
     [Fact]
+    public void Keeps_comment_lines_with_a_listed_prefix() {
+        string tex = "% ====\n% Lecturer(s): Dennis Hofheinz\n% Final words: And this model...\n% other\n\\section{Kernels} % trailing\n";
+        Assert.Equal("% Lecturer(s): Dennis Hofheinz\n% Final words: And this model...\n\\section{Kernels}\n",
+            LatexCommentStripper.StripCommentsAndHiddenBlocks(tex, ["% Lecturer(s):", "% Final words:"]));
+    }
+
+    [Fact]
     public void Cuts_trailing_comments_but_keeps_the_code_before_them() {
         Assert.Equal("$a + b$\n", Strip("$a + b$ % the sum\n"));
     }

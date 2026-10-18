@@ -24,6 +24,12 @@ public class ReferenceSlimProfile {
     public bool StripCommentsAndHidden { get; set; } = false;
 
     /// <summary>
+    /// Comment lines starting with one of these survive every comment stripping of this file (this
+    /// profile's and StripCommentsFromReferenceContext), e.g. `% Lecturer(s):` or `% Final words:`.
+    /// </summary>
+    public string[] KeepCommentPrefixes { get; set; } = [];
+
+    /// <summary>
     /// Environments removed entirely, begin to end. `\label`s inside them are kept, one per line, so
     /// references to them still resolve for the model.
     /// </summary>

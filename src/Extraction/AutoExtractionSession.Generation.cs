@@ -197,7 +197,7 @@ public partial class AutoExtractionSession {
     /// or null for the dummy anchor. Runs after the comment stripping, which would otherwise remove the
     /// `% tokenOpt` markers again.</param>
     private string PrepareReferenceContent(string tex, ReferenceSlimProfile? profile = null) {
-        string prepared = StripsReferenceContextComments ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex) : tex;
+        string prepared = StripsReferenceContextComments ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex, profile?.KeepCommentPrefixes) : tex;
         return profile is null ? prepared : ReferenceContextSlimmer.Slim(prepared, profile);
     }
 

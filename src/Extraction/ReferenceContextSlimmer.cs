@@ -27,7 +27,7 @@ public static partial class ReferenceContextSlimmer {
     public const string Marker = "% tokenOpt";
 
     public static string Slim(string tex, ReferenceSlimProfile profile) {
-        string result = profile.StripCommentsAndHidden ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex) : tex;
+        string result = profile.StripCommentsAndHidden ? LatexCommentStripper.StripCommentsAndHiddenBlocks(tex, profile.KeepCommentPrefixes) : tex;
         foreach (string env in profile.EmptyEnvironments) {
             // The begin line keeps its optional argument; only the body goes (its labels stay).
             result = EnvironmentRegex(env, withArgument: true).Replace(result, m =>
