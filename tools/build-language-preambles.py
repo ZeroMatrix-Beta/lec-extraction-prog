@@ -1,6 +1,6 @@
 """Build the pipeline's per-language preambles from the two book preambles.
 
-    pdf-preamble-de.tex  <- Grundstrukturen production preamble (German)
+    pdf-preamble-de.tex  <- the current Grundstrukturen book, spring-2025 (German)
     pdf-preamble-en.tex  <- Algebra 1 book preamble (English)
 
 Each output is the source's preamble (everything before \\begin{document}) plus what the pipeline's
@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LATEX = r"C:\Users\miche\latex"
 
 SOURCES = {
-    "de": (os.path.join(LATEX, "eth-grundstrukturen-fs2026-ki-trankskription", "grundstrukturen-fs-2026-farbig.tex"),
+    "de": (os.path.join(LATEX, "grundstrukturen-ai-transcription-spring-2025", "grundstrukturen.tex"),
            "Beobachtung", "Beobachtungen", "Bemerkung"),
     "en": (os.path.join(LATEX, "algebra-1-ai-transcription-fall-2026", "algebra-1.tex"),
            "Observation", "Observations", "Remark"),

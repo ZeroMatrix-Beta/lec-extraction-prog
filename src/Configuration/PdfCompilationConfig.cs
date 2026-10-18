@@ -13,7 +13,7 @@ public class PdfCompilationConfig {
 
     /// <summary>
     /// [AI Context] Preamble for German lectures (`% Primary Language: German`), generated from the
-    /// Grundstrukturen production preamble by tools/build-language-preambles.py.
+    /// current Grundstrukturen book (grundstrukturen-ai-transcription-spring-2025) by tools/build-language-preambles.py.
     /// [Human] Preamble für deutsche Vorlesungen.
     /// </summary>
     public string PreamblePathGerman { get; set; } = "pdf-preamble-de.tex";
