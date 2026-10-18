@@ -4,7 +4,7 @@
 |---|---|
 | 1. Console output, delay logging & stream safety | Done (`776c6b3`, `e1887d4`) |
 | 2. Part reuse and redoing a single part | Planned |
-| 3. Cleanup (`lecx clean`, `--clean-tmp`, `lecx files`) | Planned |
+| 3. Cleanup (`lecx clean`, `--clean-tmp`, `lecx files`) | `lecx clean` and `--clean-tmp` done (`323db60`, `0abdbb6`); `lecx files` open |
 | 4. Dropped from the first draft, with reasons | - |
 | 5. Order and verification | - |
 
