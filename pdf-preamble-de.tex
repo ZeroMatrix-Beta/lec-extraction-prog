@@ -532,7 +532,7 @@
 % Custom text commands (Deutsch)
 \newcommand{\qt}[1]{\textit{\textcolor{QuoteRed}{\glqq}#1\textcolor{QuoteRed}{\grqq}}}
 \newcommand{\newterm}[1]{\textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{\grqq}}
-\newcommand{\inlinemetanote}[1]{\textit{\textcolor{TextMetaNote}{[#1]}}}
+\newcommand{\inlinemetanote}[1]{{\colorlet{QuoteRed}{TextMetaNote}\textit{\textcolor{TextMetaNote}{[#1]}}}} % quote marks and brackets grey too
 \newcommand{\recap}[1]{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faHistory\ R{\"u}ckblick:}\ #1\par\smallskip}
 \NewDocumentCommand{\checkline}{ O{Probe} m }{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faCheckCircle\ #1:}\ #2\par\smallskip}
 

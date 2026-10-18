@@ -554,7 +554,7 @@ pdfauthor={Prof. Rahul Pandharipande}
 
 % Custom text commands
 \newcommand{\newterm}[1]{\textcolor{QuoteRed}{``}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{''}}
-\newcommand{\inlinemetanote}[1]{\textit{\textcolor{TextMetaNote}{[#1]}}}
+\newcommand{\inlinemetanote}[1]{{\colorlet{QuoteRed}{TextMetaNote}\textit{\textcolor{TextMetaNote}{[#1]}}}} % quote marks and brackets grey too
 % Recap line: a definition or result from an earlier lecture (or from earlier in this one) that the
 % lecturer states again. Before a restatement on the board it cites the first version, and the
 % restated one carries its label plus a week tag (def:ring-w2). A recap the lecturer only speaks

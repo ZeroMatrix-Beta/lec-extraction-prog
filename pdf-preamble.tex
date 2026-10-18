@@ -511,7 +511,7 @@ bookmarksopen=true
 
 % Custom text commands
 \newcommand{\newterm}[1]{\textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{\grqq}}
-\newcommand{\inlinemetanote}[1]{\textit{[\textcolor{TextMetaNote}{#1}]}}
+\newcommand{\inlinemetanote}[1]{{\colorlet{QuoteRed}{TextMetaNote}\textit{\textcolor{TextMetaNote}{[#1]}}}} % quote marks and brackets grey too
 % Recap line: a definition or result from an earlier lecture (or from earlier in this one) that the
 % lecturer states again. A transcript uses it for a recap the lecturer only speaks (anything written
 % goes into `content`); a review also puts one before a restatement on the board, citing the first.
