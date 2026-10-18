@@ -38,5 +38,6 @@ public class ReferenceSlimProfile {
     /// <summary>Leave `% tokenOpt (name)` where a removed environment stood. Off: nothing is left.</summary>
     public bool MarkRemovedEnvironments { get; set; } = true;
 
-    public bool RemovesAnything() => StripCommentsAndHidden || RemoveEnvironments.Length > 0 || EmptyEnvironments.Length > 0 || RemoveCommands.Length > 0;
+    /// <summary>Whether this profile removes anything beyond comments and `hidden` blocks (decides the log line).</summary>
+    public bool RemovesMoreThanComments() => RemoveEnvironments.Length > 0 || EmptyEnvironments.Length > 0 || RemoveCommands.Length > 0;
 }

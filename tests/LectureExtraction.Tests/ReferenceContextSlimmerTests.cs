@@ -110,9 +110,9 @@ public class ReferenceContextSlimmerTests {
         string rule = ReferenceContextSlimmer.RuleText(BareProfile, new ReferenceSlimProfile { StripCommentsAndHidden = true }, commentsAlreadyStated: true);
 
         Assert.StartsWith("5. To save tokens, in every context file except the most recent one every `speech`, ", rule);
-        Assert.Contains("`aiNote` and `tikzpicture` environment has been removed entirely", rule);
-        Assert.Contains(@"every `\inlinemetanote` has been removed", rule);
-        Assert.DoesNotContain("comments", rule.Split("This was done")[0]);
+        Assert.Contains("`aiNote` and `tikzpicture` environment may or may not have been removed entirely", rule);
+        Assert.Contains(@"every `\inlinemetanote` may or may not have been removed", rule);
+        Assert.DoesNotContain("comments", rule.Split("Wherever")[0]);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class ReferenceContextSlimmerTests {
     public void Rule_text_mentions_the_most_recent_file_when_its_profile_removes_something() {
         string rule = ReferenceContextSlimmer.RuleText(OldProfile, new ReferenceSlimProfile { RemoveEnvironments = ["student"] }, commentsAlreadyStated: true);
 
-        Assert.Contains("in the most recent context file every `student` environment has been removed entirely", rule);
+        Assert.Contains("in the most recent context file every `student` environment may or may not have been removed entirely", rule);
         Assert.Contains("in every older context file", rule);
     }
 }

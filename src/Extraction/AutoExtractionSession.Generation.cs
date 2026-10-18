@@ -218,7 +218,7 @@ public partial class AutoExtractionSession {
                 ? (SlimsOlderReferenceParts ? _config.ReferenceSlimming.OlderParts : null)
                 : _config.ReferenceSlimming.PrecedingPart;
             string prepared = PrepareReferenceContent(content, profile);
-            string what = profile?.RemovesAnything() == true
+            string what = profile is not null && profile.RemovesMoreThanComments()
                 ? $"gekürzt ({(older ? "OlderParts" : "PrecedingPart")})"
                 : "ohne Kommentare/hidden";
             Ui.Detail(prepared.Length == content.Length

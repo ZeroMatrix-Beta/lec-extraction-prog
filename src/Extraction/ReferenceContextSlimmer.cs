@@ -65,7 +65,7 @@ public static partial class ReferenceContextSlimmer {
         if (precedingText != "") parts.Add($"in the most recent context file {precedingText}");
         if (olderText != "") parts.Add($"in every {(precedingText == "" ? "context file except the most recent one" : "older context file")} {olderText}");
         return "5. To save tokens, " + string.Join("; ", parts) + ". " +
-               "This was done on purpose: these files show what was already transcribed and which labels exist, nothing more. " +
+               "Wherever something is missing, that was done on purpose: these files show what was already transcribed and which labels exist, nothing more. " +
                "They are NOT a style example, and the gaps are not to be imitated. Your own transcription must still contain every " +
                "environment, box, figure, comment and complete `speech` environment the system instructions require.\n";
     }
@@ -73,14 +73,14 @@ public static partial class ReferenceContextSlimmer {
     private static string Describe(ReferenceSlimProfile profile, bool commentsAlreadyStated) {
         var removed = new List<string>();
         if (profile.StripCommentsAndHidden && !commentsAlreadyStated)
-            removed.Add("all LaTeX comments and `hidden` environments have been removed");
+            removed.Add("all LaTeX comments and `hidden` environments may or may not have been removed");
         if (profile.RemoveEnvironments.Length > 0)
-            removed.Add("every " + Join(profile.RemoveEnvironments.Select(e => $"`{e}`")) + " environment has been removed entirely" +
+            removed.Add("every " + Join(profile.RemoveEnvironments.Select(e => $"`{e}`")) + " environment may or may not have been removed entirely" +
                         (profile.MarkRemovedEnvironments ? " (replaced by `% tokenOpt (name)`)" : ""));
         if (profile.EmptyEnvironments.Length > 0)
-            removed.Add("the content of each " + Join(profile.EmptyEnvironments.Select(e => $"`{e}`")) + " environment has been replaced by `% tokenOpt`");
+            removed.Add("the content of each " + Join(profile.EmptyEnvironments.Select(e => $"`{e}`")) + " environment may or may not have been replaced by `% tokenOpt`");
         if (profile.RemoveCommands.Length > 0)
-            removed.Add("every " + Join(profile.RemoveCommands.Select(c => $"`\\{c}`")) + " has been removed");
+            removed.Add("every " + Join(profile.RemoveCommands.Select(c => $"`\\{c}`")) + " may or may not have been removed");
         return Join(removed);
     }
 

@@ -232,7 +232,9 @@ The earlier parts are the one input you can shrink without losing the lecture: `
 `AiStudioAutoExtractionConfig.json` says per kind of part what goes (`OlderParts`, `PrecedingPart`;
 details in [Documentation.md §4.4](../../Documentation.md)). Since 2026-10-18 the older parts lose
 speech, didactic boxes, `aiNote`s and TikZ (~2–3k tokens each instead of ~5k); the part directly before
-stays complete. That is margin, not a fix: part 4 still needs the cache.
+stays complete. That is margin, not a fix: part 4 still needs the cache. First test, 02-23 part 4 on
+a fresh key, warm-up on, no dummy part: context 19.5k, `[Resume Part 4]` (299k) and the request
+(359k, 284k cached) both accepted, one answer to `Video complete`.
 
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
