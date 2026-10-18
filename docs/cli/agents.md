@@ -214,6 +214,20 @@ After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens �
 abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
 earlier parts (`DebugSendReferenceFile: false`), or a paid key.
 
+**The warm-up is a config switch, with no CLI flag.** `EnableImplicitPrefixCacheWarmup` in
+`AiStudioAutoExtractionConfig.json`; when off, the log says `Lade History-Dateien direkt in den
+Session-Zustand (Warmup deaktiviert)`. When on, a session sends one handshake per history batch
+before its first part (`Schritt 0`, `Schritt 1/1`, …). A session that starts at part 2 or later
+(`finish` / `run --resume` with earlier parts on disk, inlined) sends one more, `[Resume Part N]`:
+system instruction + history + the inlined earlier parts, everything but the video
+(`PrimePrefixCacheForResumedPartAsync`). If it fails, the part is sent anyway.
+
+**Part 4 is where the limit bites (2026-10-18).** Information Security, three keys: every part 1–3
+went through (352k–387k, warm-up off), every part 4 (382k–396k) was refused twice, in the first run
+and on resume. With warm-up on, `Schritt 1/1` (284k) was accepted, but the `[Resume Part 4]`
+handshake (309k) and part 4 (382k) were refused. Editing the prompt files between runs changes the
+prefix, so a resumed session starts with a prefix Google has never cached.
+
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`
 (appsettings.json, default 10, `0` = off) the attempt is abandoned and retried after 30 s. On
