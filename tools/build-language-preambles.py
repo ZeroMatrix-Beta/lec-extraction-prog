@@ -5,7 +5,8 @@
 
 Each output is the source's preamble (everything before \\begin{document}) plus what the pipeline's
 prompts teach but the book does not define yet: the `observation` theorem environment,
-`\\checkline` and `\\youtubechapter`. Rerun after either book preamble changes:
+`\\checkline` and `\\youtubechapter`; and questions/answers recoloured to the green of `\\recap`, the
+answer with its own icon. Rerun after either book preamble changes:
 
     py tools/build-language-preambles.py
 """
@@ -83,6 +84,17 @@ def build(lang, source, obs, obs_plural, remark):
                      [BS + "NewDocumentCommand{" + BS + "checkline}{ O{" + label + "} m }{" + BS + "par" + BS + "smallskip"
                       + BS + "noindent{" + BS + "sffamily" + BS + "bfseries" + BS + "color{EnvRemark}" + BS + "faCheckCircle"
                       + BS + " #1:}" + BS + " #2" + BS + "par" + BS + "smallskip}"])
+    if "answerthm" not in body:
+        # questions and answers in the green of \recap; the answer gets its own icon instead of the
+        # question mark. Both stay numbered (shared theorem counter), so either can be referenced.
+        insert_after(lines, BS + "colorlet{EnvQuestion}",
+                     [BS + "colorlet{EnvQuestion}{EnvRemark}            % pipeline: questions/answers green like " + BS + "recap"])
+        insert_after(lines, BS + "NewIconThmStyle{questionthm}",
+                     [BS + "NewIconThmStyle{answerthm}{EnvQuestion}{" + BS + "faCommentDots}"])
+        for env in ("answer}[theorem]", "question*}", "answer*}"):
+            style = "questionthm" if env.startswith("question") else "answerthm"
+            insert_before(lines, BS + "newtheorem" + ("*" if "*" in env else "") + "{" + env,
+                          [BS + "theoremstyle{" + style + "}"])
     if BS + "youtubechapter" not in body:
         insert_before(lines, BS + "titlespacing*{" + BS + "chapter}", YOUTUBE_CHAPTER.strip("\n").split("\n") + [""])
 

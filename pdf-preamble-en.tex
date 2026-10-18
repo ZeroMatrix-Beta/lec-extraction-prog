@@ -227,6 +227,7 @@
 % The other theorem families are colored as in ta-notes (EnvTheorem: Satz, Definition, Beispiel).
 \definecolor{EnvRemark}{HTML}{008837}           % Bemerkung, Notation, Zusammenfassung, Ziele
 \colorlet{EnvQuestion}{MidnightBlue}            % Frage, Antwort
+\colorlet{EnvQuestion}{EnvRemark}            % pipeline: questions/answers green like \recap
 \definecolor{EnvImportantRemark}{HTML}{D7263D}  % Wichtige Bemerkung
 % ==========================================
 
@@ -575,6 +576,7 @@ pdfauthor={Prof. Rahul Pandharipande}
 \NewIconThmStyle{examplethm}{EnvTheorem}{\faLightbulb[regular]}
 \NewIconThmStyle{remarkthm}{EnvRemark}{\faInfoCircle}
 \NewIconThmStyle{questionthm}{EnvQuestion}{\faQuestionCircle}
+\NewIconThmStyle{answerthm}{EnvQuestion}{\faCommentDots}
 \NewIconThmStyle{importantremarkthm}{EnvImportantRemark}{\faExclamationTriangle}
 
 % Math Environments (English), grouped by style. All numbered ones share the theorem counter.
@@ -628,8 +630,11 @@ pdfauthor={Prof. Rahul Pandharipande}
 
 \theoremstyle{questionthm}
 \newtheorem{question}[theorem]{Question}
+\theoremstyle{answerthm}
 \newtheorem{answer}[theorem]{Answer}
+\theoremstyle{questionthm}
 \newtheorem*{question*}{Question}
+\theoremstyle{answerthm}
 \newtheorem*{answer*}{Answer}
 
 \theoremstyle{importantremarkthm}

@@ -157,6 +157,7 @@
 \colorlet{EnvTheoremDark}{OriginalTheoremHex}
 \definecolor{EnvRemark}{HTML}{008837}           % Bemerkung, Notation, Zusammenfassung, Ziele
 \colorlet{EnvQuestion}{MidnightBlue}            % Frage, Antwort
+\colorlet{EnvQuestion}{EnvRemark}            % pipeline: questions/answers green like \recap
 \definecolor{EnvImportantRemark}{HTML}{D7263D}  % Wichtige Bemerkung
 
 % --- EMPHASIS STYLE OVERRIDE ---
@@ -548,6 +549,7 @@
 \NewIconThmStyle{remarkthm}{EnvRemark}{\faInfoCircle}
 \NewIconThmStyle{importantremarkthm}{EnvImportantRemark}{\faExclamationTriangle}
 \NewIconThmStyle{questionthm}{EnvQuestion}{\faQuestionCircle}
+\NewIconThmStyle{answerthm}{EnvQuestion}{\faCommentDots}
 
 \theoremstyle{purplethm}
 \newtheorem{theorem}{Satz}[chapter]
@@ -599,8 +601,11 @@
 
 \theoremstyle{questionthm}
 \newtheorem{question}[theorem]{Frage}
+\theoremstyle{answerthm}
 \newtheorem{answer}[theorem]{Antwort}
+\theoremstyle{questionthm}
 \newtheorem*{question*}{Frage}
+\theoremstyle{answerthm}
 \newtheorem*{answer*}{Antwort}
 
 \theoremstyle{importantremarkthm}
