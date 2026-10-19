@@ -194,9 +194,9 @@ experience they usually do not. But on 2026-10-15 one key was refused with
 the 503s counted (perhaps those that failed after Google had started generating), or the key
 was used outside this pipeline that day. The per-project usage page in AI Studio or the Cloud
 console is the place to check. On 2026-10-19 that page showed 7 requests for a run that sent 6 (2 warm-ups, 4 parts):
-the 7th was part 4's first attempt, a 503 that arrived after Google had started streaming (`Die
-bisherige Teilantwort wird verworfen`). So a 503 mid-answer counts; whether one refused before any
-output does is still open.
+the 7th was part 4's first attempt, which ended in a 503. The log shows no streamed text before
+it (`Die bisherige Teilantwort wird verworfen` is printed on every retry, it is no evidence of
+output). So at least some 503s count against the daily quota; which ones is still open.
 
 **A request over the per-minute token limit passes only with a cache hit.** The free tier caps
 input tokens per minute per model and key: 250,000 on `gemini-3.8-flash`, `gemini-3.7-flash` and
