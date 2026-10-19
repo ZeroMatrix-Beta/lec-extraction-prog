@@ -34,6 +34,8 @@ public interface IAutoExtractionConfig {
     bool OnlyDoWarmUp { get; }
     bool DebugHelloRoundtrip { get; }
     int HighDemandDelaySeconds { get; }
+    int NetworkPollIntervalSeconds { get; }
+    int NetworkMaxWaitMinutes { get; }
     int MaxContinueRequests { get; }
     bool EnableParallelFileUploads { get; }
     ThoughtSummaryConfig ThoughtSummaries { get; }

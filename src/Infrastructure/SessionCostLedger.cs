@@ -74,6 +74,24 @@ public static class SessionCostLedger {
         }
     }
 
+    /// <summary>
+    /// [AI Context] Undoes one <see cref="RecordRequest"/> for an attempt that never left the machine
+    /// (its host did not resolve), so the table does not list requests Google never saw.
+    /// [Human] Nimmt einen Versuch zurück, der wegen fehlender Verbindung nie gesendet wurde.
+    /// </summary>
+    public static void ForgetUnsentRequest(bool isGeneration, int attempt) {
+        if (isGeneration) {
+            Interlocked.Decrement(ref _generationRequests);
+        }
+        else {
+            Interlocked.Decrement(ref _supportRequests);
+        }
+
+        if (attempt > 1) {
+            Interlocked.Decrement(ref _retriedAttempts);
+        }
+    }
+
     public static void RecordWait(TimeSpan elapsed, bool skippedByUser) {
         Interlocked.Add(ref _waitedTicks, elapsed.Ticks);
         if (skippedByUser) {

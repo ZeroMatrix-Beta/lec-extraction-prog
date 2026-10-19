@@ -177,6 +177,7 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
         if (_config.HighDemandDelaySeconds > 0) {
             ApiRetryPolicy.DefaultHighDemandDelaySeconds = _config.HighDemandDelaySeconds;
         }
+        NetworkAvailability.Configure(_config.NetworkPollIntervalSeconds, _config.NetworkMaxWaitMinutes);
 
         return true;
     }

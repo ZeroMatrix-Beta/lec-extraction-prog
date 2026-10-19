@@ -117,6 +117,20 @@ public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public int HighDemandDelaySeconds { get; set; } = 180;
 
     /// <summary>
+    /// [AI Context] While the internet is down (DNS cannot resolve the Google host), seconds between two DNS
+    /// lookups. A lookup sends nothing to Google. Defaults to 15.
+    /// [Human] Abstand der DNS-Abfragen bei Internetausfall, in Sekunden.
+    /// </summary>
+    public int NetworkPollIntervalSeconds { get; set; } = 15;
+
+    /// <summary>
+    /// [AI Context] How long to wait for DNS to return before the request fails like any exhausted retry.
+    /// The failed attempts do not count against the retry limit. Defaults to 30.
+    /// [Human] So lange wird auf die Internetverbindung gewartet, in Minuten.
+    /// </summary>
+    public int NetworkMaxWaitMinutes { get; set; } = 30;
+
+    /// <summary>
     /// [AI Context] Upper bound on requests per video part, the first one included. Each continue
     /// re-sends the video, so this caps the cost of a part whose model never says "Video complete".
     /// [Human] Maximale Anzahl Requests pro Videoteil (inkl. Continue-Anfragen).
