@@ -80,9 +80,9 @@ public class NetworkAvailabilityTests : IDisposable {
         var clock = new FakeClock();
         int polls = 0;
 
-        bool result = await NetworkAvailability.WaitUntilHostResolvesAsync(
+        bool result = await NetworkAvailability.WaitUntilHostReachableAsync(
             "example.test", TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(30), CancellationToken.None,
-            resolver: (_, _) => Task.FromResult(++polls >= 2),
+            probe: (_, _) => Task.FromResult(++polls >= 2),
             delay: clock.DelayAsync,
             utcNow: clock.Now);
 
@@ -95,9 +95,9 @@ public class NetworkAvailabilityTests : IDisposable {
     public async Task A_host_that_resolves_at_once_is_not_waited_for() {
         var clock = new FakeClock();
 
-        bool result = await NetworkAvailability.WaitUntilHostResolvesAsync(
+        bool result = await NetworkAvailability.WaitUntilHostReachableAsync(
             "example.test", TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(30), CancellationToken.None,
-            resolver: (_, _) => Task.FromResult(true), delay: clock.DelayAsync, utcNow: clock.Now);
+            probe: (_, _) => Task.FromResult(true), delay: clock.DelayAsync, utcNow: clock.Now);
 
         Assert.True(result);
         Assert.Empty(clock.Delays);
@@ -108,9 +108,9 @@ public class NetworkAvailabilityTests : IDisposable {
         var clock = new FakeClock();
         int polls = 0;
 
-        bool result = await NetworkAvailability.WaitUntilHostResolvesAsync(
+        bool result = await NetworkAvailability.WaitUntilHostReachableAsync(
             "example.test", TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(1), CancellationToken.None,
-            resolver: (_, _) => { polls++; return Task.FromResult(false); },
+            probe: (_, _) => { polls++; return Task.FromResult(false); },
             delay: clock.DelayAsync,
             utcNow: clock.Now);
 
@@ -125,9 +125,9 @@ public class NetworkAvailabilityTests : IDisposable {
         using var cts = new CancellationTokenSource();
         var clock = new FakeClock();
 
-        bool result = await NetworkAvailability.WaitUntilHostResolvesAsync(
+        bool result = await NetworkAvailability.WaitUntilHostReachableAsync(
             "example.test", TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(30), cts.Token,
-            resolver: (_, _) => Task.FromResult(false),
+            probe: (_, _) => Task.FromResult(false),
             delay: (span, token) => { cts.Cancel(); token.ThrowIfCancellationRequested(); return Task.CompletedTask; },
             utcNow: clock.Now);
 
@@ -141,15 +141,15 @@ public class NetworkAvailabilityTests : IDisposable {
         var clock = new FakeClock();
         int polls = 0;
 
-        await NetworkAvailability.WaitUntilHostResolvesAsync(
+        await NetworkAvailability.WaitUntilHostReachableAsync(
             "example.test", TimeSpan.FromSeconds(15), TimeSpan.FromMinutes(30), CancellationToken.None,
-            resolver: (_, _) => Task.FromResult(++polls > 17), // back after 4 min 15 s
+            probe: (_, _) => Task.FromResult(++polls > 17), // back after 4 min 15 s
             delay: clock.DelayAsync, utcNow: clock.Now);
 
         string output = console.Output;
-        int statusLines = System.Text.RegularExpressions.Regex.Matches(output, "Warte auf DNS").Count;
+        int statusLines = System.Text.RegularExpressions.Regex.Matches(output, "Warte auf Verbindung").Count;
         Assert.Equal(5, statusLines); // t = 0, 1, 2, 3, 4 min
-        Assert.Contains("funktioniert wieder", output);
+        Assert.Contains("wieder erreichbar", output);
     }
 
     /// <summary>A clock that only moves when the wait sleeps.</summary>

@@ -199,12 +199,14 @@ it (`Die bisherige Teilantwort wird verworfen` is printed on every retry, it is 
 output). So at least some 503s count against the daily quota; which ones is still open.
 
 **A lost internet connection does not use up attempts.** When the Google host cannot be resolved
-(`Der angegebene Host ist unbekannt`, no route, `[Netzwerk-Fehler]` in the log), the app polls DNS
-every `NetworkPollIntervalSeconds` (15) for up to `NetworkMaxWaitMinutes` (30) and resends at once
-when it answers. The failed request never reached Google, so it counts neither against the retry
-limit nor in the request table, and the poll itself sends nothing to Google. If the connection stays
-down for the full wait, the part or step fails as after any exhausted retry (exit `6` for a part).
-Other connection errors (reset, timeout) still use the counted retry with its 300 s wait.
+or has no route (`Der angegebene Host ist unbekannt`, `[Netzwerk-Fehler]` in the log), the app
+probes it with a bare TCP connect to port 443 every `NetworkPollIntervalSeconds` (15) for up to
+`NetworkMaxWaitMinutes` (30) and resends at once when it answers. The probe sends no request to
+Google (no TLS, no HTTP, no quota); a DNS lookup alone would not do, since it answers from the cache
+while the route is down. The failed request never reached Google, so it counts neither against the
+retry limit nor in the request table. If the connection stays down for the full wait, the part or
+step fails as after any exhausted retry. Other connection errors (reset, timeout) still use the
+counted retry with its 300 s wait.
 
 **A request over the per-minute token limit passes only with a cache hit.** The free tier caps
 input tokens per minute per model and key: 250,000 on `gemini-3.8-flash`, `gemini-3.7-flash` and

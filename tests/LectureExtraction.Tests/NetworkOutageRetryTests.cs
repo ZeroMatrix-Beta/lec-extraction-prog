@@ -14,7 +14,7 @@ using Xunit;
 namespace LectureExtraction.Tests;
 
 /// <summary>
-/// An internet outage (DNS cannot resolve the Google host) is waited out with DNS lookups and does not
+/// An internet outage (DNS cannot resolve the Google host) is waited out with TCP connect probes and does not
 /// use up a retry attempt; any other error keeps its counted retry. The 2026-10-19 log showed the old
 /// behaviour: attempt 2 failed at once with the same DNS error, then a flat 300 s wait.
 /// </summary>
@@ -32,7 +32,7 @@ public class NetworkOutageRetryTests : IDisposable {
             return Task.FromResult(true);
         };
         NetworkAvailability.Delay = (_, _) => Task.CompletedTask;
-        NetworkAvailability.Resolver = (_, _) => Task.FromResult(true);
+        NetworkAvailability.Probe = (_, _) => Task.FromResult(true);
     }
 
     public void Dispose() {
@@ -40,14 +40,43 @@ public class NetworkOutageRetryTests : IDisposable {
         ApiRetryPolicy.DelayAsync = _previousDelay;
         NetworkAvailability.MaxWaitMinutes = _previousMaxWait;
         NetworkAvailability.Delay = null;
-        NetworkAvailability.Resolver = null;
+        NetworkAvailability.Probe = null;
+    }
+
+    [Fact]
+    public async Task A_no_route_error_waits_for_the_probe_and_skips_the_discard_message() {
+        // No route, but the name would still resolve from the cache: only the probe tells when it is back.
+        var console = new TestConsole();
+        AnsiConsole.Console = console;
+        int attempts = 0;
+        int probes = 0;
+        NetworkAvailability.Probe = (_, _) => Task.FromResult(++probes >= 3);
+
+        bool result = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
+            () => {
+                attempts++;
+                return attempts switch {
+                    1 => Stream([], new ServerError("high demand", 503, "UNAVAILABLE")),
+                    2 => Stream([], new HttpRequestException("unreachable", new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.NetworkUnreachable))),
+                    _ => Stream(["done"], null)
+                };
+            },
+            _ => Task.CompletedTask,
+            CancellationToken.None,
+            maxRetries: 2);
+
+        Assert.True(result);
+        Assert.Equal(3, attempts);
+        Assert.Equal(3, probes);
+        // Attempt 2 after the 503 says it discards; the resend after the outage does not.
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(console.Output, "verworfen"));
     }
 
     [Fact]
     public async Task Dns_failures_do_not_use_up_attempts_and_are_resent_at_once() {
         int attempts = 0;
         int lookups = 0;
-        NetworkAvailability.Resolver = (_, _) => Task.FromResult(++lookups % 2 == 0); // down on the first lookup of each outage
+        NetworkAvailability.Probe = (_, _) => Task.FromResult(++lookups % 2 == 0); // down on the first lookup of each outage
 
         // maxRetries 2 would give up after the second failure if the DNS failures counted.
         bool result = await ApiRetryPolicy.ExecuteStreamWithRetryAsync(
@@ -95,7 +124,7 @@ public class NetworkOutageRetryTests : IDisposable {
     public async Task An_outage_that_outlasts_the_maximum_wait_fails_like_an_exhausted_retry() {
         int attempts = 0;
         NetworkAvailability.MaxWaitMinutes = 0;
-        NetworkAvailability.Resolver = (_, _) => Task.FromResult(false);
+        NetworkAvailability.Probe = (_, _) => Task.FromResult(false);
 
         await Assert.ThrowsAsync<HttpRequestException>(() => ApiRetryPolicy.ExecuteStreamWithRetryAsync(
             () => { attempts++; return Stream([], NetworkAvailabilityTests.DnsFailure()); },

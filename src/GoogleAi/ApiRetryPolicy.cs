@@ -83,6 +83,7 @@ public static partial class ApiRetryPolicy {
         int consecutiveFailuresWithoutProgress = 0;
         int perMinuteTokenRefusals = 0;
         int uncountedNetworkWaits = 0;
+        bool resendAfterOutage = false;
         int attempt = 0;
 
         while (true) {
@@ -92,9 +93,13 @@ public static partial class ApiRetryPolicy {
 
             try {
                 if (attempt > 1) {
-                    Ui.Warn($"{contextMsg}Sende Anfrage neu (Versuch {attempt}). Die bisherige Teilantwort wird verworfen...", "API Retry");
+                    // After an outage the wait already said it resends, and nothing was received to discard.
+                    if (!resendAfterOutage) {
+                        Ui.Warn($"{contextMsg}Sende Anfrage neu (Versuch {attempt}). Die bisherige Teilantwort wird verworfen...", "API Retry");
+                    }
                     onRetry?.Invoke();
                 }
+                resendAfterOutage = false;
 
                 SessionCostLedger.RecordRequest(isGeneration: true, attempt);
                 var responseStream = streamFactory();
@@ -145,7 +150,7 @@ public static partial class ApiRetryPolicy {
                 }
 
                 // No DNS / no route: the request never left this machine, so it is neither counted against
-                // the retry limit nor spent at Google. Wait for the connection (DNS lookups only), resend at once.
+                // the retry limit nor spent at Google. Wait for the connection (TCP connect probes only), resend at once.
                 var outage = await WaitOutNetworkOutageAsync(ex, contextMsg, uncountedNetworkWaits, cancellationToken);
                 if (outage == NetworkOutage.Cancelled) {
                     return false; // User cancelled the wait
@@ -157,6 +162,7 @@ public static partial class ApiRetryPolicy {
                 if (outage == NetworkOutage.Recovered) {
                     SessionCostLedger.ForgetUnsentRequest(isGeneration: true, attempt);
                     uncountedNetworkWaits++;
+                    resendAfterOutage = true;
                     attempt--;
                     continue;
                 }
@@ -268,9 +274,9 @@ public static partial class ApiRetryPolicy {
 
     /// <summary>How a wait for the internet connection ended.</summary>
     private enum NetworkOutage {
-        /// <summary>Not a DNS / no-route error (or too many outages in one call): the normal retry logic decides.</summary>
+        /// <summary>Not a host-not-found / no-route error (or too many outages in one call): the normal retry logic decides.</summary>
         NotApplicable,
-        /// <summary>DNS resolves again: resend now, without using up an attempt.</summary>
+        /// <summary>The host is reachable again: resend now, without using up an attempt.</summary>
         Recovered,
         /// <summary>The connection did not come back within <see cref="NetworkAvailability.MaxWaitMinutes"/>.</summary>
         GaveUp,
@@ -278,31 +284,33 @@ public static partial class ApiRetryPolicy {
         Cancelled
     }
 
-    /// <summary>Outages one call waits out without counting an attempt; a request that keeps failing to resolve right after DNS answered is not an outage.</summary>
+    /// <summary>Outages one call waits out without counting an attempt; a request that keeps failing right after the probe got through is not an outage.</summary>
     private const int MaxUncountedNetworkWaits = 10;
 
     /// <summary>
-    /// [AI Context] For a host-not-found / no-route error: polls DNS (no request to Google, no quota) until
-    /// the host resolves or <see cref="NetworkAvailability.MaxWaitMinutes"/> pass. Ctrl+C ends the wait like any other.
-    /// [Human] Wartet bei fehlender Internetverbindung auf DNS, statt einen Versuch zu verbrauchen.
+    /// [AI Context] For a host-not-found / no-route error: probes the host with a bare TCP connect (no
+    /// request to Google, no quota) until it answers or <see cref="NetworkAvailability.MaxWaitMinutes"/>
+    /// pass. A DNS lookup alone would answer from the cache during a no-route outage. Ctrl+C ends the
+    /// wait like any other.
+    /// [Human] Wartet bei fehlender Internetverbindung, bis Google wieder erreichbar ist, statt einen Versuch zu verbrauchen.
     /// </summary>
     private static async Task<NetworkOutage> WaitOutNetworkOutageAsync(Exception ex, string contextMsg, int uncountedWaitsSoFar, CancellationToken cancellationToken) {
         if (uncountedWaitsSoFar >= MaxUncountedNetworkWaits || !NetworkAvailability.IsDnsOrNoRouteError(ex)) {
             return NetworkOutage.NotApplicable;
         }
 
-        Ui.Warn($"{contextMsg}Keine Internetverbindung zum Google-Server ({ex.Describe()}). Der Versuch zählt nicht; ich warte, bis DNS wieder antwortet (Ctrl+C bricht ab).", "Netzwerk-Fehler");
+        Ui.Warn($"{contextMsg}Keine Internetverbindung zum Google-Server ({ex.Describe()}). Der Versuch zählt nicht; ich warte, bis der Server wieder erreichbar ist (Ctrl+C bricht ab).", "Netzwerk-Fehler");
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         void cancelHandler(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cts.Cancel(); }
         Console.CancelKeyPress += cancelHandler;
         try {
-            bool back = await NetworkAvailability.WaitUntilHostResolvesAsync(
+            bool back = await NetworkAvailability.WaitUntilHostReachableAsync(
                 NetworkAvailability.GoogleApiHost,
                 TimeSpan.FromSeconds(Math.Max(1, NetworkAvailability.PollIntervalSeconds)),
                 TimeSpan.FromMinutes(Math.Max(0, NetworkAvailability.MaxWaitMinutes)),
                 cts.Token,
-                NetworkAvailability.Resolver,
+                NetworkAvailability.Probe,
                 NetworkAvailability.Delay);
             if (back) {
                 Ui.Info($"{contextMsg}Die Verbindung ist zurück: Anfrage wird sofort neu gesendet, der fehlgeschlagene Versuch zählt nicht.", "API Retry");

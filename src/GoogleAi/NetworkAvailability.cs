@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading;
@@ -10,21 +9,28 @@ namespace LectureExtraction.GoogleAi;
 
 /// <summary>
 /// [AI Context] Tells a lost internet connection (DNS fails, no route) apart from every other error and
-/// waits it out with DNS lookups only. A lookup sends nothing to Google, so polling costs no quota,
-/// and a request that failed to resolve its host never left the machine, so
-/// <see cref="ApiRetryPolicy"/> does not count it against its retry limit.
-/// [Human] Wartet bei Internetausfall (DNS) gezielt auf die Rückkehr der Verbindung, ohne Anfragen
-/// an Google zu schicken und ohne Versuche zu verbrauchen.
+/// waits it out with a bare TCP connect to the Google host: DNS lookup plus handshake, closed at once,
+/// no HTTP request, so polling costs no quota. A DNS lookup alone is not enough: on a no-route outage
+/// the name usually still resolves from the Windows DNS cache. A request that failed this way never
+/// left the machine, so <see cref="ApiRetryPolicy"/> does not count it against its retry limit.
+/// [Human] Wartet bei Internetausfall gezielt auf die Rückkehr der Verbindung (nur TCP-Verbindungsaufbau,
+/// keine Anfrage an Google) und verbraucht dabei keine Versuche.
 /// </summary>
 public static class NetworkAvailability {
-    /// <summary>The host every Gemini request goes to; the one whose DNS entry is polled.</summary>
+    /// <summary>The host every Gemini request goes to; the one that is probed.</summary>
     public const string GoogleApiHost = "generativelanguage.googleapis.com";
 
-    /// <summary>Seconds between two DNS lookups while waiting. Set from <c>NetworkPollIntervalSeconds</c>.</summary>
+    /// <summary>The HTTPS port the probe connects to.</summary>
+    public const int GoogleApiPort = 443;
+
+    /// <summary>Seconds between two probes while waiting. Set from <c>NetworkPollIntervalSeconds</c>.</summary>
     public static int PollIntervalSeconds { get; set; } = 15;
 
     /// <summary>Minutes to wait for the connection before the request fails as before. Set from <c>NetworkMaxWaitMinutes</c>.</summary>
     public static int MaxWaitMinutes { get; set; } = 30;
+
+    /// <summary>Upper bound for one probe; a dead hotspot can let a connect hang far longer.</summary>
+    private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>Takes the two values from a config; a value of zero or less keeps the current one.</summary>
     public static void Configure(int pollIntervalSeconds, int maxWaitMinutes) {
@@ -32,10 +38,10 @@ public static class NetworkAvailability {
         if (maxWaitMinutes > 0) MaxWaitMinutes = maxWaitMinutes;
     }
 
-    /// <summary>Replaces the DNS lookup of <see cref="ApiRetryPolicy"/>'s outage wait; tests only.</summary>
-    public static Func<string, CancellationToken, Task<bool>>? Resolver { get; set; }
+    /// <summary>Replaces the probe of <see cref="ApiRetryPolicy"/>'s outage wait; tests only.</summary>
+    public static Func<string, CancellationToken, Task<bool>>? Probe { get; set; }
 
-    /// <summary>Replaces the pause between two lookups of <see cref="ApiRetryPolicy"/>'s outage wait; tests only.</summary>
+    /// <summary>Replaces the pause between two probes of <see cref="ApiRetryPolicy"/>'s outage wait; tests only.</summary>
     public static Func<TimeSpan, CancellationToken, Task>? Delay { get; set; }
 
     /// <summary>How often a status line is printed while waiting.</summary>
@@ -85,37 +91,46 @@ public static class NetworkAvailability {
         return false;
     }
 
-    /// <summary>The real lookup: true when <paramref name="host"/> resolves to at least one address.</summary>
-    public static async Task<bool> ResolvesAsync(string host, CancellationToken cancellationToken) {
+    /// <summary>
+    /// The real probe: true when a TCP connection to <paramref name="host"/>:443 opens within
+    /// <see cref="ProbeTimeout"/>. It is closed at once; no TLS, no HTTP, nothing Google bills.
+    /// </summary>
+    public static async Task<bool> IsReachableAsync(string host, CancellationToken cancellationToken) {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(ProbeTimeout);
         try {
-            var addresses = await Dns.GetHostAddressesAsync(host, cancellationToken);
-            return addresses.Length > 0;
+            using var client = new TcpClient();
+            await client.ConnectAsync(host, GoogleApiPort, timeout.Token);
+            return client.Connected;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested) {
+            return false; // the probe timed out, not the caller
         }
         catch (OperationCanceledException) {
             throw;
         }
         catch (Exception) {
-            return false; // SocketException, but any failure of the lookup means "not reachable yet"
+            return false; // SocketException (DNS or connect), but any failure means "not reachable yet"
         }
     }
 
     /// <summary>
-    /// [AI Context] Polls DNS for <paramref name="host"/> every <paramref name="pollInterval"/> until it
-    /// resolves (returns true) or <paramref name="maxWait"/> has passed (returns false). Cancelling
+    /// [AI Context] Probes <paramref name="host"/> every <paramref name="pollInterval"/> until it is
+    /// reachable (returns true) or <paramref name="maxWait"/> has passed (returns false). Cancelling
     /// <paramref name="cancellationToken"/> also returns false. Prints at most one status line a minute
-    /// and one line when the connection is back. The resolver, delay and clock are injectable so tests
+    /// and one line when the connection is back. The probe, delay and clock are injectable so tests
     /// run without waiting.
-    /// [Human] Fragt alle 15 s per DNS, ob die Verbindung zurück ist (kostet keine Quota).
+    /// [Human] Prüft alle 15 s per TCP-Verbindungsaufbau, ob die Verbindung zurück ist (kostet keine Quota).
     /// </summary>
-    public static async Task<bool> WaitUntilHostResolvesAsync(
+    public static async Task<bool> WaitUntilHostReachableAsync(
         string host,
         TimeSpan pollInterval,
         TimeSpan maxWait,
         CancellationToken cancellationToken,
-        Func<string, CancellationToken, Task<bool>>? resolver = null,
+        Func<string, CancellationToken, Task<bool>>? probe = null,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
         Func<DateTime>? utcNow = null) {
-        resolver ??= ResolvesAsync;
+        probe ??= IsReachableAsync;
         delay ??= (span, token) => Task.Delay(span, token);
         utcNow ??= () => DateTime.UtcNow;
         if (pollInterval <= TimeSpan.Zero) pollInterval = TimeSpan.FromSeconds(1);
@@ -126,21 +141,21 @@ public static class NetworkAvailability {
 
         try {
             while (true) {
-                if (await resolver(host, cancellationToken)) {
+                if (await probe(host, cancellationToken)) {
                     if (waited) {
-                        Ui.Info($"DNS für {host} funktioniert wieder (nach {Describe(utcNow() - started)}).", "Netzwerk");
+                        Ui.Info($"{host} ist wieder erreichbar (nach {Describe(utcNow() - started)}).", "Netzwerk");
                     }
                     return true;
                 }
 
                 TimeSpan elapsed = utcNow() - started;
                 if (elapsed >= maxWait) {
-                    Ui.Error($"DNS für {host} nach {Describe(elapsed)} nicht wieder da: gebe auf.", "Netzwerk");
+                    Ui.Error($"{host} nach {Describe(elapsed)} noch nicht erreichbar: gebe auf.", "Netzwerk");
                     return false;
                 }
 
                 if (!waited || utcNow() - lastStatus >= StatusInterval) {
-                    Ui.Warn($"Warte auf DNS für {host} … ({Describe(elapsed)} von höchstens {Describe(maxWait)})", "Netzwerk");
+                    Ui.Warn($"Warte auf Verbindung zu {host} … ({Describe(elapsed)} von höchstens {Describe(maxWait)})", "Netzwerk");
                     lastStatus = utcNow();
                 }
                 waited = true;
