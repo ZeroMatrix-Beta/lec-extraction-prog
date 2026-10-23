@@ -215,7 +215,7 @@ tier caps input at 250,000 per minute per model and key
 Flash). Before a request, Google estimates it as the request's **text characters ÷ 4** (system
 instruction, history, inlined parts, static prompt) plus the real tokens already charged that minute;
 after acceptance, the real count, video and images included, is charged. Measured with
-`C:\Users\miche\programming\gemini-cache-probe` (README "Findings"):
+`C:\Users\miche\programming\gemini-cache-probe` (README "Findings"; the full report with every measurement is [docs/gemini-free-tier-limit-report.md](../gemini-free-tier-limit-report.md)):
 
 - One request passes while its inline text stays under ~1M characters: ~300k tokens of this prompt
   (3.30 characters per token), ~380k of plain nonsense. The prompt alone is ~863k characters (87 %).
