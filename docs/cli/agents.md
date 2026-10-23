@@ -223,6 +223,17 @@ request right after those handshakes, with the same prefix plus the video, was r
 the 2026-10-13 parts (340k–352k, "Gecacht: 0") went through suggests they were cached and the
 figure was wrong.
 
+**The usage page does not show the video requests at full size (oddity, 2026-10-23, unexplained).**
+Information Security 03-14, resume at part 3, `gemini-3.6-flash`, profile 3, warm-up on. Google's own
+`Total Prompt` per request: `Schritt 0` 153,652 · `Schritt 1/1` 278,877 · `[Resume Part 3]` 294,213 ·
+part 3 358,535 (with video) · part 4 sent next. All accepted. The per-project usage page then showed a
+peak of **294.21K** input tokens per minute, the handshake's exact total, and it stayed there after the
+request counter had moved to 4 (part 3 counted) and to 5 (part 4 sent). Part 3 was never shown at
+358K. Before the handshake the page briefly showed a peak of 220.7K, below any request sent. So the
+page counts a request without a video at full size but a request with one lower, or late; which of
+the two, and what the 250k limit is actually enforced on, is open. Do not read the page's peak as a
+request's size.
+
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
 abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
 earlier parts (`DebugSendReferenceFile: false`), or a paid key.
