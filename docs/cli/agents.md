@@ -252,9 +252,9 @@ this properly is the job of a separate probe program (`gemini-cache-probe`, 2026
 **Likely explanation (probe, 2026-10-23, see the Findings in `gemini-cache-probe`'s README).** The
 250k gate is checked against an *estimate*, request body bytes ÷ 4, plus the real tokens already
 charged that minute; the implicit cache does not raise it. An uploaded video is only a URI in the
-body. The usage page shows the peak real tokens per minute without video: that is why 3.6 stayed at
-294.21K (parts 3 and 4 are ~282k without video). The 3.8 readings (220.7K, 235.06K, 235.21K) are
-still unexplained. In practice: one request passes while its text stays under ~300k tokens; two
+body. The usage page shows the peak real tokens per minute, video included (a 400,217-token probe
+request with 99,600 video read 400.22K), so why 3.6 stayed at 294.21K after parts 3 and 4 (~359k) is
+still open, as are the 3.8 readings (220.7K, 235.06K, 235.21K). In practice: one request passes while its text stays under ~300k tokens; two
 large requests in one minute do not.
 
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
