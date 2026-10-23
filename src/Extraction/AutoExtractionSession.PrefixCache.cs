@@ -249,6 +249,8 @@ public partial class AutoExtractionSession {
         // GenerateContent fails immediately because the token budget was already exhausted by counting.
         // SkipTokenCountingDuringWarmUp=true skips this block entirely to conserve quota budget.
         long? countedTokens = null;
+        Ui.Info($"{(string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]")} " +
+                MinuteGateEstimate.Describe(requestConfig.SystemInstruction, pingContent), "Tokens");
         if (!_config.SkipTokenCountingDuringWarmUp) {
             try {
                 var warmupContents = new List<Content>();

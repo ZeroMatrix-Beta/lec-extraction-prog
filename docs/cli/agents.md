@@ -250,12 +250,20 @@ tokens" ([caching docs](https://ai.google.dev/gemini-api/docs/generate-content/c
 this properly is the job of a separate probe program (`gemini-cache-probe`, 2026-10-23).
 
 **Likely explanation (probe, 2026-10-23, see the Findings in `gemini-cache-probe`'s README).** The
-250k gate is checked against an *estimate*, request body bytes ÷ 4, plus the real tokens already
-charged that minute; the implicit cache does not raise it. An uploaded video is only a URI in the
-body. The usage page shows the peak real tokens per minute, video included (a 400,217-token probe
+250k gate is checked against an *estimate*, the request's text characters ÷ 4, plus the real tokens
+already charged that minute; the implicit cache does not raise it. Video (File API) and inline images
+do not count, nor does JSON escaping: LaTeX's backslashes cost nothing extra. Measured edges: ~380k
+tokens of text alone, the same plus ~100k of video (481k accepted on 3.5 Flash Lite and 3.6 Flash). The usage page shows the peak real tokens per minute, video included (a 400,217-token probe
 request with 99,600 video read 400.22K), so why 3.6 stayed at 294.21K after parts 3 and 4 (~359k) is
-still open, as are the 3.8 readings (220.7K, 235.06K, 235.21K). In practice: one request passes while its text stays under ~300k tokens; two
-large requests in one minute do not.
+still open, as are the 3.8 readings (220.7K, 235.06K, 235.21K). In practice: one request passes while
+its text stays under ~1M characters (the prompt alone is ~850k); two large requests in one minute do not.
+
+**The log shows that estimate before every request.** Since 2026-10-23 each `[Part N Prompt]` and
+each warm-up step (`[Schritt 0]`, `[Schritt 1/1]`, `[Resume Part N]`) logs `Minutenlimit-Schätzung:
+N Textzeichen ÷ 4 = M (P % von 250,000 …)`: system instruction + history + inlined parts, no media.
+It is computed locally (no request) and appears even with `SkipTokenCountingDuringWarmUp`. A request
+refused with P under 100 % had a request of the same minute in front of it; P over 100 % is refused
+on its own, cache or not.
 
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
 abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no

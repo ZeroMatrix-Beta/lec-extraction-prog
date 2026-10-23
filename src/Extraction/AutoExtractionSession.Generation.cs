@@ -247,6 +247,8 @@ public partial class AutoExtractionSession {
     }
 
     private async Task<int?> LogTokenCountsAsync(GenerateContentConfig requestConfig, List<Part> attachmentParts, List<Content> history, List<string> previousTexFiles, int partNumber) {
+        // Local and free, so logged even when the CountTokens calls are skipped.
+        Ui.Info($"[Part {partNumber} Prompt] {MinuteGateEstimate.Describe(requestConfig.SystemInstruction, history)}", "Tokens");
         if (_config.SkipTokenCountingDuringWarmUp) return null;
         int? countedPromptTokens = null;
 

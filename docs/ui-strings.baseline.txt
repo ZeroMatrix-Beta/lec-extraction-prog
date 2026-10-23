@@ -458,8 +458,10 @@ Ui.Info($"Würde {(step == null ? "die komplette Pipeline" : $"Schritt {step}")}
 Ui.Info($"Würde {Path.GetFileName(tex)} kompilieren (AI-Reparatur: {config.PdfCompilation.MaxFixRounds} Runden)."));
 Ui.Info($"Zieldatei '{Path.GetFileName(originalPath)}' existiert bereits.", "Hinweis");
 Ui.Info($"[Part {partNumber} Prompt] Total Prompt-Tokens (ganzer Prompt): {promptToks:N0} (Video: {vidToks:N0} Tokens)", "Tokens");
+Ui.Info($"[Part {partNumber} Prompt] {MinuteGateEstimate.Describe(requestConfig.SystemInstruction, history)}", "Tokens");
 Ui.Info($"[Warmup Request] Neu dazugekommene Tokens: {estNew:N0} | Total Prompt: {totalToks:N0} Tokens", "Tokens");
 Ui.Info($"[YouTube Mode] Es wurden {_config.YouTubeTasks.Length} Aufgabe(n) in der Konfiguration gefunden.");
+Ui.Info($"{(string.IsNullOrEmpty(stepLabel) ? "[Warmup Request]" : $"[{stepLabel}]")} " +
 Ui.Info($"{chosen.Count} Video(s) ausgewählt.");
 Ui.Info($"{filePaths.Count} Datei(en){dirInfo} geladen.");
 Ui.Info($"{instructionFiles.Count} System-Instruction-Datei(en) geladen.");
