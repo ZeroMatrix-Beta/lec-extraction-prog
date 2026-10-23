@@ -265,6 +265,16 @@ It is computed locally (no request) and appears even with `SkipTokenCountingDuri
 refused with P under 100 % had a request of the same minute in front of it; P over 100 % is refused
 on its own, cache or not.
 
+**`InlinePrecedingLecTexParts: false` lifts the limit for late parts (tested 2026-10-23).** The earlier parts'
+`.tex` are then uploaded in full as `text/plain` files, and uploaded files do not count at the gate. Information
+Security 03-14 part 4 on `gemini-3.8-flash`, profile 1, warm-up on: the log read `875'899 Textzeichen ÷ 4 =
+218'974 (87 %)` and the part (381,583 tokens) was accepted on the first attempt; no `[Resume Part 4]` handshake
+is sent in this mode. Inline, the same parts add ~136k characters and put the request at ~100 % (the probe's
+copy of this request was refused). The output kept its quality markers: same opening section as the inline
+run, `hh:mm:ss` timestamps throughout, and the speech kept its fillers in every quarter of the part (54 / 56 /
+88 / 64 per 1,000 words, crude count) where both inline runs dropped to ~25 after the first quarter. One run
+only. Should an upload fail, that file falls back to being inlined unslimmed, so watch the log line.
+
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
 abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
 earlier parts (`DebugSendReferenceFile: false`), or a paid key.
