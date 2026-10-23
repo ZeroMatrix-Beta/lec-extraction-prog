@@ -226,13 +226,15 @@ figure was wrong.
 **The usage page does not show the video requests at full size (oddity, 2026-10-23, unexplained).**
 Information Security 03-14, resume at part 3, `gemini-3.6-flash`, profile 3, warm-up on. Google's own
 `Total Prompt` per request: `Schritt 0` 153,652 · `Schritt 1/1` 278,877 · `[Resume Part 3]` 294,213 ·
-part 3 358,535 (with video) · part 4 sent next. All accepted. The per-project usage page then showed a
-peak of **294.21K** input tokens per minute, the handshake's exact total, and it stayed there after the
-request counter had moved to 4 (part 3 counted) and to 5 (part 4 sent). Part 3 was never shown at
-358K. Before the handshake the page briefly showed a peak of 220.7K, below any request sent. So the
-page counts a request without a video at full size but a request with one lower, or late; which of
-the two, and what the 250k limit is actually enforced on, is open. Do not read the page's peak as a
-request's size.
+part 3 358,535 · part 4 359,693 (both with video). All five accepted, the run's only generate
+requests. The per-project usage page then showed a peak of **294.21K** input tokens per minute (limit
+250K), the handshake's exact total, and it stayed there with the request counter at 5, part 4
+included. Before the handshake it briefly showed 220.7K, below any request sent. Pre-flight counts
+(`[Part N Prompt]`): part 3 371,361 with 76,950 video, part 4 372,386 with 76,751, so ~294.4K and
+~295.6K without the video. Part 3 fits "the video is not counted"; part 4 should then have nudged the
+peak to ~295.6K and did not (rounding, lag or something else). So the page counts a request without a
+video at full size and one with a video lower, or late; what the 250k limit is actually enforced on is
+open. Do not read the page's peak as a request's size.
 
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
 abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
