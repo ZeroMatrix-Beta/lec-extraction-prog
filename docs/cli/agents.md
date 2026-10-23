@@ -237,6 +237,18 @@ peak to ~295.6K and did not (rounding, lag or something else). So the page count
 video at full size and one with a video lower, or late; what the 250k limit is actually enforced on is
 open. Do not read the page's peak as a request's size.
 
+Same day, same key, part 4 again on `gemini-3.8-flash`, 13 attempts in all: `Schritt 0` (153,652) on
+attempt 5 (1, 3, 4: 503 "high demand"; 2: broken connection), `Schritt 1/1` (278,877; Google: 128,918
+fresh) on attempt 1, `[Resume Part 4]` (295,437; Google: 0 cached) on attempt 3, part 4 (359,693; 0
+cached) on attempt 4. All four accepted. The 3.8 page read **220.7K** / 5 requests after `Schritt
+1/1`, then **235.06K** / 8 requests when 9 attempts had been made; neither peak matches any request.
+220.7K is also what the page read during the 3.6 run before any request that size (whether it was
+then filtered to 3.6 is unconfirmed). At most one of those 9 attempts went uncounted, so at least 4 of
+the 5 503s so far counted against the daily quota. A 295k handshake accepted with "0 cached" fits
+neither the figure nor the documented rule for explicit caching that "token limits include cached
+tokens" ([caching docs](https://ai.google.dev/gemini-api/docs/generate-content/caching)). Measuring
+this properly is the job of a separate probe program (`gemini-cache-probe`, 2026-10-23).
+
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
 abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
 earlier parts (`DebugSendReferenceFile: false`), or a paid key.
