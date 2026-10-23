@@ -209,54 +209,32 @@ step fails as after any exhausted retry. Other broken connections (reset, `Error
 content to a stream`) are a counted retry after `ConnectionErrorDelaySeconds` (AI Studio and Vertex
 config, default 60; a fixed 300 s before 2026-10-23).
 
-**A request over the per-minute token limit passes only with a cache hit.** The free tier caps
-input tokens per minute per model and key: 250,000 on `gemini-3.8-flash`, `gemini-3.7-flash` and
-`gemini-3.5-flash-lite` (`GenerateContentInputTokensPerModelPerMinute-FreeTier`, seen 2026-10-15/16).
-A part's request here is ~340k (system instruction + history ≈ 270k, plus the video) and grows by
-~12k per earlier part.
+**The per-minute limit counts inline text characters, not tokens (measured 2026-10-23).** The free
+tier caps input at 250,000 per minute per model and key
+(`GenerateContentInputTokensPerModelPerMinute-FreeTier`; seen on 3.5 Flash Lite and 3.6, 3.7, 3.8
+Flash). Before a request, Google estimates it as the request's **text characters ÷ 4** (system
+instruction, history, inlined parts, static prompt) plus the real tokens already charged that minute;
+after acceptance, the real count, video and images included, is charged. Measured with
+`C:\Users\miche\programming\gemini-cache-probe` (README "Findings"):
 
-**Cached tokens do not count against that limit.** Shown by Google's accept/refuse, not by the
-"Gecacht" figure: on 2026-10-16 `gemini-3.5-flash-lite` (limit 250,000) accepted warm-up handshakes
-of 274,357 and 309,995 tokens a minute apart, with 129k and 38k fresh. So the warm-up
-(`EnableImplicitPrefixCacheWarmup`) is what lets an oversized request through. It is no guarantee:
-the cache is best-effort ([Documentation.md §4.4](../../Documentation.md)), and the 390k part-4
-request right after those handshakes, with the same prefix plus the video, was refused twice. That
-the 2026-10-13 parts (340k–352k, "Gecacht: 0") went through suggests they were cached and the
-figure was wrong.
+- One request passes while its inline text stays under ~1M characters: ~300k tokens of this prompt
+  (3.30 characters per token), ~380k of plain nonsense. The prompt alone is ~863k characters (87 %).
+- Video (File API), inline images and files uploaded as text cost nothing at that check; only the
+  1,048,576-token context window limits them (868k with video and 997k with images were accepted).
+- The implicit cache does not raise the limit; it only shortens the wait for the first reply. A
+  request too big cold is too big warm, so the warm-up never lets an oversized request through.
+- Two large requests in the same minute collide, because the first is charged at its real count. The
+  64 s waits after each handshake and between parts are what keep them apart.
+- Google's "Gecacht" figure is consistent as a cache figure (a hit on 0 of 79 new prefixes, on 84 of
+  103 repeats within 10 minutes) but says nothing about why a request was accepted or refused.
 
-**The usage page does not show the video requests at full size (oddity, 2026-10-23, unexplained).**
-Information Security 03-14, resume at part 3, `gemini-3.6-flash`, profile 3, warm-up on. Google's own
-`Total Prompt` per request: `Schritt 0` 153,652 · `Schritt 1/1` 278,877 · `[Resume Part 3]` 294,213 ·
-part 3 358,535 · part 4 359,693 (both with video). All five accepted, the run's only generate
-requests. The per-project usage page then showed a peak of **294.21K** input tokens per minute (limit
-250K), the handshake's exact total, and it stayed there with the request counter at 5, part 4
-included. Before the handshake it briefly showed 220.7K, below any request sent. Pre-flight counts
-(`[Part N Prompt]`): part 3 371,361 with 76,950 video, part 4 372,386 with 76,751, so ~294.4K and
-~295.6K without the video. Part 3 fits "the video is not counted"; part 4 should then have nudged the
-peak to ~295.6K and did not (rounding, lag or something else). So the page counts a request without a
-video at full size and one with a video lower, or late; what the 250k limit is actually enforced on is
-open. Do not read the page's peak as a request's size.
-
-Same day, same key, part 4 again on `gemini-3.8-flash`, 13 attempts in all: `Schritt 0` (153,652) on
-attempt 5 (1, 3, 4: 503 "high demand"; 2: broken connection), `Schritt 1/1` (278,877; Google: 128,918
-fresh) on attempt 1, `[Resume Part 4]` (295,437; Google: 0 cached) on attempt 3, part 4 (359,693; 0
-cached) on attempt 4. All four accepted. The 3.8 page read **220.7K** / 5 requests after `Schritt
-1/1`, then **235.06K** / 8 requests when 9 attempts had been made; neither peak matches any request.
-220.7K is also what the page read during the 3.6 run before any request that size (whether it was
-then filtered to 3.6 is unconfirmed). At most one of those 9 attempts went uncounted, so at least 4 of
-the 5 503s so far counted against the daily quota. A 295k handshake accepted with "0 cached" fits
-neither the figure nor the documented rule for explicit caching that "token limits include cached
-tokens" ([caching docs](https://ai.google.dev/gemini-api/docs/generate-content/caching)). Measuring
-this properly is the job of a separate probe program (`gemini-cache-probe`, 2026-10-23).
-
-**Likely explanation (probe, 2026-10-23, see the Findings in `gemini-cache-probe`'s README).** The
-250k gate is checked against an *estimate*, the request's text characters ÷ 4, plus the real tokens
-already charged that minute; the implicit cache does not raise it. Video (File API) and inline images
-do not count, nor does JSON escaping: LaTeX's backslashes cost nothing extra. Measured edges: ~380k
-tokens of text alone, the same plus ~100k of video (481k accepted on 3.5 Flash Lite and 3.6 Flash). The usage page shows the peak real tokens per minute, video included (a 400,217-token probe
-request with 99,600 video read 400.22K), so why 3.6 stayed at 294.21K after parts 3 and 4 (~359k) is
-still open, as are the 3.8 readings (220.7K, 235.06K, 235.21K). In practice: one request passes while
-its text stays under ~1M characters (the prompt alone is ~850k); two large requests in one minute do not.
+**The usage page shows real tokens per minute, minutes late, so it can read over its own 250K.**
+A 400,217-token probe request (99,600 of it video) read 400.22K; 380,491 read 380.49K. Two readings
+remain unexplained: on 2026-10-23 the 3.6 Flash page stayed at 294.21K (the `[Resume Part 3]`
+handshake, 294,213) after parts 3 and 4 of ~359k with video, and the 3.8 Flash page read 220.7K,
+235.06K and 235.21K, matching no request. Do not read the page's peak as a request's size. The same
+3.8 run made 9 attempts while the page counted 8, so at least 4 of its 5 `503`s counted against the
+daily quota.
 
 **The log shows that estimate before every request.** Since 2026-10-23 each `[Part N Prompt]` and
 each warm-up step (`[Schritt 0]`, `[Schritt 1/1]`, `[Resume Part N]`) logs `Minutenlimit-Schätzung:
@@ -276,8 +254,9 @@ run, `hh:mm:ss` timestamps throughout, and the speech kept its fillers in every 
 only. Should an upload fail, that file falls back to being inlined unslimmed, so watch the log line.
 
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
-abgelehnt` and the video exits `6`. Ways out: warm-up on, less history (`HistoryPreloadPaths`), no
-earlier parts (`DebugSendReferenceFile: false`), or a paid key.
+abgelehnt` and the video exits `6`. Ways out: `InlinePrecedingLecTexParts: false` (above), less
+history (`HistoryPreloadPaths`), no earlier parts (`DebugSendReferenceFile: false`), or a paid key.
+Turning the warm-up on does not help.
 
 **The warm-up is a config switch, with no CLI flag.** `EnableImplicitPrefixCacheWarmup` in
 `AiStudioAutoExtractionConfig.json`; when off, the log says `Lade History-Dateien direkt in den
@@ -285,23 +264,23 @@ Session-Zustand (Warmup deaktiviert)`. When on, a session sends one handshake pe
 before its first part (`Schritt 0`, `Schritt 1/1`, …). A session that starts at part 2 or later
 (`finish` / `run --resume` with earlier parts on disk, inlined) sends one more, `[Resume Part N]`:
 system instruction + history + the inlined earlier parts, everything but the video
-(`PrimePrefixCacheForResumedPartAsync`). If it fails, the part is sent anyway.
+(`PrimePrefixCacheForResumedPartAsync`). If it fails, the part is sent anyway. With
+`InlinePrecedingLecTexParts: false` no `[Resume Part N]` is sent. The warm-up buys only a faster first
+reply; it costs 2–3 large requests (daily quota) and 2 × 64 s per session.
 
-**Part 4 is where the limit bites (2026-10-18).** Information Security, three keys: every part 1–3
-went through (352k–387k, warm-up off), every part 4 (382k–396k) was refused twice, in the first run
-and on resume. With warm-up on, `Schritt 1/1` (284k) was accepted, but the `[Resume Part 4]`
-handshake (309k) and part 4 (382k) were refused. Editing the prompt files between runs changes the
-prefix, so a resumed session starts with a prefix Google has never cached.
+**Part 4 is where inline text runs out (2026-10-18).** Information Security, three keys: every part
+1–3 went through (352k–387k, warm-up off), every part 4 (382k–396k) was refused twice, in the first run
+and on resume; `Schritt 1/1` (284k) was accepted but `[Resume Part 4]` (309k) and part 4 refused.
+Part 4 carries the most inlined text (the prompt was then ~920k characters before the 2026-10-23
+trim), so it crossed ~1M characters on its own; the probe's 1:1 copy of the request was refused at
+exactly that edge.
 
-The earlier parts are the one input you can shrink without losing the lecture: `ReferenceSlimming` in
+The inlined earlier parts can also be shrunk: `ReferenceSlimming` in
 `AiStudioAutoExtractionConfig.json` says per kind of part what goes (`OlderParts`, `PrecedingPart`;
 details in [Documentation.md §4.4](../../Documentation.md)). Since 2026-10-18 the older parts lose
 speech, didactic boxes, `aiNote`s and TikZ (~2–3k tokens each instead of ~5k); the part directly before
-stays complete. That is margin, not a fix: part 4 still needs the cache. First test, 02-23 part 4 on
-a fresh key, warm-up on, no dummy part: context 19.5k, `[Resume Part 4]` (299k) and the request
-(359k) both accepted, one answer to `Video complete`. The same evening 02-29 and 03-01 part 4
-(364k each) passed too. Google reported 284k, 133k and 285k cached; that figure proves nothing
-either way (see above), only the accept does.
+stays complete. That is margin; uploading them (`InlinePrecedingLecTexParts: false`) takes them out of
+the count altogether. With slimming, 02-23, 02-29 and 03-01 part 4 (359k–364k) passed inline.
 
 **A request that sends nothing for 10 minutes is sent again.** The heartbeat prints
 `Noch keine Daten vom Server (N min …)` every two silent minutes; at `FirstChunkTimeoutMinutes`

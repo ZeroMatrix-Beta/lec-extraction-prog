@@ -10,7 +10,9 @@
 4. **Clean Method Signatures**:
    Never leave unused parameters in method signatures.
 5. **Visible Exception Handling**:
-   Never swallow exceptions silently. Log `ex.GetType().Name` and `ex.Message` to the console.
+   Never swallow exceptions silently. Report them through the `Ui` layer with `ex.Describe()`
+   (`src/Infrastructure/ExceptionExtensions.cs`), e.g. `Ui.Error($"Upload fehlgeschlagen: {ex.Describe()}", "Upload")`;
+   no hand-rolled `Console.WriteLine` format (same rule as `gemini.md` §1).
 6. **Preserve Architecture Comments**:
    Do not remove `[AI Context]` or `[Human]` summaries.
 7. **Mandatory Build Verification Before Task Completion**:
@@ -60,6 +62,11 @@ When the user asks to process/convert lecture videos, **do not spend turns searc
   - Extraction output: `D:\lecture-videos\grundstrukturen\extracted_output`
   - Main LaTeX document: `C:\Users\miche\latex\grundstrukturen-ai-transcription-spring-2025\grundstrukturen.tex`
   - Content snippets folder: `C:\Users\miche\latex\grundstrukturen-ai-transcription-spring-2025\content`
+- **Information Security** (2024 recordings):
+  - Source videos: `D:\lecture-videos\Information_Security`
+  - Extraction output: `D:\lecture-videos\Information_Security\extracted_output`
+  - Main LaTeX document: not recorded here; ask the user.
+- **Algebra 1**: source videos `C:\Users\miche\lectures\2026-algebra-1` (the AI Studio config's `SourceFolder`); output and LaTeX document: ask the user.
 
 ### Fast Execution Workflow
 1. **Check Status**:
@@ -77,7 +84,9 @@ When the user asks to process/convert lecture videos, **do not spend turns searc
    ```
    - Always run with `BypassSandbox: true` and `WaitMsBeforeAsync: 10000` (runs in background).
    - Use `--skip-token-counting` to save request quota.
-   - Quotas on Free Tier: 20 RPD per model per API profile. Profiles: 0 (`automated-content-extraction`), 1 (`ai-studio-test-project-1`), 2 (`ai-studio-test-project-2`), 3 (`ai-studio-test-project-3`), 4 (`latex-refinement`).
+   - Quotas on Free Tier: 20 requests per day per model per API profile on the Flash models (e.g. `gemini-3.8-flash`); failed `503` attempts count too.
+   - The free tier's 250k-per-minute limit is checked against the request's inline text characters ÷ 4, not its tokens; video, images and uploaded files do not count, and the warm-up does not help. Each request's log shows `Minutenlimit-Schätzung … (P %)`; a late part near 100 % passes with `InlinePrecedingLecTexParts: false`. Details: `docs/cli/agents.md`.
+   - Profiles: 0 (`automated-content-extraction`), 1 (`ai-studio-test-project-1`), 2 (`ai-studio-test-project-2`), 3 (`ai-studio-test-project-3`), 4 (`latex-refinement`).
 4. **LaTeX Integration**:
    - Once extraction + refinement finishes (producing `step4-...-final.tex`), copy `step4-...-final.tex` to `<latex-project>\content\`.
    - Add `\include{content/step4-...-final.tex}` into the main `.tex` file in chronological order.
