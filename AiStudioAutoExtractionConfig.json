@@ -65,6 +65,8 @@
   "HistoryRateLimitDelaySeconds": 64,
   // "HighDemandDelaySeconds": 180,
   "HighDemandDelaySeconds": 64,
+  // Wait before retrying after a broken connection (reset, "Error while copying content to a stream"); was a fixed 300.
+  "ConnectionErrorDelaySeconds": 60,
   "YouTubeTasks": [],
   "ApiKey": {
     "ActiveProfile": 3,

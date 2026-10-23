@@ -24,6 +24,14 @@ public static partial class ApiRetryPolicy {
     public static int DefaultHighDemandDelaySeconds { get; set; } = 180;
 
     /// <summary>
+    /// [AI Context] Delay in seconds before retrying after a broken connection that is not an outage (reset,
+    /// "Error while copying content to a stream"); a counted attempt. Set from <c>ConnectionErrorDelaySeconds</c>.
+    /// Defaults to 60 (was a fixed 300 until 2026-10-23).
+    /// [Human] Wartezeit in Sekunden nach einem Verbindungsabbruch (kein Internetausfall).
+    /// </summary>
+    public static int ConnectionErrorDelaySeconds { get; set; } = 60;
+
+    /// <summary>
     /// [AI Context] The wait between attempts. Defaults to the interactive spinner; tests swap in an
     /// instant fake so the retry logic can be exercised without sleeping through real backoffs.
     /// [Human] Die Wartefunktion zwischen Versuchen (in Tests ersetzbar).
@@ -505,9 +513,9 @@ public static partial class ApiRetryPolicy {
             delayMessage = "Warte auf erneuten Versuch nach Timeout...";
         }
         else if (IsNetworkConnectionError(ex)) {
-            waitTime = 300; // 5 Minuten
+            waitTime = ConnectionErrorDelaySeconds > 0 ? ConnectionErrorDelaySeconds : 60;
             Ui.Warn($"{contextMsg}Verbindung zum Google-Server unterbrochen ({ex.Describe()}).", "Netzwerk-Fehler");
-            Ui.Detail("Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+            Ui.Detail($"Keine Panik! Du hast jetzt {waitTime} Sekunden Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
             Ui.Detail($"--> Sobald die Verbindung wieder steht, drücke ENTER, um sofort weiterzumachen! (Versuch {nextAttempt}/{maxAttempts})");
             delayMessage = "Warte auf Wiederherstellung der Internetverbindung / Hotspot...";
             nextBackoff = currentBackoff;

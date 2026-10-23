@@ -196,6 +196,13 @@ public class ConfigBindingTests {
         Assert.Equal(64, LectureExtraction.GoogleAi.ApiRetryPolicy.DefaultHighDemandDelaySeconds);
         LectureExtraction.GoogleAi.ApiRetryPolicy.DefaultHighDemandDelaySeconds = 180;
     }
+
+    [Fact]
+    public void ConnectionErrorDelaySeconds_DefaultsTo60() {
+        Assert.Equal(60, new AiStudioAutoExtractionConfig().ConnectionErrorDelaySeconds);
+        Assert.Equal(60, new VertexAutoExtractionConfig().ConnectionErrorDelaySeconds);
+        Assert.Equal(60, LectureExtraction.GoogleAi.ApiRetryPolicy.ConnectionErrorDelaySeconds);
+    }
 }
 
 

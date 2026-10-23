@@ -74,6 +74,9 @@ public partial class VertexAutoExtractionSession(Client client, VertexAutoExtrac
             ApiRetryPolicy.DefaultHighDemandDelaySeconds = _config.HighDemandDelaySeconds;
         }
         NetworkAvailability.Configure(_config.NetworkPollIntervalSeconds, _config.NetworkMaxWaitMinutes);
+        if (_config.ConnectionErrorDelaySeconds > 0) {
+            ApiRetryPolicy.ConnectionErrorDelaySeconds = _config.ConnectionErrorDelaySeconds;
+        }
 
         if (!Directory.Exists(_config.SourceFolder)) {
             Ui.Error($"Quellordner nicht gefunden: {_config.SourceFolder}");

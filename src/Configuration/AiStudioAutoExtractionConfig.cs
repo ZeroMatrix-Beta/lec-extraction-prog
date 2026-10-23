@@ -125,6 +125,13 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public int NetworkMaxWaitMinutes { get; set; } = 30;
 
     /// <summary>
+    /// [AI Context] Seconds to wait before retrying after a broken connection that is not an outage (reset,
+    /// "Error while copying content to a stream"). Unlike an outage this counts as an attempt. Defaults to 60.
+    /// [Human] Wartezeit nach einem Verbindungsabbruch, in Sekunden.
+    /// </summary>
+    public int ConnectionErrorDelaySeconds { get; set; } = 60;
+
+    /// <summary>
     /// [AI Context] Upper bound on requests per video part, the first one included. Each continue
     /// re-sends the video, so this caps the cost of a part whose model never says "Video complete".
     /// [Human] Maximale Anzahl Requests pro Videoteil (inkl. Continue-Anfragen).

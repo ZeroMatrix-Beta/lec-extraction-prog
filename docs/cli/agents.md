@@ -205,8 +205,9 @@ probes it with a bare TCP connect to port 443 every `NetworkPollIntervalSeconds`
 Google (no TLS, no HTTP, no quota); a DNS lookup alone would not do, since it answers from the cache
 while the route is down. The failed request never reached Google, so it counts neither against the
 retry limit nor in the request table. If the connection stays down for the full wait, the part or
-step fails as after any exhausted retry. Other connection errors (reset, timeout) still use the
-counted retry with its 300 s wait.
+step fails as after any exhausted retry. Other broken connections (reset, `Error while copying
+content to a stream`) are a counted retry after `ConnectionErrorDelaySeconds` (AI Studio and Vertex
+config, default 60; a fixed 300 s before 2026-10-23).
 
 **A request over the per-minute token limit passes only with a cache hit.** The free tier caps
 input tokens per minute per model and key: 250,000 on `gemini-3.8-flash`, `gemini-3.7-flash` and

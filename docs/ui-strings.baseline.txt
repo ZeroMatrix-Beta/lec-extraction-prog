@@ -53,7 +53,7 @@ Ui.Detail("Folgende System Instruction-Dateien sind konfiguriert:");
 Ui.Detail("Grund: Die Voraussetzungen in AutoExtractionConfig sind nicht erfüllt.");
 Ui.Detail("Handshake läuft ohne Thinking (DisableThinkingDuringWarmUp = true).", "Cache-Warming");
 Ui.Detail("Ich habe exakt hier gesucht:");
-Ui.Detail("Keine Panik! Du hast jetzt 300 Sekunden (5 Minuten) Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
+Ui.Detail($"Keine Panik! Du hast jetzt {waitTime} Sekunden Zeit, um deinen Hotspot oder deine Internetverbindung zu reparieren...");
 Ui.Detail("Keine weiteren Durchläufe nötig.", "LatexToolkit");
 Ui.Detail("Process finished.", "FFmpeg");
 Ui.Detail("Referenzen benötigen einen weiteren Durchlauf.", "LatexToolkit");

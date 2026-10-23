@@ -178,6 +178,9 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             ApiRetryPolicy.DefaultHighDemandDelaySeconds = _config.HighDemandDelaySeconds;
         }
         NetworkAvailability.Configure(_config.NetworkPollIntervalSeconds, _config.NetworkMaxWaitMinutes);
+        if (_config.ConnectionErrorDelaySeconds > 0) {
+            ApiRetryPolicy.ConnectionErrorDelaySeconds = _config.ConnectionErrorDelaySeconds;
+        }
 
         return true;
     }

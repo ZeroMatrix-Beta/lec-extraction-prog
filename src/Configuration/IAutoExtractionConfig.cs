@@ -36,6 +36,7 @@ public interface IAutoExtractionConfig {
     int HighDemandDelaySeconds { get; }
     int NetworkPollIntervalSeconds { get; }
     int NetworkMaxWaitMinutes { get; }
+    int ConnectionErrorDelaySeconds { get; }
     int MaxContinueRequests { get; }
     bool EnableParallelFileUploads { get; }
     ThoughtSummaryConfig ThoughtSummaries { get; }
