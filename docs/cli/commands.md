@@ -201,7 +201,7 @@ the one command that continues it, as if typed:
 
 | Folder holds | Runs |
 |---|---|
-| some parts, no combined `step1-*-all*.tex` | `run --video <video> --resume --out <root>` (reuses every part, however old) |
+| some parts, no combined `step1-*-all*.tex` | `run --video <video> --resume --out <root>` (reuses every part, however old). With `EnableImplicitPrefixCacheWarmup` on, this sends the warm-up handshakes even when every part is already there (2026-10-24: two requests on profile 3 just to combine); turn the warm-up off and it combines without any request |
 | the combined file | `refine run --tex <newest step1-*-all-offset*.tex>` |
 | `step2-*merged*.tex` | `refine run --tex <it> --step 2 --through-end` |
 | `step3-*speech_refined*.tex` | `refine run --tex <it> --step 3 --through-end` |
