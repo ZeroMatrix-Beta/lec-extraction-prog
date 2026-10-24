@@ -29,7 +29,7 @@ SPEAKER = r"""
 % Shown faintly after the timestamp; without \setSpeaker nothing is shown.
 \providecommand{\lecturespeaker}{}
 \providecommand{\setSpeaker}[1]{\renewcommand{\lecturespeaker}{#1}}
-\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\color{black!45}\faUser\ \lecturespeaker}}}
+\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\footnotesize\color{black!45}\faUser\ \lecturespeaker}}}
 """
 
 YOUTUBE_CHAPTER = r"""
