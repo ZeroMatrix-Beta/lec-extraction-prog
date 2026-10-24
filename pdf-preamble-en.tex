@@ -133,9 +133,10 @@
 \colorlet{TocChapColor}{ThemeSecondary!90!black}
 \colorlet{TocSecColor}{TocEntryBlue}
 \colorlet{TocSubsecColor}{TocEntryBrown}
-\colorlet{TocSubsubColor}{gray}
+\colorlet{TocSubsubColor}{TocSubsecColor}
 \colorlet{TocLabelColor}{ThemePrimary!85!black}
 \colorlet{TocProofColor}{OliveGreen} % titled proofWrapper entries, in the color of the proof heading (ProofTint)
+\colorlet{TocSummaryColor}{TocSubsecColor} % Summary of Key Concepts inherits subsection color
 
 % 3. SHADOWS & PROOF GLOBALS
 \colorlet{ShadowNormal}{black!50}
@@ -226,8 +227,7 @@
 \colorlet{EnvTheoremDark}{OriginalTheoremHex}  % Wendet den Hex-Code auf das Wort "Definition" an
 % The other theorem families are colored as in ta-notes (EnvTheorem: Satz, Definition, Beispiel).
 \definecolor{EnvRemark}{HTML}{008837}           % Bemerkung, Notation, Zusammenfassung, Ziele
-\colorlet{EnvQuestion}{MidnightBlue}            % Frage, Antwort
-\colorlet{EnvQuestion}{EnvRemark}            % pipeline: questions/answers green like \recap
+\colorlet{EnvQuestion}{EnvRemark}               % Frage, Antwort
 \definecolor{EnvImportantRemark}{HTML}{D7263D}  % Wichtige Bemerkung
 % ==========================================
 
@@ -526,6 +526,15 @@ pdfauthor={Prof. Rahul Pandharipande}
   {}
   {\faPenNib\hspace{0.6em}\itshape}
   {\normalfont\sffamily\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocProofColor}\contentspage}
+
+% Summary of Key Concepts: note icon in place of a number, aligned at section level
+\def\ttll@summary{1}
+\def\toclevel@summary{1}
+\titlecontents{summary}[\tocindent{1}]
+  {\addvspace{0.6ex}\hypersetup{linkcolor=TocSummaryColor}\sffamily\small\color{TocSummaryColor}}
+  {}
+  {\faStickyNote\hspace{0.6em}}
+  {\normalfont\sffamily\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSummaryColor}\contentspage}
 \makeatother
 
 % Math operators
@@ -555,7 +564,8 @@ pdfauthor={Prof. Rahul Pandharipande}
 
 % Custom text commands
 \newcommand{\newterm}[1]{\textcolor{QuoteRed}{``}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{''}}
-\newcommand{\inlinemetanote}[1]{{\colorlet{QuoteRed}{TextMetaNote}\textit{\textcolor{TextMetaNote}{[#1]}}}} % quote marks and brackets grey too
+\newcommand{\inlinemetanote}[1]{\textcolor{TextMetaNote}{\colorlet{QuoteRed}{TextMetaNote}\footnotesize\textit{[#1]}}} % quote marks and brackets grey too
+\let\inlinematenote\inlinemetanote
 % Recap line: a definition or result from an earlier lecture (or from earlier in this one) that the
 % lecturer states again. Before a restatement on the board it cites the first version, and the
 % restated one carries its label plus a week tag (def:ring-w2). A recap the lecturer only speaks
@@ -630,11 +640,10 @@ pdfauthor={Prof. Rahul Pandharipande}
 
 \theoremstyle{questionthm}
 \newtheorem{question}[theorem]{Question}
+\newtheorem*{question*}{Question}
+
 \theoremstyle{answerthm}
 \newtheorem{answer}[theorem]{Answer}
-\theoremstyle{questionthm}
-\newtheorem*{question*}{Question}
-\theoremstyle{answerthm}
 \newtheorem*{answer*}{Answer}
 
 \theoremstyle{importantremarkthm}
@@ -682,19 +691,42 @@ pdfauthor={Prof. Rahul Pandharipande}
 % ==========================================
 
 % 1. Clean Spoken Protocol
+% Speaker of the following speech blocks (guest lecturer, change mid-lecture); \setSpeaker{} clears it.
+% Shown faintly after the timestamp; without \setSpeaker nothing is shown.
+\providecommand{\lecturespeaker}{}
+\providecommand{\setSpeaker}[1]{\renewcommand{\lecturespeaker}{#1}}
+\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\color{black!45}\faUser\ \lecturespeaker}}}
+
 \newtcolorbox{speech}[1][]{
 enhanced,
 frame hidden,
+boxrule=0pt,
+sharp corners=north,
+arc=3mm,
 colback=EnvSpokenBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={3pt}{0pt}{EnvSpokenProof}}
+    \tcbset{
+      underlay unbroken and last={
+        \fill[EnvSpokenProof] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+      },
+      underlay first and middle={
+        \fill[EnvSpokenProof] (frame.north west) rectangle ([xshift=3pt]frame.south west);
+      }
+    }
   \else
-    \tcbset{borderline west={3pt}{0pt}{EnvSpoken}}
+    \tcbset{
+      underlay unbroken and last={
+        \fill[EnvSpoken] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+      },
+      underlay first and middle={
+        \fill[EnvSpoken] (frame.north west) rectangle ([xshift=3pt]frame.south west);
+      }
+    }
   \fi
 },
-title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faMicrophone\ \ Spoken Transcript\ifblank{#1}{}{ [#1]}}},
+title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faMicrophone\ \ Spoken Transcript\ifblank{#1}{}{ [#1]}\speakertag}},
 attach title to upper={\par\setlength{\parindent}{\standardparindent}\setlength{\parskip}{\customparskip}\vspace{1ex}},
 breakable
 }
@@ -718,6 +750,9 @@ code={
       boxed title style={colback=EnvNoteBg, colframe=EnvNote, boxrule=0.5pt}
     }
   \fi
+  \ifboolexpr{ test {\ifstrequal{#1}{Summary of Key Concepts}} or test {\ifstrequal{#1}{Summary}} }{%
+    \tcbset{phantom={\phantomsection\addcontentsline{toc}{summary}{#1}}}%
+  }{}%
 },
 title={\sffamily\bfseries\begin{tabular}[t]{@{}l@{\hspace{0.5em}}l@{}}\faStickyNote & \begin{tabular}[t]{@{}l@{}} #1 \end{tabular}\end{tabular}},
 coltitle=black,
@@ -729,15 +764,31 @@ breakable
 % 3. Best Teacher / Didactic Insight
 \newtcolorbox{insight}[1][Didactic Insight]{
 enhanced,
-arc=3mm,
 frame hidden,
+boxrule=0pt,
+sharp corners=north,
+arc=3mm,
 colback=EnvTeacherBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={2pt}{0pt}{EnvTeacherProof}}
+    \tcbset{
+      underlay unbroken and last={
+        \fill[EnvTeacherProof] (frame.north west) rectangle ([xshift=2pt, yshift=3mm]frame.south west);
+      },
+      underlay first and middle={
+        \fill[EnvTeacherProof] (frame.north west) rectangle ([xshift=2pt]frame.south west);
+      }
+    }
   \else
-    \tcbset{borderline west={2pt}{0pt}{EnvTeacherBorder}}
+    \tcbset{
+      underlay unbroken and last={
+        \fill[EnvTeacherBorder] (frame.north west) rectangle ([xshift=2pt, yshift=3mm]frame.south west);
+      },
+      underlay first and middle={
+        \fill[EnvTeacherBorder] (frame.north west) rectangle ([xshift=2pt]frame.south west);
+      }
+    }
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvTeacherProof\else EnvTeacherBorder\fi}{\textit{\faLightbulb\ \ Insight:} #1}},
@@ -879,7 +930,7 @@ code={
   \ifblank{#1}{
     \tcbset{notitle}
   }{
-    \tcbset{title={\sffamily\bfseries\textcolor{\ifinsideproof EnvMathProof\else EnvMath\fi}{\faChalkboard\ \ #1}}, 
+    \tcbset{title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faChalkboard\ \ #1}}, 
     attach title to upper={\par\setlength{\parindent}{0pt}\setlength{\parskip}{\customparskip}\vspace{1ex}}}
   }
 }
@@ -927,13 +978,30 @@ breakable
 \newtcolorbox{student}[1][Student Interaction]{
 enhanced,
 frame hidden,
+boxrule=0pt,
+sharp corners=north,
+arc=3mm,
 colback=EnvStudentBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={3pt}{0pt}{EnvStudentProof}}
+    \tcbset{
+      underlay unbroken and last={
+        \fill[EnvStudentProof] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+      },
+      underlay first and middle={
+        \fill[EnvStudentProof] (frame.north west) rectangle ([xshift=3pt]frame.south west);
+      }
+    }
   \else
-    \tcbset{borderline west={3pt}{0pt}{EnvStudent}}
+    \tcbset{
+      underlay unbroken and last={
+        \fill[EnvStudent] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+      },
+      underlay first and middle={
+        \fill[EnvStudent] (frame.north west) rectangle ([xshift=3pt]frame.south west);
+      }
+    }
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvStudentProof\else EnvStudent\fi}{\faUserGraduate\ \ #1}},

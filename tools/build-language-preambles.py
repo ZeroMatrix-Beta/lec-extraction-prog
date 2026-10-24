@@ -5,7 +5,7 @@
 
 Each output is the source's preamble (everything before \\begin{document}) plus what the pipeline's
 prompts teach but the book does not define yet: the `observation` theorem environment,
-`\\checkline` and `\\youtubechapter`; and questions/answers recoloured to the green of `\\recap`, the
+`\\checkline`, `\\setSpeaker` and `\\youtubechapter`; and questions/answers recoloured to the green of `\\recap`, the
 answer with its own icon. Rerun after either book preamble changes:
 
     py tools/build-language-preambles.py
@@ -23,6 +23,14 @@ SOURCES = {
     "en": (os.path.join(LATEX, "algebra-1-ai-transcription-fall-2026", "algebra-1.tex"),
            "Observation", "Observations", "Remark"),
 }
+
+SPEAKER = r"""
+% Speaker of the following speech blocks (guest lecturer, change mid-lecture); \setSpeaker{} clears it.
+% Shown faintly after the timestamp; without \setSpeaker nothing is shown.
+\providecommand{\lecturespeaker}{}
+\providecommand{\setSpeaker}[1]{\renewcommand{\lecturespeaker}{#1}}
+\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\color{black!45}\faUser\ \lecturespeaker}}}
+"""
 
 YOUTUBE_CHAPTER = r"""
 % Custom YouTube / Standalone Video Chapter Command:
@@ -95,6 +103,11 @@ def build(lang, source, obs, obs_plural, remark):
             style = "questionthm" if env.startswith("question") else "answerthm"
             insert_before(lines, BS + "newtheorem" + ("*" if "*" in env else "") + "{" + env,
                           [BS + "theoremstyle{" + style + "}"])
+    if BS + "setSpeaker" not in body:
+        # the speaker of the following speech blocks, shown faintly after the timestamp; unset shows nothing
+        title = next(i for i, l in enumerate(lines) if BS + "faMicrophone" in l and "{ [#1]}}}" in l)
+        lines[title] = lines[title].replace("{ [#1]}}}", "{ [#1]}" + BS + "speakertag}}", 1)
+        insert_before(lines, BS + "newtcolorbox{speech}", SPEAKER.strip("\n").split("\n") + [""])
     if BS + "youtubechapter" not in body:
         insert_before(lines, BS + "titlespacing*{" + BS + "chapter}", YOUTUBE_CHAPTER.strip("\n").split("\n") + [""])
 

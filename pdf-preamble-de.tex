@@ -665,6 +665,12 @@
 % ==========================================
 
 % 1. Clean Spoken Protocol
+% Speaker of the following speech blocks (guest lecturer, change mid-lecture); \setSpeaker{} clears it.
+% Shown faintly after the timestamp; without \setSpeaker nothing is shown.
+\providecommand{\lecturespeaker}{}
+\providecommand{\setSpeaker}[1]{\renewcommand{\lecturespeaker}{#1}}
+\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\color{black!45}\faUser\ \lecturespeaker}}}
+
 \newtcolorbox{speech}[1][]{
 enhanced,
 frame hidden,
@@ -677,7 +683,7 @@ code={
     \tcbset{borderline west={3pt}{0pt}{EnvSpoken}}
   \fi
 },
-title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faMicrophone\ \ Gesprochenes Wort\ifblank{#1}{}{ [#1]}}},
+title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faMicrophone\ \ Gesprochenes Wort\ifblank{#1}{}{ [#1]}\speakertag}},
 attach title to upper={\par\setlength{\parindent}{\standardparindent}\setlength{\parskip}{\customparskip}\vspace{1ex}},
 breakable
 }
