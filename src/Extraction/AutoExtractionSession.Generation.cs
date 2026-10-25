@@ -132,9 +132,8 @@ public partial class AutoExtractionSession {
         // at the very beginning of the User Message, BEFORE the static beginning and the video part.
         // This precise positioning is mandatory to perfectly align with the token sequence cached 
         // during the WarmUpWithBatchedHistoryAsync handshakes, guaranteeing a cache hit here.
-        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            userPromptParts.AddRange(_historyParts);
-        }
+        // Uploaded history files (InlineHistory=false) come first, in any case.
+        userPromptParts.AddRange(HistoryUserTurnParts());
 
         var uploadedTexParts = new List<Part>();
         bool hasDummy = _config.SendDummyFileDuringTranscription;

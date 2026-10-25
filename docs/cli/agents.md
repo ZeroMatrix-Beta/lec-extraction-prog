@@ -243,7 +243,8 @@ daily quota.
 
 **The log shows that estimate before every request.** Since 2026-10-23 each `[Part N Prompt]` and
 each warm-up step (`[Schritt 0]`, `[Schritt 1/1]`, `[Resume Part N]`) logs `Minutenlimit-Schätzung:
-N Textzeichen ÷ 4 = M (P % von 250,000 …)`: system instruction + history + inlined parts, no media.
+N Textzeichen ÷ 4 = M (P % von 250,000 …)`: system instruction + history + inlined parts, no media
+and no uploaded files (earlier parts or history), only the short path lines in front of them.
 It is computed locally (no request) and appears even with `SkipTokenCountingDuringWarmUp`. A request
 refused with P under 100 % had a request of the same minute in front of it; P over 100 % is refused
 on its own, cache or not.
@@ -258,9 +259,23 @@ run, `hh:mm:ss` timestamps throughout, and the speech kept its fillers in every 
 88 / 64 per 1,000 words, crude count) where both inline runs dropped to ~25 after the first quarter. One run
 only. Should an upload fail, that file falls back to being inlined unslimmed, so watch the log line.
 
+**`InlineHistory: false` does the same for the training history (added 2026-10-25, not yet run).** Optional
+key in `AiStudioAutoExtractionConfig.json`; absent or `true` changes nothing. With `false`, each history text
+file (`.md`, `.txt`, `.tex` under `HistoryPreloadPaths`) is uploaded as `text/plain` and linked at the very
+start of the user turn, after one note saying it belongs to the system instructions, each link preceded by
+the file's path. It goes into the user turn even with `LoadHistoryIntoSystemInstruction: true`, because the
+system instruction rejects file links (`500 Internal error`, gemini-cache-probe e13). The system instruction
+keeps its file tree and the rules; images go as before. The history was ~407k characters in 32 files on
+2026-10-25, ~42 % of the gate's count: Analysis II part 1 at `975'744 Textzeichen ÷ 4 = 243'936 (97 %)`
+should drop to roughly 570k (≈57 %). The log says `N History-Textdatei(en) als text/plain hochgeladen`; a
+file whose upload fails is inlined where it would have gone (`Upload von History-Datei '…' fehlgeschlagen`).
+Untested: whether uploaded history steers the model as well as inlined history. Check the first run the way
+the earlier-parts test was checked (opening section, `hh:mm:ss` timestamps, fillers kept in every quarter).
+
 After the second refusal the part fails with `Die Anfrage hat N Eingabe-Tokens … zweimal
-abgelehnt` and the video exits `6`. Ways out: `InlinePrecedingLecTexParts: false` (above), less
-history (`HistoryPreloadPaths`), no earlier parts (`DebugSendReferenceFile: false`), or a paid key.
+abgelehnt` and the video exits `6`. Ways out: `InlinePrecedingLecTexParts: false` (above),
+`InlineHistory: false` (above), less history (`HistoryPreloadPaths`), no earlier parts
+(`DebugSendReferenceFile: false`), or a paid key.
 Turning the warm-up on does not help.
 
 **The warm-up is a config switch, with no CLI flag.** `EnableImplicitPrefixCacheWarmup` in

@@ -55,6 +55,7 @@ public interface IAutoExtractionConfig {
     string[] SystemInstructionPaths { get; }
     string[] HistoryPreloadPaths { get; }
     bool LoadHistoryIntoSystemInstruction { get; }
+    bool InlineHistory { get; }
     int HistoryBatchCount { get; }
 
     // Pacing: the wait between parts and continues, and the warm-up delays

@@ -148,10 +148,11 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
     /// [AI Context] Maps a lowercase file extension to the mime type sent to Gemini, or null when the
     /// type is unsupported. Static and side-effect-free so the mapping can be tested directly.
     ///
-    /// <para>".tex" is present only for the <c>uploadTextAsFile</c> bypass (Phase 12): normally a .tex
-    /// file short-circuits into inline text long before this switch is reached, and the switch is only
-    /// consulted once a caller has explicitly asked for the upload path.</para>
-    /// [Human] Übersetzt die Dateiendung in den Mime-Typ. ".tex" gibt es nur für den Upload-Umweg.
+    /// <para>".tex", ".md" and ".txt" are present only for the <c>uploadTextAsFile</c> bypass: normally
+    /// a text file short-circuits into inline text long before this switch is reached, and the switch is
+    /// only consulted once a caller has explicitly asked for the upload path (preceding parts, Phase 12;
+    /// history files under InlineHistory=false).</para>
+    /// [Human] Übersetzt die Dateiendung in den Mime-Typ. Textendungen gibt es nur für den Upload-Umweg.
     /// </summary>
     public static string? ResolveMimeType(string extension) => extension switch {
         ".jpg" or ".jpeg" => "image/jpeg",
@@ -162,7 +163,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
         ".aac" => "audio/aac",
         ".wav" => "audio/wav",
         ".mp4" => "video/mp4",
-        ".tex" => "text/plain",
+        ".tex" or ".md" or ".txt" => "text/plain",
         _ => null
     };
 

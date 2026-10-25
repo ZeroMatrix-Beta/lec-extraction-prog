@@ -58,6 +58,16 @@ public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public bool InlinePrecedingLecTexParts { get; set; } = true;
 
     /// <summary>
+    /// [AI Context] true (default): the history's text files are inlined as text, in the system instruction or
+    /// the user turn as LoadHistoryIntoSystemInstruction says. false: each is uploaded as a text/plain file and
+    /// linked from the start of the user turn, because the system instruction rejects file links (gemini-cache-probe
+    /// e13, 500 Internal error). Uploaded files do not count at the free tier's per-minute gate, inline text does.
+    /// A file whose upload fails is inlined where it would have gone. Images are not affected.
+    /// [Human] Lädt die History-Textdateien hoch, statt sie einzubetten (zählt nicht ans Minutenlimit).
+    /// </summary>
+    public bool InlineHistory { get; set; } = true;
+
+    /// <summary>
     /// [AI Context] Strips LaTeX comments and `hidden` environments from the inlined reference context
     /// (preceding parts and the dummy anchor), and adds a rule to the reference-context preamble saying
     /// so - and that the model's own output must still contain them. Inline path only: uploaded .tex

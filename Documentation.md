@@ -178,6 +178,9 @@ With `InlinePrecedingLecTexParts`, every earlier part goes into the user turn as
 
 Shipped `AiStudioAutoExtractionConfig.json` (2026-10-18): `OlderParts` removes `speech`, `overview`, `insight`, `steps`, `note`, `student`, `pause`, `aiNote`, `tikzpicture` and `\inlinemetanote`; `PrecedingPart` only strips comments/`hidden` (keeping the `% Lecturer(s):`, `% Speaker(s):`, `% Primary Language:`, `% Final words:` and `% Final board:` lines), since the current part continues it (240 s overlap). Without those lines the 2026-10-18 part 4 of 02-23 wrote `% Lecturer(s): Unknown`. On Information Security that takes an older part from ~5k tokens (old slimming) to ~2–3k. The class defaults reproduce the 2026-10-16 behaviour: older parts lose speech bodies and TikZ, the preceding part stays complete.
 
+### Uploading the History (`InlineHistory`)
+`InlineHistory` (optional, default `true`) does for the training history what `InlinePrecedingLecTexParts: false` does for the earlier parts. With `false`, `SystemInstructionTextBuilder.AppendHistoryFilesAsync` uploads each history text file whose extension maps to `text/plain` (`.md`, `.txt`, `.tex`) instead of inlining it, and returns the uploads (a header Part with the file's path, then the file link) apart from the media parts (`LoadedHistory`). The session (`AddLoadedHistory`, `HistoryUserTurnParts`) puts them at the start of every user turn, after `UploadedHistoryNotice`, in the part requests and in every warm-up handshake alike, so the prefixes still match. They go there even with `LoadHistoryIntoSystemInstruction: true`: the system instruction rejects file links (gemini-cache-probe e13, `500 Internal error`). The system instruction keeps its file tree, so the paths still resolve; images are unaffected. A failed upload is inlined where the file would have gone, with a warning. Uploaded files do not count at the free tier's per-minute gate, so the `Minutenlimit-Schätzung` drops by the history's ~407k characters (2026-10-25). Whether uploaded history steers the model as well as inlined history is open (§9).
+
 ### ThinkingConfig Consistency
 The `GenerateContentConfig` sent during warm-up uses the **same `ThinkingConfig`** as the actual Part-1 request (same `ThinkingBudget` / `ThinkingLevel` / model-specific routing). A mismatch would create a different cache bucket key, causing a cache miss. Use `DisableThinkingDuringWarmUp: true` to force `ThinkingBudget = 0` for the handshake only (saves thinking-tokens during warm-up at the cost of a guaranteed cache miss for that round).
 
@@ -579,6 +582,9 @@ Part 1 enthält immer einen `<reference_context file="part0.tex">`-Block (ein sy
 ### Kürzen der eingebetteten Vorgänger-Teile (`ReferenceSlimming`)
 `StripCommentsFromReferenceContext` entfernt zuerst Kommentare und `hidden` aus jeder eingebetteten Datei. Danach wendet `ReferenceContextSlimmer` pro Datei ein Profil aus `ReferenceSlimming` an: `PrecedingPart` für den direkten Vorgänger, `OlderParts` für alle älteren Teile (nur mit `SlimOlderReferenceParts`). Ein Profil hat `StripCommentsAndHidden`, `KeepCommentPrefixes` (Kommentarzeilen, die erhalten bleiben, z. B. `% Lecturer(s):`, `% Final words:`), `RemoveEnvironments` (ganz entfernt), `EmptyEnvironments` (Inhalt durch `% tokenOpt` ersetzt), `RemoveCommands` (z. B. `inlinemetanote` samt Argument) und `MarkRemovedEnvironments`. `\label`s in entfernten Blöcken bleiben; Abschnitte, `content` und Satz-Umgebungen werden nur angefasst, wenn sie gelistet sind. Ungeschlossene Umgebungen bleiben stehen. Regel 5 der Präambel wird aus den Profilen erzeugt. Ausgeliefert (2026-10-18): ältere Teile ohne `speech`, `overview`, `insight`, `steps`, `note`, `student`, `pause`, `aiNote`, `tikzpicture`, `\inlinemetanote`; der direkte Vorgänger nur ohne Kommentare/`hidden`. Klassen-Defaults = Verhalten vom 2026-10-16.
 
+### History hochladen (`InlineHistory`)
+`InlineHistory` (optional, Default `true`) macht für die Training History, was `InlinePrecedingLecTexParts: false` für die Vorgänger-Teile macht. Bei `false` lädt `SystemInstructionTextBuilder.AppendHistoryFilesAsync` jede History-Textdatei mit `text/plain`-Endung (`.md`, `.txt`, `.tex`) hoch, statt sie einzubetten. Die Session setzt die Uploads (je eine Kopfzeile mit dem Pfad, dann der Datei-Link) hinter `UploadedHistoryNotice` an den Anfang jedes User-Turns, in Part-Requests und allen Warm-up-Handshakes gleich. Auch bei `LoadHistoryIntoSystemInstruction: true`, denn die System Instruction lehnt Datei-Links ab (gemini-cache-probe e13). Dateibaum und Bilder bleiben wie bisher. Ein gescheiterter Upload wird eingebettet, wo die Datei sonst stünde, mit Warnung. Hochgeladene Dateien zählen nicht ans Minutenlimit; die `Minutenlimit-Schätzung` sinkt um die ~407k Zeichen der History (2026-10-25). Ob hochgeladene History das Modell gleich gut steuert, ist offen (§9).
+
 ### ThinkingConfig-Konsistenz
 Die `GenerateContentConfig` im Warm-Up verwendet dieselbe **`ThinkingConfig`** wie die echte Part-1-Anfrage (gleiches `ThinkingBudget` / `ThinkingLevel` / modellspezifisches Routing). Ein Unterschied würde einen anderen Cache-Bucket-Key erzeugen und einen Cache-Miss verursachen. Mit `DisableThinkingDuringWarmUp: true` wird für den Handshake `ThinkingBudget = 0` erzwungen (spart Denk-Tokens im Warm-Up, auf Kosten eines garantierten Cache-Misses für diese Runde).
 
@@ -834,6 +840,12 @@ Zwei Schalter sind implementiert und getestet, aber ihr Default beruht auf
   (Inline) und `false` (Upload) laufen lassen und den Default aus dem
   gemessenen Token-/Zeitverbrauch setzen.
   *Aktueller Config-Wert: `false` (Upload-Modus).*
+
+- **`InlineHistory`** — Ein Teil mit `false` (History hochgeladen) laufen lassen:
+  die `Minutenlimit-Schätzung` sollte von ~97 % auf ~57 % fallen. Dann die
+  Ausgabe mit einem Inline-Lauf desselben Teils vergleichen (Eröffnungsabschnitt,
+  `hh:mm:ss`-Zeitstempel, Füllwörter in jedem Viertel, TikZ-Regeln), bevor
+  der Schalter in der Config auf `false` bleibt. *Default: `true` (wie bisher).*
 
 ### Struktur-Roadmap (offen)
 

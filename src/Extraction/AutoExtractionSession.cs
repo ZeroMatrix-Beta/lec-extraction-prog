@@ -47,6 +47,8 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     private string _systemInstructionText = "";
     // [AI Context] Cached payloads to avoid redundant uploads and API calls across multiple video chunks.
     private readonly List<Part> _historyParts = [];
+    // [AI Context] History text files uploaded under InlineHistory=false (header Part + file link each); always in the user turn.
+    private readonly List<Part> _uploadedHistoryParts = [];
     // [AI Context] Stores the acknowledged history prompt and the model's confirmation, statically prepended to all subsequent API calls.
     private readonly List<Content> _sessionPreamble = [];
     private bool _historyWasLoaded = false;
@@ -272,7 +274,7 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             string logDest = !string.IsNullOrWhiteSpace(_sessionLogger.CurrentSessionLogPath)
                 ? _sessionLogger.CurrentSessionLogPath
                 : _config.LogFolder;
-            await ExtractionHelpers.LogSystemInstructionDumpAsync(logDest, _systemInstructionText, _historyParts);
+            await ExtractionHelpers.LogSystemInstructionDumpAsync(logDest, _systemInstructionText, [.. _historyParts, .. _uploadedHistoryParts]);
         }
 
         await _sessionLogger.LogSessionSetupAsync();
@@ -364,16 +366,9 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
                 // If warmup is disabled, load history files directly into session state without API handshakes
                 Ui.Info("Lade History-Dateien direkt in den Session-Zustand (Warmup deaktiviert)...");
                 var batchBuilder = new System.Text.StringBuilder();
-                var loadedParts = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
-                    historyFilesForSystemInstruction, batchBuilder, commonBase, _attachmentHandler, _config.VerboseConsoleOutput);
-                
-                if (_config.LoadHistoryIntoSystemInstruction) {
-                    _systemInstructionText += batchBuilder.ToString();
-                    _historyParts.AddRange(loadedParts);
-                } else {
-                    _historyParts.Add(new Part { Text = batchBuilder.ToString() });
-                    _historyParts.AddRange(loadedParts);
-                }
+                var loaded = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
+                    historyFilesForSystemInstruction, batchBuilder, commonBase, _attachmentHandler, _config.VerboseConsoleOutput, uploadTextFiles: !_config.InlineHistory);
+                AddLoadedHistory(batchBuilder.ToString(), loaded);
             }
 
             _historyWasLoaded = true;
@@ -386,6 +381,44 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     }
 
 
+
+    /// <summary>
+    /// [AI Context] Puts one loaded history batch where LoadHistoryIntoSystemInstruction says: its inlined
+    /// text and media into the system instruction or the user turn's history parts. Uploaded text files
+    /// (InlineHistory=false) always go to the user turn, because the system instruction rejects file links
+    /// (gemini-cache-probe e13). A batch whose text files were all uploaded leaves no empty text Part behind.
+    /// [Human] Legt einen geladenen History-Batch in System Instruction oder User-Turn ab.
+    /// </summary>
+    private void AddLoadedHistory(string batchText, SystemInstructionTextBuilder.LoadedHistory loaded) {
+        if (_config.LoadHistoryIntoSystemInstruction) {
+            _systemInstructionText += batchText;
+            _historyParts.AddRange(loaded.MediaParts);
+        } else {
+            if (_config.InlineHistory || batchText.Length > 0) {
+                _historyParts.Add(new Part { Text = batchText });
+            }
+            _historyParts.AddRange(loaded.MediaParts);
+        }
+        _uploadedHistoryParts.AddRange(loaded.UploadedTextParts);
+    }
+
+    /// <summary>
+    /// [AI Context] The history that opens every user turn, in the same order for the part requests and all
+    /// warm-up handshakes so their prefixes agree: the uploaded history files (with their notice), then, if
+    /// LoadHistoryIntoSystemInstruction is false, the inlined history.
+    /// [Human] Die History am Anfang jedes User-Turns (Request und Warm-ups gleich).
+    /// </summary>
+    private List<Part> HistoryUserTurnParts() {
+        var parts = new List<Part>();
+        if (_uploadedHistoryParts.Count > 0) {
+            parts.Add(new Part { Text = SystemInstructionTextBuilder.UploadedHistoryNotice });
+            parts.AddRange(_uploadedHistoryParts);
+        }
+        if (!_config.LoadHistoryIntoSystemInstruction) {
+            parts.AddRange(_historyParts);
+        }
+        return parts;
+    }
 
     private List<Part> GetValidSystemInstructionParts() =>
         BuildSystemInstructionParts(_systemInstructionText, _historyParts, _config.LoadHistoryIntoSystemInstruction, _backend.SystemInstructionAcceptsFiles);

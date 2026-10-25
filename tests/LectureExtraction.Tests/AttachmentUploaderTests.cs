@@ -28,6 +28,8 @@ public class AttachmentUploaderTests {
 
     [Theory]
     [InlineData(".tex", "text/plain")]
+    [InlineData(".md", "text/plain")]
+    [InlineData(".txt", "text/plain")]
     [InlineData(".mp4", "video/mp4")]
     [InlineData(".png", "image/png")]
     [InlineData(".pdf", "application/pdf")]
@@ -36,13 +38,13 @@ public class AttachmentUploaderTests {
     }
 
     [Theory]
-    [InlineData(".md")]
     [InlineData(".cs")]
     [InlineData(".json")]
     [InlineData(".zip")]
     public void ResolveMimeType_leaves_other_text_extensions_unsupported(string extension) {
-        // The uploadTextAsFile bypass is deliberately only usable for .tex: every other entry of
-        // s_textExtensions has no caller that wants it uploaded, and would reach a null mime type.
+        // The uploadTextAsFile bypass is deliberately only usable for .tex, .md and .txt (preceding parts
+        // and history): every other entry of s_textExtensions has no caller that wants it uploaded, and
+        // would reach a null mime type.
         Assert.Null(AttachmentUploader.ResolveMimeType(extension));
     }
 

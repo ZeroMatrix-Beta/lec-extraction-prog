@@ -70,29 +70,56 @@ public static class SystemInstructionTextBuilder {
     }
 
     /// <summary>
+    /// [AI Context] What one call of <see cref="AppendHistoryFilesAsync"/> produced besides the inlined
+    /// text. <paramref name="MediaParts"/> are the images and the like, placed as before.
+    /// <paramref name="UploadedTextParts"/> are the text files uploaded under InlineHistory=false, each a
+    /// header Part naming the file followed by its file link; the session puts them at the start of the
+    /// user turn, because the system instruction rejects file links.
+    /// [Human] Ergebnis: Medien-Parts und (bei InlineHistory=false) die hochgeladenen Textdateien.
+    /// </summary>
+    public sealed record LoadedHistory(List<Part> MediaParts, List<Part> UploadedTextParts);
+
+    /// <summary>
     /// [AI Context] Appends history files to <paramref name="targetBuilder"/>. Text files are
-    /// inlined; everything else (images and the like) is uploaded via
-    /// <paramref name="attachmentUploader"/> and <b>returned</b> rather than written to session
+    /// inlined, or with <paramref name="uploadTextFiles"/> uploaded as text/plain (a failed upload is
+    /// inlined as before, with a warning); everything else (images and the like) is uploaded via
+    /// <paramref name="attachmentUploader"/>. Parts are <b>returned</b> rather than written to session
     /// state - that is what lets this method be static and leaves the session the single writer of
     /// its own <c>_historyParts</c>.
-    /// [Human] Hängt History-Dateien an. Textdateien werden eingebettet, andere hochgeladen und
-    /// als Parts zurückgegeben (nicht direkt in den Session-Zustand geschrieben).
+    /// [Human] Hängt History-Dateien an. Textdateien werden eingebettet (oder hochgeladen), andere
+    /// hochgeladen und als Parts zurückgegeben (nicht direkt in den Session-Zustand geschrieben).
     /// </summary>
-    public static async Task<List<Part>> AppendHistoryFilesAsync(
+    public static async Task<LoadedHistory> AppendHistoryFilesAsync(
         List<string> historyFiles,
         StringBuilder targetBuilder,
         string? commonBase,
         AttachmentUploader attachmentUploader,
-        bool verboseConsoleOutput = false) {
+        bool verboseConsoleOutput = false,
+        bool uploadTextFiles = false) {
 
         historyFiles = [.. historyFiles.Where(f => !HistoryFileResolver.IsDeletedPromptFile(f))];
         List<string> nonTextFiles = [];
+        List<Part> uploadedTextParts = [];
         int textFileCount = 0;
+        int uploadedFileCount = 0;
 
         foreach (string historyFilePath in historyFiles) {
             string extension = Path.GetExtension(historyFilePath).ToLowerInvariant();
             if (s_inlineTextExtensions.Contains(extension)) {
                 string relativePath = ResolveRelativePath(historyFilePath, commonBase);
+                if (uploadTextFiles && AttachmentUploader.ResolveMimeType(extension) == "text/plain") {
+                    var fileParts = new List<Part>();
+                    if (await attachmentUploader.UploadAndAttachFileAsync(historyFilePath, fileParts, uploadTextAsFile: true)) {
+                        uploadedTextParts.Add(new Part { Text = UploadedHistoryFileHeader(relativePath) });
+                        uploadedTextParts.AddRange(fileParts);
+                        uploadedFileCount++;
+                        if (verboseConsoleOutput) {
+                            Ui.Info($"History-Textdatei hochgeladen: {relativePath}");
+                        }
+                        continue;
+                    }
+                    Ui.Warn($"Upload von History-Datei '{relativePath}' fehlgeschlagen - die Datei wird stattdessen direkt eingebettet.", "History");
+                }
                 targetBuilder.AppendLine($"\n******\n------\n******\nHere is history reference file `{relativePath}`:\n");
                 targetBuilder.AppendLine(await System.IO.File.ReadAllTextAsync(historyFilePath));
                 textFileCount++;
@@ -108,13 +135,35 @@ public static class SystemInstructionTextBuilder {
         if (!verboseConsoleOutput && textFileCount > 0) {
             Ui.Info($"{textFileCount} History-Textdatei(en) in System Instruction eingebunden.");
         }
+        if (!verboseConsoleOutput && uploadedFileCount > 0) {
+            Ui.Info($"{uploadedFileCount} History-Textdatei(en) als text/plain hochgeladen (InlineHistory = false, zählen nicht ans Minutenlimit).");
+        }
 
-        if (nonTextFiles.Count == 0) return [];
+        if (nonTextFiles.Count == 0) return new([], uploadedTextParts);
 
         string quotedFileList = string.Join(", ", nonTextFiles.Select(p => $"\"{p}\""));
         var (uploadSuccess, _, uploadedParts) = await attachmentUploader.ProcessAttachmentsAsync($"attach {quotedFileList}", true, commonBase);
-        return uploadSuccess && uploadedParts.Count > 0 ? uploadedParts : [];
+        return new(uploadSuccess && uploadedParts.Count > 0 ? uploadedParts : [], uploadedTextParts);
     }
+
+    /// <summary>
+    /// [AI Context] The header Part before an uploaded history file's link: the separator and wording
+    /// an inlined history file gets, so the model can still tie each file to its path in the tree.
+    /// [Human] Kopfzeile vor einer hochgeladenen History-Datei.
+    /// </summary>
+    public static string UploadedHistoryFileHeader(string relativePath) =>
+        $"\n******\n------\n******\nHere is history reference file `{relativePath}` (attached as a file):\n";
+
+    /// <summary>
+    /// [AI Context] Opens the uploaded history in the user turn. A link there does not carry the system
+    /// instruction's authority by position, so the text says it. Constant, so every request and warm-up
+    /// share it as a prefix.
+    /// [Human] Hinweis vor der hochgeladenen History: Sie gehört zur System Instruction.
+    /// </summary>
+    public const string UploadedHistoryNotice =
+        "NOTE: The Training History listed in the system instruction's folder structure is attached below as " +
+        "text files, each preceded by its path. It belongs to the system instructions and has the same authority " +
+        "as if it were written there: worked examples and rules to follow, not material to transcribe.\n";
 
     /// <summary>
     /// [AI Context] Path shown to the model for a file. Relative to the common base when there is

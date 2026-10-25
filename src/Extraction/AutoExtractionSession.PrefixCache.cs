@@ -73,16 +73,9 @@ public partial class AutoExtractionSession {
             // warming them both up together perfectly.
             // [Human] Fügt den Text entweder an die System Instruction oder die User-Message an.
             var batchBuilder = new System.Text.StringBuilder();
-            var loadedParts = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
-                batchFiles, batchBuilder, commonBase, _attachmentHandler);
-            
-            if (_config.LoadHistoryIntoSystemInstruction) {
-                _historyParts.AddRange(loadedParts);
-                _systemInstructionText += batchBuilder.ToString();
-            } else {
-                _historyParts.Add(new Part { Text = batchBuilder.ToString() });
-                _historyParts.AddRange(loadedParts);
-            }
+            var loaded = await SystemInstructionTextBuilder.AppendHistoryFilesAsync(
+                batchFiles, batchBuilder, commonBase, _attachmentHandler, uploadTextFiles: !_config.InlineHistory);
+            AddLoadedHistory(batchBuilder.ToString(), loaded);
 
             bool shouldSendHandshake = true;
             
@@ -139,9 +132,8 @@ public partial class AutoExtractionSession {
         // [AI Context] When LoadHistoryIntoSystemInstruction is false, the history resides in the User Message.
         // We prepend it here to ensure the exact same token sequence is sent during the warmup handshakes
         // as will be sent during the actual video generation request, ensuring a perfect prefix match.
-        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            warmupParts.AddRange(_historyParts);
-        }
+        // Uploaded history files (InlineHistory=false) are in the User Message either way.
+        warmupParts.AddRange(HistoryUserTurnParts());
 
         if (shouldIncludeDummy) {
             warmupParts.Add(new Part { Text = ComposeReferenceContextText("", 1) });
@@ -182,10 +174,7 @@ public partial class AutoExtractionSession {
         string stepLabel = $"Resume Part {partNumber}";
         Ui.Info($"[{stepLabel}] Teil 1-{partNumber - 1} stammen von der Festplatte - zusätzlicher Handshake, damit die eingebetteten Teile vor dem Video-Request im impliziten Cache liegen:", "Cache-Warming");
 
-        List<Part> warmupParts = [];
-        if (!_config.LoadHistoryIntoSystemInstruction && _historyParts.Count > 0) {
-            warmupParts.AddRange(_historyParts);
-        }
+        List<Part> warmupParts = HistoryUserTurnParts();
         warmupParts.Add(new Part { Text = ComposeReferenceContextText(await BuildInlinedPrecedingPartsAsync(previousTexFiles), partNumber) });
         warmupParts.Add(new Part { Text = HandshakeText() });
 
