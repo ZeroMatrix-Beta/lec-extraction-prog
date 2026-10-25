@@ -50,6 +50,7 @@ public static class LatexAutoFixer {
     public static IReadOnlyList<ILatexLineFix> DefaultLineFixes { get; } = [
         new TexorpdfstringBracketFix(),
         new BraceNestedOptionalArgumentFix(),
+        new BareMathCommandInTitleFix(),
         new TrailingDollarAfterParenFix(),
         new UnclosedEnvironmentEndFix(),
         // before InlineMetaNoteMathFix: it acts only on a line with an odd number of '$', so it never

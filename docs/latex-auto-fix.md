@@ -37,6 +37,7 @@ src/Latex/
     ├── ILatexLineFix.cs                    ← interface for line-local fixes
     ├── ILatexDocumentFix.cs                ← interface for whole-document fixes
     ├── BraceNestedOptionalArgumentFix.cs   ← [Units in $R[x]$] → [{Units in $R[x]$}]
+    ├── BareMathCommandInTitleFix.cs        ← [Sequential \implies Topological] → [Sequential $\implies$ Topological]
     ├── TexorpdfstringBracketFix.cs         ← {R[[x]}}} → {R[[x]]}}
     ├── UndefinedMathCommandFix.cs          ← \mapsfrom → \mathrel{\reflectbox{$\mapsto$}}, \sub → \subset
     ├── UnclosedInlineMathBeforeProseFix.cs ← $x and negatives → $x$ and negatives
@@ -53,6 +54,7 @@ src/Latex/
 | Fix | pdflatex says | Cause | Seen in |
 |---|---|---|---|
 | `BraceNestedOptionalArgumentFix` | `Extra }, or forgotten $` at `\begin{theorem}[… $R[x]` | A classic optional argument ends at the first `]`, so `R[x]` in a title cuts it off. | 09-30 (theorem), 10-06 (lemma) |
+| `BareMathCommandInTitleFix` | `Missing $ inserted` at `\begin{proofWrapper}[… \implies …]` | A math-only command (`\implies`, `\to`, `\subseteq`, `\iff`, …) written as prose in a box title, which is set in text mode. Wraps each such command outside `$...$` in its own `$...$`; titles with `\texorpdfstring` are left alone. | Analysis II 02-23, rerun of 2026-10-25 (step 4, a `proofWrapper` and a `content` title) |
 | `TexorpdfstringBracketFix` | `Argument of \environment content has an extra }` | The plain-text half of `\texorpdfstring` lost a `]` that became a `}`: `{R[[x]}}}`. | 09-30 (5 titles) |
 | `MisnamedEnvironmentEndFix` | `\begin{speech} on input line 1011 ended by \end{student}` | The model closed `speech` with the wrong name. | 09-22 |
 | `UndefinedMathCommandFix` | `Undefined control sequence` at `\mapsfrom` (or `\sub`) | The preamble has no `stmaryrd` and no `\sub`: `\mapsfrom` → `\mathrel{\reflectbox{$\mapsto$}}`, `\longmapsfrom` likewise, `\sub` → `\subset`. | 10-07 (step 4; `\sub` from AI repair round 1) |
