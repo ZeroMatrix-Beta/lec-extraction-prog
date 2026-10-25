@@ -32,7 +32,21 @@ public class Algebra1007AutoFixTests {
             Commands.FixLine(line));
     }
 
+    // Step 4 of the Analysis II lecture of 2026-02-23 (3.8 rerun of 2026-10-25), line 1965.
+    [Fact]
+    public void Replaces_marvosym_Lightning_with_stmaryrd_lightning() {
+        string line = @"\text{\Large\textbf{\Lightning}} \qquad \left( 0 < \frac{r(x)}{4} \le r(x_{n_\ell}) \to 0 \right)";
+
+        Assert.Equal(
+            @"\text{\Large\textbf{\ensuremath{\lightning}}} \qquad \left( 0 < \frac{r(x)}{4} \le r(x_{n_\ell}) \to 0 \right)",
+            Commands.FixLine(line));
+        Assert.Equal(@"so $r \to 0$, \ensuremath{\lightning}.", Commands.FixLine(@"so $r \to 0$, \Lightning."));
+    }
+
     [Theory]
+    [InlineData(@"a contradiction $\lightning$")]
+    [InlineData(@"\ensuremath{\lightning}")]
+    [InlineData(@"\LightningBolt is not ours")]
     [InlineData(@"$K \subset I \subseteq R \subsetneq S$")]
     [InlineData(@"\subsection{Sub-ideals}")]
     [InlineData(@"\subsubsection{Well-Definedness}")]

@@ -10,23 +10,28 @@ namespace LectureExtraction.Latex.AutoFix;
 /// a \sub; \reflectbox comes with graphicx, which tikz loads, and the AI repair's own
 /// '\mathrel{\reflectbox{$\mapsto$}}' compiled. Longer names (\subset, \subseteq, \subsection, \mapsfromchar)
 /// and an escaped backslash ('\\sub...' is a line break plus text) stay untouched.
-/// [Human] Ersetzt Befehle, die die Präambel nicht kennt (\mapsfrom, \longmapsfrom, \sub), durch bekannte.
+/// <para>'\Lightning' (marvosym, not loaded) -> '\ensuremath{\lightning}': the contradiction mark that
+/// transcription.md names is stmaryrd's '\lightning', which the preamble loads; step 4 of the Analysis II
+/// lecture of 2026-02-23 (3.8 rerun of 2026-10-25) wrote '\text{\Large\textbf{\Lightning}}'. \ensuremath
+/// makes the replacement work in text mode (inside \text{...}) as well as in math.</para>
+/// [Human] Ersetzt Befehle, die die Präambel nicht kennt (\mapsfrom, \longmapsfrom, \sub, \Lightning), durch bekannte.
 /// </summary>
 public sealed partial class UndefinedMathCommandFix : ILatexLineFix {
-    public string Description => @"unbekannten Befehl (\mapsfrom, \sub) ersetzt";
+    public string Description => @"unbekannten Befehl (\mapsfrom, \sub, \Lightning) ersetzt";
 
     public string FixLine(string code) {
-        if (!code.Contains(@"\sub") && !code.Contains("mapsfrom")) return code;
+        if (!code.Contains(@"\sub") && !code.Contains("mapsfrom") && !code.Contains(@"\Lightning")) return code;
         return CommandRegex().Replace(code, m => {
             if (LatexScan.IsEscaped(code, m.Index)) return m.Value;
             return m.Groups[1].Value switch {
                 "mapsfrom" => @"\mathrel{\reflectbox{$\mapsto$}}",
                 "longmapsfrom" => @"\mathrel{\reflectbox{$\longmapsto$}}",
+                "Lightning" => @"\ensuremath{\lightning}",
                 _ => @"\subset",
             };
         });
     }
 
-    [GeneratedRegex(@"\\(mapsfrom|longmapsfrom|sub)(?![A-Za-z@])")]
+    [GeneratedRegex(@"\\(mapsfrom|longmapsfrom|sub|Lightning)(?![A-Za-z@])")]
     private static partial Regex CommandRegex();
 }
