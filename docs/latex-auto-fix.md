@@ -39,7 +39,7 @@ src/Latex/
     ├── BraceNestedOptionalArgumentFix.cs   ← [Units in $R[x]$] → [{Units in $R[x]$}]
     ├── BareMathCommandInTitleFix.cs        ← [Sequential \implies Topological] → [Sequential $\implies$ Topological]
     ├── TexorpdfstringBracketFix.cs         ← {R[[x]}}} → {R[[x]]}}
-    ├── UndefinedMathCommandFix.cs          ← \mapsfrom → \mathrel{\reflectbox{$\mapsto$}}, \sub → \subset
+    ├── UndefinedMathCommandFix.cs          ← \mapsfrom → \mathrel{\reflectbox{$\mapsto$}}, \sub → \subset, \Lightning → \ensuremath{\lightning}
     ├── UnclosedInlineMathBeforeProseFix.cs ← $x and negatives → $x$ and negatives
     ├── HighlightOptionalColorFix.cs        ← \begin{highlight}[T] → \begin{highlight}{BrickRed}[T]
     ├── HighlightColorTintFix.cs            ← \begin{highlight}{BrickRed!15} → \begin{highlight}{BrickRed}
