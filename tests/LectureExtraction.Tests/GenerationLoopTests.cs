@@ -343,6 +343,7 @@ public class GenerationLoopTests : IDisposable {
     private static async IAsyncEnumerable<GenerateContentResponse> Stream(GenerateContentResponse[] chunks, Exception? thenThrow = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         foreach (var chunk in chunks) {
+            cancellationToken.ThrowIfCancellationRequested();
             await Task.Yield();
             yield return chunk;
         }

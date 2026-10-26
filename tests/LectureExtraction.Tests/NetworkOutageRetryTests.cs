@@ -69,7 +69,7 @@ public class NetworkOutageRetryTests : IDisposable {
         Assert.Equal(3, attempts);
         Assert.Equal(3, probes);
         // Attempt 2 after the 503 says it discards; the resend after the outage does not.
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(console.Output, "verworfen"));
+        Assert.Equal(1, console.Output.Split("verworfen").Length - 1);
     }
 
     [Fact]
@@ -183,6 +183,7 @@ public class NetworkOutageRetryTests : IDisposable {
 
     private static async IAsyncEnumerable<GenerateContentResponse> Stream(string[] texts, Exception? thenThrow, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         foreach (string text in texts) {
+            cancellationToken.ThrowIfCancellationRequested();
             await Task.Yield();
             yield return new GenerateContentResponse {
                 Candidates = [new Candidate { Content = new Content { Role = "model", Parts = [new Part { Text = text }] } }]
