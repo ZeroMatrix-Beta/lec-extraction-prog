@@ -3,7 +3,7 @@
 | Section | Status |
 |---|---|
 | 1. Console output, delay logging & stream safety | Done (`776c6b3`, `e1887d4`) |
-| 2. Part reuse and redoing a single part | Planned |
+| 2. Part reuse and redoing a single part | One shared reuse rule that picks up `-copy-N` parts done (2.2.A without the geometry check); geometry check and 2.2.B-D open |
 | 3. Cleanup (`lecx clean`, `--clean-tmp`, `lecx files`) | `lecx clean` and `--clean-tmp` done (`323db60`, `0abdbb6`); `lecx files` open |
 | 4. Dropped from the first draft, with reasons | - |
 | 5. Order and verification | - |
@@ -47,6 +47,13 @@ Already done (`776c6b3`): a failed part no longer deletes the parts finished bef
 exhausted per-day quota fails fast with a `--profile` hint instead of sleeping for hours. Re-running
 with another profile inside the resume window reuses the finished parts; after the window,
 `--resume-window 48` does. **Resuming after a failure therefore needs no new option.**
+
+Also done (2026-10-26): the reuse rule exists once, `PartReuse.FindReusablePart`, used by
+`AutoExtractionSession` for the reuse and the pre-upload and by `ExtractionPlanner`. The legacy
+`VertexAutoExtractionSession` keeps its own copy, as it stays unchanged. The rule checks the
+newest of `partN.tex` and its `-copy-N` files, so the next run reuses a redone part; that fixes
+the part half of item 2 below. Still open: the geometry check of item 1, the combined
+`-all*.tex` copies of item 2, and item 3.
 
 What is still wrong or missing:
 

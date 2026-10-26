@@ -48,10 +48,10 @@ public partial class AutoExtractionSession {
             $"<parameter name=\"duration_and_timestamps\">Do NOT calculate any time offset for the 'speech' environment. Start at 00:00:00 and ensure the final timestamp in your very last 'speech' block perfectly matches the segment length ({durationString}).</parameter>\n" +
             "</context_and_parameters>";
 
-        var (uploadSuccess, parsedPrompt, attachmentParts) = await _attachmentHandler.ProcessAttachmentsAsync($"attach \"{partFile}\" | {prompt}");
+        var (uploadSuccess, attachmentParts) = await _attachmentHandler.UploadFilesAsync([partFile]);
         if (!uploadSuccess || attachmentParts.Count == 0) return new SegmentUpload(false, null, []);
 
-        return new SegmentUpload(true, parsedPrompt, attachmentParts);
+        return new SegmentUpload(true, prompt, attachmentParts);
     }
 
     /// <summary>
@@ -330,7 +330,8 @@ public partial class AutoExtractionSession {
                 BudgetStopSuffix = $"Breche diesen Teil ab ({partFile}).",
                 BuildContinuePrompt = BuildPartContinuePrompt,
                 WaitBeforeContinueAsync = async () => {
-                    int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
+                    int delay = _config.VideoPartDelaySeconds;
+                    if (delay <= 0) return true;
                     Ui.Detail($"Warte {delay} Sekunden vor der Fortsetzung, um API-Limits zu schonen...", "Timer");
                     if (!await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Rate-Limits (Token Refill)...")) {
                         Ui.Info("Warten durch Benutzer abgebrochen.");

@@ -42,8 +42,8 @@ public partial class AutoExtractionSession {
         var batches = HistoryFileResolver.GroupHistoryFilesByTopLevelSubfolder(
             historyFiles, _config.HistoryPreloadPaths, _config.HistoryBatchCount);
 
-        int systemInstructionDelay = _config.SystemInstructionDelaySeconds > 0 ? _config.SystemInstructionDelaySeconds : 65;
-        int historyBatchDelay = _config.HistoryRateLimitDelaySeconds > 0 ? _config.HistoryRateLimitDelaySeconds : 65;
+        int systemInstructionDelay = Math.Max(0, _config.SystemInstructionDelaySeconds);
+        int historyBatchDelay = Math.Max(0, _config.HistoryRateLimitDelaySeconds);
 
         Ui.Info($"Starte gestaffeltes Cache-Warming für System Instruction + History in {batches.Count} Batch(es) (BaseDelay: {systemInstructionDelay}s, HistoryDelay: {historyBatchDelay}s)...", "SystemInstruction-Warmup");
 
@@ -310,9 +310,11 @@ public partial class AutoExtractionSession {
                 string tag = string.IsNullOrEmpty(stepLabel) ? "[Warmup Result]" : $"[{stepLabel}]";
                 Ui.Info(usage.Describe(caller, tag).TrimStart(), "Tokens");
 
-                int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
-                Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");
-                await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
+                int delay = customDelay ?? _config.VideoPartDelaySeconds;
+                if (delay > 0) {
+                    Ui.Detail($"Warte {delay} Sekunden (Token Refill)...", "Rate-Limit");
+                    await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
+                }
                 return true;
             } else {
                 Ui.Warn($"Cache-Warming Handshake {stepPrefix}abgebrochen oder fehlgeschlagen.", "Cache-Warming");
@@ -321,9 +323,11 @@ public partial class AutoExtractionSession {
         }
         catch (Exception ex) {
             Ui.Warn($"Cache-Warming Handshake fehlgeschlagen: {ex.Describe()}. Das Setup wird abgebrochen.", "Cache-Warming");
-            int delay = customDelay ?? (_config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130);
-            Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
-            await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
+            int delay = customDelay ?? _config.VideoPartDelaySeconds;
+            if (delay > 0) {
+                Ui.Detail($"Warte {delay} Sekunden (Token Refill nach Handshake)...", "Rate-Limit");
+                await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Handshake...");
+            }
         }
         return false;
     }

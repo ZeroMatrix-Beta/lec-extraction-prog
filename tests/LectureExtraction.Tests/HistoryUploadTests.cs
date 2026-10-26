@@ -50,6 +50,26 @@ public class HistoryUploadTests {
     }
 
     [Fact]
+    public async Task A_history_image_whose_path_has_a_comma_is_attached() {
+        // Non-text history files used to go through `attach "a", "b"`, which split this path in two.
+        AnsiConsole.Console = new TestConsole();
+        string dir = CreateTempDir();
+        try {
+            string png = Path.Combine(dir, "board, week 3.png");
+            File.WriteAllBytes(png, [0x89, 0x50, 0x4E, 0x47]);
+            var uploader = new AttachmentUploader(client: null!, uploadFolder: "", includePaths: [], isAiStudio: true, gcsBucketName: "", inlineImages: true);
+
+            var loaded = await SystemInstructionTextBuilder.AppendHistoryFilesAsync([png], new StringBuilder(), dir, uploader);
+
+            Assert.Contains(loaded.MediaParts, part => part.InlineData != null);
+            Assert.Contains(loaded.MediaParts, part => part.Text?.Contains("board, week 3.png") == true);
+        }
+        finally {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
     public async Task Failed_upload_is_inlined_as_before() {
         AnsiConsole.Console = new TestConsole();
         string dir = CreateTempDir();

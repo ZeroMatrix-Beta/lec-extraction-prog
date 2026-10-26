@@ -102,6 +102,9 @@
 \definecolor{DeepSeaGreenBright1}{HTML}{335655}
 \definecolor{DeepSeaGreenBright2}{HTML}{4A6F6E}
 \definecolor{DarkCaramel}{HTML}{684A31}
+\definecolor{OriginalTheoremHex}{HTML}{6A3199} % Theorem purple
+\colorlet{EnvTheorem}{OriginalTheoremHex}
+\colorlet{EnvTheoremDark}{OriginalTheoremHex}
 
 % 1. CORE THEME COLORS
 \colorlet{ThemePrimary}{RoyalPurple}
@@ -113,15 +116,20 @@
 \colorlet{ThemeAccent4}{BrickRed}
 
 % 2. TEXT & LINKS
-\definecolor{TextEmphColor}{HTML}{BD6400}
+\definecolor{ListAmber}{HTML}{BD2400}
+% 2026-10-25 (from algebra-1): ai-note / EnvAI is ListAmber softened with 75% Gray (previously BrickRed),
+% and \emph shares it (previously #BD6400):
+\colorlet{EnvAI}{ListAmber!25!Gray}
+\colorlet{TextEmphColor}{EnvAI}
 \definecolor{TextBoldColor}{HTML}{0E6C95}
 \colorlet{TextMetaNote}{Gray}
 \colorlet{LinkColor}{MidnightBlue}
 \colorlet{FileColor}{Magenta}
-\definecolor{ListAmber}{HTML}{BD2400}
-\colorlet{ItemizeBullet}{ListAmber}
-\colorlet{EnumerateBullet}{ListAmber}
-\definecolor{QuoteRed}{HTML}{BD2400}
+% 2026-10-25: itemize and enumerate labels in theorem purple at every depth (previously ListAmber):
+\colorlet{ItemizeBullet}{EnvTheorem}
+\colorlet{EnumerateBullet}{EnvTheorem}
+% 2026-10-25: quote marks of \qt and \newterm in section heading purple (previously #BD2400):
+\colorlet{QuoteRed}{ThemePrimary}
 \colorlet{HeadingSlate}{SlateBlue4}
 \colorlet{HeadingBrown}{Brown!80!black}
 
@@ -131,8 +139,9 @@
 \colorlet{TocPartColor}{ThemePrimary!90!black}
 \colorlet{TocChapColor}{ThemeSecondary!90!black}
 \colorlet{TocSecColor}{TocEntryBlue}
-\colorlet{TocSubsecColor}{TocEntryBrown}
-\colorlet{TocSubsubColor}{gray}
+% 2026-10-25: subsections and subsubsections in the TOC in black (previously TocEntryBrown / gray):
+\colorlet{TocSubsecColor}{black}
+\colorlet{TocSubsubColor}{black}
 \colorlet{TocLabelColor}{ThemePrimary!85!black}
 \colorlet{TocProofColor}{OliveGreen}
 
@@ -147,23 +156,27 @@
 \colorlet{EnvMath}{MidnightBlue}
 \colorlet{EnvTeacher}{ForestGreen}
 \colorlet{EnvMeta}{TealBlue}
-\colorlet{EnvAI}{BrickRed}
+% EnvAI is defined above in section 2 (shared with TextEmphColor)
 \colorlet{EnvNote}{BurntOrange}
 \colorlet{EnvBreak}{BrickRed}
 
 % --- THEOREM ENVIRONMENT COLORS ---
-\definecolor{OriginalTheoremHex}{HTML}{6A3199}
-\colorlet{EnvTheorem}{OriginalTheoremHex}
-\colorlet{EnvTheoremDark}{OriginalTheoremHex}
+% (EnvTheorem is defined with OriginalTheoremHex above in custom colors)
 \definecolor{EnvRemark}{HTML}{008837}           % Bemerkung, Notation, Zusammenfassung, Ziele
 \colorlet{EnvQuestion}{MidnightBlue}            % Frage, Antwort
 \colorlet{EnvQuestion}{EnvRemark}            % pipeline: questions/answers green like \recap
-\definecolor{EnvImportantRemark}{HTML}{D7263D}  % Wichtige Bemerkung
+% 2026-10-25: ListAmber, the old list label red (previously #D7263D):
+\colorlet{EnvImportantRemark}{ListAmber}        % Wichtige Bemerkung
 
 % --- EMPHASIS STYLE OVERRIDE ---
-% \emph and \textbf in sans-serif bold, each in its color, as in the other books.
-\DeclareTextFontCommand{\emph}{\sffamily\bfseries\color{TextEmphColor}}
-\DeclareTextFontCommand{\textbf}{\sffamily\bfseries\color{TextBoldColor}}
+% \emph and \textbf in sans-serif bold, each in its color, as in the other books; math inside bold too.
+\DeclareTextFontCommand{\emph}{\sffamily\bfseries\boldmath\color{TextEmphColor}}
+\DeclareTextFontCommand{\textbf}{\sffamily\bfseries\boldmath\color{TextBoldColor}}
+
+% --- AUTOMATIC BOLD MATH IN BOLD TEXT (2026-10-25) ---
+\makeatletter
+\g@addto@macro\bfseries{\ifmmode\else\boldmath\fi}
+\makeatother
 
 % 5. ENVIRONMENT MIXES & PROOF STATES
 \colorlet{EnvSpokenBg}{EnvSpoken!5}
@@ -181,6 +194,9 @@
 \colorlet{EnvAIBorder}{EnvAI!85!black}
 \colorlet{EnvAIProof}{EnvAIBorder!50!ProofTint}
 \colorlet{EnvAIFallbackProof}{EnvAI!50!ProofTint}
+% 2026-10-25: ai-note title text (65% white mixed into #668F99, for contrast against EnvAIBorder):
+\definecolor{EnvAITitleTextBase}{HTML}{668F99}
+\colorlet{EnvAITitleText}{EnvAITitleTextBase!35!white}
 \colorlet{EnvStudentBg}{EnvStudent!5}
 \colorlet{EnvStudentProof}{EnvStudent!50!ProofTint}
 \colorlet{EnvBreakProof}{EnvBreak!50!ProofTint}
@@ -191,10 +207,12 @@
 \colorlet{ProofQEDBg}{white}
 
 % 7. HEADER, FOOTER & CHAPTER
-\colorlet{HeaderFooterFaint}{ThemeWeekNumber!45!Gray}
+% 2026-10-25: 40% proof green mixed into the faint header/footer colour; "WOCHE n" in theorem purple
+% (previously ThemeWeekNumber!45!Gray and ThemeWeekNumber):
+\colorlet{HeaderFooterFaint}{ThemeWeekNumber!45!Gray!60!ProofTint}
 \colorlet{HeaderFooterLine}{HeaderFooterFaint!50}
 \colorlet{ChapTitleText}{ThemeSecondary!90!black}
-\colorlet{ChapNumberText}{ThemeWeekNumber}
+\colorlet{ChapNumberText}{EnvTheorem}
 \colorlet{ChapSubtitleText}{HeaderFooterFaint}
 \colorlet{ChapLine}{ThemeSecondary!80!black}
 
@@ -214,14 +232,15 @@
 \colorlet{SubSecBar2}{HeadingBrown!70!white}
 \colorlet{SubSecBar1Proof}{SubSecBar1!50!ProofTint}
 \colorlet{SubSecBar2Proof}{SubSecBar2!50!ProofTint}
-\colorlet{SubSecTitleColor}{HeadingBrown}
+% 2026-10-25: subsection and subsubsection titles in SecTitleColor (previously HeadingBrown)
+\colorlet{SubSecTitleColor}{SecTitleColor}
 \colorlet{SubSecTitleColorProof}{SubSecTitleColor!50!ProofTint}
 
 \colorlet{SubSubSecBar1}{HeadingBrown}
 \colorlet{SubSubSecBar2}{gray!60!white}
 \colorlet{SubSubSecBar1Proof}{SubSubSecBar1!50!ProofTint}
 \colorlet{SubSubSecBar2Proof}{SubSubSecBar2!50!ProofTint}
-\colorlet{SubSubSecTitleColor}{HeadingBrown}
+\colorlet{SubSubSecTitleColor}{SecTitleColor}
 \colorlet{SubSubSecTitleColorProof}{SubSubSecTitleColor!50!ProofTint}
 \colorlet{SubSubSecNumberColor}{gray}
 \colorlet{SubSubSecNumberColorProof}{SubSubSecNumberColor!50!ProofTint}
@@ -352,7 +371,11 @@
   labelsep=0.333em plus 0.167em minus 0.111em
 }
 \setlist[itemize,2]{topsep=0pt, itemsep=0pt, parsep=0pt}
+\setlist[itemize,3]{topsep=0pt, itemsep=0pt, parsep=0pt}
+\setlist[itemize,4]{topsep=0pt, itemsep=0pt, parsep=0pt}
 \setlist[enumerate,2]{topsep=0pt, itemsep=0pt, parsep=0pt}
+\setlist[enumerate,3]{topsep=0pt, itemsep=0pt, parsep=0pt}
+\setlist[enumerate,4]{topsep=0pt, itemsep=0pt, parsep=0pt}
 
 \makeatletter
 \newcommand{\fixlistaftertheorem}{%
@@ -531,9 +554,45 @@
 \ifdefined\norm\else\DeclarePairedDelimiter\norm{\lVert}{\rVert}\fi % \norm{v}
 
 % Custom text commands (Deutsch)
-\newcommand{\qt}[1]{\textit{\textcolor{QuoteRed}{\glqq}#1\textcolor{QuoteRed}{\grqq}}}
-\newcommand{\newterm}[1]{\textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{#1}}\textcolor{QuoteRed}{\grqq}}
-\newcommand{\inlinemetanote}[1]{{\colorlet{QuoteRed}{TextMetaNote}\textit{\textcolor{TextMetaNote}{[#1]}}}} % quote marks and brackets grey too
+% 2026-10-25 (from algebra-1): only the outermost \qt / \newterm colours its quote marks; nested
+% ones, and any inside \inlinemetanote, take the colour of the text around them.
+\newif\ifinsideqt
+\insideqtfalse
+\newcommand{\qt}[1]{%
+  \ifinsideqt
+    \textit{\glqq #1\grqq}%
+  \else
+    \begingroup
+    \insideqttrue
+    \textit{\textcolor{QuoteRed}{\glqq}{\insideqttrue\colorlet{QuoteRed}{.}#1}\textcolor{QuoteRed}{\grqq}}%
+    \endgroup
+  \fi
+}
+\newcommand{\newterm}[1]{%
+  \begingroup
+  \ifinsideqt
+    \textcolor{TextBoldColor}{\textit{\glqq #1\grqq}}%
+  \else
+    \textcolor{QuoteRed}{\glqq}\textcolor{TextBoldColor}{\textit{%
+      \begingroup
+      \insideqttrue
+      \colorlet{QuoteRed}{.}%
+      #1%
+      \endgroup
+    }}\textcolor{QuoteRed}{\grqq}%
+  \fi
+  \endgroup
+}
+\newcommand{\inlinemetanote}[1]{%
+  \textcolor{TextMetaNote}{%
+    \insideqttrue
+    \colorlet{QuoteRed}{TextMetaNote}%
+    \colorlet{TextBoldColor}{TextMetaNote}%
+    \colorlet{TextEmphColor}{TextMetaNote}%
+    \footnotesize\textit{[#1]}%
+  }%
+} % quote marks, textbf, emph and brackets grey too
+\let\inlinematenote\inlinemetanote
 \newcommand{\recap}[1]{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faHistory\ R{\"u}ckblick:}\ #1\par\smallskip}
 \NewDocumentCommand{\checkline}{ O{Probe} m }{\par\smallskip\noindent{\sffamily\bfseries\color{EnvRemark}\faCheckCircle\ #1:}\ #2\par\smallskip}
 
@@ -668,19 +727,41 @@
 % Shown faintly after the timestamp; without \setSpeaker nothing is shown.
 \providecommand{\lecturespeaker}{}
 \providecommand{\setSpeaker}[1]{\renewcommand{\lecturespeaker}{#1}}
-\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\footnotesize\color{black!45}\faUser\ \lecturespeaker}}}
+\providecommand{\speakertag}{\ifdefempty{\lecturespeaker}{}{\quad{\mdseries\footnotesize\color{black!45}\faUser\ \ \lecturespeaker}}}
+
+% 2026-10-25 (from algebra-1): the 3pt accent bar of speech, insight and student. On the last
+% (or only) part it curves into the bottom-left rounded corner (arc=3mm), tapers from 3pt to 0pt
+% and runs 2.5mm along the bottom edge; on the other parts of a broken box it is a straight bar.
+\tcbset{
+  accent bar/.style={
+    underlay unbroken and last={
+      \fill[#1] (frame.north west) --
+        ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        ([xshift=5.5mm]frame.south west)
+        .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
+        ([xshift=3pt, yshift=3mm]frame.south west) --
+        ([xshift=3pt]frame.north west) -- cycle;
+    },
+    underlay first and middle={
+      \fill[#1] (frame.north west) rectangle ([xshift=3pt]frame.south west);
+    }
+  }
+}
 
 % 1. Clean Spoken Protocol
 \newtcolorbox{speech}[1][]{
 enhanced,
 frame hidden,
+boxrule=0pt,
+sharp corners=north,
+arc=3mm,
 colback=EnvSpokenBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={3pt}{0pt}{EnvSpokenProof}}
+    \tcbset{accent bar=EnvSpokenProof}
   \else
-    \tcbset{borderline west={3pt}{0pt}{EnvSpoken}}
+    \tcbset{accent bar=EnvSpoken}
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvSpokenProof\else EnvSpoken\fi}{\faMicrophone\ \ Gesprochenes Wort\ifblank{#1}{}{ [#1]}\speakertag}},
@@ -695,20 +776,21 @@ colback=white,
 boxrule=0.5pt,
 dynamic shadow,
 varwidth boxed title*=-30pt,
+% 2026-10-25: coloured like aiNote (EnvAIBorder and EnvAIBg, previously EnvNote / BurntOrange):
 code={
   \ifinsideproof
     \tcbset{
-      colframe=EnvNoteProof,
-      boxed title style={colback=EnvNoteBg, colframe=EnvNoteProof, boxrule=0.5pt}
+      colframe=EnvAIProof,
+      boxed title style={colback=EnvAIBg, colframe=EnvAIProof, boxrule=0.5pt}
     }
   \else
     \tcbset{
-      colframe=EnvNote,
-      boxed title style={colback=EnvNoteBg, colframe=EnvNote, boxrule=0.5pt}
+      colframe=EnvAIBorder,
+      boxed title style={colback=EnvAIBg, colframe=EnvAIBorder, boxrule=0.5pt}
     }
   \fi
 },
-title={\sffamily\bfseries\begin{tabular}[t]{@{}l@{\hspace{0.5em}}l@{}}\faStickyNote & \begin{tabular}[t]{@{}l@{}} \ifblank{#1}{{\"U}berblick}{#1} \end{tabular}\end{tabular}},
+title={\sffamily\bfseries\begin{tabular}[t]{@{}l@{\hspace{0.5em}}l@{}}\textcolor{EnvAIBorder}{\faStickyNote} &\begin{tabular}[t]{@{}l@{}} \ifblank{#1}{{\"U}berblick}{#1} \end{tabular}\end{tabular}},
 coltitle=black,
 attach boxed title to top left={xshift=10pt, yshift*=-\tcboxedtitleheight/2},
 top=16pt,
@@ -718,15 +800,17 @@ breakable
 % 3. Best Teacher / Didactic Insight
 \newtcolorbox{insight}[1][Didaktischer Hinweis]{
 enhanced,
-arc=3mm,
 frame hidden,
+boxrule=0pt,
+sharp corners=north,
+arc=3mm,
 colback=EnvTeacherBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={2pt}{0pt}{EnvTeacherProof}}
+    \tcbset{accent bar=EnvTeacherProof}
   \else
-    \tcbset{borderline west={2pt}{0pt}{EnvTeacherBorder}}
+    \tcbset{accent bar=EnvTeacherBorder}
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvTeacherProof\else EnvTeacherBorder\fi}{\textit{\faLightbulb\ \ Didaktischer Hinweis:} #1}},
@@ -781,6 +865,7 @@ arc=4pt,
 dynamic color shadow=#3,
 varwidth boxed title*=-30pt,
 attach boxed title to top left={xshift=10pt, yshift=-10pt},
+top=14pt, % the attached title reaches 10pt into the box: keep the first line clear of it
 code={
   \ifinsideproof
     \tcbset{
@@ -827,6 +912,7 @@ arc=4pt,
 dynamic color shadow=#3,
 varwidth boxed title*=-30pt,
 attach boxed title to top left={xshift=10pt, yshift=-10pt},
+top=14pt, % the attached title reaches 10pt into the box: keep the first line clear of it
 code={
   \ifinsideproof
     \tcbset{
@@ -860,10 +946,11 @@ opacityback=0,
 breakable,
 before upper={\setlength{\parskip}{\customparskip}\setlength{\parindent}{0pt}},
 code={
+  % 2026-10-25: bar 3pt wide like speech (previously 2pt):
   \ifinsideproof
-    \tcbset{borderline west={2pt}{0pt}{EnvMathProof}}
+    \tcbset{borderline west={3pt}{0pt}{EnvMathProof}}
   \else
-    \tcbset{borderline west={2pt}{0pt}{EnvMath!50}}
+    \tcbset{borderline west={3pt}{0pt}{EnvMath!50}}
   \fi
   \ifblank{#1}{
     \tcbset{notitle}
@@ -905,7 +992,7 @@ code={
   \fi
 },
 fonttitle=\bfseries\sffamily,
-coltitle=white,
+coltitle=EnvAITitleText, % 2026-10-25 (previously white)
 title={\faRobot\ \ #1},
 boxrule=1pt,
 arc=3pt,
@@ -916,13 +1003,16 @@ breakable
 \newtcolorbox{student}[1][Frage aus dem Publikum]{
 enhanced,
 frame hidden,
+boxrule=0pt,
+sharp corners=north,
+arc=3mm,
 colback=EnvStudentBg,
 dynamic shadow,
 code={
   \ifinsideproof
-    \tcbset{borderline west={3pt}{0pt}{EnvStudentProof}}
+    \tcbset{accent bar=EnvStudentProof}
   \else
-    \tcbset{borderline west={3pt}{0pt}{EnvStudent}}
+    \tcbset{accent bar=EnvStudent}
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvStudentProof\else EnvStudent\fi}{\faUserGraduate\ \ #1}},
@@ -1029,15 +1119,52 @@ breakable
   \let\Cref\proofwrapper@pdfref
 }
 
+% 2026-10-25 (from algebra-1): the proof heading is sized and spaced like the heading level it
+% sits under, with the pen icon inline instead of in the margin.
+\newcommand{\proofwrapper@fontsize}{%
+  \ifcase\proofwrapper@depth
+    \Large% 0: chapter
+  \or
+    \Large% 1: section
+  \or
+    \large% 2: subsection
+  \else
+    \normalsize% 3: subsubsection
+  \fi
+}
+\newcommand{\proofwrapper@beforespace}{%
+  \ifcase\proofwrapper@depth
+    3.5ex plus 1ex minus .2ex% 0: chapter
+  \or
+    3.5ex plus 1ex minus .2ex% 1: section
+  \or
+    3ex plus 1ex minus .2ex% 2: subsection
+  \else
+    2.5ex plus 1ex minus .2ex% 3: subsubsection
+  \fi
+}
+\newcommand{\proofwrapper@afterspace}{%
+  \ifcase\proofwrapper@depth
+    1.5ex plus .2ex% 0: chapter
+  \or
+    1.5ex plus .2ex% 1: section
+  \or
+    1.2ex plus .2ex% 2: subsection
+  \else
+    1ex plus .2ex% 3: subsubsection
+  \fi
+}
+
 \newenvironment{proofWrapper}[1][Beweis]{%
-    \par\addvspace{3.5ex plus 1ex minus .2ex}%
+    \par\addvspace{\proofwrapper@beforespace}%
     \insideprooftrue
-    \noindent
+    \noindent%
     \def\proofwrapper@title{#1}%
     \ifx\proofwrapper@title\proofWrapperDefaultTitle\else\proofwrapper@tocentry{#1}\fi
-    \makebox[0pt][r]{\textcolor{ProofTint}{\faPenNib}\hspace{10pt}}%
-    {\normalfont\sffamily\Large\bfseries\color{ProofTint}#1}%
-    \par\nobreak\vspace{1.5ex plus .2ex}\vspace{-\parskip}%
+    {\normalfont\sffamily\bfseries\boldmath\proofwrapper@fontsize\color{ProofTint}%
+      \faPenNib\hspace{0.5em}#1%
+    }%
+    \par\nobreak\vspace{\proofwrapper@afterspace}\vspace{-\parskip}%
     \@afterindentfalse\@afterheading
 }{%
     \ifmmode
@@ -1101,6 +1228,34 @@ breakable
 \NewFallbackBox{ai-kinetic-emphasis}
 \NewEnviron{hidden}{}
 
+% --- VIBRANT HEADING & CHAPTER STYLING (2026-10-25, from algebra-1) ---
+% Colours of the bars before the headings and of the rule under \section:
+\definecolor{SecBarOne}{HTML}{6A3199}
+\definecolor{SecBarTwo}{HTML}{143866}
+\definecolor{SecBarThree}{HTML}{008CC8}
+\definecolor{SecBarFour}{HTML}{BD6400}
+\definecolor{SecLineLeft}{HTML}{6A3199}
+\definecolor{SecLineMid}{HTML}{143866}
+\definecolor{SecLineRight}{HTML}{5CA8D6}
+
+\definecolor{SubSecBarOne}{HTML}{123563}
+\definecolor{SubSecBarTwo}{HTML}{6A3199}
+\definecolor{SubSecBarThree}{HTML}{0E6C95}
+
+\definecolor{SubSubSecBarOne}{HTML}{2B4C7E}
+\definecolor{SubSubSecBarTwo}{HTML}{7E42B3}
+
+% Heading text colors:
+\colorlet{SecTitleCol}{SecTitleColor}
+\colorlet{SubSecTitleCol}{SecTitleColor}
+\colorlet{SubSubSecTitleCol}{SecTitleColor}
+
+\newcommand{\cbar}[3]{\textcolor{#1}{\rule{#2}{#3}}\kern2.1pt}
+
+\newcommand{\ChapRule}{%
+  \noindent\textcolor{ChapLine}{\rule{\textwidth}{1.5pt}}%
+}
+
 % Custom Lecture Chapter Command with Optional Semester/Week Number
 \newif\ifrestorelecturesubcounters
 \newcounter{currentweek}
@@ -1130,7 +1285,11 @@ breakable
       \setcounter{chapter}{\numexpr#1-1\relax}%
     }%
   }%
-  \chapter[\texorpdfstring{#2, #3\quad---\quad #5}{#2, #3 --- #5}]{{\Large\color{ChapSubtitleText}#2 #4} \texorpdfstring{\\[1ex]}{--- } {\LARGE #5}}%
+  \chapter[\texorpdfstring{#2, #3\quad---\quad #5}{#2, #3 --- #5}]{%
+    {\Large\color{ChapSubtitleText}#2 #4}%
+    \texorpdfstring{\\[1ex]}{--- }%
+    {\LARGE\raggedleft\color{ChapTitleText}#5}%
+  }%
   \ifrestorelecturesubcounters
     \setcounter{section}{\TempSec}%
     \setcounter{theorem}{\TempThm}%
@@ -1146,10 +1305,18 @@ breakable
 \NewDocumentCommand{\youtubechapter}{ o m m }{%
   \stepcounter{lecturecount}%
   \IfValueTF{#1}{%
-    \chapter[\texorpdfstring{#2, #1\quad---\quad #3}{#2, #1 --- #3}]{{\Large\color{ChapSubtitleText}#2\ ---\ #1} \texorpdfstring{\\[1ex]}{--- } {\LARGE #3}}%
+    \chapter[\texorpdfstring{#2, #1\quad---\quad #3}{#2, #1 --- #3}]{%
+      {\Large\color{ChapSubtitleText}#2\ ---\ #1}%
+      \texorpdfstring{\\[1ex]}{--- }%
+      {\LARGE\raggedleft\color{ChapTitleText}#3}%
+    }%
     \markboth{\chaptername\ \thechapter\ \ ·\ \ #2, #1}{}%
   }{%
-    \chapter[\texorpdfstring{#2\quad---\quad #3}{#2 --- #3}]{{\Large\color{ChapSubtitleText}#2} \texorpdfstring{\\[1ex]}{--- } {\LARGE #3}}%
+    \chapter[\texorpdfstring{#2\quad---\quad #3}{#2 --- #3}]{%
+      {\Large\color{ChapSubtitleText}#2}%
+      \texorpdfstring{\\[1ex]}{--- }%
+      {\LARGE\raggedleft\color{ChapTitleText}#3}%
+    }%
     \markboth{\chaptername\ \thechapter\ \ ·\ \ #2}{}%
   }%
   \InsertMark{gs-sec}{}\InsertMark{gs-subsec}{}\InsertMark{gs-subsubsec}{}%
@@ -1159,50 +1326,64 @@ breakable
 \titlespacing*{\chapter}{0pt}{-20pt}{18pt plus 4pt minus 2pt}
 
 \titleformat{\chapter}[display]
-{\normalfont\sffamily\Large\bfseries\color{ChapTitleText}}
+{\normalfont\sffamily\Large\bfseries\boldmath\color{ChapTitleText}}
 {\raggedleft\large\color{ChapNumberText}\chapterlabel}
 {1ex}
-{\color{ChapLine}\rule{\textwidth}{1.5pt}\endgraf\nopagebreak\vspace{2ex}\raggedleft} 
-[\endgraf\nopagebreak\vspace{1ex}\color{ChapLine}\rule{\textwidth}{1.5pt}]
+{\ChapRule\endgraf\nopagebreak\vspace{2ex}\raggedleft}
+[\endgraf\nopagebreak\vspace{1ex}\ChapRule]
 
-% Extended Section Bars 
-\newcommand{\sectionbar}{%
-\tikz[baseline=0pt]{
-\fill[\ifinsideproof SecBar1Proof\else SecBar1\fi] (-2.5pt, 0) rectangle (1.0pt, 0.72em);
-\fill[\ifinsideproof SecBar2Proof\else SecBar2\fi] (2.0pt, 0) rectangle (3.5pt, 0.72em);
-\fill[\ifinsideproof SecBar3Proof\else SecBar3\fi] (4.8pt, 0) rectangle (5.3pt, 0.72em);
-\fill[\ifinsideproof SecBar4Proof\else SecBar4\fi] (6.6pt, 0) rectangle (8.1pt, 0.72em);
-}%
-\hspace{10pt}%
+% Three-colour rule under every \section
+\newcommand{\SecRule}{%
+  \vspace{-0.55em}\noindent%
+  \textcolor{SecLineLeft}{\rule{0.28\textwidth}{1.25pt}}%
+  \textcolor{SecLineMid}{\rule{0.36\textwidth}{1.0pt}}%
+  \textcolor{SecLineRight}{\rule{0.36\textwidth}{0.75pt}}%
 }
 
-\newcommand{\subsectionbar}{%
-\tikz[baseline=0pt]{
-\fill[\ifinsideproof SubSecBar1Proof\else SubSecBar1\fi] (-2.5pt, 0) rectangle (0.3pt, 0.72em);
-\shade[left color=\ifinsideproof SubSecBar1Proof\else SubSecBar1\fi, right color=\ifinsideproof SubSecBar2Proof\else SubSecBar2\fi] (1.3pt, 0) rectangle (2.0pt, 0.72em);
-\fill[\ifinsideproof SubSecBar2Proof\else SubSecBar2\fi] (3.3pt, 0) rectangle (4.8pt, 0.72em);
-}%
-\hspace{10pt}%
+% Bars in front of the heading text, which follows in the heading colour
+\newcommand{\SecSym}{%
+  \phantomsection%
+  \mbox{%
+    \cbar{SecBarOne}{3.5pt}{1.55ex}%
+    \cbar{SecBarTwo}{2.6pt}{1.55ex}%
+    \cbar{SecBarThree}{1.8pt}{1.55ex}%
+    \cbar{SecBarFour}{1.1pt}{1.55ex}%
+    \kern0.4em%
+  }%
+  \color{\ifinsideproof SecTitleColorProof\else SecTitleCol\fi}%
 }
 
-\newcommand{\subsubsectionbar}{%
-\tikz[baseline=0pt]{
-\fill[\ifinsideproof SubSubSecBar1Proof\else SubSubSecBar1\fi] (-2.5pt, 0) rectangle (-1.0pt, 0.72em);
-\fill[\ifinsideproof SubSubSecBar2Proof\else SubSubSecBar2\fi] (0,0) rectangle (2.2pt, 0.72em);
-}%
-\hspace{10pt}%
+\newcommand{\SubsecSym}{%
+  \phantomsection%
+  \mbox{%
+    \cbar{SubSecBarOne}{2.8pt}{1.45ex}%
+    \cbar{SubSecBarTwo}{2.0pt}{1.45ex}%
+    \cbar{SubSecBarThree}{1.2pt}{1.45ex}%
+    \kern0.4em%
+  }%
+  \color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleCol\fi}%
+}
+
+\newcommand{\SubsubsecSym}{%
+  \phantomsection%
+  \mbox{%
+    \cbar{SubSubSecBarOne}{2.4pt}{1.35ex}%
+    \cbar{SubSubSecBarTwo}{1.4pt}{1.35ex}%
+    \kern0.35em%
+  }%
+  \color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleCol\fi}%
 }
 
 % Headings show no number, as in the other books; the numbers stay in the TOC, the running
-% heads and \cref. The \color sits in the before-code (horizontal mode), not in the format
-% argument: there it would add a color whatsit to the vertical list, and the glue after it is a
-% legal page break, which let a \section heading be separated from the \subsection below it.
-\titleformat{\section}{\normalfont\sffamily\Large\bfseries}{}{0pt}{\phantomsection\color{\ifinsideproof SecTitleColorProof\else SecTitleColor\fi}\makebox[0pt][r]{\sectionbar}}
-\titleformat{\subsection}{\normalfont\sffamily\large\bfseries}{}{0pt}{\phantomsection\color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleColor\fi}\makebox[0pt][r]{\subsectionbar}}
-\titleformat{\subsubsection}{\normalfont\sffamily\normalsize\bfseries}{}{0pt}{\phantomsection\color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleColor\fi}\makebox[0pt][r]{\subsubsectionbar}}
-\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{\phantomsection} % the class default, plus a link target on the heading (unnumbered, it has none)
+% heads and \cref. The \color sits in the before-code (horizontal mode, inside \SecSym etc.), not
+% in the format argument: there it would add a color whatsit to the vertical list, and the glue
+% after it is a legal page break, which let a \section heading be separated from the \subsection below it.
+\titleformat{\section}{\normalfont\Large\sffamily\bfseries\boldmath}{}{0pt}{\SecSym}[\SecRule]
+\titleformat{\subsection}{\normalfont\large\sffamily\bfseries\boldmath}{}{0pt}{\SubsecSym}
+\titleformat{\subsubsection}{\normalfont\normalsize\sffamily\bfseries\boldmath}{}{0pt}{\SubsubsecSym}
+\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries\boldmath}{\theparagraph}{1em}{\phantomsection} % the class default, plus a link target on the heading (unnumbered, it has none)
 
-\titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\titlespacing*{\section}{0pt}{3.5ex plus 1ex minus .2ex}{1.8ex plus .2ex}
 \titlespacing*{\subsection}{0pt}{3ex plus 1ex minus .2ex}{1.2ex plus .2ex}
 \titlespacing*{\subsubsection}{0pt}{2.5ex plus 1ex minus .2ex}{1ex plus .2ex}
 

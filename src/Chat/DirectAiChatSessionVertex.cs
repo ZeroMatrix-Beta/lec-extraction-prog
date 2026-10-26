@@ -222,7 +222,7 @@ public class DirectAiChatSessionVertex {
                 bool isCommandHandled = await TryHandleBuiltInCommandsAsync(input, history, initialHistory, parts, newPrompt => promptText = newPrompt, turnCancel.Token);
 
                 if (isCommandHandled) {
-                    if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!input.Trim().TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) continue;
                     if (parts.Count == 0) continue;
                 }
 
@@ -266,7 +266,7 @@ public class DirectAiChatSessionVertex {
         Ui.Detail("📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
         Ui.Detail("🚪 exit / quit             -> Beendet den Chat");
         Ui.Detail("🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-        Ui.Detail("📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
+        Ui.Detail("📎 attach datei1, datei2 | Frage   -> Hängt Dateien an und stellt eine Frage dazu. Pfade mit Komma in \"...\" setzen.");
         Ui.Detail("🌡️  set temp [wert]         -> Ändert die Temperatur dynamisch");
         Ui.Detail("🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch");
         Ui.Detail("🧠 set thinking-budget [w] -> Setzt das Thinking Budget für Gemini 2.5 (z.B. 4096)");

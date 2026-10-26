@@ -263,7 +263,7 @@ public partial class DirectAiChatSessionAiStudio {
                 // If the command handler took care of everything (or failed gracefully), we skip the API call for this turn.
                 if (isCommandHandled) {
                     // The only exception is the 'attach' command, which modifies our parts/prompt and STILL wants to talk to Gemini
-                    if (!input.TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
+                    if (!input.Trim().TrimStart('/').StartsWith("attach ", StringComparison.OrdinalIgnoreCase)) {
                         continue;
                     }
 
@@ -326,7 +326,7 @@ public partial class DirectAiChatSessionAiStudio {
         Ui.Detail("📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
         Ui.Detail("🚪 exit / quit             -> Beendet den Chat");
         Ui.Detail("🧹 clear / reset           -> Löscht den bisherigen Chat-Verlauf (Gedächtnis)");
-        Ui.Detail("📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
+        Ui.Detail("📎 attach datei1, datei2 | Frage   -> Hängt Dateien an und stellt eine Frage dazu. Pfade mit Komma in \"...\" setzen.");
         Ui.Detail("                           (Tipp: Das '|' trennt Dateien und Frage. Ohne '|' wird nochmal nachgefragt.)");
         Ui.Detail("🌡️  set temp [wert]         -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
         Ui.Detail("🔢 set tokens [wert]       -> Ändert das MaxOutputTokens-Limit dynamisch (z.B. set tokens 8192)");

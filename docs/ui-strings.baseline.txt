@@ -64,7 +64,7 @@ Ui.Detail("Verbinde mit Google AI Studio API...");
 Ui.Detail("Warte 150 Sekunden vor der Fortsetzung...", "Timer");
 Ui.Detail("🌡️  set temp [wert]         -> Ändert die Temperatur dynamisch");
 Ui.Detail("🌡️  set temp [wert]         -> Ändert die Temperatur für die nächste Antwort (z.B. set temp 0.5)");
-Ui.Detail("📎 attach datei1 | Frage   -> Hängt Dateien an und stellt eine Frage dazu.");
+Ui.Detail("📎 attach datei1, datei2 | Frage   -> Hängt Dateien an und stellt eine Frage dazu. Pfade mit Komma in \"...\" setzen.");
 Ui.Detail("📜 help / commands         -> Zeigt diese Befehlsübersicht erneut an");
 Ui.Detail("🔍 set grounding [on/off]  -> Aktiviert/Deaktiviert Google Search Grounding (Websuche)");
 Ui.Detail("🔑 change-key [0-3]        -> Wechselt das API-Key Profil für diese Session (0 für dediziert)");

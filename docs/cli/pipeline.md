@@ -101,7 +101,17 @@ stays around 25 minutes whatever the lecture's length.
 
 The 2-hour one is the expensive one: past it, every part is re-requested and re-billed.
 It was a hardcoded constant with no way to reach it; `--resume-window` and `--force` now
-expose it. The FFmpeg cache is additionally validated — an incomplete set, a part smaller
+expose it.
+
+**Which file of a part counts.** A part requested again while its `.tex` still exists is
+written next to it as `<name>-partN-copy-1.tex` (then `-copy-2`, …). The window is measured on
+the **newest** of `<name>-partN.tex` and its copies, and that file is the one reused. Until
+2026-10-26 only `<name>-partN.tex` was checked, so once it was older than the window every
+later run paid for the part again and wrote one more copy. The run, its pre-upload of the next
+part and `lecx plan` share this rule (`PartReuse`), so the plan's `resumableSegments` is what
+the run reuses.
+
+The FFmpeg cache is additionally validated — an incomplete set, a part smaller
 than 1 KB, or a count that disagrees with `--parts` is discarded and re-cut.
 
 **The compressed intermediate is not validated.** For a raw video the producer first writes

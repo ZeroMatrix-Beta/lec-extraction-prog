@@ -42,11 +42,11 @@ public class ExtractionPlannerTests : IDisposable {
     }
 
     /// <summary>Writes a finished part .tex where the pipeline would, so the planner can find it.</summary>
-    private void WriteFinishedPart(AiStudioAutoExtractionConfig config, string videoPath, int part, TimeSpan age) {
+    private void WriteFinishedPart(AiStudioAutoExtractionConfig config, string videoPath, int part, TimeSpan age, string suffix = "") {
         string folder = Path.Combine(config.TargetFolder, ExtractionHelpers.ComputeOutputFolderName(videoPath));
         Directory.CreateDirectory(folder);
 
-        string texPath = Path.Combine(folder, $"{ExtractionHelpers.ComputeTexBaseName(videoPath)}-part{part}.tex");
+        string texPath = Path.Combine(folder, $"{ExtractionHelpers.ComputeTexBaseName(videoPath)}-part{part}{suffix}.tex");
         File.WriteAllText(texPath, "\\section{done}");
         File.SetLastWriteTime(texPath, DateTime.Now - age);
     }
@@ -97,6 +97,21 @@ public class ExtractionPlannerTests : IDisposable {
         var plan = ExtractionPlanner.Build(config, [video], resumeWindowHours: 24, force: false);
 
         Assert.Equal(1, plan.ResumableSegments);
+    }
+
+    [Fact]
+    public void AFreshCopyOfAStalePart_IsReused_AsTheRunReusesIt() {
+        // A part transcribed again is written as -copy-1 next to the stale original; the run reuses
+        // the copy, so the plan must not count the part as pending.
+        var config = Config(parts: 2);
+        string video = Video("02-16-2026-monday-week1-Analysis.mp4");
+        WriteFinishedPart(config, video, part: 1, age: TimeSpan.FromHours(5));
+        WriteFinishedPart(config, video, part: 1, age: TimeSpan.FromMinutes(20), suffix: "-copy-1");
+
+        var plan = ExtractionPlanner.Build(config, [video], ExtractionPlanner.DefaultResumeWindowHours, force: false);
+
+        Assert.Equal(1, plan.ResumableSegments);
+        Assert.Equal(1, plan.PendingRequests);
     }
 
     [Fact]

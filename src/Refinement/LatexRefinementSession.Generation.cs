@@ -209,7 +209,10 @@ public partial class LatexRefinementSession {
     private async Task<(string FullResponseText, TokenUsage Usage, bool Usable)> StreamAndCollectAsync(
         RefinementStepConfig stepConfig, BackendParameters backendParams, List<Content> history, GenerateContentConfig requestConfig, string outputFileName, ThoughtLog thoughts) {
         string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
-        int rateLimitDelay = stepConfig.RateLimitDelaySeconds > 0 ? stepConfig.RateLimitDelaySeconds : 130;
+        // RateLimitDelaySeconds paces the requests, where 0 means no wait, and also seeds the retry
+        // backoff, which keeps its 130 s fallback: a failed request retried at once fails again.
+        int rateLimitDelay = stepConfig.RateLimitDelaySeconds;
+        int retryBackoff = rateLimitDelay > 0 ? rateLimitDelay : 130;
 
         var result = await GenerationLoop.RunAsync(history,
             h => {
@@ -231,9 +234,9 @@ public partial class LatexRefinementSession {
                     }
                 },
                 RetryContext = outputFileName,
-                InitialBackoff = rateLimitDelay,
+                InitialBackoff = retryBackoff,
                 FirstChunkTimeout = AppConfig.FirstChunkTimeout,
-                HighDemandDelay = rateLimitDelay,
+                HighDemandDelay = retryBackoff,
                 CancelledAsWarning = true,
                 ReportRequest = request => {
                     var usage = request.Usage;
@@ -248,6 +251,7 @@ public partial class LatexRefinementSession {
                 BudgetStopSuffix = "Breche dieses Refinement ab.",
                 BuildContinuePrompt = BuildRefinementContinuePrompt,
                 WaitBeforeContinueAsync = async () => {
+                    if (rateLimitDelay <= 0) return true;
                     Ui.Detail($"Warte {rateLimitDelay} Sekunden (Token Refill)...", "Rate-Limit");
                     if (!await InteractiveDelay.SmartDelayAsync(rateLimitDelay, "Warte auf Rate-Limits (Token Refill)...")) {
                         Ui.Warn("Warten durch Benutzer abgebrochen.");

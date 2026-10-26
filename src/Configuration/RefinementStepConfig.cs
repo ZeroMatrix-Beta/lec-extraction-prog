@@ -3,6 +3,10 @@ namespace LectureExtraction.Configuration;
 public class RefinementStepConfig {
     public bool Enabled { get; set; } = true;
     public bool AttachAudio { get; set; } = true;
+    /// <summary>
+    /// Seconds to wait before each request of this step and before uploading its audio; 0 means no
+    /// wait. Also the first retry backoff after a failed request, which stays 130 s when this is 0.
+    /// </summary>
     public int RateLimitDelaySeconds { get; set; } = 130;
     /// <summary>Upper bound on requests for this step, the first one included (continues re-send the whole history).</summary>
     public int MaxContinueRequests { get; set; } = 10;
