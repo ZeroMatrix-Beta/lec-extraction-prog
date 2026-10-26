@@ -129,9 +129,9 @@ public static class CliBootstrapper {
         root.Add(PlanCommand.Build());
         root.Add(RunCommand.Build(chainRefinement: true, "run", "Run the whole pipeline: segments -> LaTeX -> refinement -> PDF."));
 
-        var extract = new Command("extract", "Transcription only - never chains into refinement.");
-        extract.Add(RunCommand.Build(chainRefinement: false, "run", "Transcribe videos into per-part .tex files."));
-        root.Add(extract);
+        root.Add(new Command("extract", "Transcription only - never chains into refinement.") {
+            RunCommand.Build(chainRefinement: false, "run", "Transcribe videos into per-part .tex files.")
+        });
         root.Add(RefineCommands.BuildRefine());
         root.Add(RefineCommands.BuildPdf());
         root.Add(BatchCommand.Build());

@@ -17,6 +17,7 @@
    Do not remove `[AI Context]` or `[Human]` summaries.
 7. **Mandatory Build Verification Before Task Completion**:
    Before finishing any task or handing over to the user, you MUST run `dotnet build`. Ensure the output is exactly `0 Warning(s)` and `0 Error(s)`. Any warnings (e.g. `CA1860`, `SYSLIB1045`, `IDE0028`, `IDE0060`) must be fixed immediately.
+   Rules 1-4 are raised to warnings in `.editorconfig` and run in `dotnet build` (`Directory.Build.props`); the GitHub Actions build (`.github/workflows/build.yml`) treats every warning as an error.
 8. **The Prompt Repo `C:\Users\miche\latex\prompt-engineering`**:
    The `*Config.json` files here load its prompt files by absolute path, so renaming or moving a file there breaks this project. Reading it is fine when a task touches the prompts or those paths. Change it only when told to; changes there are committed in that repo (same rule as `gemini.md` §4).
 9. **Running the program headlessly**:

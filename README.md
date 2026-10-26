@@ -151,6 +151,7 @@ Upon starting the application, you are presented with 7 operational modes:
    - `API_KEY-latex-refinement` (Refinement Pipeline)
 3. **Google Cloud Vertex AI:** Requires the Google Cloud CLI (`gcloud`) to be installed and authenticated via `gcloud auth application-default login`. The linked project must have an active Billing Account.
 4. **System Instruction (`gemini.md`):** The application relies on a comprehensive system prompt file that dictates the strict LaTeX formatting rules and custom environments (e.g., `\begin{speech}`). You must configure the absolute path to this file in the application's configuration classes before running.
+5. **Build & checks:** `dotnet build` and `dotnet test lec-extraction-prog.slnx`. The coding rules from `gemini.md` §3 run as build warnings (`.editorconfig`, `Directory.Build.props`); the GitHub Actions workflow (`.github/workflows/build.yml`) builds and tests every push and PR on Windows and treats every warning as an error.
 
 ---
 
@@ -332,6 +333,7 @@ Beim Start der Anwendung stehen 7 Betriebsmodi zur Verfügung:
    - `API_KEY-latex-refinement` (Für das Post-Processing)
 3. **Google Cloud Vertex AI:** Setzt voraus, dass du die Google Cloud CLI (`gcloud`) installiert hast und über `gcloud auth application-default login` authentifiziert bist. Das verknüpfte Projekt muss über ein aktives Rechnungskonto (Billing Account) verfügen.
 4. **System Instruction (`gemini.md`):** Die Anwendung benötigt zwingend eine System-Instruktionsdatei, die der KI die genauen LaTeX-Formatierungsregeln und Custom-Environments (z.B. `\begin{speech}`) vorgibt. Der absolute Pfad zu dieser Datei muss vor dem Start in den Konfigurationsklassen des Programms hinterlegt werden.
+5. **Build & Prüfungen:** `dotnet build` und `dotnet test lec-extraction-prog.slnx`. Die Coding-Regeln aus `gemini.md` §3 laufen als Build-Warnungen (`.editorconfig`, `Directory.Build.props`); der GitHub-Actions-Workflow (`.github/workflows/build.yml`) baut und testet jeden Push und PR unter Windows und behandelt jede Warnung als Fehler.
 
 ---
 
