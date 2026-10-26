@@ -20,13 +20,7 @@ namespace LectureExtraction.Chat;
 /// [Human] Der Manager für Chat-Sitzungen, die über Google Cloud Vertex AI laufen. Getrennt vom normalen AI Studio, da es eigene Abrechnungs- und Zugriffsregeln hat.
 /// </summary>
 public class DirectAiChatSessionVertex {
-    public static readonly string[] AvailableModels = [
-        "gemini-3.8-flash",
-        "gemini-3.7-flash",
-        "gemini-3.6-flash",
-        "gemini-3.5-flash",
-        "gemini-3-flash-preview"
-    ];
+    public static readonly string[] AvailableModels = ModelCatalog.Default;
 
     private readonly DirectAiChatSessionVertexConfig _config;
     private readonly string UploadFolderPath;

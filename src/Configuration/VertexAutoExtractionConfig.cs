@@ -10,23 +10,15 @@ namespace LectureExtraction.Configuration;
 /// </summary>
 public class VertexAutoExtractionConfig : IAutoExtractionConfig {
     public VertexEndpoint Endpoint { get; set; } = new();
-    public WorkspacePaths Paths { get; set; } = new() {
-        SourceFolder = @"D:\lecture-videos\d-und-a\new",
-        TargetFolder = @"D:\lecture-videos\d-und-a\extracted",
-        LogFolder = @"C:\Users\miche\gemini-logs"
-    };
-    public ContextSources Sources { get; set; } = new() {
-        HistoryPreloadPaths = AppConfig.HistoryPreloadPaths
-    };
+    public WorkspacePaths Paths { get; set; } = new();
+    public ContextSources Sources { get; set; } = new();
     public GenerationParameters Generation { get; set; } = new() {
         Temperature = 0.35f,
         TopP = 0.95f,
         TopK = 40,
         MaxOutputTokens = 65535
     };
-    public ModelSelection ModelSelection { get; set; } = new() {
-        Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"]
-    };
+    public ModelSelection ModelSelection { get; set; } = new();
     public ContextCacheSettings ContextCaching { get; set; } = new() {
         Enabled = true,
         Minutes = 45,

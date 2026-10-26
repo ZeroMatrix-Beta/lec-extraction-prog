@@ -10,22 +10,15 @@ namespace LectureExtraction.Configuration;
 /// </summary>
 public class AiStudioAutoExtractionConfig : IAutoExtractionConfig {
     public ApiKeyProfile ApiKey { get; set; } = new();
-    public WorkspacePaths Paths { get; set; } = new() {
-        SourceFolder = @"D:\lecture-videos\grundstrukturen",
-        LogFolder = @"C:\Users\miche\gemini-logs"
-    };
-    public ContextSources Sources { get; set; } = new() {
-        HistoryPreloadPaths = [@"C:\Users\miche\latex\prompt-engineering\transcription\training-history"]
-    };
+    public WorkspacePaths Paths { get; set; } = new();
+    public ContextSources Sources { get; set; } = new();
     public GenerationParameters Generation { get; set; } = new() {
         Temperature = 0.36f,
         TopP = 0.8f,
         TopK = 10,
         MaxOutputTokens = 65535
     };
-    public ModelSelection ModelSelection { get; set; } = new() {
-        Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"]
-    };
+    public ModelSelection ModelSelection { get; set; } = new();
 
     // Delegating properties for backward compatibility
     [JsonIgnore] [Newtonsoft.Json.JsonIgnore] public int ActiveApiProfile { get => ApiKey.ActiveProfile; set => ApiKey.ActiveProfile = value; }

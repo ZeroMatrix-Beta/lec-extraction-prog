@@ -22,7 +22,7 @@ public static class SourceFolderMenu {
             string choice1 = $"1) Google AI Studio Auto-Extraktion: {aiStudioConfig.SourceFolder}";
             string choice2 = $"2) Google Cloud Vertex AI Auto-Extraktion: {vertexConfig.SourceFolder}";
             string choice3 = $"3) FFmpeg Converter: {ffmpegConfig.SourceFolder}";
-            string choice4 = $"4) LaTeX Refinement Session Source: {(string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder)}";
+            string choice4 = $"4) LaTeX Refinement Session Source: {latexConfig.SourceFolder}";
             var selection = Ui.Select(
                 "Welchen Quellordner möchten Sie ansehen / ändern?",
                 [choice1, choice2, choice3, choice4],
@@ -49,11 +49,10 @@ public static class SourceFolderMenu {
                 }).Or(ffmpegConfig.SourceFolder);
             }
             else if (selection.Value == choice4) {
-                string currentLatexSource = string.IsNullOrEmpty(latexConfig.SourceFolder) ? AppConfig.LatexRefinementSourceFolder : latexConfig.SourceFolder;
-                latexConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(currentLatexSource, newFolder => {
+                latexConfig.SourceFolder = ConfigurationPrompts.PromptForSourceFolder(latexConfig.SourceFolder, newFolder => {
                     latexConfig.SourceFolder = newFolder;
                     ConfigLoader<LatexRefinementSessionConfig>.Save(latexConfig);
-                }).Or(currentLatexSource);
+                }).Or(latexConfig.SourceFolder);
             }
         }
     }

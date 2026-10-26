@@ -218,7 +218,7 @@ public static class RefinementUiHelper {
     }
 
     private static void ChangeRefinementModel(LatexRefinementSessionConfig refinementConfig) {
-        var newModel = Ui.Select("Wähle ein Modell:", ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"]);
+        var newModel = Ui.Select("Wähle ein Modell:", ModelCatalog.Default);
         if (!newModel.IsValue || string.IsNullOrEmpty(newModel.Value)) return;
 
         if (refinementConfig.UseVertex) {
