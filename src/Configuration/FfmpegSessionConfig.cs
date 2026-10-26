@@ -5,6 +5,6 @@ namespace LectureExtraction.Configuration;
 /// Binds to FfmpegSessionConfig.json and the FfmpegSessionConfig section in appsettings.json.
 /// </summary>
 public class FfmpegSessionConfig {
-    public string SourceFolder { get; set; } = AppConfig.FfmpegSourceFolder;
-    public string TargetFolder { get; set; } = AppConfig.FfmpegTargetFolder;
+    public string SourceFolder { get; set; } = "";
+    public string TargetFolder { get; set; } = "";
 }

@@ -18,8 +18,8 @@ namespace LectureExtraction.Tests;
 public class ConfigMigratorTests {
     /// <summary>
     /// Mirrors what <see cref="ConfigLoader{T}"/> does after migrating: bind the migrated JSON
-    /// onto a fresh instance, including the ClearCollectionsRecursively step that stops array
-    /// defaults being appended to.
+    /// onto a fresh instance through <see cref="ConfigLayerBinder"/>, which replaces the lists the
+    /// JSON sets instead of appending to their defaults.
     /// </summary>
     private static T MigrateAndBind<T>(string legacyJson) where T : class, new() {
         var root = JObject.Parse(legacyJson);
@@ -29,12 +29,7 @@ public class ConfigMigratorTests {
         var configuration = new ConfigurationBuilder().AddJsonStream(stream).Build();
 
         var config = new T();
-        // internal on ConfigLoader<T>; reached by reflection the same way ConfigCommentPreservationTests
-        // reaches SerializePreservingComments.
-        typeof(ConfigLoader<T>)
-            .GetMethod("ClearCollectionsRecursively", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [config]);
-        configuration.Bind(config);
+        ConfigLayerBinder.Bind(configuration, config);
         return config;
     }
 

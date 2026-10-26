@@ -107,6 +107,11 @@ public static class GoogleAiClientBuilder {
         var options = new HttpOptions {
             Timeout = (int)TimeSpan.FromMinutes(20).TotalMilliseconds
         };
+        if (string.IsNullOrWhiteSpace(projectId)) {
+            // The project id has no default since it names one Google Cloud account; say where it goes
+            // instead of leaving the first request to fail with an SDK message.
+            Ui.Warn("Keine Vertex-Projekt-ID gesetzt: ProjectId in VertexAutoExtractionConfig.json / DirectAiChatSessionVertexConfig.json bzw. VertexProjectId in LatexRefinementSessionConfig.json eintragen.", "Vertex");
+        }
         Ui.Detail($"Verbinde mit Google Cloud Vertex AI (Projekt: {projectId})...");
         return new Client(
             vertexAI: true,

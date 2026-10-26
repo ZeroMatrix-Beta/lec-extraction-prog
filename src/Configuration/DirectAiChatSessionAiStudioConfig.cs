@@ -17,15 +17,10 @@ public class DirectAiChatSessionAiStudioConfig {
         HistoryPreloadPaths = AppConfig.HistoryPreloadPaths,
         SystemInstructionPaths = string.IsNullOrEmpty(AppConfig.SystemInstructionPath) ? [] : [AppConfig.SystemInstructionPath]
     };
-    public ModelSelection ModelSelection { get; set; } = new() {
-        Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash"]
-    };
+    public ModelSelection ModelSelection { get; set; } = new();
 
-    public string GcsBucketName { get; set; } = "biran-linalg-source-material";
-    public string[] IncludePaths { get; set; } = [
-        @"D:\lecture-videos\d-und-a/",
-        @"D:\lecture-videos\d-und-a/new"
-    ];
+    public string GcsBucketName { get; set; } = "";
+    public string[] IncludePaths { get; set; } = [];
     public bool UseGoogleSearch { get; set; } = false;
 
     /// <summary>Prints full exception objects instead of just their message. Matches the flag of the same name on the extraction configs.</summary>

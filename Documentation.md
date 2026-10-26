@@ -17,20 +17,26 @@ When modifying the code, developers and AI agents must maintain this separation 
 
 ---
 
-## 1. Configuration Hierarchy & The "Array Merge" Quirk
+## 1. Configuration Hierarchy & Lists
 
-The application uses the `Microsoft.Extensions.Configuration` binder to load settings from multiple sources. The hierarchy is as follows (last loaded wins):
-1. `AppConfig.cs` (Hardcoded C# defaults)
-2. `appsettings.json` (Global overrides)
-3. Specific session configs (e.g., `VertexAutoExtractionConfig.json`)
+`ConfigLoader<T>` loads each session's settings in layers, and the later layer wins for every key it sets:
+1. The C# property defaults of the config class (e.g. `AiStudioAutoExtractionConfig.cs`)
+2. `appsettings.json`, section `AppConfig:<ClassName>` (optional global overrides)
+3. The session's own file (e.g. `VertexAutoExtractionConfig.json`)
 
-### The Array Merging Gotcha
-A critical behavior of the .NET Configuration Binder is how it handles arrays (like `HistoryPreloadPaths` or `SystemInstructionPaths`).
-If your base configuration (`appsettings.json`) defines an array with 2 items, and your specific session config (`VertexAutoExtractionConfig.json`) defines an array with 1 item, **the binder does not replace the array; it merges them by index**.
-- Index 0 from the base config is overwritten by Index 0 from the session config.
-- Index 1 from the base config remains intact and is loaded into the final array.
+`appsettings.json` also holds the global settings in `AppConfig` (`UploadFolder`, `LogFolder`, `IsVertexAiEnabled`, ...); the chat sessions and the session logger start from those paths.
 
-**Solution:** To prevent unwanted files from being loaded, we ensure that base arrays in `AppConfig.cs` and `appsettings.json` are strictly empty (`[]`). You must explicitly define all required paths in your specific session `.json` file.
+### Lists replace, they do not merge
+On its own, the .NET configuration binder handles lists (like `HistoryPreloadPaths` or `SystemInstructionPaths`) badly in two ways: it **appends** a JSON array to the list already in the object (default `[a, b]` + JSON `[c]` = `[a, b, c]`), and an **empty** JSON array `[]` binds nothing, so it cannot clear a default.
+
+`ConfigLayerBinder` therefore empties every list a layer names before binding it. The result:
+- A list in the JSON **replaces** the default (or the earlier layer's list) as a whole. `[]` gives an empty list.
+- A list the JSON **leaves out keeps** its value: the C# default, or what an earlier layer set.
+
+(Until 2026-10-26 the loader emptied *every* list before binding, so a list default only applied if the JSON repeated it. `ConfigLoaderDefaultsTests` now checks that loading without any JSON gives exactly the class defaults.)
+
+### What the defaults contain
+The C# defaults hold only neutral values that work on any machine: tuning values (delays, retries, generation parameters), feature switches, the API-key variable names, and the shared model list (`ModelCatalog.Default`). Paths, prompt files, the Vertex project id and bucket names belong to one machine or one Google Cloud account; they default to empty and are set in the JSON files.
 
 ---
 
@@ -343,8 +349,9 @@ Handles the interactive REPL (Read-Eval-Print Loop) for manual debugging, as wel
 
 ### 🔧 `LectureExtraction.Configuration`
 Centralized configuration management.
-- **`ConfigLoader<T>`**: A generic loader implementing the `Microsoft.Extensions.Configuration` binder. It merges defaults from `AppConfig.cs`, global overrides from `appsettings.json`, and specific settings from `{Session}Config.json`.
-- **`AppConfig`**: The single source of truth for global, hardcoded fallback parameters (e.g., fallback paths, `DefaultThinkingBudget`, `VertexProjectId`) and feature flags (`IsVertexAiEnabled`, read from `appsettings.json` — replaces the old `Program.Activate_Vertex` static field, which required a recompile to change).
+- **`ConfigLoader<T>`**: A generic loader implementing the `Microsoft.Extensions.Configuration` binder. It layers the class's C# defaults, optional overrides from `appsettings.json` and the settings from `{Session}Config.json`; `ConfigLayerBinder` makes a list in a later layer replace the earlier one (see section 1).
+- **`AppConfig`**: The global settings from `appsettings.json`: the upload and log folders and history/system-instruction paths the chat sessions and the session logger start from, and the feature flags (`IsVertexAiEnabled` — replaces the old `Program.Activate_Vertex` static field, which required a recompile to change — and `FirstChunkTimeoutMinutes`).
+- **`ModelCatalog`**: The default model list every config and model picker starts from.
 
 ### 🎬 `LectureExtraction.Media`
 Wraps the local `ffmpeg.exe` binary to preprocess media before sending it to the cloud.
@@ -429,20 +436,26 @@ Bei Änderungen am Code müssen Entwickler und KI-Agenten diese Trennung strikt 
 
 ---
 
-## 1. Konfigurations-Hierarchie & das "Array Merge" Problem
+## 1. Konfigurations-Hierarchie & Listen
 
-Die Anwendung nutzt den `Microsoft.Extensions.Configuration` Binder, um Einstellungen aus mehreren Quellen zu laden. Die Hierarchie ist wie folgt (die zuletzt geladene überschreibt vorherige):
-1. `AppConfig.cs` (Fest codierte C#-Standardwerte)
-2. `appsettings.json` (Globale Überschreibungen)
-3. Spezifische Session-Configs (z. B. `VertexAutoExtractionConfig.json`)
+`ConfigLoader<T>` lädt die Einstellungen jeder Session in Ebenen; die spätere Ebene gewinnt für jeden Schlüssel, den sie setzt:
+1. Die C#-Standardwerte der Konfigurationsklasse (z. B. `AiStudioAutoExtractionConfig.cs`)
+2. `appsettings.json`, Abschnitt `AppConfig:<Klassenname>` (optionale globale Überschreibungen)
+3. Die eigene Datei der Session (z. B. `VertexAutoExtractionConfig.json`)
 
-### Die Array-Merging Falle
-Ein kritisches Verhalten des .NET Configuration Binders ist der Umgang mit Arrays (wie `HistoryPreloadPaths` oder `SystemInstructionPaths`).
-Wenn die Basiskonfiguration (`appsettings.json`) ein Array mit 2 Elementen definiert und die spezifische Session-Config ein Array mit 1 Element, **ersetzt der Binder das Array nicht; er führt sie nach Index zusammen**.
-- Index 0 aus der Basis-Config wird durch Index 0 aus der Session-Config überschrieben.
-- Index 1 aus der Basis-Config bleibt erhalten und wird in das endgültige Array geladen.
+`appsettings.json` enthält zusätzlich die globalen Einstellungen unter `AppConfig` (`UploadFolder`, `LogFolder`, `IsVertexAiEnabled`, ...); die Chat-Sessions und der Session-Logger starten mit diesen Pfaden.
 
-**Lösung:** Um zu verhindern, dass unerwünschte Dateien geladen werden, stellen wir sicher, dass Basis-Arrays in `AppConfig.cs` und `appsettings.json` strikt leer sind (`[]`). Du musst alle erforderlichen Pfade explizit in deiner spezifischen Session-`.json`-Datei definieren.
+### Listen ersetzen, sie werden nicht zusammengeführt
+Allein behandelt der .NET-Configuration-Binder Listen (wie `HistoryPreloadPaths` oder `SystemInstructionPaths`) auf zwei Arten falsch: Er **hängt** ein JSON-Array an die vorhandene Liste **an** (Standard `[a, b]` + JSON `[c]` = `[a, b, c]`), und ein **leeres** JSON-Array `[]` bindet gar nichts, kann also keinen Standardwert leeren.
+
+`ConfigLayerBinder` leert deshalb jede Liste, die eine Ebene nennt, bevor er sie bindet. Ergebnis:
+- Eine Liste in der JSON **ersetzt** den Standardwert (bzw. die Liste der früheren Ebene) vollständig. `[]` ergibt eine leere Liste.
+- Eine Liste, die in der JSON **fehlt, behält** ihren Wert: den C#-Standardwert oder den der früheren Ebene.
+
+(Bis 2026-10-26 leerte der Loader vor dem Binden *jede* Liste, ein Listen-Standardwert galt also nur, wenn die JSON ihn wiederholte. `ConfigLoaderDefaultsTests` prüft jetzt, dass das Laden ganz ohne JSON genau die Klassen-Standardwerte ergibt.)
+
+### Was in den Standardwerten steht
+Die C#-Standardwerte enthalten nur neutrale Werte, die auf jedem Rechner funktionieren: Tuning-Werte (Wartezeiten, Retries, Generierungsparameter), Schalter, die Namen der API-Key-Variablen und die gemeinsame Modellliste (`ModelCatalog.Default`). Pfade, Prompt-Dateien, die Vertex-Projekt-ID und Bucket-Namen gehören zu einem Rechner oder einem Google-Cloud-Konto; sie sind standardmäßig leer und stehen in den JSON-Dateien.
 
 ---
 
@@ -755,8 +768,9 @@ Verarbeitet die interaktive REPL (Read-Eval-Print Loop) für manuelles Debugging
 
 ### 🔧 `LectureExtraction.Configuration`
 Zentralisiertes Konfigurations-Management.
-- **`ConfigLoader<T>`**: Ein generischer Loader, der den `Microsoft.Extensions.Configuration` Binder implementiert. Führt Standards aus `AppConfig.cs`, globale Überschreibungen aus `appsettings.json` und spezifische Einstellungen aus `{Session}Config.json` zusammen.
-- **`AppConfig`**: Die einzige Quelle der Wahrheit (Single Source of Truth) für globale, fest codierte Fallback-Parameter (z. B. Fallback-Pfade, `DefaultThinkingBudget`, `VertexProjectId`) sowie Feature-Flags (`IsVertexAiEnabled`, aus `appsettings.json` gelesen — ersetzt das alte statische Feld `Program.Activate_Vertex`, das einen Neu-Kompilierungslauf zum Ändern erforderte).
+- **`ConfigLoader<T>`**: Ein generischer Loader, der den `Microsoft.Extensions.Configuration` Binder implementiert. Er legt die C#-Standardwerte der Klasse, optionale Überschreibungen aus `appsettings.json` und die Einstellungen aus `{Session}Config.json` übereinander; `ConfigLayerBinder` sorgt dafür, dass eine Liste der späteren Ebene die frühere ersetzt (siehe Abschnitt 1).
+- **`AppConfig`**: Die globalen Einstellungen aus `appsettings.json`: Upload- und Log-Ordner sowie History-/System-Instruction-Pfade, mit denen die Chat-Sessions und der Session-Logger starten, und die Feature-Flags (`IsVertexAiEnabled` — ersetzt das alte statische Feld `Program.Activate_Vertex`, das für jede Änderung eine Neukompilierung erforderte — und `FirstChunkTimeoutMinutes`).
+- **`ModelCatalog`**: Die Standard-Modellliste, mit der jede Konfiguration und jede Modellauswahl startet.
 
 ### 🎬 `LectureExtraction.Media`
 Wickelt die lokale `ffmpeg.exe` Binary ab, um Medien vorzuverarbeiten, bevor sie in die Cloud gesendet werden.

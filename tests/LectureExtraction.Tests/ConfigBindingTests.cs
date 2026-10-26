@@ -147,20 +147,6 @@ public class ConfigBindingTests {
     }
 
     [Fact]
-    public void ClearCollectionsRecursively_ClearsInitializedCollections() {
-        var dummy = new AiStudioAutoExtractionConfig {
-            Model = ["a", "b"]
-        };
-        Assert.True(dummy.Model.Length > 0);
-
-        typeof(ConfigLoader<AiStudioAutoExtractionConfig>)
-            .GetMethod("ClearCollectionsRecursively", BindingFlags.NonPublic | BindingFlags.Static)!
-            .Invoke(null, [dummy]);
-
-        Assert.Empty(dummy.Model);
-    }
-
-    [Fact]
     public void ModelSelection_SelectOrAdd_AppendsNewModel_WithoutOverwritingExisting() {
         var selection = new ModelSelection {
             Available = ["gemini-3.6-flash", "gemini-3.5-flash"],
