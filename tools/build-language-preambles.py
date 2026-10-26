@@ -6,7 +6,8 @@
 Each output is the source's preamble (everything before \\begin{document}) plus what the pipeline's
 prompts teach but the book does not define yet: the `observation` theorem environment,
 `\\checkline`, `\\setSpeaker` and `\\youtubechapter`; and questions/answers recoloured to the green of `\\recap`, the
-answer with its own icon. Rerun after either book preamble changes:
+answer with its own icon. A book's own `\\setSpeaker{...}` (its lecturer) is dropped. Rerun after
+either book preamble changes:
 
     py tools/build-language-preambles.py
 """
@@ -75,6 +76,13 @@ def build(lang, source, obs, obs_plural, remark):
     if cut < 0:
         sys.exit(f"no \\begin{{document}} in {source}")
     lines = text[:cut].rstrip("\n").split("\n")
+    # a book may set its lecturer once in the preamble; the pipeline's lectures have other speakers,
+    # so drop that call together with the comment lines right above it
+    for i in [i for i, l in enumerate(lines) if l.startswith(BS + "setSpeaker{")][::-1]:
+        start = i
+        while start > 0 and lines[start - 1].startswith("%"):
+            start -= 1
+        del lines[start:i + 1]
     body = "\n".join(lines)
 
     if BS + "newtheorem{observation}" not in body:
