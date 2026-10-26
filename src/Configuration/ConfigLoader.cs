@@ -10,7 +10,8 @@ namespace LectureExtraction.Configuration;
 
 /// <summary>
 /// Generic configuration loader implementing the hierarchy:
-/// corresponding .json > appsettings.json > C# default properties.
+/// corresponding .json > appsettings.json > C# default properties. A list in a JSON file replaces the
+/// list below it as a whole; a list the JSON leaves out keeps the value below it.
 /// Runs ConfigMigrator before binding to ensure legacy flat JSON keys are migrated seamlessly.
 /// </summary>
 public static class ConfigLoader<T> where T : class, new() {
@@ -62,44 +63,10 @@ public static class ConfigLoader<T> where T : class, new() {
 
         var config = new T();
 
-        configuration.GetSection("AppConfig").GetSection(sectionName).Bind(config);
-
-        ClearCollectionsRecursively(config);
-
-        configuration.Bind(config);
+        ConfigLayerBinder.Bind(configuration.GetSection("AppConfig").GetSection(sectionName), config);
+        ConfigLayerBinder.Bind(configuration, config);
 
         return config;
-    }
-
-    /// <summary>
-    /// [AI Context] Recursively clears initialized collections (arrays, lists) on the default C# instance
-    /// before binding configuration sources. This prevents binding from appending duplicate entries
-    /// to arrays or lists that have non-empty C# default initializers.
-    /// [Human] Leert enthaltene Collections rekursiv vor dem Binden von Konfigurationen, damit Standardwerte nicht doppelt angehängt werden.
-    /// </summary>
-    internal static void ClearCollectionsRecursively(object? obj) {
-        if (obj == null) return;
-        var type = obj.GetType();
-        if (type.IsPrimitive || type == typeof(string) || type.IsValueType) return;
-
-        foreach (var prop in type.GetProperties()) {
-            if (!prop.CanRead) continue;
-
-            if (prop.PropertyType.IsArray && prop.CanWrite) {
-                prop.SetValue(obj, Array.CreateInstance(prop.PropertyType.GetElementType()!, 0));
-            }
-            else if (typeof(System.Collections.IList).IsAssignableFrom(prop.PropertyType)) {
-                if (prop.GetValue(obj) is System.Collections.IList list && list.Count > 0) {
-                    list.Clear();
-                }
-            }
-            else if (prop.PropertyType.IsClass && prop.PropertyType != typeof(string)) {
-                var val = prop.GetValue(obj);
-                if (val != null) {
-                    ClearCollectionsRecursively(val);
-                }
-            }
-        }
     }
 
     /// <summary>

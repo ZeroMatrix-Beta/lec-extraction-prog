@@ -9,7 +9,7 @@ namespace LectureExtraction.Configuration;
 /// [Human] Modellauswahl-Konfiguration mit automatischer Bereichsprüfung für das aktive Modell.
 /// </summary>
 public class ModelSelection {
-    private string[] _available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"];
+    private string[] _available = ModelCatalog.Default;
 
     public string[] Available {
         get => _available;
