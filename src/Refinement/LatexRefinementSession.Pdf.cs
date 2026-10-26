@@ -511,7 +511,9 @@ public partial class LatexRefinementSession {
 
     private async Task<(string Text, TokenUsage Usage)> StreamFixResponseAsync(List<Content> history, GenerateContentConfig requestConfig, BackendParameters backendParams, string outputFileName, ThoughtLog thoughts) {
         string providerName = _config.UseVertex ? "Vertex AI" : "Google AI Studio";
-        int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds > 0 ? _config.Step3LastRefinement.RateLimitDelaySeconds : 130;
+        // As in StreamAndCollectAsync: 0 means no pacing wait, while the retry backoff keeps 130 s.
+        int fixDelay = _config.Step3LastRefinement?.RateLimitDelaySeconds ?? 130;
+        int retryBackoff = fixDelay > 0 ? fixDelay : 130;
 
         var result = await GenerationLoop.RunAsync(history,
             h => {
@@ -526,9 +528,9 @@ public partial class LatexRefinementSession {
                 AnnounceRequest = (request, max) =>
                     Ui.Info($"Sende PDF-Fix-Anfrage an {providerName} ({backendParams.CurrentModel}) (Request {request}/{max})...", "API"),
                 RetryContext = outputFileName,
-                InitialBackoff = fixDelay,
+                InitialBackoff = retryBackoff,
                 FirstChunkTimeout = AppConfig.FirstChunkTimeout,
-                HighDemandDelay = fixDelay,
+                HighDemandDelay = retryBackoff,
                 CancelledAsWarning = true,
                 EmptyAnswerRetries = 3,
                 IsComplete = text => text.Contains(RefinementCompleteMarker, StringComparison.OrdinalIgnoreCase),
@@ -541,6 +543,7 @@ public partial class LatexRefinementSession {
                     return continuePrompt;
                 },
                 WaitBeforeContinueAsync = () => {
+                    if (fixDelay <= 0) return Task.FromResult(true);
                     Ui.Detail($"Warte {fixDelay} Sekunden vor der Fortsetzung...", "Timer");
                     return InteractiveDelay.SmartDelayAsync(fixDelay, "Warte auf Rate-Limits (Token Refill)...");
                 },

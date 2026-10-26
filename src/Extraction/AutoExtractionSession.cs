@@ -120,7 +120,8 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     /// of re-requested. Was a hardcoded 2 hours on <c>VideoProcessingState</c> with no way to reach
     /// it, which made it the most expensive invisible constant here: a batch retried after the
     /// window lapsed silently re-bought every part it had already paid for. Still 2 hours by
-    /// default, so the interactive run is unchanged.
+    /// default, so the interactive run is unchanged. <see cref="PartReuse"/> measures it on the
+    /// newest of the part's file and its -copy-N siblings.
     /// [Human] Wie alt eine bereits erzeugte .tex-Datei sein darf, um wiederverwendet zu werden.
     /// </summary>
     public TimeSpan ResumeWindow { get; init; } = TimeSpan.FromHours(2);
@@ -290,9 +291,11 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             _sessionPreamble.Add(roundtrip.UserTurn!);
             _sessionPreamble.Add(roundtrip.ModelTurn!);
 
-            int delay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 60;
-            Ui.Detail($"Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
-            await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
+            int delay = _config.VideoPartDelaySeconds;
+            if (delay > 0) {
+                Ui.Detail($"Warte {delay}s (Token Refill) nach Debug 'Hello' Roundtrip...");
+                await InteractiveDelay.SmartDelayAsync(delay, "Warte auf Token-Refill nach Debug Roundtrip...");
+            }
             Ui.Success("'Hello' Roundtrip erfolgreich.");
         }
 
@@ -633,11 +636,11 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             string targetPartPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 1}.tex");
 
             Ui.Step($"Verarbeite Teil {i + 1}/{partsWithTimes.Count}: {Path.GetFileName(safePartPath)}");
-            // Check if the .tex file already exists and is not older than 2 hours
-            if (System.IO.File.Exists(targetPartPath) && (DateTime.Now - System.IO.File.GetLastWriteTime(targetPartPath)) <= ResumeWindow) {
-                Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(targetPartPath)}. Überspringe API-Extraktion für diesen Teil.", "Resume");
-                string existingTex = await System.IO.File.ReadAllTextAsync(targetPartPath);
-                state.GeneratedTexFiles.Add(targetPartPath);
+            string? reusablePartPath = PartReuse.FindReusablePart(fileSpecificOutputFolder, state.BaseName, i + 1, ResumeWindow);
+            if (reusablePartPath != null) {
+                Ui.Info($"Vorhandene LaTeX-Datei gefunden: {Path.GetFileName(reusablePartPath)}. Überspringe API-Extraktion für diesen Teil.", "Resume");
+                string existingTex = await System.IO.File.ReadAllTextAsync(reusablePartPath);
+                state.GeneratedTexFiles.Add(reusablePartPath);
 
                 // The part keeps the header it was written with - its own model, date and tokens - so
                 // a reused part is described as what it is, not as part of this run.
@@ -685,7 +688,7 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             }
 
             if (i > 0) {
-                int rateLimitDelay = _config.VideoPartDelaySeconds > 0 ? _config.VideoPartDelaySeconds : 130;
+                int rateLimitDelay = _config.VideoPartDelaySeconds; // 0 waits for nothing
                 double secondsSinceLastGen = (DateTime.UtcNow - InteractiveDelay.LastGenerationCompletionTimeUtc).TotalSeconds;
                 if (secondsSinceLastGen < rateLimitDelay && !InteractiveDelay.IsInSmartDelay) {
                     int waitRemaining = (int)Math.Ceiling(rateLimitDelay - secondsSinceLastGen);
@@ -702,8 +705,9 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
             // If EnableParallelFileUploads is enabled, start pre-uploading the next part (or the audio file if this is the last part) while Gemini processes the current part.
             if (_config.EnableParallelFileUploads) {
                 if (i + 1 < partsWithTimes.Count) {
-                    string nextTexPath = Path.Combine(fileSpecificOutputFolder, $"{state.BaseName}-part{i + 2}.tex");
-                    if (!System.IO.File.Exists(nextTexPath)) {
+                    // The same rule the next iteration applies, so a part that will be reused is not
+                    // uploaded and a stale one that will be transcribed again is.
+                    if (PartReuse.FindReusablePart(fileSpecificOutputFolder, state.BaseName, i + 2, ResumeWindow) == null) {
                         Ui.Info($"Starte parallelen Video-Upload für nächsten Teil ({i + 2}/{partsWithTimes.Count}) im Hintergrund...", "Pre-Upload");
                         state.PendingVideoUploadTask = UploadSegmentAndBuildPromptAsync(partsWithTimes[i + 1].FilePath, i + 2, partsWithTimes.Count, file, fullOriginalVideoDuration);
                     }
@@ -722,7 +726,7 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
                         if (System.IO.File.Exists(audioPath)) {
                             Ui.Info($"Starte parallelen Audio-Upload für LaTeX Refinement im Hintergrund ({Path.GetFileName(audioPath)})...", "Pre-Upload");
                             var handler = _backend.CreateAudioUploader(state.RefinementClient, fileSpecificOutputFolder);
-                            var (audioUploadOk, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioPath}\"");
+                            var (audioUploadOk, attached) = await handler.UploadFilesAsync([audioPath]);
                             if (audioUploadOk) return attached;
                         }
                         return [];

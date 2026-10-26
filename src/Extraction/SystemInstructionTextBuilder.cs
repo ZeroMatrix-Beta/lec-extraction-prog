@@ -141,8 +141,7 @@ public static class SystemInstructionTextBuilder {
 
         if (nonTextFiles.Count == 0) return new([], uploadedTextParts);
 
-        string quotedFileList = string.Join(", ", nonTextFiles.Select(p => $"\"{p}\""));
-        var (uploadSuccess, _, uploadedParts) = await attachmentUploader.ProcessAttachmentsAsync($"attach {quotedFileList}", true, commonBase);
+        var (uploadSuccess, uploadedParts) = await attachmentUploader.UploadFilesAsync(nonTextFiles, asSystemInstruction: true, baseDirectory: commonBase);
         return new(uploadSuccess && uploadedParts.Count > 0 ? uploadedParts : [], uploadedTextParts);
     }
 

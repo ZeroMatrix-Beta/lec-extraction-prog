@@ -48,44 +48,96 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
     }
 
     /// <summary>
-    /// [AI Context] Parses the multipart payload, resolves physical paths, and streams payloads to the model context.
-    /// Returning boolean flag dictates if the parent loop should proceed or halt.
-    /// [Human] Nimmt den 'attach' Befehl auseinander, zerlegt ihn in Dateien und die eigentliche Text-Frage.
+    /// [AI Context] Runs a chat <c>attach</c> command: parses it with <see cref="ParseAttachCommand"/>,
+    /// then attaches its files with <see cref="UploadFilesAsync"/>. Only for text a person typed; code
+    /// that already holds its paths calls <see cref="UploadFilesAsync"/> directly.
+    /// [Human] Führt den Chat-Befehl 'attach' aus: zerlegt ihn in Dateien und Frage und hängt die Dateien an.
     /// </summary>
     public async Task<(bool success, string promptText, List<Part> parts)> ProcessAttachmentsAsync(string input, bool asSystemInstruction = false, string? baseDirectory = null, CancellationToken cancellationToken = default) {
+        var command = ParseAttachCommand(input);
+        var (success, parts) = await UploadFilesAsync(command.FilePaths, asSystemInstruction, baseDirectory, cancellationToken);
+        return (success, command.Prompt, parts);
+    }
+
+    /// <summary>
+    /// [AI Context] Splits <c>attach file1, "file, 2" | prompt</c> into its file paths and prompt.
+    /// Commas and semicolons separate the files and the first "|" starts the prompt, except inside a
+    /// path that starts with a quote, so a quoted path may contain all three. Pure, so it is tested
+    /// directly.
+    /// [Human] Zerlegt den Chat-Befehl 'attach' in Dateien und Frage. Ein Pfad in Anführungszeichen
+    /// darf Kommas, Semikolons und '|' enthalten.
+    /// </summary>
+    public static AttachCommand ParseAttachCommand(string input) {
+        string payload = input.Trim().TrimStart('/');
+        if (payload.StartsWith("attach ", StringComparison.OrdinalIgnoreCase) || payload.Equals("attach", StringComparison.OrdinalIgnoreCase)) {
+            payload = payload["attach".Length..];
+        }
+
+        var filePaths = new List<string>();
+        var token = new System.Text.StringBuilder();
+        bool tokenHasText = false;
+        char? openQuote = null;
+        string prompt = "";
+
+        for (int i = 0; i < payload.Length; i++) {
+            char c = payload[i];
+            if (openQuote != null) {
+                token.Append(c);
+                if (c == openQuote) openQuote = null;
+            }
+            else if (c is ',' or ';') {
+                AddPath(filePaths, token);
+                tokenHasText = false;
+            }
+            else if (c == '|') {
+                prompt = payload[(i + 1)..].Trim();
+                break;
+            }
+            else {
+                // A quote opens only at the start of a path, so an apostrophe inside a name stays text.
+                if (c is '"' or '\'' && !tokenHasText) openQuote = c;
+                if (!char.IsWhiteSpace(c)) tokenHasText = true;
+                token.Append(c);
+            }
+        }
+        AddPath(filePaths, token);
+
+        return new AttachCommand(filePaths, prompt);
+
+        static void AddPath(List<string> paths, System.Text.StringBuilder token) {
+            string path = token.ToString().Trim().Trim('"', '\'');
+            if (path.Length > 0) paths.Add(path);
+            token.Clear();
+        }
+    }
+
+    /// <summary>
+    /// [AI Context] Finds each file (see <see cref="ResolveFilePath"/>) and attaches it: text inline,
+    /// media uploaded. The paths are used as given, never parsed, so a path may contain any character
+    /// the file system allows. Returns success when at least one file was attached; a file that is not
+    /// found is reported with every location searched.
+    /// [Human] Sucht die angegebenen Dateien und hängt sie an bzw. lädt sie hoch. Die Pfade werden
+    /// nicht zerlegt, dürfen also auch Kommas enthalten.
+    /// </summary>
+    public async Task<(bool success, List<Part> parts)> UploadFilesAsync(IReadOnlyList<string> filePaths, bool asSystemInstruction = false, string? baseDirectory = null, CancellationToken cancellationToken = default) {
         var parts = new List<Part>();
-
-        // [AI Context] Implements a custom syntax parser: "attach [file1, file2] | [prompt]"
-        string payload = input[7..].Trim(); // Entfernt das "attach " am Anfang
-        string[] payloadParts = payload.Split('|', 2);
-        string filesPart = payloadParts[0];
-        string promptText = payloadParts.Length > 1 ? payloadParts[1].Trim() : "";
-
-        string[] fileNames = filesPart.Split([';', ','], StringSplitOptions.RemoveEmptyEntries);
-        bool anyFileLoaded = false;
         var loadedNames = new List<string>();
 
-        // ====================================================================
-        // NEUER, SAUBERER ANSATZ ZUR DATEISUCHE UND ZUM UPLOAD
-        // ====================================================================
-        foreach (var fileName in fileNames) {
-            string rawName = fileName.Trim().Trim('"', '\'');
-            string? resolvedPath = ResolveFilePath(rawName, out List<string> searchedLocations);
+        foreach (string filePath in filePaths) {
+            string? resolvedPath = ResolveFilePath(filePath, out List<string> searchedLocations);
 
             if (resolvedPath != null) {
                 if (asSystemInstruction && LectureExtraction.Extraction.HistoryFileResolver.IsIgnoredPromptFile(resolvedPath)) {
                     Ui.Detail($"Überspringe als ignoriert/gelöscht markierte Datei '{Path.GetFileName(resolvedPath)}' für System Instruction.", "Token-Opt");
                     continue;
                 }
-                bool loaded = await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory, cancellationToken: cancellationToken);
-                if (loaded) {
-                    anyFileLoaded = true;
+                if (await UploadAndAttachFileAsync(resolvedPath, parts, asSystemInstruction, baseDirectory, cancellationToken: cancellationToken)) {
                     loadedNames.Add(Path.GetFileName(resolvedPath));
                 }
             }
             else {
                 Ui.Blank();
-                Ui.Error($"Die Datei '{rawName}' wurde absolut nirgends gefunden.");
+                Ui.Error($"Die Datei '{filePath}' wurde absolut nirgends gefunden.");
                 Ui.Detail("Ich habe exakt hier gesucht:");
                 foreach (var loc in searchedLocations) {
                     Ui.Detail($"- {loc}");
@@ -97,7 +149,7 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
             Ui.Success($"{loadedNames.Count} Datei(en) angehängt: {string.Join(", ", loadedNames)}");
         }
 
-        return (anyFileLoaded, promptText, parts);
+        return (loadedNames.Count > 0, parts);
     }
 
     /// <summary>
@@ -404,3 +456,6 @@ public class AttachmentUploader(Client client, string uploadFolder, string[] inc
         }
     }
 }
+
+/// <summary>A parsed chat <c>attach</c> command: the files to attach and the prompt after "|".</summary>
+public sealed record AttachCommand(IReadOnlyList<string> FilePaths, string Prompt);

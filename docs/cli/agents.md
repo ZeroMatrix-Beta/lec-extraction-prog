@@ -52,7 +52,8 @@ exits `6`, and the JSON payload names which.
 
 A finished `.tex` part is reused instead of re-requested **only if it is younger than two
 hours**. Retry a failed batch three hours later and you silently pay for every part
-again.
+again. A part that was requested again is saved as `-partN-copy-1.tex`; the newest of the
+part's files is the one whose age counts and the one reused.
 
 ```bash
 lecx plan --folder ... --resume-window 24 --json   # what would be reused with a 24h window

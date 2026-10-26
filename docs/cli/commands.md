@@ -23,7 +23,7 @@ lecx run --folder "D:/lecture-videos/analysis2" --from 03-30-2026
 | `--from <text>` | Skip videos before the first whose filename contains this, in chronological order |
 | `--limit <n>` | At most n videos, in chronological order |
 | `--stop-after extract` | Transcribe only; skip refinement and PDF |
-| `--resume-window <hours>` | How long a finished `.tex` part stays reusable. Default **2** |
+| `--resume-window <hours>` | How long a finished `.tex` part stays reusable, measured on the newest of `-partN.tex` and its `-copy-N` files. Default **2** |
 | `--resume` | Reuse finished `.tex` parts whatever their age (an unlimited `--resume-window`) |
 | `--force` | Ignore existing `.tex` parts and re-request every segment |
 | `--clean-tmp` | Delete the lecture's `tmp/` after a successful run |

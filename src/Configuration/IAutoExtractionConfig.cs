@@ -58,7 +58,7 @@ public interface IAutoExtractionConfig {
     bool InlineHistory { get; }
     int HistoryBatchCount { get; }
 
-    // Pacing: the wait between parts and continues, and the warm-up delays
+    // Pacing: the wait between parts and continues, and the warm-up delays. 0 means no wait.
     int VideoPartDelaySeconds { get; }
     int SystemInstructionDelaySeconds { get; }
     int HistoryRateLimitDelaySeconds { get; }

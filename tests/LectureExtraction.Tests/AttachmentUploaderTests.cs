@@ -89,6 +89,58 @@ public class AttachmentUploaderTests {
         }
     }
 
+    [Theory]
+    [InlineData("attach a.pdf, b.png | explain this", new[] { "a.pdf", "b.png" }, "explain this")]
+    [InlineData("attach \"D:\\Analysis 2, Woche 3.mp4\" | transcribe", new[] { "D:\\Analysis 2, Woche 3.mp4" }, "transcribe")]
+    [InlineData("attach 'x; y.tex'; z.md", new[] { "x; y.tex", "z.md" }, "")]
+    [InlineData("attach \"a | b.md\", c.md | q", new[] { "a | b.md", "c.md" }, "q")]
+    [InlineData("attach Peter's notes.pdf, b.md", new[] { "Peter's notes.pdf", "b.md" }, "")]
+    [InlineData("  /ATTACH notes.md | one | two", new[] { "notes.md" }, "one | two")]
+    [InlineData("attach a.md,, ;b.md", new[] { "a.md", "b.md" }, "")]
+    [InlineData("attach", new string[0], "")]
+    public void ParseAttachCommand_splits_only_outside_quotes(string input, string[] expectedPaths, string expectedPrompt) {
+        var command = AttachmentUploader.ParseAttachCommand(input);
+
+        Assert.Equal(expectedPaths, command.FilePaths);
+        Assert.Equal(expectedPrompt, command.Prompt);
+    }
+
+    [Fact]
+    public async Task UploadFilesAsync_takes_a_path_with_commas_and_semicolons_as_one_file() {
+        // The extraction used to send every segment as `attach "<path>" | <prompt>` through the chat
+        // parser, which split "Analysis 2, Woche 3" into two files that were both "not found".
+        AnsiConsole.Console = new TestConsole();
+        string dir = Path.Combine(Path.GetTempPath(), "lecx-attach-" + Path.GetRandomFileName(), "Analysis 2, Woche 3");
+        Directory.CreateDirectory(dir);
+        string path = Path.Combine(dir, "notes; part 1.tex");
+        File.WriteAllText(path, "\\section{Teil 1}");
+        try {
+            var (ok, parts) = await CreateUploader().UploadFilesAsync([path]);
+
+            Assert.True(ok);
+            var part = Assert.Single(parts);
+            Assert.Contains("\\section{Teil 1}", part.Text);
+
+            var (chatOk, prompt, chatParts) = await CreateUploader().ProcessAttachmentsAsync($"attach \"{path}\" | Was steht hier?");
+            Assert.True(chatOk);
+            Assert.Equal("Was steht hier?", prompt);
+            Assert.Single(chatParts);
+        }
+        finally {
+            Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task UploadFilesAsync_reports_failure_when_no_file_is_found() {
+        AnsiConsole.Console = new TestConsole();
+
+        var (ok, parts) = await CreateUploader().UploadFilesAsync([Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".tex")]);
+
+        Assert.False(ok);
+        Assert.Empty(parts);
+    }
+
     private static string WriteTempTex(string content) {
         string path = Path.Combine(Path.GetTempPath(), $"{Path.GetRandomFileName()}.tex");
         File.WriteAllText(path, content);

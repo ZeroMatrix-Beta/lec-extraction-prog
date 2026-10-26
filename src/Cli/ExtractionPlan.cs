@@ -188,21 +188,15 @@ public static class ExtractionPlanner {
     }
 
     /// <summary>
-    /// Mirrors the reuse test in <c>TranscribeSegmentsAsync</c>: a part is skipped when its .tex
-    /// exists and is younger than the window. Kept deliberately identical, because a plan that
-    /// disagrees with the run it predicts is worse than no plan.
+    /// Applies the run's own reuse rule, <see cref="PartReuse.FindReusablePart"/>, to every part:
+    /// a plan that disagrees with the run it predicts is worse than no plan.
     /// </summary>
     private static int CountResumableSegments(string outputFolder, string baseName, int segmentCount, double resumeWindowHours) {
-        if (!Directory.Exists(outputFolder)) {
-            return 0;
-        }
-
         var window = TimeSpan.FromHours(resumeWindowHours);
         int resumable = 0;
 
         for (int part = 1; part <= segmentCount; part++) {
-            string texPath = Path.Combine(outputFolder, $"{baseName}-part{part}.tex");
-            if (File.Exists(texPath) && (DateTime.Now - File.GetLastWriteTime(texPath)) <= window) {
+            if (PartReuse.FindReusablePart(outputFolder, baseName, part, window) != null) {
                 resumable++;
             }
         }

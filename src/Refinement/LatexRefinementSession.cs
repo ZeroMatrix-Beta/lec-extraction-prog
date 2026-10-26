@@ -268,8 +268,8 @@ public partial class LatexRefinementSession {
                 }
                 else {
                     var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "",
-                        fileActivationDelaySeconds: _config.Step1MergeAndTimestamp.RateLimitDelaySeconds > 0 ? _config.Step1MergeAndTimestamp.RateLimitDelaySeconds : 130);
-                    var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
+                        fileActivationDelaySeconds: _config.Step1MergeAndTimestamp.RateLimitDelaySeconds);
+                    var (success, attached) = await handler.UploadFilesAsync([audioFilePath!]);
                     if (success) {
                         audioParts.AddRange(attached);
                         Ui.Info($"Audio-Datei erfolgreich verarbeitet: {audioFilePath}", "Step 1");
@@ -346,8 +346,8 @@ public partial class LatexRefinementSession {
             }
             else {
                 var handler = new AttachmentUploader(_client, targetFolder, [targetFolder], !_config.UseVertex, _config.UseVertex ? _config.VertexGcsBucketName : "",
-                    fileActivationDelaySeconds: _config.Step2SpeechRefinement.RateLimitDelaySeconds > 0 ? _config.Step2SpeechRefinement.RateLimitDelaySeconds : 130);
-                var (success, _, attached) = await handler.ProcessAttachmentsAsync($"attach \"{audioFilePath}\"");
+                    fileActivationDelaySeconds: _config.Step2SpeechRefinement.RateLimitDelaySeconds);
+                var (success, attached) = await handler.UploadFilesAsync([audioFilePath!]);
                 if (success) {
                     audioParts.AddRange(attached);
                     Ui.Info($"Audio-Datei erfolgreich verarbeitet: {audioFilePath}", "Step 2");
