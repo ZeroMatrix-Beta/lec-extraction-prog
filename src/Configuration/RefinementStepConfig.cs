@@ -16,6 +16,6 @@ public class RefinementStepConfig {
     /// <summary>Gemini's thought summaries for this step and where they go (off by default).</summary>
     public ThoughtSummaryConfig ThoughtSummaries { get; set; } = new();
 
-    public BackendParameters AiStudio { get; set; } = new() { ModelSelection = new() { Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] } };
-    public BackendParameters Vertex { get; set; } = new() { ModelSelection = new() { Available = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview"] } };
+    public BackendParameters AiStudio { get; set; } = new();
+    public BackendParameters Vertex { get; set; } = new();
 }
