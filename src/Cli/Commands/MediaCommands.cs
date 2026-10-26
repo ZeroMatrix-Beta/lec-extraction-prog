@@ -29,11 +29,11 @@ public static class MediaCommands {
     };
 
     public static Command Build() {
-        var media = new Command("media", "Local FFmpeg stages. No API calls, no cost.");
-        media.Add(BuildProbe());
-        media.Add(BuildSegment());
-        media.Add(BuildAudio());
-        return media;
+        return new Command("media", "Local FFmpeg stages. No API calls, no cost.") {
+            BuildProbe(),
+            BuildSegment(),
+            BuildAudio()
+        };
     }
 
     private static Command BuildProbe() {

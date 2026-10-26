@@ -12,7 +12,7 @@ namespace LectureExtraction.GoogleAi;
 /// [Human] Kümmert sich komplett um die Verbindung zu Google (API-Keys laden, Client bauen, Modelle abfragen).
 /// </summary>
 public static class GoogleAiClientBuilder {
-    private static readonly ConditionalWeakTable<Client, string> ClientEnvNames = new();
+    private static readonly ConditionalWeakTable<Client, string> ClientEnvNames = [];
     // [AI Context] Which environment variable each resolved key value came from, so BuildAiStudioClient can
     // tag a client with its key name exactly, whatever was resolved in between (a "last resolved key" static
     // mis-tagged clients built later, e.g. the uploader's ClientFactory after the refinement key was read).

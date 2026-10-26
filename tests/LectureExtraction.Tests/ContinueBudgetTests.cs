@@ -33,7 +33,7 @@ public class ContinueBudgetTests {
     [Fact]
     public void A_repeated_tail_counts_as_no_progress() {
         // A model stuck re-emitting the same block until MAX_TOKENS.
-        string loop = new string('x', 500);
+        string loop = new('x', 500);
         var budget = new ContinueBudget(maxTotal: 10, maxWithoutProgress: 2);
 
         Assert.True(budget.TryContinue(loop, out _));
@@ -62,7 +62,7 @@ public class ContinueBudgetTests {
 
     [Fact]
     public void Echo_tail_honours_a_configured_length_and_falls_back_when_it_is_not_positive() {
-        string response = new string('x', 3000);
+        string response = new('x', 3000);
 
         Assert.Equal("...\n" + new string('x', 2000), ContinueBudget.EchoTail(response, 2000));
         Assert.Equal("...\n" + new string('x', ContinueBudget.EchoLength), ContinueBudget.EchoTail(response, 0));

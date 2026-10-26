@@ -9,7 +9,8 @@ namespace LectureExtraction.Latex.AutoFix;
 /// the first ']' outside braces, so <c>\begin{theorem}[Units in $R[x]$ over ...]</c> closes after
 /// <c>R[x</c> and the rest spills into the document ("Extra }, or forgotten $"). Wrapping the
 /// argument in <c>{...}</c> hides the inner brackets. Covers <c>\begin{env}[...]</c> and
-/// <c>\item[...]</c>.
+/// <c>\item[...]</c>. An interval in math that pairs with nothing (<c>$(0, 1]$</c>, <c>$[0, 1)$</c>) is
+/// braced too, in every environment: it breaks even the bracket-counting ones below.
 ///
 /// <para>The regex only locates where an argument starts; where it ends is decided by counting
 /// bracket and brace depth, because nesting is exactly what a regex cannot count. Lines whose
@@ -38,13 +39,11 @@ public sealed partial class BraceNestedOptionalArgumentFix : ILatexLineFix {
             if (!match.Success) return code;
 
             int open = match.Index + match.Length - 1; // the '['
-            if (BracketAwareEnvironments.Contains(match.Groups[1].Value)) {
-                searchFrom = open + 1;
-                continue;
-            }
-
-            int close = LatexScan.FindOptionalArgumentEnd(code, open, out bool hasNestedBrackets);
-            if (close < 0 || !hasNestedBrackets) {
+            int close = LatexScan.FindOptionalArgumentEnd(code, open, out bool hasNestedBrackets, out bool hasUnpairedMathBrackets);
+            bool endsEarly = BracketAwareEnvironments.Contains(match.Groups[1].Value)
+                ? hasUnpairedMathBrackets
+                : hasNestedBrackets;
+            if (close < 0 || !endsEarly) {
                 searchFrom = open + 1;
                 continue;
             }

@@ -1,0 +1,26 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Windows, like the machine the app runs on: several tests use Windows paths (D:\out\...),
+    # which Path.GetFileName does not split on Linux.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      # CI=true is set by GitHub Actions, so Directory.Build.props turns warnings into errors here.
+      - name: Build
+        run: dotnet build lec-extraction-prog.slnx
+      - name: Test
+        run: dotnet test lec-extraction-prog.slnx --no-build

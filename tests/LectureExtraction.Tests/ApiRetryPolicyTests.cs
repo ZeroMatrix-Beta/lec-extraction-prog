@@ -318,6 +318,7 @@ public class ApiRetryPolicyTests : IDisposable {
 
     private static async IAsyncEnumerable<GenerateContentResponse> Stream(string[] texts, Exception? thenThrow, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         foreach (string text in texts) {
+            cancellationToken.ThrowIfCancellationRequested();
             await Task.Yield();
             yield return new GenerateContentResponse {
                 Candidates = [new Candidate { Content = new Content { Role = "model", Parts = [new Part { Text = text }] } }]
@@ -331,6 +332,7 @@ public class ApiRetryPolicyTests : IDisposable {
     /// <summary>Like <see cref="Stream"/>, but every part is a thought-summary part.</summary>
     private static async IAsyncEnumerable<GenerateContentResponse> Thoughts(string[] texts, Exception? thenThrow, [EnumeratorCancellation] CancellationToken cancellationToken = default) {
         foreach (string text in texts) {
+            cancellationToken.ThrowIfCancellationRequested();
             await Task.Yield();
             yield return new GenerateContentResponse {
                 Candidates = [new Candidate { Content = new Content { Role = "model", Parts = [new Part { Text = text, Thought = true }] } }]

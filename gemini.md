@@ -43,6 +43,7 @@ Um C#-Compiler- und Analyzer-Warnungen (insbesondere `CA1860`, `SYSLIB1045`, `ID
    Methodensignaturen müssen sauber von ungenutzten Parametern befreit werden. Wenn Helper-Methoden umgeschrieben werden, sind alte Parameter sofort zu löschen.
 5. **Verpflichtender Build-Check vor Abschluss der Aufgabe:**
    Bevor eine KI ihre Arbeit an den Benutzer übergibt, **muss** zwingend `dotnet build` ausgeführt werden. Eine Aufgabe gilt erst dann als erledigt, wenn der Build exakt `0 Warnung(en)` und `0 Fehler` ausgibt. Jede auftretende Warnung ist sofort zu beheben.
+   Die Regeln 1-4 stehen als Warnungen in `.editorconfig` und laufen über `Directory.Build.props` auch in `dotnet build`; der GitHub-Actions-Build (`.github/workflows/build.yml`) behandelt jede Warnung als Fehler.
 
 ## 4. Das Prompt-Repo `prompt-engineering`
 `C:\Users\miche\latex\prompt-engineering` enthält die Prompt-Dateien, die die `*Config.json` dieses Projekts per absolutem Pfad laden. Lesen ist erlaubt, wenn eine Aufgabe die Prompts oder diese Pfade betrifft (ein umbenannter Ordner dort bricht die Configs hier). Ändern nur auf ausdrückliche Anweisung: Änderungen dort gehören in jenes Repo und werden dort committet.

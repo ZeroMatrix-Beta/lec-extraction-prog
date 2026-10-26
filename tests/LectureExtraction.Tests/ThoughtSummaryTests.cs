@@ -305,7 +305,7 @@ public class ThoughtLogTests {
 
         await log.EndRequestAsync(1, Usage(1, 1, "STOP"));
         log.Absorb(ResponsePartsTests.Chunk(("next request", true)));
-        Assert.Single(System.Text.RegularExpressions.Regex.Matches(console.Output, "nach Neustart"));
+        Assert.Equal(1, console.Output.Split("nach Neustart").Length - 1);
     });
 
     [Fact]

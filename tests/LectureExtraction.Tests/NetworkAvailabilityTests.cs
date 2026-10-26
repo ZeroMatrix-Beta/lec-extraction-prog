@@ -147,7 +147,7 @@ public class NetworkAvailabilityTests : IDisposable {
             delay: clock.DelayAsync, utcNow: clock.Now);
 
         string output = console.Output;
-        int statusLines = System.Text.RegularExpressions.Regex.Matches(output, "Warte auf Verbindung").Count;
+        int statusLines = output.Split("Warte auf Verbindung").Length - 1;
         Assert.Equal(5, statusLines); // t = 0, 1, 2, 3, 4 min
         Assert.Contains("wieder erreichbar", output);
     }
@@ -161,6 +161,7 @@ public class NetworkAvailabilityTests : IDisposable {
         public DateTime Now() => _start + Elapsed;
 
         public Task DelayAsync(TimeSpan span, CancellationToken token) {
+            token.ThrowIfCancellationRequested();
             Delays.Add(span);
             Elapsed += span;
             return Task.CompletedTask;
