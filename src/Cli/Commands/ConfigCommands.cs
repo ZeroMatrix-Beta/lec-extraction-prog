@@ -17,14 +17,14 @@ namespace LectureExtraction.Cli.Commands;
 /// </summary>
 public static class ConfigCommands {
     public static Command Build() {
-        var config = new Command("config", "Inspect the configuration the pipeline would run with.");
-        config.Add(BuildList());
-        config.Add(BuildGet());
-        config.Add(BuildSet());
-        config.Add(BuildModels());
-        config.Add(BuildProfiles());
-        config.Add(BuildFolders());
-        return config;
+        return new Command("config", "Inspect the configuration the pipeline would run with.") {
+            BuildList(),
+            BuildGet(),
+            BuildSet(),
+            BuildModels(),
+            BuildProfiles(),
+            BuildFolders()
+        };
     }
 
     private static Command BuildList() {
