@@ -2,5 +2,13 @@ root=true
 
 [*.cs]
 csharp_new_line_before_open_brace = none
-intent_style = space
+indent_style = space
 indent_size = 4
+
+# The project rules in gemini.md §3 and .agents/rules/AGENTS.md, enforced by the build
+# (EnforceCodeStyleInBuild in Directory.Build.props) instead of only by asking.
+dotnet_diagnostic.CA1860.severity = warning    # Count > 0 / Length > 0 instead of Any()
+dotnet_diagnostic.SYSLIB1045.severity = warning # [GeneratedRegex] instead of runtime Regex
+dotnet_diagnostic.IDE0028.severity = warning    # collection initializers / expressions
+dotnet_diagnostic.IDE0090.severity = warning    # target-typed new()
+dotnet_diagnostic.IDE0060.severity = warning    # no unused parameters
