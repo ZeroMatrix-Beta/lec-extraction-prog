@@ -76,10 +76,23 @@ public static partial class LatexScan {
     /// brace closes that was never opened. Brackets inside braces do not count - LaTeX does not see them.
     /// <paramref name="hasNestedBrackets"/> tells whether LaTeX itself would have ended the argument early.
     /// </summary>
-    public static int FindOptionalArgumentEnd(string text, int open, out bool hasNestedBrackets) {
+    public static int FindOptionalArgumentEnd(string text, int open, out bool hasNestedBrackets) =>
+        FindOptionalArgumentEnd(text, open, out hasNestedBrackets, out _);
+
+    /// <summary>
+    /// As above. Brackets inside <c>$...$</c> are counted on their own and never end the argument, because
+    /// the author meant them as mathematics: the ']' of a half-open interval <c>$(0, 1]$</c> pairs with
+    /// nothing, yet it is not where the title ends (Analysis II 2026-02-25, the most frequent compile error).
+    /// <paramref name="hasUnpairedMathBrackets"/> tells whether such a bracket occurs; that breaks even the
+    /// xparse arguments that count bracket pairs.
+    /// </summary>
+    public static int FindOptionalArgumentEnd(string text, int open, out bool hasNestedBrackets, out bool hasUnpairedMathBrackets) {
         hasNestedBrackets = false;
+        hasUnpairedMathBrackets = false;
         int braceDepth = 0;
         int bracketDepth = 1;
+        bool inMath = false;
+        int mathBracketDepth = 0;
 
         for (int i = open + 1; i < text.Length; i++) {
             char c = text[i];
@@ -90,6 +103,21 @@ public static partial class LatexScan {
                 continue;
             }
             if (braceDepth > 0) continue;
+            if (c == '$') {
+                if (inMath && mathBracketDepth > 0) hasUnpairedMathBrackets = true; // "[0, 1)"
+                inMath = !inMath;
+                mathBracketDepth = 0;
+                continue;
+            }
+            if (inMath) {
+                if (c == '[') mathBracketDepth++;
+                else if (c == ']') {
+                    hasNestedBrackets = true; // LaTeX would stop here
+                    if (mathBracketDepth > 0) mathBracketDepth--;
+                    else hasUnpairedMathBrackets = true;
+                }
+                continue;
+            }
             if (c == '[') { bracketDepth++; hasNestedBrackets = true; }
             else if (c == ']' && --bracketDepth == 0) return i;
         }

@@ -36,7 +36,7 @@ src/Latex/
 └── AutoFix/
     ├── ILatexLineFix.cs                    ← interface for line-local fixes
     ├── ILatexDocumentFix.cs                ← interface for whole-document fixes
-    ├── BraceNestedOptionalArgumentFix.cs   ← [Units in $R[x]$] → [{Units in $R[x]$}]
+    ├── BraceNestedOptionalArgumentFix.cs   ← [Units in $R[x]$] → [{Units in $R[x]$}], [On $(0, 1]$] → [{On $(0, 1]$}]
     ├── BareMathCommandInTitleFix.cs        ← [Sequential \implies Topological] → [Sequential $\implies$ Topological]
     ├── TexorpdfstringBracketFix.cs         ← {R[[x]}}} → {R[[x]]}}
     ├── UndefinedMathCommandFix.cs          ← \mapsfrom → \mathrel{\reflectbox{$\mapsto$}}, \sub → \subset, \Lightning → \ensuremath{\lightning}
@@ -53,7 +53,7 @@ src/Latex/
 
 | Fix | pdflatex says | Cause | Seen in |
 |---|---|---|---|
-| `BraceNestedOptionalArgumentFix` | `Extra }, or forgotten $` at `\begin{theorem}[… $R[x]` | A classic optional argument ends at the first `]`, so `R[x]` in a title cuts it off. | 09-30 (theorem), 10-06 (lemma) |
+| `BraceNestedOptionalArgumentFix` | `Extra }, or forgotten $` at `\begin{theorem}[… $R[x]` | A classic optional argument ends at the first `]`, so `R[x]` in a title cuts it off; `$...$` does not protect it. An interval bracket that pairs with nothing (`$(0, 1]$`) cuts off every title, `content` included, and a lone `[` (`$[0, 1)$`) breaks `content`, `math-stroke` and `highlight` (`File ended while scanning use of \environment`). | 09-30 (theorem), 10-06 (lemma); Analysis II 02-16 to 02-25 (`(0, 1]`, `[a, b]`, `C([a, b])`) |
 | `BareMathCommandInTitleFix` | `Missing $ inserted` at `\begin{proofWrapper}[… \implies …]` | A math-only command (`\implies`, `\to`, `\subseteq`, `\iff`, …) written as prose in a box title, which is set in text mode. Wraps each such command outside `$...$` in its own `$...$`; titles with `\texorpdfstring` are left alone. | Analysis II 02-23, rerun of 2026-10-25 (step 4, a `proofWrapper` and a `content` title) |
 | `TexorpdfstringBracketFix` | `Argument of \environment content has an extra }` | The plain-text half of `\texorpdfstring` lost a `]` that became a `}`: `{R[[x]}}}`. | 09-30 (5 titles) |
 | `MisnamedEnvironmentEndFix` | `\begin{speech} on input line 1011 ended by \end{student}` | The model closed `speech` with the wrong name. | 09-22 |
@@ -72,7 +72,8 @@ them with line numbers and the AI repair (or you) handles them.
 
 `content`, `math-stroke` and `highlight` are defined with `\NewTColorBox` and an xparse argument
 spec, which counts nested brackets. `\begin{content}[… $\mathbb{Z}[i]$]` compiles (09-16), so the
-bracket fix skips them. Everything defined with `\newtheorem`, `\newtcolorbox{…}[1][…]` or
+bracket fix skips them unless a bracket in math pairs with nothing: `$(0, 1]$` and `$[0, 1)$` both break an
+xparse `O{}` argument and compile once braced (checked in pdflatex, 2026-10-26). Everything defined with `\newtheorem`, `\newtcolorbox{…}[1][…]` or
 `\newenvironment` (theorem family, `speech`, `aiNote`, `student`, `proof`, `proofWrapper`, …) needs it.
 
 ## 4. Parsing rules (`LatexScan`)

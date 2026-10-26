@@ -40,6 +40,23 @@ public class BraceNestedOptionalArgumentFixTests {
     }
 
     [Fact]
+    public void Braces_the_half_open_interval_that_broke_the_02_25_lecture() {
+        string line = @"\begin{example}[Failure of Compactness for $A = (0, 1] \subset \mathbb{R}$]\label[example]{ex:half-open-interval-non-compact}";
+
+        Assert.Equal(
+            @"\begin{example}[{Failure of Compactness for $A = (0, 1] \subset \mathbb{R}$}]\label[example]{ex:half-open-interval-non-compact}",
+            Fix.FixLine(line));
+    }
+
+    [Theory]
+    [InlineData(@"\begin{content}[Non-Compactness of $(0, 1]$]", @"\begin{content}[{Non-Compactness of $(0, 1]$}]")]
+    [InlineData(@"\begin{content}[Compactness of $[0, 1)$]", @"\begin{content}[{Compactness of $[0, 1)$}]")] // xparse counts the lone '['
+    [InlineData(@"\item[$(a, b]$] half-open", @"\item[{$(a, b]$}] half-open")]
+    public void Braces_unpaired_interval_brackets_in_every_environment(string line, string expected) {
+        Assert.Equal(expected, Fix.FixLine(line));
+    }
+
+    [Fact]
     public void Braces_every_affected_argument_on_a_line() {
         Assert.Equal(@"\item[{$[0,1]$}] and \item[{$[1,2]$}]", Fix.FixLine(@"\item[$[0,1]$] and \item[$[1,2]$]"));
     }
@@ -51,6 +68,8 @@ public class BraceNestedOptionalArgumentFixTests {
     [InlineData(@"\begin{content}[Definition of the Candidate Map \texorpdfstring{$\hat{\phi}$}{phi-hat}]")]
     [InlineData(@"An element $(a_0, a_1, \dots) \in R[[x]]$ is a formal power series.")]
     [InlineData(@"\begin{remark}[Display \[x\] versus inline]")]
+    [InlineData(@"\begin{lemma}[Compactness of $[0, 1)$]")] // a classic argument ends at the first ']' only
+    [InlineData(@"\begin{content}[On $[a, b]$ and $\mathbb{Z}[i]$]")]
     public void Leaves_correct_lines_alone(string line) {
         Assert.Equal(line, Fix.FixLine(line));
     }
