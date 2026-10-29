@@ -158,6 +158,12 @@ takes roughly an hour). Live evidence of progress is the output folder (new
 `step1-…-partN.tex` files) and `lecx status`, and the per-process session folders under
 `C:\Users\miche\gemini-logs\folder-*` (`chat_log.md`).
 
+**If the supervisor is killed, a worker log keeps only its header.** `batch` itself exits only `0`, `1` or `6`;
+any other code (on 2026-10-29 a `4` hours into a run) came from whatever ended the process, not from the pipeline,
+and the children die with it. `worker-N.log` then holds just the `===` line and the command line, and the batch
+prints no `Ergebnis`. What the child finished is on disk: continue each lecture with `lecx finish` (that day the
+Tuesday lecture had stopped after its merge step and resumed at step 2, speech).
+
 ## Running a hand-picked set of videos
 
 `batch` can only select with `--folder`, `--from` and `--limit`, so it cannot run an
