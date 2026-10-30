@@ -157,6 +157,25 @@ public partial class AutoExtractionSession(IExtractionBackend backend, IAutoExtr
     }
 
     /// <summary>
+    /// [AI Context] Non-interactive YouTube entry point, the counterpart of <see cref="RunAsync"/> for
+    /// <c>lecx youtube</c>. Same cleanup around it as menu entry 3; the source folder is not needed,
+    /// since the model reads the video from its URL.
+    /// [Human] YouTube-Aufgaben ohne Menü ausführen.
+    /// </summary>
+    public async Task<bool> RunYouTubeAsync(IReadOnlyList<YouTubeTranscriptionTask> tasks) {
+        _config.TargetFolder = ExtractionHelpers.OutputRoot(_config);
+        Directory.CreateDirectory(_config.TargetFolder);
+
+        await _backend.CleanUpRemoteFilesAsync();
+        try {
+            return await new YouTubeTaskRunner(_config, this).RunAsync(tasks);
+        }
+        finally {
+            await _backend.CleanUpRemoteFilesAsync();
+        }
+    }
+
+    /// <summary>
     /// [AI Context] Validates the source folder and settles the target folder, which defaults to a
     /// subfolder of the source. Shared by the interactive and headless entry points so they cannot
     /// disagree about where output lands.

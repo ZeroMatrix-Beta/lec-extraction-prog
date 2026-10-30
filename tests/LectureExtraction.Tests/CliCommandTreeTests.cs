@@ -30,6 +30,7 @@ public class CliCommandTreeTests {
     [InlineData("status")]
     [InlineData("quota")]
     [InlineData("thoughts")]
+    [InlineData("youtube")]
     public void RootCommand_ExposesTopLevelCommand(string name) {
         var root = CliBootstrapper.BuildRootCommand();
 

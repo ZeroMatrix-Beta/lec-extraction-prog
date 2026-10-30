@@ -46,6 +46,29 @@ key does not resolve (checked **before** any request).
 Identical to `run` minus `--stop-after`, and it never chains into refinement. Produces
 the per-part `.tex` files and stops.
 
+## `lecx youtube` — paid
+
+Menu entry 3 (YouTube) without the menu. The model reads the video straight from YouTube
+(`Part.FromUri`), one request per timestamp fragment, then the usual refinement and PDF. Nothing
+is downloaded, cut or uploaded.
+
+```bash
+lecx youtube --url "https://www.youtube.com/watch?v=IPfi49IbHNU" --duration 1:35:00 --name my-lecture --profile 3 --dry-run
+```
+
+| Option | Meaning |
+|---|---|
+| `--url <link>` | Required. `watch?v=`, `youtu.be/`, `shorts/`, `live/` or a bare id. A playlist's `list=`/`index=` are dropped, so only that one video is sent |
+| `--duration <d>` | Required. Minutes (`90`) or `HH:MM:SS` / `MM:SS`. The app cannot look it up, and the fragments are cut from it |
+| `--name <name>` | Output name. The folder is `<out>/step1-<name>/`, the parts `step1-<name>-partN.tex`. Default `youtube-<video id>` |
+| `--parts <n>` | Number of fragments. Default one per started 45 minutes; they overlap by `--overlap` (config `OverlapSeconds`) |
+| `--out` · `--overlap` · `--model` · `--profile` · `--stop-after extract` · `--thoughts` | As for `run` |
+
+Differences from `run`: **no resume** (a rerun requests every fragment again), no `plan` support
+(use `--dry-run`, which prints the fragments and the key), and `--fps` has no effect. A fragment
+without an answer is left out of the combined file, the refinement still runs, and the command
+exits `6`.
+
 ## `lecx plan` — free
 
 Reports what a run would do and calls nothing. Same selection options as `run`.

@@ -26,21 +26,30 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
     private readonly IAutoExtractionConfig _config = config;
     private readonly IYouTubeTranscriptionHost _host = host;
 
-    public async Task RunAsync() {
-        var tasksToProcess = ResolveTasks();
+    public Task RunAsync() => RunAsync(ResolveTasks());
+
+    /// <summary>
+    /// [AI Context] Runs exactly these tasks, with no prompt. The menu reaches it through
+    /// <see cref="ResolveTasks"/>; <c>lecx youtube</c> builds the task from its flags and calls it directly.
+    /// [Human] Führt genau diese Aufgaben ohne Rückfrage aus.
+    /// </summary>
+    /// <returns>false if the session could not be set up or any task lost a fragment or its refinement.</returns>
+    public async Task<bool> RunAsync(IReadOnlyList<YouTubeTranscriptionTask> tasksToProcess) {
         if (tasksToProcess.Count == 0) {
             Ui.Info("Keine YouTube-Aufgaben zum Verarbeiten.");
-            return;
+            return true;
         }
 
         Ui.Step($"Starte Transkription für {tasksToProcess.Count} YouTube-Video(s)...", "YouTube Mode");
 
-        if (!await _host.EnsureSessionSetupAsync()) return;
+        if (!await _host.EnsureSessionSetupAsync()) return false;
 
+        bool allSucceeded = true;
         foreach (var task in tasksToProcess) {
             if (string.IsNullOrWhiteSpace(task.VideoUrl)) continue;
-            await TranscribeTaskAsync(task);
+            allSucceeded &= await TranscribeTaskAsync(task);
         }
+        return allSucceeded;
     }
 
     /// <summary>
@@ -71,7 +80,7 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
         return tasks;
     }
 
-    private async Task TranscribeTaskAsync(YouTubeTranscriptionTask task) {
+    private async Task<bool> TranscribeTaskAsync(YouTubeTranscriptionTask task) {
         string baseName = string.IsNullOrWhiteSpace(task.OutputName) ? "youtube-lecture" : task.OutputName;
         if (!baseName.StartsWith("step1-", StringComparison.OrdinalIgnoreCase)) {
             baseName = "step1-" + baseName;
@@ -85,6 +94,7 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
         Ui.Step($"Starte API-Extraktion für URL: {task.VideoUrl} ({baseName})", "YouTube Consumer");
         List<string> generatedTexFiles = [];
         string fullOutputTextRaw = "";
+        int missingFragments = 0;
 
         for (int i = 0; i < task.Fragments.Count; i++) {
             var frag = task.Fragments[i];
@@ -99,7 +109,10 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
                 task.VideoUrl, partNum, baseName, parsedPrompt, attachmentParts, generatedTexFiles, targetPartPath
             )).LatexBody;
 
-            if (string.IsNullOrWhiteSpace(texOutput)) continue;
+            if (string.IsNullOrWhiteSpace(texOutput)) {
+                missingFragments++;
+                continue;
+            }
 
             string cleanTex = LatexResponseCleaner.CleanLatexResponse(texOutput);
             fullOutputTextRaw += $"\n\n% --- TEIL {partNum}: {frag.StartTime}-{frag.EndTime} ({frag.PartTitle}) ---\n" + cleanTex;
@@ -113,12 +126,16 @@ public sealed class YouTubeTaskRunner(IAutoExtractionConfig config, IYouTubeTran
             Ui.Success($"Teildatei gespeichert unter: {targetPartPath}");
         }
 
-        if (!string.IsNullOrWhiteSpace(fullOutputTextRaw)) {
-            string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
-            await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
-            Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
-            await _host.RefineYouTubeOutputAsync(combinedPath, task.Fragments.Count);
+        if (string.IsNullOrWhiteSpace(fullOutputTextRaw)) return false;
+
+        string combinedPath = Path.Combine(fileSpecificOutputFolder, $"{baseName}.tex");
+        await System.IO.File.WriteAllTextAsync(combinedPath, fullOutputTextRaw.Trim());
+        Ui.Success($"Zusammengeführte YouTube-Transkription gespeichert unter: {combinedPath}");
+        if (missingFragments > 0) {
+            Ui.Warn($"{missingFragments} von {task.Fragments.Count} Fragment(en) ohne Antwort; die Gesamtdatei ist lückenhaft.", "YouTube Mode");
         }
+        bool refined = await _host.RefineYouTubeOutputAsync(combinedPath, task.Fragments.Count);
+        return refined && missingFragments == 0;
     }
 
     /// <summary>

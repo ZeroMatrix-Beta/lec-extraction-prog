@@ -130,7 +130,7 @@ public static class RunCommand {
         return command;
     }
 
-    private static AutoExtractionSession BuildSession(AiStudioAutoExtractionConfig config, double resumeWindowHours, ParseResult parseResult) {
+    internal static AutoExtractionSession BuildSession(AiStudioAutoExtractionConfig config, double resumeWindowHours, ParseResult parseResult) {
         string envName = ApiKeyProfileResolver.Resolve(config.ActiveApiProfile, config.AiStudioApiKeyEnvNames);
         string apiKey = GoogleAiClientBuilder.ResolveApiKeyByName(envName) ?? "no-key";
         Client client = GoogleAiClientBuilder.BuildAiStudioClient(apiKey);

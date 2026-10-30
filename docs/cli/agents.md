@@ -396,11 +396,7 @@ a request ending in `MAX_TOKENS` with a large thinking count is where a continue
 
 `lecx ask` is registered but refuses with exit `2`. Everything else in `--help` works.
 
-**YouTube has no CLI command.** The YouTube mode (`YouTubeTaskRunner`: the model reads the video
-straight from its URL via `Part.FromUri`, one request per timestamp fragment, no download, no FFmpeg)
-is reachable only from the interactive menu (`3) 📺 YouTube-Video transkribieren`), and that menu
-blocks an unattended run. Its tasks can be declared in `YouTubeTasks` of `*AutoExtractionConfig.json`
-(`VideoUrl`, `OutputName`, `Fragments[]` of `StartTime` / `EndTime` / `PartTitle`), but the menu still
-asks whether to run them. The output goes to `<TargetFolder>/step1-<OutputName>/`. To run a YouTube
-lecture from a script, download it first (e.g. `yt-dlp`) and use `lecx run --video` on the file: that
-also gives it the normal segmenting, resume and part naming.
+**YouTube: `lecx youtube`, not the menu.** `lecx youtube --url <link> --duration <min|HH:MM:SS>`
+runs menu entry 3 without its questions (see [commands.md](commands.md#lecx-youtube--paid)). The
+model reads the video from its URL, so nothing is downloaded, but there is also no resume: a rerun
+asks for every fragment again. `YouTubeTasks` in the config is still read only by the menu.

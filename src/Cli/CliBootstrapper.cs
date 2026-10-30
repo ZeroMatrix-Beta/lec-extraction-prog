@@ -134,6 +134,7 @@ public static class CliBootstrapper {
         });
         root.Add(RefineCommands.BuildRefine());
         root.Add(RefineCommands.BuildPdf());
+        root.Add(YouTubeCommand.Build());
         root.Add(BatchCommand.Build());
         root.Add(ChatCommand.Build());
         root.Add(CleanCommand.Build());
