@@ -146,13 +146,18 @@
 \colorlet{TocSecColor}{TocEntryBlue}
 % 2026-10-25: Subsections in TOC set to black (previously TocEntryBrown):
 % \colorlet{TocSubsecColor}{TocEntryBrown}
-\colorlet{TocSubsecColor}{black}
+% 2026-10-29: Distinct bold number colors and softened dark title colors for TOC hierarchy:
+\colorlet{TocSecNumColor}{EnvTheorem}
+\colorlet{TocSubsecNumColor}{TextBoldColor}
+\colorlet{TocSubsecColor}{black!85}
 % 2026-10-25: Subsubsections in TOC set to black (previously TocSubsecColor):
 % \colorlet{TocSubsubColor}{TocSubsecColor}
-\colorlet{TocSubsubColor}{black}
+\colorlet{TocSubsubNumColor}{TocEntryBrown}
+\colorlet{TocSubsubColor}{black!70}
 \colorlet{TocLabelColor}{ThemePrimary!85!black}
 \colorlet{TocProofColor}{OliveGreen} % titled proofWrapper entries, in the color of the proof heading (ProofTint)
-\colorlet{TocSummaryColor}{TocSubsecColor} % Summary of Key Concepts inherits subsection color
+\colorlet{TocSummaryIconColor}{TocEntryBrown}
+\colorlet{TocSummaryColor}{black!80} % Summary of Key Concepts text color
 
 % 3. SHADOWS & PROOF GLOBALS
 \colorlet{ShadowNormal}{black!50}
@@ -191,9 +196,9 @@
 \colorlet{EnvAIBorder}{EnvAI!85!black}
 \colorlet{EnvAIProof}{EnvAIBorder!50!ProofTint}
 \colorlet{EnvAIFallbackProof}{EnvAI!50!ProofTint}
-% 2026-10-25: Title text color for ai-note (65% white mixed into #668F99 for clear contrast against EnvAIBorder):
+% 2026-10-26: Title text color for ai-note (82% white mixed into #668F99 for enhanced whiteness and contrast against EnvAIBorder):
 \definecolor{EnvAITitleTextBase}{HTML}{668F99}
-\colorlet{EnvAITitleText}{EnvAITitleTextBase!35!white}
+\colorlet{EnvAITitleText}{EnvAITitleTextBase!18!white}
 \colorlet{EnvStudentBg}{EnvStudent!5}
 \colorlet{EnvStudentProof}{EnvStudent!50!ProofTint}
 \colorlet{EnvBreakProof}{EnvBreak!50!ProofTint}
@@ -409,7 +414,13 @@ pdfauthor={Prof. Rahul Pandharipande}
 
 \setlist[description]{
   style=unboxed,
-  labelsep=0.333em plus 0.167em minus 0.111em
+  leftmargin=0pt,
+  font=\sffamily\bfseries\color{EnumerateBullet}\colorlet{TextBoldColor}{EnumerateBullet},
+  topsep=\dimexpr\customenvspace-\customparskip\relax,
+  partopsep=0pt,
+  itemsep=\dimexpr\customenvspace-\customparskip\relax,
+  parsep=\customparskip,
+  labelsep=0.5em
 }
 
 % Abstände bei geschachtelten Listen 
@@ -449,8 +460,9 @@ pdfauthor={Prof. Rahul Pandharipande}
 \fancyfoot[L]{\parbox[t]{0.47\textwidth}{\sloppy\raggedright\small\sffamily\color{HeaderFooterFaint}\rightmark}}
 \fancyfoot[R]{\parbox[t]{0.47\textwidth}{\sloppy\raggedleft\small\sffamily\color{HeaderFooterFaint}\lastxmark}}
 
-\renewcommand{\headrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 0.5pt\hfill}}
-\renewcommand{\footrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 0.5pt\hfill}}
+% 2026-10-26: Header and footer rule thickness matched to nice box (overview) and aiNote at 1pt (previously 0.5pt):
+\renewcommand{\headrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 1pt\hfill}}
+\renewcommand{\footrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 1pt\hfill}}
 
 \fancypagestyle{plain}{%
   \fancyhf{}%
@@ -544,23 +556,23 @@ pdfauthor={Prof. Rahul Pandharipande}
 % Level 2 (Section): Lecture Sections
 \titlecontents{section}[\tocindent{1}]
   {\addvspace{0.8ex}\proofwrapper@tocinner{1}\hypersetup{linkcolor=TocSecColor}\sffamily\small\color{TocSecColor}}
-  {\color{TocLabelColor}\thecontentslabel\hspace{1.2ex}\color{TocSecColor}}
+  {{\bfseries\color{TocSecNumColor}\thecontentslabel}\hspace{1.2ex}\color{TocSecColor}}
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSecColor}\contentspage}
 
 % Level 3 (Subsection): Subsections
 \titlecontents{subsection}[\tocindent{2}]
   {\addvspace{0.4ex}\proofwrapper@tocinner{2}\hypersetup{linkcolor=TocSubsecColor}\sffamily\footnotesize\color{TocSubsecColor}}
-  {\color{TocSubsecColor}\thecontentslabel\hspace{1.2ex}\color{TocSubsecColor}}
+  {{\bfseries\color{TocSubsecNumColor}\thecontentslabel}\hspace{1.2ex}\color{TocSubsecColor}}
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSubsecColor}\contentspage}
 
 % Level 4 (Subsubsection): Subsubsections
 \titlecontents{subsubsection}[\tocindent{3}]
   {\addvspace{0.2ex}\proofwrapper@tocinner{3}\hypersetup{linkcolor=TocSubsubColor}\sffamily\footnotesize\color{TocSubsubColor}}
-  {\color{TocSubsubColor}\thecontentslabel\hspace{1.2ex}\color{TocSubsubColor}}
+  {{\bfseries\color{TocSubsubNumColor}\thecontentslabel}\hspace{1.2ex}\color{TocSubsubColor}}
   {}
-  {\normalfont\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSubsubColor}\contentspage}
+  {\normalfont\sffamily\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSubsubColor}\contentspage}
 
 % Titled proofWrapper: pen nib in place of a number, one level below the heading it sits under
 \titlecontents{proofwrapper}[0pt]
@@ -575,7 +587,7 @@ pdfauthor={Prof. Rahul Pandharipande}
 \titlecontents{summary}[\tocindent{1}]
   {\addvspace{0.6ex}\hypersetup{linkcolor=TocSummaryColor}\sffamily\small\color{TocSummaryColor}}
   {}
-  {\faStickyNote\hspace{0.6em}}
+  {{\color{TocSummaryIconColor}\faStickyNote}\hspace{0.6em}}
   {\normalfont\sffamily\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSummaryColor}\contentspage}
 \makeatother
 
@@ -786,15 +798,13 @@ code={
   \ifinsideproof
     \tcbset{
       underlay unbroken and last={
-        % 2026-10-25: Single continuous path in pure EnvSpokenProof (MidnightBlue proof tint, no gradient/cyan).
-        % Curves into the bottom-left rounded corner (arc=3mm), tapers smoothly from 3pt to 0pt,
-        % and continues 2.5mm onto the bottom edge to disappear seamlessly without any color jump:
-        \fill[EnvSpokenProof] (frame.north west) --
-          ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        % 2026-10-26: Split straight vertical bar as an axis-aligned rectangle and bottom-left corner arc.
+        % This ensures uniform width across unbroken and broken boxes without pixel snapping discrepancies:
+        \fill[EnvSpokenProof] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+        \fill[EnvSpokenProof] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
           ([xshift=5.5mm]frame.south west)
           .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-          ([xshift=3pt, yshift=3mm]frame.south west) --
-          ([xshift=3pt]frame.north west) -- cycle;
+          ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
       },
       underlay first and middle={
         \fill[EnvSpokenProof] (frame.north west) rectangle ([xshift=3pt]frame.south west);
@@ -803,15 +813,13 @@ code={
   \else
     \tcbset{
       underlay unbroken and last={
-        % 2026-10-25: Single continuous path in pure EnvSpoken (MidnightBlue, no gradient/cyan).
-        % Curves into the bottom-left rounded corner (arc=3mm), tapers smoothly from 3pt to 0pt,
-        % and continues 2.5mm onto the bottom edge to disappear seamlessly without any color jump:
-        \fill[EnvSpoken] (frame.north west) --
-          ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        % 2026-10-26: Split straight vertical bar as an axis-aligned rectangle and bottom-left corner arc.
+        % This ensures uniform width across unbroken and broken boxes without pixel snapping discrepancies:
+        \fill[EnvSpoken] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+        \fill[EnvSpoken] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
           ([xshift=5.5mm]frame.south west)
           .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-          ([xshift=3pt, yshift=3mm]frame.south west) --
-          ([xshift=3pt]frame.north west) -- cycle;
+          ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
       },
       underlay first and middle={
         \fill[EnvSpoken] (frame.north west) rectangle ([xshift=3pt]frame.south west);
@@ -828,20 +836,21 @@ breakable
 \newtcolorbox{overview}[1][]{
 enhanced,
 colback=white,
-boxrule=0.5pt,
+boxrule=1pt,
 dynamic shadow,
 varwidth boxed title*=-30pt,
 % 2026-10-25: nice-box / overview colored to match aiNote (EnvAIBorder and EnvAIBg, previously EnvNote / BurntOrange):
+% 2026-10-26: Border width matched to aiNote at 1pt (previously 0.5pt):
 code={
   \ifinsideproof
     \tcbset{
       colframe=EnvAIProof,
-      boxed title style={colback=EnvAIBg, colframe=EnvAIProof, boxrule=0.5pt}
+      boxed title style={colback=EnvAIBg, colframe=EnvAIProof, boxrule=1pt}
     }
   \else
     \tcbset{
       colframe=EnvAIBorder,
-      boxed title style={colback=EnvAIBg, colframe=EnvAIBorder, boxrule=0.5pt}
+      boxed title style={colback=EnvAIBg, colframe=EnvAIBorder, boxrule=1pt}
     }
   \fi
   \ifboolexpr{ test {\ifstrequal{#1}{Summary of Key Concepts}} or test {\ifstrequal{#1}{Summary}} }{%
@@ -868,16 +877,13 @@ code={
   \ifinsideproof
     \tcbset{
       underlay unbroken and last={
-        % 2026-10-25: Single continuous path in pure EnvTeacherProof (width matched to speech at 3pt).
-        % Curves into bottom-left corner (arc=3mm), tapers from 3pt to 0pt, continues 2.5mm onto bottom edge.
-        % Previously 2pt straight rectangle:
-        % \fill[EnvTeacherProof] (frame.north west) rectangle ([xshift=2pt, yshift=3mm]frame.south west);
-        \fill[EnvTeacherProof] (frame.north west) --
-          ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        % 2026-10-26: Split straight vertical bar as an axis-aligned rectangle and bottom-left corner arc.
+        % This ensures uniform width across unbroken and broken boxes without pixel snapping discrepancies:
+        \fill[EnvTeacherProof] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+        \fill[EnvTeacherProof] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
           ([xshift=5.5mm]frame.south west)
           .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-          ([xshift=3pt, yshift=3mm]frame.south west) --
-          ([xshift=3pt]frame.north west) -- cycle;
+          ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
       },
       underlay first and middle={
         % 2026-10-25: Width matched to speech at 3pt (previously 2pt):
@@ -887,16 +893,13 @@ code={
   \else
     \tcbset{
       underlay unbroken and last={
-        % 2026-10-25: Single continuous path in pure EnvTeacherBorder (width matched to speech at 3pt).
-        % Curves into bottom-left corner (arc=3mm), tapers from 3pt to 0pt, continues 2.5mm onto bottom edge.
-        % Previously 2pt straight rectangle:
-        % \fill[EnvTeacherBorder] (frame.north west) rectangle ([xshift=2pt, yshift=3mm]frame.south west);
-        \fill[EnvTeacherBorder] (frame.north west) --
-          ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        % 2026-10-26: Split straight vertical bar as an axis-aligned rectangle and bottom-left corner arc.
+        % This ensures uniform width across unbroken and broken boxes without pixel snapping discrepancies:
+        \fill[EnvTeacherBorder] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+        \fill[EnvTeacherBorder] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
           ([xshift=5.5mm]frame.south west)
           .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-          ([xshift=3pt, yshift=3mm]frame.south west) --
-          ([xshift=3pt]frame.north west) -- cycle;
+          ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
       },
       underlay first and middle={
         % 2026-10-25: Width matched to speech at 3pt (previously 2pt):
@@ -917,20 +920,19 @@ colback=white,
 colupper=black,
 fonttitle=\bfseries\sffamily,
 coltitle=black,
-boxrule=1.5pt,
-arc=4pt,
-dynamic color shadow=#1!30,
+boxrule=1.2pt,
+arc=3.5pt,
 varwidth boxed title*=-30pt,
 code={
   \ifinsideproof
     \tcbset{
       colframe=#1!50!ProofTint,
-      boxed title style={colback=white, colframe=#1!50!ProofTint, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+      boxed title style={colback=#1!5!white, colframe=#1!50!ProofTint, boxrule=0.8pt, top=2.5pt, bottom=2.5pt, left=5pt, right=5pt}
     }
   \else
     \tcbset{
       colframe=#1,
-      boxed title style={colback=white, colframe=#1, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+      boxed title style={colback=#1!5!white, colframe=#1, boxrule=0.8pt, top=2.5pt, bottom=2.5pt, left=5pt, right=5pt}
     }
   \fi
 },
@@ -1057,13 +1059,13 @@ code={
 \newtcolorbox{note}[1][Administrative Metanote]{
 enhanced,
 frame hidden,
-colback=white,
-opacityback=0,
+colback=EnvMeta!3!white,
 code={
+  % 2026-10-26: Dashed borderline thickness matched to aiNote at 1pt (previously 0.5pt):
   \ifinsideproof
-    \tcbset{borderline={0.5pt}{0pt}{EnvMetaProof, dashed}}
+    \tcbset{borderline={1pt}{0pt}{EnvMetaProof, dashed}}
   \else
-    \tcbset{borderline={0.5pt}{0pt}{EnvMeta, dashed}}
+    \tcbset{borderline={1pt}{0pt}{EnvMeta, dashed}}
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvMetaProof\else EnvMeta\fi}{\faEye\ \ #1}},
@@ -1106,17 +1108,13 @@ code={
   \ifinsideproof
     \tcbset{
       underlay unbroken and last={
-        % 2026-10-25: Single continuous path in pure EnvStudentProof (no gradient).
-        % Curves into the bottom-left rounded corner (arc=3mm), tapers smoothly from 3pt to 0pt,
-        % and continues 2.5mm onto the bottom edge to disappear seamlessly:
-        % Previously stopped flat at yshift=3mm:
-        % \fill[EnvStudentProof] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
-        \fill[EnvStudentProof] (frame.north west) --
-          ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        % 2026-10-26: Split straight vertical bar as an axis-aligned rectangle and bottom-left corner arc.
+        % This ensures uniform width across unbroken and broken boxes without pixel snapping discrepancies:
+        \fill[EnvStudentProof] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+        \fill[EnvStudentProof] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
           ([xshift=5.5mm]frame.south west)
           .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-          ([xshift=3pt, yshift=3mm]frame.south west) --
-          ([xshift=3pt]frame.north west) -- cycle;
+          ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
       },
       underlay first and middle={
         \fill[EnvStudentProof] (frame.north west) rectangle ([xshift=3pt]frame.south west);
@@ -1125,17 +1123,13 @@ code={
   \else
     \tcbset{
       underlay unbroken and last={
-        % 2026-10-25: Single continuous path in pure EnvStudent (no gradient).
-        % Curves into the bottom-left rounded corner (arc=3mm), tapers smoothly from 3pt to 0pt,
-        % and continues 2.5mm onto the bottom edge to disappear seamlessly:
-        % Previously stopped flat at yshift=3mm:
-        % \fill[EnvStudent] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
-        \fill[EnvStudent] (frame.north west) --
-          ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+        % 2026-10-26: Split straight vertical bar as an axis-aligned rectangle and bottom-left corner arc.
+        % This ensures uniform width across unbroken and broken boxes without pixel snapping discrepancies:
+        \fill[EnvStudent] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+        \fill[EnvStudent] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
           ([xshift=5.5mm]frame.south west)
           .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-          ([xshift=3pt, yshift=3mm]frame.south west) --
-          ([xshift=3pt]frame.north west) -- cycle;
+          ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
       },
       underlay first and middle={
         \fill[EnvStudent] (frame.north west) rectangle ([xshift=3pt]frame.south west);
@@ -1393,6 +1387,35 @@ breakable
   \noindent\textcolor{ChapLine}{\rule{\textwidth}{1.5pt}}%
 }
 
+% --- ORDINAL DATE FORMATTING (1st, 2nd, 3rd, 4th... 31st) ---
+\makeatletter
+\newcommand{\ordinalsuffix}[1]{%
+  \ifcase\numexpr(#1)\relax
+    th\or st\or nd\or rd\or th\or th\or th\or th\or th\or th% 0-9
+  \or th\or th\or th\or th\or th\or th\or th\or th\or th\or th% 10-19
+  \or th\or st\or nd\or rd\or th\or th\or th\or th\or th\or th% 20-29
+  \or th\or st\else th\fi}
+
+\makeatother
+
+% "17 September 2023" -> 17th September 2023. A date that does not start with a day number
+% ("September 17, 2023", an empty one) is printed unchanged instead of stopping the compile
+% (the pipeline's English preamble is built from this one).
+\ExplSyntaxOn
+\seq_new:N \l__ordinal_date_seq
+\NewDocumentCommand{\formatordinaldate}{m}
+  {
+    \regex_extract_once:nnNTF { \A \s* (\d+) \s+ (.*?) \s* \Z } {#1} \l__ordinal_date_seq
+      {
+        \seq_item:Nn \l__ordinal_date_seq {2}
+        \textsuperscript { \ordinalsuffix { \seq_item:Nn \l__ordinal_date_seq {2} } }
+        \c_space_tl
+        \seq_item:Nn \l__ordinal_date_seq {3}
+      }
+      {#1}
+  }
+\ExplSyntaxOff
+
 % Custom Lecture Chapter Command with Optional Semester/Week Number
 \newif\ifrestorelecturesubcounters
 \newcounter{currentweek}
@@ -1422,9 +1445,9 @@ breakable
       \setcounter{chapter}{\numexpr#1-1\relax}%
     }%
   }%
-  \chapter[\texorpdfstring{#2, #3\quad---\quad #5}{#2, #3 --- #5}]{%
-    {\Large\color{ChapSubtitleText}#2 #4}%
-    \texorpdfstring{\\[1ex]}{--- }%
+  \chapter[\texorpdfstring{#2, \formatordinaldate{#3}\quad---\quad #5}{#2, #3 --- #5}]{%
+    {\Large\color{ChapSubtitleText}#2, \formatordinaldate{#4}}%
+    \texorpdfstring{\\[1.4ex]}{--- }%
     {\LARGE\raggedleft\color{ChapTitleText}#5}%
   }%
   \ifrestorelecturesubcounters
@@ -1434,26 +1457,26 @@ breakable
     \setcounter{figure}{\TempFig}%
     \setcounter{table}{\TempTab}%
   \fi
-  \markboth{\chaptername\ \thechapter\ \ ---\ \ #2 #4\ \ ---\ \ #5}{}%
+  \markboth{\chaptername\ \thechapter\ \ ---\ \ #2, \formatordinaldate{#4}\ \ ---\ \ #5}{}%
 }
 
 % Chapter 0 for the background the lectures assume (content/prerequisites.tex): its own part line
 % "Prerequisites" in the TOC, a book icon instead of the calendar, and "PREREQUISITES" instead of
 % "WEEK n" above the title. Sections and results are numbered 0.x.
 % \prerequisiteschapter{Subtitle}{Title}
-\newcommand{\chapterlabel}{\MakeUppercase{\chaptertitlename}\ \thechapter}
+\newcommand{\chapterlabel}{\chaptertitlename\ \thechapter}
 \NewDocumentCommand{\prerequisiteschapter}{ m m }{%
   \phantomsection
   \addcontentsline{toc}{part}{Prerequisites}%
   \addtocontents{toc}{\protect\renewcommand{\protect\tocchaptericon}{\protect\faBook}}%
   \setcounter{chapter}{-1}%
-  \renewcommand{\chapterlabel}{\MakeUppercase{Prerequisites}}%
+  \renewcommand{\chapterlabel}{Prerequisites}%
   \chapter[#2]{%
     {\Large\color{ChapSubtitleText}#1}%
     \texorpdfstring{\\[1ex]}{--- }%
     {\LARGE\raggedleft\color{ChapTitleText}#2}%
   }%
-  \renewcommand{\chapterlabel}{\MakeUppercase{\chaptertitlename}\ \thechapter}%
+  \renewcommand{\chapterlabel}{\chaptertitlename\ \thechapter}%
   \addtocontents{toc}{\protect\renewcommand{\protect\tocchaptericon}{\protect\faCalendarDay}}%
   \markboth{Prerequisites\ \ ---\ \ #2}{}%
 }
@@ -1486,18 +1509,18 @@ breakable
 
 \newcommand{\SecRule}{%
   \vspace{-0.55em}\noindent%
-  \textcolor{SecLineLeft}{\rule{0.28\textwidth}{1.25pt}}%
+  \textcolor{SecLineLeft}{\rule{0.28\textwidth}{1.0pt}}%
   \textcolor{SecLineMid}{\rule{0.36\textwidth}{1.0pt}}%
-  \textcolor{SecLineRight}{\rule{0.36\textwidth}{0.75pt}}%
+  \textcolor{SecLineRight}{\rule{0.36\textwidth}{1.0pt}}%
 }
 
 \newcommand{\SecSym}{%
   \phantomsection%
   \mbox{%
-    \cbar{SecBarOne}{3.5pt}{1.55ex}%
-    \cbar{SecBarTwo}{2.6pt}{1.55ex}%
-    \cbar{SecBarThree}{1.8pt}{1.55ex}%
-    \cbar{SecBarFour}{1.1pt}{1.55ex}%
+    \cbar{SecBarOne}{3pt}{1.55ex}%
+    \cbar{SecBarTwo}{2.2pt}{1.55ex}%
+    \cbar{SecBarThree}{1.5pt}{1.55ex}%
+    \cbar{SecBarFour}{0.95pt}{1.55ex}%
     \kern0.4em%
   }%
   \color{\ifinsideproof SecTitleColorProof\else SecTitleCol\fi}%
@@ -1506,9 +1529,9 @@ breakable
 \newcommand{\SubsecSym}{%
   \phantomsection%
   \mbox{%
-    \cbar{SubSecBarOne}{2.8pt}{1.45ex}%
-    \cbar{SubSecBarTwo}{2.0pt}{1.45ex}%
-    \cbar{SubSecBarThree}{1.2pt}{1.45ex}%
+    \cbar{SubSecBarOne}{3pt}{1.45ex}%
+    \cbar{SubSecBarTwo}{2.15pt}{1.45ex}%
+    \cbar{SubSecBarThree}{1.3pt}{1.45ex}%
     \kern0.4em%
   }%
   \color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleCol\fi}%
@@ -1517,8 +1540,8 @@ breakable
 \newcommand{\SubsubsecSym}{%
   \phantomsection%
   \mbox{%
-    \cbar{SubSubSecBarOne}{2.4pt}{1.35ex}%
-    \cbar{SubSubSecBarTwo}{1.4pt}{1.35ex}%
+    \cbar{SubSubSecBarOne}{3pt}{1.35ex}%
+    \cbar{SubSubSecBarTwo}{1.75pt}{1.35ex}%
     \kern0.35em%
   }%
   \color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleCol\fi}%

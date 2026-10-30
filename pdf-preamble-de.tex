@@ -139,9 +139,13 @@
 \colorlet{TocPartColor}{ThemePrimary!90!black}
 \colorlet{TocChapColor}{ThemeSecondary!90!black}
 \colorlet{TocSecColor}{TocEntryBlue}
-% 2026-10-25: subsections and subsubsections in the TOC in black (previously TocEntryBrown / gray):
-\colorlet{TocSubsecColor}{black}
-\colorlet{TocSubsubColor}{black}
+% 2026-10-29 (from algebra-1): TOC numbers bold, coloured per level; softened dark title colours
+% (previously black for subsections and subsubsections):
+\colorlet{TocSecNumColor}{EnvTheorem}
+\colorlet{TocSubsecNumColor}{TextBoldColor}
+\colorlet{TocSubsecColor}{black!85}
+\colorlet{TocSubsubNumColor}{TocEntryBrown}
+\colorlet{TocSubsubColor}{black!70}
 \colorlet{TocLabelColor}{ThemePrimary!85!black}
 \colorlet{TocProofColor}{OliveGreen}
 
@@ -194,9 +198,9 @@
 \colorlet{EnvAIBorder}{EnvAI!85!black}
 \colorlet{EnvAIProof}{EnvAIBorder!50!ProofTint}
 \colorlet{EnvAIFallbackProof}{EnvAI!50!ProofTint}
-% 2026-10-25: ai-note title text (65% white mixed into #668F99, for contrast against EnvAIBorder):
+% 2026-10-26: ai-note title text (82% white mixed into #668F99, for contrast against EnvAIBorder):
 \definecolor{EnvAITitleTextBase}{HTML}{668F99}
-\colorlet{EnvAITitleText}{EnvAITitleTextBase!35!white}
+\colorlet{EnvAITitleText}{EnvAITitleTextBase!18!white}
 \colorlet{EnvStudentBg}{EnvStudent!5}
 \colorlet{EnvStudentProof}{EnvStudent!50!ProofTint}
 \colorlet{EnvBreakProof}{EnvBreak!50!ProofTint}
@@ -367,8 +371,15 @@
   ref=(\alph*)
 }
 \setlist[description]{
+  % 2026-10-29: labels like the enumerate ones, spaced like the theorem environments
   style=unboxed,
-  labelsep=0.333em plus 0.167em minus 0.111em
+  leftmargin=0pt,
+  font=\sffamily\bfseries\color{EnumerateBullet}\colorlet{TextBoldColor}{EnumerateBullet},
+  topsep=\dimexpr\customenvspace-\customparskip\relax,
+  partopsep=0pt,
+  itemsep=\dimexpr\customenvspace-\customparskip\relax,
+  parsep=\customparskip,
+  labelsep=0.5em
 }
 \setlist[itemize,2]{topsep=0pt, itemsep=0pt, parsep=0pt}
 \setlist[itemize,3]{topsep=0pt, itemsep=0pt, parsep=0pt}
@@ -417,8 +428,9 @@
 
 % A plain \hrule, not an \hbox: a box in the head's vbox gets a full \baselineskip above it,
 % which pushed the line out of the one-line head (it vanished, and the head became 21pt tall).
-\renewcommand{\headrule}{\vskip3pt{\color{HeaderFooterLine}\hrule height 0.5pt width \headwidth}\vskip-3.5pt}
-\renewcommand{\footrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 0.5pt\hfill}}
+% 2026-10-26: header and footer rules 1pt, like the overview and aiNote frames (previously 0.5pt):
+\renewcommand{\headrule}{\vskip3pt{\color{HeaderFooterLine}\hrule height 1pt width \headwidth}\vskip-4pt}
+\renewcommand{\footrule}{\hbox to\headwidth{\color{HeaderFooterLine}\leaders\hrule height 1pt\hfill}}
 
 \fancypagestyle{plain}{%
   \fancyhf{}%
@@ -504,23 +516,23 @@
 % Level 2 (Section): Lecture Sections
 \titlecontents{section}[\tocindent{1}]
   {\addvspace{0.8ex}\proofwrapper@tocinner{1}\hypersetup{linkcolor=TocSecColor}\sffamily\small\color{TocSecColor}}
-  {\color{TocLabelColor}\thecontentslabel\hspace{1.2ex}\color{TocSecColor}}
+  {{\bfseries\color{TocSecNumColor}\thecontentslabel}\hspace{1.2ex}\color{TocSecColor}}
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSecColor}\contentspage}
 
 % Level 3 (Subsection): Subsections
 \titlecontents{subsection}[\tocindent{2}]
   {\addvspace{0.4ex}\proofwrapper@tocinner{2}\hypersetup{linkcolor=TocSubsecColor}\sffamily\footnotesize\color{TocSubsecColor}}
-  {\color{TocSubsecColor}\thecontentslabel\hspace{1.2ex}\color{TocSubsecColor}}
+  {{\bfseries\color{TocSubsecNumColor}\thecontentslabel}\hspace{1.2ex}\color{TocSubsecColor}}
   {}
   {\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSubsecColor}\contentspage}
 
 % Level 4 (Subsubsection): Subsubsections
 \titlecontents{subsubsection}[\tocindent{3}]
   {\addvspace{0.2ex}\proofwrapper@tocinner{3}\hypersetup{linkcolor=TocSubsubColor}\sffamily\footnotesize\color{TocSubsubColor}}
-  {\color{TocSubsubColor}\thecontentslabel\hspace{1.2ex}\color{TocSubsubColor}}
+  {{\bfseries\color{TocSubsubNumColor}\thecontentslabel}\hspace{1.2ex}\color{TocSubsubColor}}
   {}
-  {\normalfont\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSubsubColor}\contentspage}
+  {\normalfont\sffamily\color{HeaderFooterLine}\titlerule*[0.6pc]{.}\color{TocSubsubColor}\contentspage}
 
 % Titled proofWrapper
 \titlecontents{proofwrapper}[0pt]
@@ -735,12 +747,13 @@
 \tcbset{
   accent bar/.style={
     underlay unbroken and last={
-      \fill[#1] (frame.north west) --
-        ([yshift=3mm]frame.south west) arc (180:270:3mm) --
+      % 2026-10-26: the straight part is its own axis-aligned rectangle, so the bar is equally wide
+      % in unbroken and broken boxes (no pixel-snapping difference); the corner piece follows it
+      \fill[#1] (frame.north west) rectangle ([xshift=3pt, yshift=3mm]frame.south west);
+      \fill[#1] ([yshift=3mm]frame.south west) arc (180:270:3mm) --
         ([xshift=5.5mm]frame.south west)
         .. controls ([xshift=3.5mm, yshift=0.2pt]frame.south west) and ([xshift=3pt, yshift=1.2mm]frame.south west) ..
-        ([xshift=3pt, yshift=3mm]frame.south west) --
-        ([xshift=3pt]frame.north west) -- cycle;
+        ([xshift=3pt, yshift=3mm]frame.south west) -- cycle;
     },
     underlay first and middle={
       \fill[#1] (frame.north west) rectangle ([xshift=3pt]frame.south west);
@@ -773,20 +786,21 @@ breakable
 \newtcolorbox{overview}[1][]{
 enhanced,
 colback=white,
-boxrule=0.5pt,
+boxrule=1pt,
 dynamic shadow,
 varwidth boxed title*=-30pt,
-% 2026-10-25: coloured like aiNote (EnvAIBorder and EnvAIBg, previously EnvNote / BurntOrange):
+% 2026-10-25: coloured like aiNote (EnvAIBorder and EnvAIBg, previously EnvNote / BurntOrange);
+% 2026-10-26: frame 1pt like aiNote (previously 0.5pt):
 code={
   \ifinsideproof
     \tcbset{
       colframe=EnvAIProof,
-      boxed title style={colback=EnvAIBg, colframe=EnvAIProof, boxrule=0.5pt}
+      boxed title style={colback=EnvAIBg, colframe=EnvAIProof, boxrule=1pt}
     }
   \else
     \tcbset{
       colframe=EnvAIBorder,
-      boxed title style={colback=EnvAIBg, colframe=EnvAIBorder, boxrule=0.5pt}
+      boxed title style={colback=EnvAIBg, colframe=EnvAIBorder, boxrule=1pt}
     }
   \fi
 },
@@ -825,20 +839,20 @@ colback=white,
 colupper=black,
 fonttitle=\bfseries\sffamily,
 coltitle=black,
-boxrule=1.5pt,
-arc=4pt,
-dynamic color shadow=#1!30,
+% 2026-10-29: thinner frame, no shadow, tinted title tab (previously 1.5pt, arc 4pt, coloured shadow, white tab):
+boxrule=1.2pt,
+arc=3.5pt,
 varwidth boxed title*=-30pt,
 code={
   \ifinsideproof
     \tcbset{
       colframe=#1!50!ProofTint,
-      boxed title style={colback=white, colframe=#1!50!ProofTint, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+      boxed title style={colback=#1!5!white, colframe=#1!50!ProofTint, boxrule=0.8pt, top=2.5pt, bottom=2.5pt, left=5pt, right=5pt}
     }
   \else
     \tcbset{
       colframe=#1,
-      boxed title style={colback=white, colframe=#1, boxrule=0.5pt, top=2pt, bottom=2pt, left=4pt, right=4pt}
+      boxed title style={colback=#1!5!white, colframe=#1, boxrule=0.8pt, top=2.5pt, bottom=2.5pt, left=5pt, right=5pt}
     }
   \fi
 },
@@ -965,13 +979,13 @@ code={
 \newtcolorbox{note}[1][Organisatorische Metanotiz]{
 enhanced,
 frame hidden,
-colback=white,
-opacityback=0,
+colback=EnvMeta!3!white,
 code={
+  % 2026-10-26: tinted background, dashed line 1pt like aiNote (previously transparent, 0.5pt):
   \ifinsideproof
-    \tcbset{borderline={0.5pt}{0pt}{EnvMetaProof, dashed}}
+    \tcbset{borderline={1pt}{0pt}{EnvMetaProof, dashed}}
   \else
-    \tcbset{borderline={0.5pt}{0pt}{EnvMeta, dashed}}
+    \tcbset{borderline={1pt}{0pt}{EnvMeta, dashed}}
   \fi
 },
 title={\sffamily\bfseries\textcolor{\ifinsideproof EnvMetaProof\else EnvMeta\fi}{\faEye\ \ #1}},
@@ -1286,8 +1300,8 @@ breakable
     }%
   }%
   \chapter[\texorpdfstring{#2, #3\quad---\quad #5}{#2, #3 --- #5}]{%
-    {\Large\color{ChapSubtitleText}#2 #4}%
-    \texorpdfstring{\\[1ex]}{--- }%
+    {\Large\color{ChapSubtitleText}#2, #4}% 2026-10-29: comma after the weekday, more space above the title
+    \texorpdfstring{\\[1.4ex]}{--- }%
     {\LARGE\raggedleft\color{ChapTitleText}#5}%
   }%
   \ifrestorelecturesubcounters
@@ -1307,14 +1321,14 @@ breakable
   \IfValueTF{#1}{%
     \chapter[\texorpdfstring{#2, #1\quad---\quad #3}{#2, #1 --- #3}]{%
       {\Large\color{ChapSubtitleText}#2\ ---\ #1}%
-      \texorpdfstring{\\[1ex]}{--- }%
+      \texorpdfstring{\\[1.4ex]}{--- }%
       {\LARGE\raggedleft\color{ChapTitleText}#3}%
     }%
     \markboth{\chaptername\ \thechapter\ \ ·\ \ #2, #1}{}%
   }{%
     \chapter[\texorpdfstring{#2\quad---\quad #3}{#2 --- #3}]{%
       {\Large\color{ChapSubtitleText}#2}%
-      \texorpdfstring{\\[1ex]}{--- }%
+      \texorpdfstring{\\[1.4ex]}{--- }%
       {\LARGE\raggedleft\color{ChapTitleText}#3}%
     }%
     \markboth{\chaptername\ \thechapter\ \ ·\ \ #2}{}%
@@ -1322,7 +1336,7 @@ breakable
   \InsertMark{gs-sec}{}\InsertMark{gs-subsec}{}\InsertMark{gs-subsubsec}{}%
 }
 
-\newcommand{\chapterlabel}{\MakeUppercase{\chaptertitlename}\ \thechapter}
+\newcommand{\chapterlabel}{\chaptertitlename\ \thechapter} % 2026-10-29: "Woche n", no longer upper case
 \titlespacing*{\chapter}{0pt}{-20pt}{18pt plus 4pt minus 2pt}
 
 \titleformat{\chapter}[display]
@@ -1335,19 +1349,19 @@ breakable
 % Three-colour rule under every \section
 \newcommand{\SecRule}{%
   \vspace{-0.55em}\noindent%
-  \textcolor{SecLineLeft}{\rule{0.28\textwidth}{1.25pt}}%
+  \textcolor{SecLineLeft}{\rule{0.28\textwidth}{1.0pt}}%
   \textcolor{SecLineMid}{\rule{0.36\textwidth}{1.0pt}}%
-  \textcolor{SecLineRight}{\rule{0.36\textwidth}{0.75pt}}%
+  \textcolor{SecLineRight}{\rule{0.36\textwidth}{1.0pt}}%
 }
 
 % Bars in front of the heading text, which follows in the heading colour
 \newcommand{\SecSym}{%
   \phantomsection%
   \mbox{%
-    \cbar{SecBarOne}{3.5pt}{1.55ex}%
-    \cbar{SecBarTwo}{2.6pt}{1.55ex}%
-    \cbar{SecBarThree}{1.8pt}{1.55ex}%
-    \cbar{SecBarFour}{1.1pt}{1.55ex}%
+    \cbar{SecBarOne}{3pt}{1.55ex}%
+    \cbar{SecBarTwo}{2.2pt}{1.55ex}%
+    \cbar{SecBarThree}{1.5pt}{1.55ex}%
+    \cbar{SecBarFour}{0.95pt}{1.55ex}%
     \kern0.4em%
   }%
   \color{\ifinsideproof SecTitleColorProof\else SecTitleCol\fi}%
@@ -1356,9 +1370,9 @@ breakable
 \newcommand{\SubsecSym}{%
   \phantomsection%
   \mbox{%
-    \cbar{SubSecBarOne}{2.8pt}{1.45ex}%
-    \cbar{SubSecBarTwo}{2.0pt}{1.45ex}%
-    \cbar{SubSecBarThree}{1.2pt}{1.45ex}%
+    \cbar{SubSecBarOne}{3pt}{1.45ex}%
+    \cbar{SubSecBarTwo}{2.15pt}{1.45ex}%
+    \cbar{SubSecBarThree}{1.3pt}{1.45ex}%
     \kern0.4em%
   }%
   \color{\ifinsideproof SubSecTitleColorProof\else SubSecTitleCol\fi}%
@@ -1367,8 +1381,8 @@ breakable
 \newcommand{\SubsubsecSym}{%
   \phantomsection%
   \mbox{%
-    \cbar{SubSubSecBarOne}{2.4pt}{1.35ex}%
-    \cbar{SubSubSecBarTwo}{1.4pt}{1.35ex}%
+    \cbar{SubSubSecBarOne}{3pt}{1.35ex}%
+    \cbar{SubSubSecBarTwo}{1.75pt}{1.35ex}%
     \kern0.35em%
   }%
   \color{\ifinsideproof SubSubSecTitleColorProof\else SubSubSecTitleCol\fi}%
