@@ -63,6 +63,10 @@ public static class RefineCommands {
 
             var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
             var key = ApplyOverrides(config, parseResult);
+            if (key.Error != null) {
+                Ui.Error(key.Error, "refine");
+                return ExitCodes.Usage;
+            }
             string? audio = ResolveAudio(parseResult, tex);
             bool throughEnd = parseResult.GetValue(ThroughEnd);
 
@@ -80,13 +84,13 @@ public static class RefineCommands {
                 CliOutput.Payload(context, new {
                     dryRun = true, tex = Path.GetFullPath(tex), step = stepChoice, throughEnd,
                     audio, overlapSeconds, backend = config.UseVertex ? "vertex" : "aistudio", model = StepModel(config),
-                    apiKeyProfile = config.AiStudioActiveApiProfile, apiKeyEnvName = key.EnvName, apiKeyResolves = key.Resolves
+                    apiKeyProfile = TableProfile(key.EnvName), apiKeyEnvName = key.EnvName, apiKeyResolves = key.Resolves
                 }, () => Ui.Info($"Würde {(step == null ? "die komplette Pipeline" : $"Schritt {step}")} auf {Path.GetFileName(tex)} anwenden."));
                 return ExitCodes.Success;
             }
 
             if (!key.Resolves) {
-                Ui.Error($"Der API-Key '{key.EnvName}' (Profil {config.AiStudioActiveApiProfile}) ist nicht gesetzt.", "refine");
+                Ui.Error($"Der API-Key '{key.EnvName}' (Profil {TableProfile(key.EnvName)}) ist nicht gesetzt.", "refine");
                 return ExitCodes.Configuration;
             }
 
@@ -120,6 +124,10 @@ public static class RefineCommands {
 
             var config = ConfigLoader<LatexRefinementSessionConfig>.Load();
             var key = ApplyOverrides(config, parseResult);
+            if (key.Error != null) {
+                Ui.Error(key.Error, "pdf");
+                return ExitCodes.Usage;
+            }
 
             // Every generation step off, PDF on: the session then runs step 4 alone.
             config.Step1MergeAndTimestamp.Enabled = false;
@@ -142,7 +150,7 @@ public static class RefineCommands {
                 CliOutput.Payload(context, new {
                     dryRun = true, tex = Path.GetFullPath(tex),
                     fixLoopRounds = config.PdfCompilation.MaxFixRounds, model = StepModel(config),
-                    apiKeyProfile = config.AiStudioActiveApiProfile, apiKeyEnvName = key.EnvName, apiKeyResolves = key.Resolves
+                    apiKeyProfile = TableProfile(key.EnvName), apiKeyEnvName = key.EnvName, apiKeyResolves = key.Resolves
                 }, () => Ui.Info($"Würde {Path.GetFileName(tex)} kompilieren (AI-Reparatur: {config.PdfCompilation.MaxFixRounds} Runden)."));
                 return ExitCodes.Success;
             }
@@ -172,9 +180,16 @@ public static class RefineCommands {
     /// not cover them; a caller that hits a rate limit can move to another key, and one that hits
     /// "high demand" on a model can move to another model, without editing config.
     /// </summary>
-    private static (string EnvName, bool Resolves) ApplyOverrides(LatexRefinementSessionConfig config, ParseResult parseResult) {
+    private static (string EnvName, bool Resolves, string? Error) ApplyOverrides(LatexRefinementSessionConfig config, ParseResult parseResult) {
         if (parseResult.GetValue(ExtractionOptions.Profile) is string profileRaw && !string.IsNullOrWhiteSpace(profileRaw)) {
-            config.AiStudioActiveApiProfile = ApiKeyProfileResolver.ResolveIndex(profileRaw, config.AiStudioApiKeyEnvNames, config.AiStudioActiveApiProfile);
+            // A number is the profile table's (config profiles), not an index into this config's own list.
+            var profileTable = ((AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig))).AiStudioApiKeyEnvNames;
+            int index = ApiKeyProfileResolver.ResolveIndexInStageList(profileRaw, profileTable, config.AiStudioApiKeyEnvNames);
+            if (index < 0) {
+                string wanted = int.TryParse(profileRaw.Trim(), out int number) ? ApiKeyProfileResolver.Resolve(number, profileTable) : profileRaw;
+                return (wanted, false, $"Der Key '{wanted}' (--profile {profileRaw}) fehlt in AiStudioApiKeyEnvNames von LatexRefinementSessionConfig.json.");
+            }
+            config.AiStudioActiveApiProfile = index;
         }
 
         // Every step, because the PDF repair runs on step 3's settings and --step picks which one runs.
@@ -187,8 +202,16 @@ public static class RefineCommands {
         ThoughtOptions.Apply(config, parseResult);
 
         string envName = RefinementUiHelper.ResolveRefinementKeyEnvName(config);
-        return (envName, config.UseVertex || GoogleAiClientBuilder.IsApiKeyPresent(envName));
+        return (envName, config.UseVertex || GoogleAiClientBuilder.IsApiKeyPresent(envName), null);
     }
+
+    /// <summary>
+    /// The key's number in the profile table (config profiles), -1 if it has none. The refinement
+    /// config's own index is not shown: in another order it named a different key's number.
+    /// </summary>
+    private static int TableProfile(string envName) =>
+        ApiKeyProfileResolver.ResolveIndex(envName,
+            ((AiStudioAutoExtractionConfig)ConfigSectionRegistry.Load(typeof(AiStudioAutoExtractionConfig))).AiStudioApiKeyEnvNames, -1);
 
     /// <summary>The model the final step (and with it the PDF repair) would use - what --model sets.</summary>
     private static string StepModel(LatexRefinementSessionConfig config) =>

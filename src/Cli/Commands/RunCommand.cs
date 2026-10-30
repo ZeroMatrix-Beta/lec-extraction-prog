@@ -145,14 +145,16 @@ public static class RunCommand {
         var sessionLogger = new SessionLogger(ConfigLoader<SessionLoggerConfig>.Load());
         var refinementConfig = ConfigLoader<LatexRefinementSessionConfig>.Load();
 
-        if (parseResult.GetValue(ExtractionOptions.Profile) is string profileRaw && !string.IsNullOrWhiteSpace(profileRaw)) {
-            refinementConfig.AiStudioActiveApiProfile = ApiKeyProfileResolver.ResolveIndex(profileRaw, refinementConfig.AiStudioApiKeyEnvNames, refinementConfig.AiStudioActiveApiProfile);
+        // The refinement continues on the extraction's key, found by name in its own list. --profile has
+        // already picked that key from the profile table; reading --profile N as an index into the
+        // refinement list chose another key wherever the two lists differ in order (2026-10-26:
+        // --profile 4 ran the refinement on profile 0's key).
+        int matchingRefinementProfile = ApiKeyProfileResolver.ResolveIndex(envName, refinementConfig.AiStudioApiKeyEnvNames, -1);
+        if (matchingRefinementProfile >= 0) {
+            refinementConfig.AiStudioActiveApiProfile = matchingRefinementProfile;
         }
-        else {
-            int matchingRefinementProfile = ApiKeyProfileResolver.ResolveIndex(envName, refinementConfig.AiStudioApiKeyEnvNames, -1);
-            if (matchingRefinementProfile >= 0) {
-                refinementConfig.AiStudioActiveApiProfile = matchingRefinementProfile;
-            }
+        else if (parseResult.GetValue(ExtractionOptions.Profile) is string profileRaw && !string.IsNullOrWhiteSpace(profileRaw)) {
+            Ui.Warn($"'{envName}' (--profile {profileRaw}) fehlt in AiStudioApiKeyEnvNames von LatexRefinementSessionConfig.json; das Refinement nutzt '{RefinementUiHelper.ResolveRefinementKeyEnvName(refinementConfig)}'.", "run");
         }
 
         // Only an explicit --model reaches the refinement steps. Without it, which model they use is

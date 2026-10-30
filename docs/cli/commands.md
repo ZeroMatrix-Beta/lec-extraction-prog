@@ -98,7 +98,7 @@ lecx refine run --tex out/step1-lecture.tex --step 1 --through-end
 | `--through-end` | With `--step`, continue through the remaining steps and compile the PDF |
 | `--audio <file>` | Audio for timestamp correction. Defaults to `*_audio.aac` beside the `.tex` |
 | `--overlap <s>` | Overlap the segments were cut with, for step 1. Defaults to the extraction config's `OverlapSeconds` |
-| `--profile <n>` | Refinement API-key profile for this run only — an index into the refinement config's own key list. Switch it when a key hits its rate limit. Exits `4` if that key is unset |
+| `--profile <n>` | API-key profile for this run only: the number from `lecx config profiles` (or a key name such as `latex-refinement`). That key is then looked up by name in the refinement config's own key list, whose order may differ (before 2026-10-30 the number was an index into that list, so `--profile 4` ran on profile 0's key). Exits `2` if the key is not in that list, `4` if it is unset. Switch it when a key hits its rate limit |
 | `--model <id>` | Model for every step of this run only (e.g. `gemini-3.7-flash` when a key's daily quota on the configured model is used up: the free-tier quota counts per model) |
 
 Step 1 reads the part count from the document itself (its `% --- TEIL n` separators), so

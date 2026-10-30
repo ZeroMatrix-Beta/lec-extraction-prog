@@ -131,24 +131,19 @@ lecx run --config-dir ./cfg-worker1 --profile 1 --save-config ...
 ## What `--profile` switches
 
 One `--profile N` per worker covers the **whole** pipeline, not just extraction: `run`
-also points the refinement session (merge, speech, polish, PDF repair) at index `N` of the
-refinement config's key list (`RunCommand.BuildSession`). So four workers on profiles 0-3
-use four independent keys end to end.
+keeps the refinement session (merge, speech, polish, PDF repair) on the same key, so four
+workers on profiles 0-3 use four independent keys end to end.
 
-**The two lists are ordered differently**, so a profile number names different keys for
-transcription and for refinement (as of 2026-10-17):
-
-| `--profile` | Transcription (`AiStudioAutoExtractionConfig.json`) | Refinement (`LatexRefinementSessionConfig.json`) |
-|---|---|---|
-| 0 | `API_KEY-automated-content-extraction` | `API_KEY-latex-refinement` |
-| 1 | `API_KEY-ai-studio-test-project-1` | `API_KEY-ai-studio-test-project-1` |
-| 2 | `API_KEY-ai-studio-test-project-2` | `API_KEY-ai-studio-test-project-2` |
-| 3 | `API_KEY-ai-studio-test-project-3` | `API_KEY-ai-studio-test-project-3` |
-| 4 | `API_KEY-latex-refinement` | `API_KEY-automated-content-extraction` |
-
-Profiles 0-3 still give four distinct keys within each stage. The log line `Verwende
-API_KEY-…` at the start of each stage names the key really used; `config profiles` lists only
-the transcription order.
+**The number always means the row of `lecx config profiles`**, in every command (`run`,
+`refine run`, `pdf compile`, `finish`). The refinement config keeps its own key list
+(`LatexRefinementSessionConfig.json`), in a different order: there `latex-refinement` comes
+first and `automated-content-extraction` last. The key is therefore looked up there **by name**
+(`ApiKeyProfileResolver.ResolveIndexInStageList`, and `RunCommand.BuildSession` for `run`).
+Until 2026-10-30 the number was an index into that list, so profiles 0 and 4 were swapped for
+refinement: `--profile 4` ran it on `automated-content-extraction` and used up that key's daily
+quota (Information Security 03-14, 2026-10-26). A key missing from the refinement list makes
+`refine run` / `pdf compile` exit `2`; `run` warns and the refinement keeps its configured key.
+The log line `Verwende API_KEY-…` at the start of each stage names the key really used.
 
 ## Logs are written per video, at the end
 

@@ -53,6 +53,24 @@ public static class ApiKeyProfileResolver {
         return defaultIndex;
     }
 
+    /// <summary>
+    /// [AI Context] Resolves --profile for a stage that keeps its own key list (the refinement's
+    /// <c>LatexRefinementSessionConfig.AiStudioApiKeyEnvNames</c>). A number always means the profile
+    /// table's entry - the extraction config's list, which <c>lecx config profiles</c> shows - and that
+    /// key is then looked up by name in the stage's list, because the two lists need not be in the same
+    /// order (2026-10-26: the refinement list had latex-refinement first and automated-content-extraction
+    /// last, so <c>--profile 4</c> sent the refinement to profile 0's key). A name is looked up as given.
+    /// Returns the index in <paramref name="stageEnvNames"/>, or -1 when that key is not in it.
+    /// [Human] Eine Profil-Nummer gilt immer laut Profil-Tabelle; der Key wird dann per Name in der
+    /// eigenen Key-Liste des Schritts gesucht.
+    /// </summary>
+    public static int ResolveIndexInStageList(string profileOrName, string[]? profileTable, string[]? stageEnvNames) {
+        string keyName = int.TryParse(profileOrName.Trim(), out int profile)
+            ? Resolve(profile, profileTable)
+            : profileOrName;
+        return ResolveIndex(keyName, stageEnvNames, -1);
+    }
+
     private static string NormalizeKeyName(string name) {
         if (name.StartsWith("API_KEY-", StringComparison.OrdinalIgnoreCase) ||
             name.StartsWith("API_KEY_", StringComparison.OrdinalIgnoreCase) ||
